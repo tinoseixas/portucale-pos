@@ -8,7 +8,7 @@ import { PlusCircle, List, Calendar } from 'lucide-react'
 import { ServiceCard } from '@/components/ServiceCard'
 import { ServiceCalendar } from '@/components/ServiceCalendar'
 import type { ServiceRecord } from '@/lib/types'
-import { useCollection, useUser, useFirestore, useMemoFirebase } from '@/firebase';
+import { useCollection, useUser, useFirestore, useMemoFirebase, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { collection, query, orderBy, getDocs, collectionGroup } from 'firebase/firestore';
 import { ADMIN_EMAIL } from '@/lib/admin'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -38,20 +38,26 @@ export default function DashboardPage() {
     if (isUserLoading || !firestore) return;
 
     if (isUserAdmin) {
-      const fetchAllServices = async () => {
+      const fetchAllServices = () => {
         setIsLoadingAllServices(true);
-        try {
-          // Use collectionGroup to fetch all serviceRecords across all employees
-          const servicesQuery = query(collectionGroup(firestore, 'serviceRecords'), orderBy('arrivalDateTime', 'desc'));
-          const snapshot = await getDocs(servicesQuery);
-          const servicesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ServiceRecord));
-          setAllServices(servicesData);
-        } catch (error) {
-          console.error("Error fetching all services for admin:", error);
-          setAllServices([]);
-        } finally {
-          setIsLoadingAllServices(false);
-        }
+        const servicesQuery = query(collectionGroup(firestore, 'serviceRecords'), orderBy('arrivalDateTime', 'desc'));
+        
+        getDocs(servicesQuery)
+          .then(snapshot => {
+            const servicesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ServiceRecord));
+            setAllServices(servicesData);
+            setIsLoadingAllServices(false);
+          })
+          .catch(error => {
+            console.error("Admin service fetch failed, emitting contextual error:", error);
+            const contextualError = new FirestorePermissionError({
+                operation: 'list',
+                path: 'serviceRecords (collectionGroup)',
+            });
+            errorEmitter.emit('permission-error', contextualError);
+            setAllServices([]);
+            setIsLoadingAllServices(false);
+          });
       };
       fetchAllServices();
     } else {
