@@ -6,10 +6,11 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/componen
 import { Separator } from '@/components/ui/separator'
 import { Clock, Briefcase, Camera } from 'lucide-react'
 import type { ServiceRecord, Employee } from '@/lib/types'
-import { format, differenceInMinutes, parseISO } from 'date-fns'
+import { format, differenceInMinutes, parseISO, isValid } from 'date-fns'
 import { ca } from 'date-fns/locale';
 import { useCollection, useDoc, useFirestore, useUser, useMemoFirebase } from '@/firebase'
 import { collection, doc } from 'firebase/firestore'
+import { PlaceHolderImages } from '@/lib/placeholder-images'
 
 function calculateTotalTime(services: ServiceRecord[]): string {
     if (!services) return '0h 0m';
@@ -18,6 +19,10 @@ function calculateTotalTime(services: ServiceRecord[]): string {
         if (service.arrivalDateTime && service.departureDateTime) {
             const startDate = parseISO(service.arrivalDateTime);
             const endDate = parseISO(service.departureDateTime);
+
+            if (!isValid(startDate) || !isValid(endDate)) {
+              return total;
+            }
 
             if (endDate < startDate) { // handles overnight shifts
                 endDate.setDate(endDate.getDate() + 1);
@@ -55,7 +60,11 @@ export default function ReportPage() {
     const totalTime = useMemo(() => calculateTotalTime(services || []), [services]);
     const today = format(new Date(), 'dd MMMM, yyyy', { locale: ca });
 
-    const allPhotos = services?.flatMap(s => s.photoIds.map(id => ({ id, url: 'https://placehold.co/600x400' }))) || [];
+    const getPhotoUrl = (id: string) => {
+      return PlaceHolderImages.find(p => p.id === id)?.imageUrl || 'https://placehold.co/100x100';
+    }
+
+    const allPhotos = services?.flatMap(s => s.photoIds?.map(id => ({ id, url: getPhotoUrl(id) }))) || [];
 
     if (isLoadingServices || isLoadingEmployee) {
         return <p>Carregant informe...</p>;
@@ -107,19 +116,25 @@ export default function ReportPage() {
                     <div>
                         <h3 className="text-lg font-semibold mb-4">Detall de Serveis</h3>
                         <div className="space-y-4">
-                            {services && services.map(service => (
+                            {services && services.map(service => {
+                                const arrival = parseISO(service.arrivalDateTime);
+                                const departure = parseISO(service.departureDateTime);
+                                
+                                return (
                                 <Card key={service.id} className="bg-background">
                                     <CardContent className="pt-6">
                                         <div className="flex flex-col sm:flex-row justify-between sm:items-start gap-4">
                                             <p className="text-muted-foreground flex-1 pr-4">{service.description}</p>
                                             <div className="flex items-center gap-2 text-sm font-medium text-primary flex-shrink-0">
                                                 <Clock className="h-4 w-4" />
-                                                <span>{format(parseISO(service.arrivalDateTime), 'HH:mm')} - {format(parseISO(service.departureDateTime), 'HH:mm')}</span>
+                                                <span>
+                                                    {isValid(arrival) ? format(arrival, 'HH:mm') : 'N/A'} - {isValid(departure) ? format(departure, 'HH:mm') : 'N/A'}
+                                                </span>
                                             </div>
                                         </div>
                                     </CardContent>
                                 </Card>
-                            ))}
+                            )})}
                         </div>
                     </div>
                     
