@@ -140,7 +140,7 @@ export default function NewServicePage() {
                 setIsTracking(true); 
                 toast({
                     title: "Servei desat!",
-                    description: "El nou servei ha estat registrat. Rastreig GPS iniciat.",
+                    description: "El nou servei ha estat registrat.",
                 })
                  router.push(`/dashboard/edit/${docRef.id}`); // Redirect to edit page
             }
