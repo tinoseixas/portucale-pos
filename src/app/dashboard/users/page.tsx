@@ -117,7 +117,7 @@ export default function UsersPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {employees && employees.map(employee => (
+              {employees && employees.filter(e => e.email !== ADMIN_EMAIL).map(employee => (
                 <TableRow key={employee.id}>
                   <TableCell>
                     <div className="flex items-center gap-3">
