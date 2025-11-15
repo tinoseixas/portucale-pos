@@ -9,9 +9,10 @@ import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Clock, FileText, Camera, ArrowLeft, Save } from 'lucide-react'
 import { useToast } from "@/hooks/use-toast"
-import { useAuth, useFirestore, useUser } from '@/firebase'
+import { useFirestore, useUser } from '@/firebase'
 import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates'
-import { collection, doc } from 'firebase/firestore'
+import { collection } from 'firebase/firestore'
+import { PlaceHolderImages } from '@/lib/placeholder-images'
 
 export default function NewServicePage() {
   const router = useRouter()
@@ -31,7 +32,7 @@ export default function NewServicePage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!user) {
+    if (!user || !firestore) {
         toast({
             variant: "destructive",
             title: "Error",
@@ -44,13 +45,19 @@ export default function NewServicePage() {
     const arrivalDateTime = new Date(`${today}T${startTime}`).toISOString();
     const departureDateTime = new Date(`${today}T${endTime}`).toISOString();
 
+    const photoIds = photos.map((_, index) => {
+        // In a real app, you would upload to storage and get an ID.
+        // For now, we'll use a random placeholder image ID from our list.
+        return PlaceHolderImages[index % PlaceHolderImages.length].id;
+    });
+
     const serviceRecord = {
         employeeId: user.uid,
         arrivalDateTime,
         departureDateTime,
         description,
         pendingTasks: '', // This field exists in the schema, so we provide a default value.
-        photoIds: [], // This will be handled later, maybe with Firebase Storage
+        photoIds: photoIds,
     };
 
     const serviceRecordsCollection = collection(firestore, `employees/${user.uid}/serviceRecords`);
@@ -95,7 +102,7 @@ export default function NewServicePage() {
 
             <div className="space-y-2">
               <Label htmlFor="photos" className="flex items-center gap-2"><Camera className="h-4 w-4 text-muted-foreground" /> Captura de Fotos</Label>
-              <Input id="photos" type="file" multiple onChange={handlePhotoChange} disabled title="La càrrega de fotos s'implementarà properament" />
+              <Input id="photos" type="file" multiple onChange={handlePhotoChange} accept="image/*" />
               {photos.length > 0 && (
                 <p className="text-sm text-muted-foreground mt-2">{photos.length} foto(s) seleccionada(s).</p>
               )}
