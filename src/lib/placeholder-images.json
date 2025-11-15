@@ -1,3 +1,40 @@
 {
-  "placeholderImages": []
+  "placeholderImages": [
+    {
+      "id": "1",
+      "description": "Una imatge d'un lloc de construcció.",
+      "imageUrl": "https://images.unsplash.com/photo-1591955506264-3f5a6834570a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw4fHxjb25zdHJ1Y3Rpb24lMjBzaXRlfGVufDB8fHx8MTc2MzE1MjIxN3ww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "construction site"
+    },
+    {
+      "id": "2",
+      "description": "Una imatge d'una oficina neta.",
+      "imageUrl": "https://images.unsplash.com/photo-1524758631624-e2822e304c36?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwyfHxjbGVhbiUyMG9mZmljZXxlbnwwfHx8fDE3NjMxOTYwNjh8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "clean office"
+    },
+    {
+      "id": "3",
+      "description": "Eines de lampisteria.",
+      "imageUrl": "https://images.unsplash.com/photo-1581166397057-235af2b3c6dd?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxMHx8cGx1bWJpbmclMjB0b29sc3xlbnwwfHx8fDE3NjMxNDIwMzh8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "plumbing tools"
+    },
+    {
+      "id": "4",
+      "description": "Jardineria.",
+      "imageUrl": "https://images.unsplash.com/photo-1617576683096-00fc8eecb3af?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw4fHxnYXJkZW5pbmclMjB3b3JrfGVufDB8fHx8MTc2MzE5NjA2OHww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "gardening work"
+    },
+    {
+      "id": "5",
+      "description": "Instal·lació elèctrica.",
+      "imageUrl": "https://images.unsplash.com/photo-1683295083329-4d4738291f3a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxMHx8ZWxlY3RyaWNhbCUyMGluc3RhbGxhdGlvbnxlbnwwfHx8fDE3NjMxOTYwNjh8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "electrical installation"
+    },
+    {
+      "id": "user_avatar",
+      "description": "Avatar for mock user.",
+      "imageUrl": "https://images.unsplash.com/photo-1600180758890-6b94519a8ba6?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw1fHxwZXJzb24lMjBwb3J0cmFpdHxlbnwwfHx8fDE3NjMxNDEzMjJ8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "person portrait"
+    }
+  ]
 }
