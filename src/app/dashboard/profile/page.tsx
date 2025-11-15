@@ -18,6 +18,7 @@ import { updateProfile } from 'firebase/auth';
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import type { Employee } from '@/lib/types';
 import { Camera, Save } from 'lucide-react';
+import { PlaceHolderImages } from '@/lib/placeholder-images';
 
 
 const profileSchema = z.object({
@@ -87,7 +88,7 @@ export default function ProfilePage() {
     
     // NOTE: In a real app, we would upload this file to Firebase Storage
     // and get a download URL. For this demo, we'll use a placeholder.
-    const photoURL = 'https://picsum.photos/seed/user-avatar/200';
+    const photoURL = PlaceHolderImages.find(p => p.id === 'user_avatar')?.imageUrl || 'https://picsum.photos/seed/user-avatar/200';
     
     try {
         await updateProfile(user, { photoURL });
@@ -97,6 +98,9 @@ export default function ProfilePage() {
         toast({
             title: 'Foto de perfil actualitzada',
         });
+        // Force a re-render to show the new photo by re-fetching the user or simply reloading the page.
+        // For a smoother UX, a state management solution would be better.
+        router.refresh();
     } catch (error) {
         toast({
             variant: 'destructive',

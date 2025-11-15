@@ -46,10 +46,6 @@ export function Header() {
         
         {user && (
           <div className="flex items-center gap-4">
-            <Avatar>
-              <AvatarImage src={user.photoURL ?? employee?.avatar} alt={user.email ?? 'User'} />
-              <AvatarFallback>{getInitials(user.email, employee)}</AvatarFallback>
-            </Avatar>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                  <Button variant="ghost" className="relative h-8 w-8 rounded-full">
