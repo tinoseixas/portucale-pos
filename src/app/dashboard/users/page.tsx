@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { useCollection, useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase'
 import { collection, doc } from 'firebase/firestore'
@@ -9,31 +9,27 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
+import { ADMIN_UID } from '@/lib/admin'
 
 export default function UsersPage() {
   const router = useRouter()
-  const { user } = useUser()
+  const { user, isUserLoading } = useUser()
   const firestore = useFirestore()
-
-  const employeeDocRef = useMemoFirebase(() => {
-    if (!user) return null
-    return doc(firestore, 'employees', user.uid)
-  }, [firestore, user])
-
-  const { data: currentEmployee, isLoading: isLoadingCurrentEmployee } = useDoc<Employee>(employeeDocRef)
-
-  useEffect(() => {
-    if (!isLoadingCurrentEmployee && currentEmployee?.role !== 'admin') {
-      router.push('/dashboard')
-    }
-  }, [currentEmployee, isLoadingCurrentEmployee, router])
+  const isCurrentUserAdmin = user?.uid === ADMIN_UID
 
   const employeesQuery = useMemoFirebase(() => {
-    if (currentEmployee?.role !== 'admin') return null
+    if (!isCurrentUserAdmin) return null
     return collection(firestore, 'employees')
-  }, [firestore, currentEmployee])
+  }, [firestore, isCurrentUserAdmin])
 
   const { data: employees, isLoading: isLoadingEmployees } = useCollection<Employee>(employeesQuery)
+
+  useEffect(() => {
+    if (!isUserLoading && !isCurrentUserAdmin) {
+      router.push('/dashboard')
+    }
+  }, [isUserLoading, isCurrentUserAdmin, router])
+
 
   const getInitials = (employee: Employee) => {
     if (employee.firstName && employee.lastName) return `${employee.firstName[0]}${employee.lastName[0]}`.toUpperCase()
@@ -42,11 +38,11 @@ export default function UsersPage() {
     return 'U'
   }
 
-  if (isLoadingCurrentEmployee || isLoadingEmployees) {
+  if (isUserLoading || isLoadingEmployees) {
     return <p>Carregant usuaris...</p>
   }
   
-  if (currentEmployee?.role !== 'admin') {
+  if (!isCurrentUserAdmin) {
     return <p>Accés denegat.</p>
   }
 
@@ -63,6 +59,7 @@ export default function UsersPage() {
               <TableRow>
                 <TableHead>Empleat</TableHead>
                 <TableHead>ID d'Empleat</TableHead>
+                <TableHead>Correu electrònic</TableHead>
                 <TableHead>Rol</TableHead>
               </TableRow>
             </TableHeader>
@@ -77,11 +74,11 @@ export default function UsersPage() {
                       </Avatar>
                       <div>
                         <p className="font-medium">{employee.firstName} {employee.lastName}</p>
-                        <p className="text-sm text-muted-foreground">{employee.email}</p>
                       </div>
                     </div>
                   </TableCell>
                   <TableCell>{employee.employeeId}</TableCell>
+                  <TableCell>{employee.email}</TableCell>
                   <TableCell>
                     <Badge variant={employee.role === 'admin' ? 'default' : 'secondary'}>
                       {employee.role}

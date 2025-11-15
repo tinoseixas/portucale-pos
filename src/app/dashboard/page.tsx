@@ -1,55 +1,72 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { PlusCircle } from 'lucide-react'
 import { ServiceCard } from '@/components/ServiceCard'
 import type { ServiceRecord, Employee } from '@/lib/types'
 import { useCollection, useUser, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query, collectionGroup, getDocs } from 'firebase/firestore';
+import { collection, query, collectionGroup, getDocs, Query } from 'firebase/firestore';
 import { ADMIN_UID } from '@/lib/admin'
 
 export default function DashboardPage() {
-  const { user } = useUser();
+  const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
   const [allServices, setAllServices] = useState<ServiceRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  const isUserAdmin = user?.uid === ADMIN_UID;
+  const isUserAdmin = useMemo(() => user?.uid === ADMIN_UID, [user]);
 
-  // This query is for the regular user view
-  const serviceRecordsQuery = useMemoFirebase(() => {
-    if (!user || isUserAdmin) return null;
-    return collection(firestore, `employees/${user.uid}/serviceRecords`);
-  }, [firestore, user, isUserAdmin]);
+  // Query for regular user's services
+  const userServicesQuery = useMemoFirebase(() => {
+    if (isUserLoading || !user || isUserAdmin) return null;
+    return query(collection(firestore, `employees/${user.uid}/serviceRecords`));
+  }, [firestore, user, isUserAdmin, isUserLoading]);
+  
+  const { data: userServices, isLoading: isLoadingUserServices } = useCollection<ServiceRecord>(userServicesQuery);
 
-  const { data: userServices, isLoading: isLoadingUserServices } = useCollection<ServiceRecord>(serviceRecordsQuery);
-
+  // Fetch all services if the user is an admin
   useEffect(() => {
     async function fetchAllServices() {
       if (isUserAdmin && firestore) {
         setIsLoading(true);
         const servicesQuery = query(collectionGroup(firestore, 'serviceRecords'));
-        const querySnapshot = await getDocs(servicesQuery);
-        const services: ServiceRecord[] = [];
-        querySnapshot.forEach((doc) => {
-          services.push({ id: doc.id, ...doc.data() } as ServiceRecord);
+        const unsubscribe = onSnapshot(servicesQuery, (querySnapshot) => {
+          const services: ServiceRecord[] = [];
+          querySnapshot.forEach((doc) => {
+            services.push({ id: doc.id, ...doc.data() } as ServiceRecord);
+          });
+          
+          const sortedServices = services.sort((a, b) => 
+            new Date(b.arrivalDateTime).getTime() - new Date(a.arrivalDateTime).getTime()
+          );
+
+          setAllServices(sortedServices);
+          setIsLoading(false);
+        }, (error) => {
+           console.error("Error fetching all services:", error);
+           setIsLoading(false);
         });
-        setAllServices(services);
-        setIsLoading(false);
+        return () => unsubscribe();
       }
     }
-    fetchAllServices();
-  }, [isUserAdmin, firestore]);
-  
-  useEffect(() => {
-    if (!isUserAdmin) {
-      setIsLoading(isLoadingUserServices);
-    }
-  }, [isLoadingUserServices, isUserAdmin])
 
-  const services = isUserAdmin ? allServices : userServices;
+    if (!isUserLoading) {
+      if (isUserAdmin) {
+        fetchAllServices();
+      } else {
+        setIsLoading(isLoadingUserServices);
+      }
+    }
+  }, [isUserAdmin, firestore, isUserLoading, isLoadingUserServices]);
+
+  const services = isUserAdmin ? allServices : userServices?.sort((a, b) => 
+    new Date(b.arrivalDateTime).getTime() - new Date(a.arrivalDateTime).getTime()
+  );
+  
+  // Need to import onSnapshot to avoid build errors
+  const { onSnapshot } = require("firebase/firestore");
 
   return (
     <div className="space-y-8">
@@ -68,16 +85,16 @@ export default function DashboardPage() {
         </div>
       </div>
       
-      {isLoading && <p>Carregant serveis...</p>}
+      {(isLoading || isUserLoading) && <p>Carregant serveis...</p>}
 
-      {!isLoading && services && services.length > 0 ? (
+      {!(isLoading || isUserLoading) && services && services.length > 0 ? (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {services.map(service => (
             <ServiceCard key={service.id} service={service} />
           ))}
         </div>
       ) : (
-        !isLoading && (
+        !(isLoading || isUserLoading) && (
             <div className="text-center py-16 border-2 border-dashed rounded-lg">
                 <h2 className="text-xl font-semibold">No hi ha serveis registrats</h2>
                 <p className="text-muted-foreground mt-2">Comença afegint el teu primer servei del dia.</p>

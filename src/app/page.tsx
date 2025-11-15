@@ -52,7 +52,7 @@ export default function Home() {
             lastName: 'Usuari',
             email: newUser.email,
             role: newUser.uid === ADMIN_UID ? 'admin' : 'user',
-          });
+          }, { merge: true });
 
           toast({
             title: "Compte creat",
