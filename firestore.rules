@@ -45,8 +45,8 @@ service cloud.firestore {
       allow get: if isOwner(employeeId) || isAdmin();
       allow list: if isAdmin(); // Only admin can list all employees
       allow create: if isOwner(employeeId) && request.resource.data.id == employeeId;
-      allow update: if isOwner(employeeId);
-      allow delete: if isOwner(employeeId);
+      allow update: if isOwner(employeeId) || isAdmin();
+      allow delete: if isOwner(employeeId) || isAdmin();
     }
 
     /**
