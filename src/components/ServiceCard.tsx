@@ -31,7 +31,16 @@ function EmployeeName({ employeeId }: { employeeId: string }) {
     return <Skeleton className="h-5 w-32" />;
   }
 
-  const employeeName = employee ? `${employee.firstName} ${employee.lastName}` : 'Empleat desconegut';
+  if (!employee) {
+     return (
+      <div className="flex items-center text-sm text-muted-foreground font-medium">
+        <User className="h-4 w-4 mr-2" />
+        <span>Empleat desconegut</span>
+      </div>
+    )
+  }
+
+  const employeeName = `${employee.firstName} ${employee.lastName}`;
 
   return (
     <div className="flex items-center text-sm text-muted-foreground font-medium">
@@ -68,7 +77,7 @@ export function ServiceCard({ service, isUserAdmin }: ServiceCardProps) {
           </div>
       </CardHeader>
       <CardContent className="flex-1 space-y-4 flex flex-col">
-        {isUserAdmin && <EmployeeName employeeId={service.employeeId} />}
+        {isUserAdmin && service.employeeId && <EmployeeName employeeId={service.employeeId} />}
 
         <p className="text-muted-foreground line-clamp-2 h-10 flex-grow">{service.description}</p>
         
