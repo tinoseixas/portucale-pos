@@ -4,12 +4,12 @@ import { useState, useMemo, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
-import { PlusCircle, List, Calendar as CalendarIcon, User, Edit, Search } from 'lucide-react'
+import { PlusCircle, List, Calendar as CalendarIcon, User, Edit, Search, Trash2 } from 'lucide-react'
 import { ServiceCard } from '@/components/ServiceCard'
 import { ServiceCalendar } from '@/components/ServiceCalendar'
 import type { ServiceRecord, Employee } from '@/lib/types'
-import { useCollection, useUser, useFirestore, useMemoFirebase, errorEmitter, FirestorePermissionError } from '@/firebase';
-import { collection, query, orderBy, getDocs, collectionGroup } from 'firebase/firestore';
+import { useCollection, useUser, useFirestore, useMemoFirebase, errorEmitter, FirestorePermissionError, deleteDocumentNonBlocking } from '@/firebase';
+import { collection, query, orderBy, getDocs, collectionGroup, doc } from 'firebase/firestore';
 import { ADMIN_EMAIL } from '@/lib/admin'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Card, CardHeader, CardContent, CardDescription, CardTitle } from '@/components/ui/card'
@@ -20,6 +20,20 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { format, parseISO, isSameDay, startOfDay } from 'date-fns'
 import { ca } from 'date-fns/locale'
 import { cn } from '@/lib/utils'
+import { Checkbox } from "@/components/ui/checkbox"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
+import { useToast } from "@/hooks/use-toast"
+
 
 const userColors = [
   '#3b82f6', '#ef4444', '#10b981', '#f97316', '#8b5cf6', '#ec4899', '#f59e0b', '#14b8a6'
@@ -39,6 +53,7 @@ export default function DashboardPage() {
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
   const router = useRouter();
+  const { toast } = useToast();
   const [view, setView] = useState<'list' | 'calendar'>('list');
   
   // Admin state
@@ -46,6 +61,7 @@ export default function DashboardPage() {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [isLoadingAllServices, setIsLoadingAllServices] = useState(true);
   const [isLoadingEmployees, setIsLoadingEmployees] = useState(true);
+  const [selectedRows, setSelectedRows] = useState<string[]>([]);
 
   // Filters state
   const [selectedUser, setSelectedUser] = useState<string>('all');
@@ -142,6 +158,11 @@ export default function DashboardPage() {
     return filtered;
 
   }, [isUserAdmin, allServices, userServices, selectedUser, selectedDate]);
+  
+  // Clear selected rows when filters change
+  useEffect(() => {
+    setSelectedRows([]);
+  }, [filteredServices]);
 
 
   const services = filteredServices as (ServiceRecord[] | ServiceWithRowColor[]);
@@ -156,12 +177,60 @@ export default function DashboardPage() {
     const employee = employees.find(e => e.id === employeeId);
     return employee ? `${employee.firstName} ${employee.lastName}` : 'Desconegut';
   };
+
+  const handleDeleteSelected = () => {
+    if (!firestore) return;
+    
+    selectedRows.forEach(serviceId => {
+      // Find the service to get the employeeId
+      const service = allServices.find(s => s.id === serviceId);
+      if (service) {
+        const docRef = doc(firestore, `employees/${service.employeeId}/serviceRecords`, serviceId);
+        deleteDocumentNonBlocking(docRef);
+      }
+    });
+
+    toast({
+      title: `${selectedRows.length} servei(s) eliminat(s)`,
+      description: 'Els registres seleccionats han estat eliminats.',
+    });
+
+    // Optimistically remove from UI
+    setAllServices(allServices.filter(s => !selectedRows.includes(s.id)));
+    setSelectedRows([]);
+  }
   
   const renderAdminView = () => (
      <Card>
       <CardHeader>
-        <CardTitle>Tots els Serveis</CardTitle>
-        <CardDescription>Visualitza, filtra i gestiona tots els registres de servei.</CardDescription>
+        <div className="flex justify-between items-start">
+            <div>
+                <CardTitle>Tots els Serveis</CardTitle>
+                <CardDescription>Visualitza, filtra i gestiona tots els registres de servei.</CardDescription>
+            </div>
+             {selectedRows.length > 0 && (
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="destructive">
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Eliminar ({selectedRows.length})
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Estàs segur?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Aquesta acció eliminarà permanentment {selectedRows.length} registre(s) de servei. Aquesta acció no es pot desfer.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel·lar</AlertDialogCancel>
+                      <AlertDialogAction onClick={handleDeleteSelected} className="bg-destructive hover:bg-destructive/90">Eliminar</AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+            )}
+        </div>
         <div className="flex flex-col sm:flex-row gap-4 pt-4">
             <Select value={selectedUser} onValueChange={setSelectedUser}>
               <SelectTrigger className="w-full sm:w-[200px]">
@@ -211,6 +280,15 @@ export default function DashboardPage() {
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-[40px] px-2">
+                 <Checkbox
+                    checked={selectedRows.length > 0 && selectedRows.length === services.length}
+                    onCheckedChange={(checked) => {
+                       setSelectedRows(checked ? services.map(s => s.id) : []);
+                    }}
+                    aria-label="Seleccionar totes les files"
+                  />
+              </TableHead>
               <TableHead className="w-[10px]"></TableHead>
               <TableHead>Funcionari</TableHead>
               <TableHead>Data</TableHead>
@@ -221,7 +299,20 @@ export default function DashboardPage() {
           </TableHeader>
           <TableBody>
             {services && services.length > 0 ? (services as ServiceWithRowColor[]).map(service => (
-              <TableRow key={service.id} className={service.rowColor}>
+              <TableRow key={service.id} className={service.rowColor} data-state={selectedRows.includes(service.id) && "selected"}>
+                <TableCell className="px-2">
+                    <Checkbox
+                        checked={selectedRows.includes(service.id)}
+                        onCheckedChange={(checked) => {
+                        setSelectedRows(
+                            checked
+                            ? [...selectedRows, service.id]
+                            : selectedRows.filter((id) => id !== service.id)
+                        );
+                        }}
+                        aria-label={`Seleccionar fila ${service.id}`}
+                    />
+                </TableCell>
                 <TableCell>
                   <div 
                     className="h-full w-1 rounded-full" 
@@ -244,7 +335,7 @@ export default function DashboardPage() {
               </TableRow>
             )) : (
               <TableRow>
-                <TableCell colSpan={6} className="h-24 text-center">
+                <TableCell colSpan={7} className="h-24 text-center">
                   No s'han trobat serveis per als filtres seleccionats.
                 </TableCell>
               </TableRow>
@@ -338,7 +429,3 @@ export default function DashboardPage() {
     </div>
   )
 }
-
-    
-
-    
