@@ -100,7 +100,7 @@ export default function DashboardPage() {
         </div>
       </div>
       
-      {isLoading && <p>Carregant serveis...</p>}
+      {isLoading && <p>{isUserAdmin ? "Carregant tots els serveis..." : "Carregant serveis..."}</p>}
 
       {!isLoading && services && services.length > 0 ? (
         view === 'list' ? (

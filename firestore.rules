@@ -44,7 +44,7 @@ service cloud.firestore {
 
     /**
      * @description Protects access to the /employees/{employeeId} collection.
-     * Admins can get any profile, users can only get their own.
+     * Admins can get/list any profile, users can only get their own.
      */
     match /employees/{employeeId} {
       allow get: if isOwner(employeeId) || isAdmin();
