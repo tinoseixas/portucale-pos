@@ -4,44 +4,34 @@ import Link from 'next/link'
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Button } from '@/components/ui/button'
-import { LogOut, User } from 'lucide-react'
-import { useAuth, useUser } from '@/firebase'
+import { LogOut, User, Briefcase } from 'lucide-react'
+import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase'
 import { signOut } from 'firebase/auth'
 import { useRouter } from 'next/navigation'
-
-function Logo() {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className="h-6 w-6 text-primary"
-    >
-      <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" />
-      <polyline points="14 2 14 8 20 8" />
-      <line x1="16" y1="13" x2="8" y2="13" />
-      <line x1="16" y1="17" x2="8" y2="17" />
-      <line x1="10" y1="9" x2="8" y2="9" />
-    </svg>
-  )
-}
+import type { Employee } from '@/lib/types'
+import { doc } from 'firebase/firestore'
 
 
 export function Header() {
   const { user } = useUser()
   const auth = useAuth()
+  const firestore = useFirestore()
   const router = useRouter()
+
+  const employeeDocRef = useMemoFirebase(() => {
+    if (!user) return null;
+    return doc(firestore, 'employees', user.uid);
+  }, [firestore, user]);
+
+  const { data: employee } = useDoc<Employee>(employeeDocRef);
 
   const handleLogout = async () => {
     await signOut(auth)
     router.push('/')
   }
   
-  const getInitials = (email: string | null | undefined) => {
+  const getInitials = (email: string | null | undefined, employee?: Employee | null) => {
+    if (employee?.firstName) return employee.firstName[0].toUpperCase();
     if (!email) return 'U'
     return email[0].toUpperCase();
   }
@@ -50,7 +40,7 @@ export function Header() {
     <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 items-center justify-between">
         <Link href="/dashboard" className="flex items-center gap-2 font-bold text-lg">
-          <Logo />
+          <Briefcase className="h-6 w-6 text-primary" />
           <span className="hidden sm:inline">Registre de Serveis</span>
         </Link>
         
@@ -59,13 +49,13 @@ export function Header() {
             <DropdownMenuTrigger asChild>
                <Button variant="ghost" className="relative h-8 w-8 rounded-full">
                   <Avatar className="h-8 w-8">
-                    <AvatarImage src={user.photoURL ?? undefined} alt={user.email ?? 'User'} />
-                    <AvatarFallback>{getInitials(user.email)}</AvatarFallback>
+                    <AvatarImage src={user.photoURL ?? employee?.avatar} alt={user.email ?? 'User'} />
+                    <AvatarFallback>{getInitials(user.email, employee)}</AvatarFallback>
                   </Avatar>
                </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuLabel>{user.email}</DropdownMenuLabel>
+              <DropdownMenuLabel>{employee?.firstName ? `${employee.firstName} ${employee.lastName}`: user.email}</DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => router.push('/dashboard/profile')}>
                   <User className="mr-2 h-4 w-4" />
