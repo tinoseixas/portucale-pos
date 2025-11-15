@@ -35,6 +35,7 @@ export default function ProfilePage() {
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
   const employeeDocRef = useMemoFirebase(() => {
     if (!user) return null;
@@ -65,7 +66,9 @@ export default function ProfilePage() {
         employeeId: employee.employeeId,
       });
     }
-  }, [employee, reset]);
+    // Set initial avatar URL from user or employee data
+    setAvatarUrl(user?.photoURL ?? employee?.avatar ?? null);
+  }, [employee, reset, user]);
 
   const onSubmit = (data: ProfileFormValues) => {
     if (!user || !employeeDocRef) return;
@@ -86,21 +89,18 @@ export default function ProfilePage() {
     const file = event.target.files?.[0];
     if (!file || !user) return;
     
-    // NOTE: In a real app, we would upload this file to Firebase Storage
-    // and get a download URL. For this demo, we'll use a placeholder.
-    const photoURL = PlaceHolderImages.find(p => p.id === 'user_avatar')?.imageUrl || 'https://picsum.photos/seed/user-avatar/200';
+    const userAvatarPlaceholder = PlaceHolderImages.find(p => p.id === 'user_avatar');
+    const photoURL = userAvatarPlaceholder?.imageUrl || 'https://picsum.photos/seed/user-avatar/200';
     
     try {
         await updateProfile(user, { photoURL });
          if (employeeDocRef) {
             updateDocumentNonBlocking(employeeDocRef, { avatar: photoURL });
         }
+        setAvatarUrl(photoURL); // Update local state immediately
         toast({
             title: 'Foto de perfil actualitzada',
         });
-        // Force a re-render to show the new photo by re-fetching the user or simply reloading the page.
-        // For a smoother UX, a state management solution would be better.
-        router.refresh();
     } catch (error) {
         toast({
             variant: 'destructive',
@@ -119,6 +119,13 @@ export default function ProfilePage() {
     router.push('/');
     return null;
   }
+  
+  const getInitials = (employee?: Employee | null) => {
+    if (employee?.firstName && employee?.lastName) return `${employee.firstName[0]}${employee.lastName[0]}`.toUpperCase();
+    if (employee?.firstName) return employee.firstName[0].toUpperCase();
+    if (user?.email) return user.email[0].toUpperCase();
+    return 'U';
+  }
 
   return (
     <div className="max-w-2xl mx-auto">
@@ -132,8 +139,8 @@ export default function ProfilePage() {
             <div className="flex flex-col items-center space-y-4">
               <div className="relative">
                 <Avatar className="h-24 w-24 cursor-pointer" onClick={handleAvatarClick}>
-                  <AvatarImage src={user.photoURL ?? employee?.avatar} alt="User avatar" />
-                  <AvatarFallback>{(employee?.firstName?.[0] ?? 'U').toUpperCase()}</AvatarFallback>
+                  <AvatarImage src={avatarUrl ?? undefined} alt="User avatar" />
+                  <AvatarFallback>{getInitials(employee)}</AvatarFallback>
                 </Avatar>
                 <div className="absolute bottom-0 right-0 bg-primary text-primary-foreground rounded-full p-1.5" onClick={handleAvatarClick}>
                     <Camera className="h-4 w-4" />
