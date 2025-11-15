@@ -26,7 +26,7 @@ export function Header() {
 
   const { data: employee } = useDoc<Employee>(employeeDocRef);
   
-  const isUserAdmin = !isUserLoading && user?.email === ADMIN_EMAIL;
+  const isUserAdmin = user?.email === ADMIN_EMAIL;
 
   const handleLogout = async () => {
     if (!auth) return;
@@ -50,7 +50,12 @@ export function Header() {
         </Link>
         
         {/* Only render the user section once loading is complete */}
-        {!isUserLoading && user && (
+        {isUserLoading ? (
+            <div className="flex items-center gap-4">
+                <div className="h-8 w-24 rounded-md bg-muted animate-pulse" />
+                <div className="h-8 w-8 rounded-full bg-muted animate-pulse" />
+            </div>
+        ) : user && (
           <div className="flex items-center gap-4">
              <div className="hidden sm:flex items-center gap-4">
                 {employee?.firstName && (
@@ -58,7 +63,6 @@ export function Header() {
                     Bona feina, {employee.firstName}!
                     </span>
                 )}
-                {/* Client-side render only for admin button */}
                 {isUserAdmin && (
                     <Button variant="outline" size="sm" onClick={() => router.push('/dashboard/users')}>
                         <Users className="mr-2 h-4 w-4" />
