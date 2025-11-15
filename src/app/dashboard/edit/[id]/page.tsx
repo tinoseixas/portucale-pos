@@ -45,7 +45,8 @@ export default function EditServicePage() {
   const [startTime, setStartTime] = useState('')
   const [endTime, setEndTime] = useState('')
   const [description, setDescription] = useState('')
-  const [photos, setPhotos] = useState<File[]>([])
+  const [newPhotos, setNewPhotos] = useState<File[]>([])
+  const [newPhotoPreviews, setNewPhotoPreviews] = useState<string[]>([])
   const [existingPhotoIds, setExistingPhotoIds] = useState<string[]>([]);
   const [albarans, setAlbarans] = useState<string[]>(['']);
 
@@ -55,16 +56,27 @@ export default function EditServicePage() {
       const arrival = new Date(service.arrivalDateTime)
       const departure = new Date(service.departureDateTime)
       setStartTime(`${arrival.getHours().toString().padStart(2, '0')}:${arrival.getMinutes().toString().padStart(2, '0')}`)
-      setEndTime(`${departure.getHours().toString().padStart(2, '0')}:${departure.getMinutes().toString().padStart(2, '0')}`)
+      setEndTime(`${departure.getHours().toString().padStart(2, '0' )}:${departure.getMinutes().toString().padStart(2, '0')}`)
       setDescription(service.description)
       setExistingPhotoIds(service.photoIds || [])
       setAlbarans(service.albarans?.length > 0 ? service.albarans : [''])
     }
   }, [service])
+  
+  useEffect(() => {
+    // Cleanup object URLs to avoid memory leaks
+    return () => {
+      newPhotoPreviews.forEach(url => URL.revokeObjectURL(url));
+    };
+  }, [newPhotoPreviews]);
 
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
-      setPhotos(Array.from(e.target.files))
+      const files = Array.from(e.target.files);
+      setNewPhotos(files);
+      
+      const newPreviews = files.map(file => URL.createObjectURL(file));
+      setNewPhotoPreviews(newPreviews);
     }
   }
 
@@ -91,7 +103,7 @@ export default function EditServicePage() {
     const arrivalDateTime = new Date(`${today}T${startTime}`).toISOString()
     const departureDateTime = new Date(`${today}T${endTime}`).toISOString()
 
-    const newPhotoIds = photos.map((_, index) => {
+    const newPhotoIds = newPhotos.map((_, index) => {
         return PlaceHolderImages[(existingPhotoIds.length + index) % PlaceHolderImages.length].id;
     });
 
@@ -199,18 +211,21 @@ export default function EditServicePage() {
 
             <div className="space-y-2">
               <Label htmlFor="photos" className="flex items-center gap-2"><Camera className="h-4 w-4 text-muted-foreground" /> Fotos Adjuntades</Label>
-               {existingPhotoIds.length > 0 && (
-                 <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
-                    {existingPhotoIds.map(photoId => (
-                        <div key={photoId} className="relative aspect-square rounded-md overflow-hidden">
-                            <Image src={getPhotoUrl(photoId)} alt="Foto del servei" fill style={{objectFit: "cover"}} sizes="100px" />
-                        </div>
-                    ))}
-                 </div>
-              )}
-              <Input id="photos" type="file" multiple onChange={handlePhotoChange} accept="image/*" />
-              {photos.length > 0 && (
-                <p className="text-sm text-muted-foreground mt-2">{photos.length} nova(es) foto(s) seleccionada(es).</p>
+              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
+                 {existingPhotoIds.map(photoId => (
+                    <div key={photoId} className="relative aspect-square rounded-md overflow-hidden">
+                        <Image src={getPhotoUrl(photoId)} alt="Foto del servei" fill style={{objectFit: "cover"}} sizes="100px" />
+                    </div>
+                 ))}
+                 {newPhotoPreviews.map((previewUrl, index) => (
+                    <div key={index} className="relative aspect-square rounded-md overflow-hidden">
+                      <Image src={previewUrl} alt={`Previsualització ${index + 1}`} fill style={{ objectFit: 'cover' }} sizes="100px" />
+                    </div>
+                  ))}
+              </div>
+              <Input id="photos" type="file" multiple onChange={handlePhotoChange} accept="image/*" className="mt-2"/>
+              {newPhotos.length > 0 && (
+                <p className="text-sm text-muted-foreground mt-2">{newPhotos.length} nova(es) foto(s) seleccionada(es).</p>
               )}
             </div>
 

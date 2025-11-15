@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -13,6 +13,7 @@ import { useFirestore, useUser } from '@/firebase'
 import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates'
 import { collection } from 'firebase/firestore'
 import { PlaceHolderImages } from '@/lib/placeholder-images'
+import Image from 'next/image'
 
 export default function NewServicePage() {
   const router = useRouter()
@@ -21,13 +22,26 @@ export default function NewServicePage() {
   const [endTime, setEndTime] = useState('')
   const [description, setDescription] = useState('')
   const [photos, setPhotos] = useState<File[]>([])
+  const [photoPreviews, setPhotoPreviews] = useState<string[]>([])
   const [albarans, setAlbarans] = useState<string[]>([''])
   const { user } = useUser()
   const firestore = useFirestore()
 
+  useEffect(() => {
+    // Cleanup object URLs to avoid memory leaks
+    return () => {
+      photoPreviews.forEach(url => URL.revokeObjectURL(url));
+    };
+  }, [photoPreviews]);
+
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
-      setPhotos(Array.from(e.target.files))
+      const files = Array.from(e.target.files);
+      setPhotos(files);
+      
+      // Create preview URLs
+      const newPreviews = files.map(file => URL.createObjectURL(file));
+      setPhotoPreviews(newPreviews);
     }
   }
 
@@ -61,6 +75,7 @@ export default function NewServicePage() {
     const arrivalDateTime = new Date(`${today}T${startTime}`).toISOString();
     const departureDateTime = new Date(`${today}T${endTime}`).toISOString();
 
+    // This logic remains to associate placeholders in the DB
     const photoIds = photos.map((_, index) => {
         return PlaceHolderImages[index % PlaceHolderImages.length].id;
     });
@@ -143,6 +158,17 @@ export default function NewServicePage() {
 
             <div className="space-y-2">
               <Label htmlFor="photos" className="flex items-center gap-2"><Camera className="h-4 w-4 text-muted-foreground" /> Captura de Fotos</Label>
+              
+              {photoPreviews.length > 0 && (
+                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2 my-4">
+                  {photoPreviews.map((previewUrl, index) => (
+                    <div key={index} className="relative aspect-square rounded-md overflow-hidden">
+                      <Image src={previewUrl} alt={`Previsualització ${index + 1}`} fill style={{ objectFit: 'cover' }} sizes="100px" />
+                    </div>
+                  ))}
+                </div>
+              )}
+              
               <Input id="photos" type="file" multiple onChange={handlePhotoChange} accept="image/*" />
               {photos.length > 0 && (
                 <p className="text-sm text-muted-foreground mt-2">{photos.length} foto(s) seleccionada(s).</p>
