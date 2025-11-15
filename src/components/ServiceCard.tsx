@@ -2,17 +2,20 @@ import type { ServiceRecord } from '@/lib/types'
 import Link from 'next/link'
 import Image from 'next/image'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Clock, Camera, Edit, Hash, Video } from 'lucide-react'
+import { Clock, Camera, Edit, Hash, Video, Calendar, User } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { Button } from './ui/button'
 
 interface ServiceCardProps {
   service: ServiceRecord;
+  employeeName?: string;
+  isUserAdmin?: boolean;
 }
 
-export function ServiceCard({ service }: ServiceCardProps) {
+export function ServiceCard({ service, employeeName, isUserAdmin }: ServiceCardProps) {
   const startTime = service.arrivalDateTime ? format(parseISO(service.arrivalDateTime), 'HH:mm') : 'N/A'
   const endTime = service.departureDateTime ? format(parseISO(service.departureDateTime), 'HH:mm') : 'N/A'
+  const serviceDate = service.arrivalDateTime ? format(parseISO(service.arrivalDateTime), 'dd/MM/yyyy') : 'N/A'
   
   const mediaItems = service.media?.slice(0, 3) || [];
 
@@ -26,8 +29,18 @@ export function ServiceCard({ service }: ServiceCardProps) {
             <span>{startTime} - {endTime}</span>
           </div>
         </div>
+         <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Calendar className="h-4 w-4" />
+            <span>{serviceDate}</span>
+          </div>
       </CardHeader>
       <CardContent className="flex-1 space-y-4 flex flex-col">
+        {isUserAdmin && employeeName && (
+            <div className="flex items-center text-sm text-muted-foreground font-medium">
+                <User className="h-4 w-4 mr-2" />
+                <span>{employeeName}</span>
+            </div>
+        )}
         <p className="text-muted-foreground line-clamp-2 h-10 flex-grow">{service.description}</p>
         
         {mediaItems.length > 0 && (
@@ -55,7 +68,7 @@ export function ServiceCard({ service }: ServiceCardProps) {
             <Hash className="h-4 w-4 mr-2" />
             <span>{service.albarans?.length || 0} albarà(ns)</span>
         </div>
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between pt-2">
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Camera className="h-4 w-4" />
                 <span>{service.media?.length || 0} fitxer(s)</span>

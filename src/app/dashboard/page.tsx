@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { PlusCircle, List, Calendar } from 'lucide-react'
 import { ServiceCard } from '@/components/ServiceCard'
 import { ServiceCalendar } from '@/components/ServiceCalendar'
-import type { ServiceRecord } from '@/lib/types'
+import type { ServiceRecord, Employee } from '@/lib/types'
 import { useCollection, useUser, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, query, collectionGroup, onSnapshot } from 'firebase/firestore';
 import { ADMIN_UID } from '@/lib/admin'
@@ -17,6 +17,7 @@ export default function DashboardPage() {
   const firestore = useFirestore();
   const router = useRouter();
   const [allServices, setAllServices] = useState<ServiceRecord[]>([]);
+  const [allEmployees, setAllEmployees] = useState<Employee[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [view, setView] = useState<'list' | 'calendar'>('list');
 
@@ -30,35 +31,58 @@ export default function DashboardPage() {
   
   const { data: userServices, isLoading: isLoadingUserServices } = useCollection<ServiceRecord>(userServicesQuery);
 
-  // Fetch all services if the user is an admin
+  // Fetch all services and employees if the user is an admin
   useEffect(() => {
-    async function fetchAllServices() {
+    async function fetchAdminData() {
       if (isUserAdmin && firestore) {
         setIsLoading(true);
+        // Fetch all services
         const servicesQuery = query(collectionGroup(firestore, 'serviceRecords'));
-        const unsubscribe = onSnapshot(servicesQuery, (querySnapshot) => {
+        const servicesUnsubscribe = onSnapshot(servicesQuery, (querySnapshot) => {
           const services: ServiceRecord[] = [];
           querySnapshot.forEach((doc) => {
             services.push({ id: doc.id, ...doc.data() } as ServiceRecord);
           });
-          
           const sortedServices = services.sort((a, b) => 
             new Date(b.arrivalDateTime).getTime() - new Date(a.arrivalDateTime).getTime()
           );
-
           setAllServices(sortedServices);
-          setIsLoading(false);
         }, (error) => {
            console.error("Error fetching all services:", error);
-           setIsLoading(false);
         });
-        return () => unsubscribe();
+
+        // Fetch all employees
+        const employeesQuery = query(collection(firestore, 'employees'));
+        const employeesUnsubscribe = onSnapshot(employeesQuery, (querySnapshot) => {
+          const employees: Employee[] = [];
+          querySnapshot.forEach((doc) => {
+            employees.push({ id: doc.id, ...doc.data() } as Employee);
+          });
+          setAllEmployees(employees);
+        }, (error) => {
+          console.error("Error fetching employees:", error);
+        });
+        
+        // This combines loading state, but you could have separate ones
+        Promise.all([
+            new Promise(resolve => onSnapshot(servicesQuery, resolve)),
+            new Promise(resolve => onSnapshot(employeesQuery, resolve))
+        ]).then(() => {
+            setIsLoading(false);
+        }).catch(() => {
+            setIsLoading(false);
+        })
+
+        return () => {
+          servicesUnsubscribe();
+          employeesUnsubscribe();
+        };
       }
     }
 
     if (!isUserLoading) {
       if (isUserAdmin) {
-        fetchAllServices();
+        fetchAdminData();
       } else {
         setIsLoading(isLoadingUserServices);
       }
@@ -68,6 +92,14 @@ export default function DashboardPage() {
   const services = isUserAdmin ? allServices : userServices?.sort((a, b) => 
     new Date(b.arrivalDateTime).getTime() - new Date(a.arrivalDateTime).getTime()
   );
+  
+  const employeeMap = useMemo(() => {
+    if (!isUserAdmin) return {};
+    return allEmployees.reduce((acc, employee) => {
+      acc[employee.id] = `${employee.firstName} ${employee.lastName}`;
+      return acc;
+    }, {} as Record<string, string>);
+  }, [allEmployees, isUserAdmin]);
   
   const handleEventClick = (service: ServiceRecord) => {
     router.push(`/dashboard/edit/${service.id}`);
@@ -100,7 +132,12 @@ export default function DashboardPage() {
         view === 'list' ? (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               {services.map(service => (
-                <ServiceCard key={service.id} service={service} />
+                <ServiceCard 
+                    key={service.id} 
+                    service={service} 
+                    isUserAdmin={isUserAdmin}
+                    employeeName={isUserAdmin ? employeeMap[service.employeeId] : undefined}
+                />
               ))}
             </div>
         ) : (
