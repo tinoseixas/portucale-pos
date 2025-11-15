@@ -17,18 +17,23 @@ export function BottomNav() {
     return user.email === ADMIN_EMAIL;
   }, [user, isUserLoading]);
 
-  const navItems = [
+  const baseNavItems = [
     { href: '/dashboard', icon: LayoutDashboard, label: 'Serveis' },
     { href: '/dashboard/new', icon: PlusCircle, label: 'Nou' },
     { href: '/dashboard/report', icon: FileText, label: 'Informe' },
   ];
-
-  if (!isUserLoading && isUserAdmin) {
-    navItems.push({ href: '/dashboard/users', icon: Users, label: 'Usuaris' });
-  }
   
-  // Perfil should always be the last item
-  navItems.push({ href: '/dashboard/profile', icon: UserIcon, label: 'Perfil' });
+  const adminNavItem = { href: '/dashboard/users', icon: Users, label: 'Usuaris' };
+  const profileNavItem = { href: '/dashboard/profile', icon: UserIcon, label: 'Perfil' };
+
+  const navItems = useMemo(() => {
+    const items = [...baseNavItems];
+    if (isUserAdmin) {
+      items.push(adminNavItem);
+    }
+    items.push(profileNavItem);
+    return items;
+  }, [isUserAdmin]);
 
 
   return (
