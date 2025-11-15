@@ -20,6 +20,7 @@ import { Calendar } from '@/components/ui/calendar'
 import { format } from 'date-fns'
 import { ca } from 'date-fns/locale'
 import { cn } from '@/lib/utils'
+import { LocationTracker } from '@/components/LocationTracker'
 
 
 type MediaFile = {
@@ -38,6 +39,9 @@ export default function NewServicePage() {
   const [media, setMedia] = useState<MediaFile[]>([])
   const [albarans, setAlbarans] = useState<string[]>([''])
   const [showCamera, setShowCamera] = useState(false)
+  const [isTracking, setIsTracking] = useState(false);
+  const [serviceId, setServiceId] = useState<string | null>(null);
+
   const { user, isUserLoading } = useUser()
   const firestore = useFirestore()
 
@@ -80,7 +84,7 @@ export default function NewServicePage() {
     setMedia(prev => prev.filter((_, i) => i !== index));
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!user || !firestore) {
         toast({
@@ -117,14 +121,28 @@ export default function NewServicePage() {
     };
 
     const serviceRecordsCollection = collection(firestore, `employees/${user.uid}/serviceRecords`);
-    addDocumentNonBlocking(serviceRecordsCollection, serviceRecord);
     
-    toast({
-        title: "Servei desat!",
-        description: "El nou servei ha estat registrat correctament.",
-    })
-    
-    router.push('/dashboard')
+    try {
+        const docRef = await addDocumentNonBlocking(serviceRecordsCollection, serviceRecord);
+        if (docRef) {
+          setServiceId(docRef.id);
+        }
+
+        toast({
+            title: "Servei desat!",
+            description: "El nou servei ha estat registrat correctament.",
+        })
+        
+        setIsTracking(false);
+        router.push('/dashboard')
+
+    } catch (error) {
+         toast({
+            variant: "destructive",
+            title: "Error",
+            description: "No s'ha pogut desar el servei.",
+        })
+    }
   }
 
   if (isUserLoading) {
@@ -166,6 +184,16 @@ export default function NewServicePage() {
         <ArrowLeft className="mr-2 h-4 w-4" />
         Tornar
       </Button>
+      
+      {user && serviceId && (
+        <LocationTracker
+          employeeId={user.uid}
+          serviceRecordId={serviceId}
+          isTracking={isTracking}
+          setIsTracking={setIsTracking}
+        />
+      )}
+
       <Card>
         <CardHeader>
           <CardTitle>Registrar Nou Servei</CardTitle>

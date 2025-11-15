@@ -2,12 +2,13 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter, useParams, useSearchParams } from 'next/navigation'
+import dynamic from 'next/dynamic'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Clock, FileText, Camera, ArrowLeft, Save, Trash2, Hash, Plus, X, Video, Calendar as CalendarIcon } from 'lucide-react'
+import { Clock, FileText, Camera, ArrowLeft, Save, Trash2, Hash, Plus, X, Video, Calendar as CalendarIcon, Map } from 'lucide-react'
 import { useToast } from "@/hooks/use-toast"
 import { useFirestore, useUser, useDoc, useMemoFirebase } from '@/firebase'
 import { doc, deleteDoc } from 'firebase/firestore'
@@ -32,6 +33,12 @@ import { format } from 'date-fns'
 import { ca } from 'date-fns/locale'
 import { cn } from '@/lib/utils'
 import { ADMIN_EMAIL } from '@/lib/admin'
+import { LocationTracker } from '@/components/LocationTracker'
+
+const ServiceRouteMap = dynamic(() => import('@/components/ServiceRouteMap'), {
+  ssr: false,
+  loading: () => <p>Carregant mapa...</p>
+})
 
 type MediaFile = {
   type: 'image' | 'video';
@@ -67,6 +74,7 @@ export default function EditServicePage() {
   const [media, setMedia] = useState<MediaFile[]>([])
   const [albarans, setAlbarans] = useState<string[]>(['']);
   const [showCamera, setShowCamera] = useState(false);
+  const [isTracking, setIsTracking] = useState(false);
 
 
   useEffect(() => {
@@ -75,7 +83,7 @@ export default function EditServicePage() {
       const departure = new Date(service.departureDateTime)
       setDate(arrival)
       setStartTime(`${arrival.getHours().toString().padStart(2, '0')}:${arrival.getMinutes().toString().padStart(2, '0')}`)
-      setEndTime(`${departure.getHours().toString().padStart(2, '0' )}:${departure.getMinutes().toString().padStart(2, '0')}`)
+      setEndTime(`${departure.getHours().toString().padStart(2, '0')}:${departure.getMinutes().toString().padStart(2, '0')}`)
       setDescription(service.description)
       setMedia(service.media || [])
       setAlbarans(service.albarans?.length > 0 ? service.albarans : [''])
@@ -145,6 +153,7 @@ export default function EditServicePage() {
       title: "Servei actualitzat!",
       description: "El servei ha estat modificat correctament.",
     })
+    setIsTracking(false);
     router.push('/dashboard')
   }
   
@@ -179,11 +188,19 @@ export default function EditServicePage() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto">
+    <div className="max-w-2xl mx-auto space-y-8">
       <Button variant="ghost" onClick={() => router.back()} className="mb-4 -ml-4">
         <ArrowLeft className="mr-2 h-4 w-4" />
         Tornar
       </Button>
+      {!isUserAdmin && docOwnerId && serviceId && (
+        <LocationTracker
+          employeeId={docOwnerId}
+          serviceRecordId={serviceId}
+          isTracking={isTracking}
+          setIsTracking={setIsTracking}
+        />
+      )}
       <Card>
         <CardHeader>
           <CardTitle>Editar Servei #{serviceId.slice(-6)}</CardTitle>
@@ -330,6 +347,18 @@ export default function EditServicePage() {
           </form>
         </CardContent>
       </Card>
+
+      {isUserAdmin && docOwnerId && serviceId && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2"><Map className="h-5 w-5" /> Ruta del Servei</CardTitle>
+            <CardDescription>Visualització del percurs realitzat durant el servei.</CardDescription>
+          </CardHeader>
+          <CardContent>
+             <ServiceRouteMap employeeId={docOwnerId} serviceId={serviceId} />
+          </CardContent>
+        </Card>
+      )}
     </div>
   )
 }
