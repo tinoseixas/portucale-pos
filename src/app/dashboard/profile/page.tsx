@@ -18,7 +18,6 @@ import { updateProfile } from 'firebase/auth';
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import type { Employee } from '@/lib/types';
 import { Camera, Save, ArrowLeft } from 'lucide-react';
-import { PlaceHolderImages } from '@/lib/placeholder-images';
 
 
 const profileSchema = z.object({
@@ -65,10 +64,14 @@ export default function ProfilePage() {
         lastName: employee.lastName,
         employeeId: employee.employeeId,
       });
+      if (employee.avatar) {
+        setAvatarUrl(employee.avatar);
+      }
     }
-    // Set initial avatar URL from user or employee data
-    setAvatarUrl(user?.photoURL ?? null);
-  }, [employee, reset, user]);
+    if(user?.photoURL && !avatarUrl) {
+      setAvatarUrl(user.photoURL);
+    }
+  }, [employee, reset, user, avatarUrl]);
 
   const onSubmit = (data: ProfileFormValues) => {
     if (!user || !employeeDocRef) return;
@@ -85,39 +88,40 @@ export default function ProfilePage() {
     fileInputRef.current?.click();
   };
 
-  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file || !user) return;
-    
-    // Find the placeholder image for the user avatar.
-    const userAvatarPlaceholder = PlaceHolderImages.find(p => p.id === 'user_avatar');
-    // If not found, use a consistent fallback based on user ID.
-    const photoURL = userAvatarPlaceholder?.imageUrl || `https://picsum.photos/seed/${user.uid}/200`;
-    
-    try {
-        // Update Firebase Auth user profile
-        await updateProfile(user, { photoURL });
 
-        // Update the avatar URL in the Firestore document
-        if (employeeDocRef) {
-            updateDocumentNonBlocking(employeeDocRef, { avatar: photoURL });
+    const reader = new FileReader();
+    reader.onloadend = async () => {
+        const dataUrl = reader.result as string;
+        try {
+            // Update Firebase Auth user profile
+            await updateProfile(user, { photoURL: dataUrl });
+
+            // Update the avatar URL in the Firestore document
+            if (employeeDocRef) {
+                updateDocumentNonBlocking(employeeDocRef, { avatar: dataUrl });
+            }
+
+            // Update local state to immediately reflect the change
+            setAvatarUrl(dataUrl);
+            
+            toast({
+                title: 'Foto de perfil actualitzada',
+                description: 'La teva nova foto de perfil ha estat guardada.'
+            });
+
+        } catch (error) {
+            console.error("Error updating profile picture: ", error);
+            toast({
+                variant: 'destructive',
+                title: 'Error',
+                description: 'No s\'ha pogut actualitzar la foto de perfil.',
+            });
         }
-
-        // Update local state to immediately reflect the change
-        setAvatarUrl(photoURL);
-        
-        toast({
-            title: 'Foto de perfil actualitzada',
-            description: 'La teva foto ha estat actualitzada. Pot ser que hagis de refrescar la pàgina per veure els canvis a tot arreu.'
-        });
-
-    } catch (error) {
-        toast({
-            variant: 'destructive',
-            title: 'Error',
-            description: 'No s\'ha pogut actualitzar la foto de perfil.',
-        });
-    }
+    };
+    reader.readAsDataURL(file);
   };
 
 
@@ -154,7 +158,7 @@ export default function ProfilePage() {
                   <AvatarImage src={displayAvatar ?? undefined} alt="User avatar" key={displayAvatar} />
                   <AvatarFallback>{getInitials(employee)}</AvatarFallback>
                 </Avatar>
-                <div className="absolute bottom-0 right-0 bg-primary text-primary-foreground rounded-full p-1.5" onClick={handleAvatarClick}>
+                <div className="absolute bottom-0 right-0 bg-primary text-primary-foreground rounded-full p-1.5 cursor-pointer" onClick={handleAvatarClick}>
                     <Camera className="h-4 w-4" />
                 </div>
               </div>

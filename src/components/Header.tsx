@@ -42,8 +42,7 @@ export function Header() {
     <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 items-center justify-between">
         <Link href="/dashboard" className="flex items-center gap-2 font-bold text-lg">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="https://storage.googleapis.com/deis-assets/studio/ts-serveis-logo.png" alt="Logotip" style={{ width: '120px', height: '32px', objectFit: 'contain' }} />
+          <Image src="https://storage.googleapis.com/deis-assets/studio/ts-serveis-logo.png" alt="Logotip" width={120} height={32} />
         </Link>
         
         {user && (
