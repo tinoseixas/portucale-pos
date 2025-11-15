@@ -37,6 +37,7 @@ export default function UsersPage() {
 
   const employeesQuery = useMemoFirebase(() => {
     if (!isCurrentUserAdmin || !firestore) return null;
+    // This query now fetches the entire document for all employees
     return collection(firestore, 'employees')
   }, [firestore, isCurrentUserAdmin])
 

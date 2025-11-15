@@ -49,6 +49,9 @@ export function ServiceCard({ service, isUserAdmin }: ServiceCardProps) {
   
   const mediaItems = service.media?.slice(0, 3) || [];
 
+  // For admins, the edit link needs to include the owner's ID
+  const editLink = isUserAdmin ? `/dashboard/edit/${service.id}?ownerId=${service.employeeId}` : `/dashboard/edit/${service.id}`;
+
   return (
     <Card className="transition-all hover:shadow-lg flex flex-col">
       <CardHeader>
@@ -100,7 +103,7 @@ export function ServiceCard({ service, isUserAdmin }: ServiceCardProps) {
                 <span>{service.media?.length || 0} fitxer(s)</span>
             </div>
              <Button asChild variant="outline" size="sm">
-                <Link href={`/dashboard/edit/${service.id}`}>
+                <Link href={editLink}>
                     <Edit className="mr-2 h-4 w-4" />
                     Editar
                 </Link>

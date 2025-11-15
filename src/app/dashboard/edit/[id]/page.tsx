@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useRouter, useParams } from 'next/navigation'
+import { useRouter, useParams, useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -31,6 +31,7 @@ import { Calendar } from '@/components/ui/calendar'
 import { format } from 'date-fns'
 import { ca } from 'date-fns/locale'
 import { cn } from '@/lib/utils'
+import { ADMIN_EMAIL } from '@/lib/admin'
 
 type MediaFile = {
   type: 'image' | 'video';
@@ -41,15 +42,21 @@ type MediaFile = {
 export default function EditServicePage() {
   const router = useRouter()
   const params = useParams()
+  const searchParams = useSearchParams()
   const { toast } = useToast()
   const { user } = useUser()
   const firestore = useFirestore()
   const serviceId = params.id as string
 
+  // For admins, the owner's ID might be in the query params
+  const ownerId = searchParams.get('ownerId')
+  const isUserAdmin = user?.email === ADMIN_EMAIL
+  const docOwnerId = isUserAdmin && ownerId ? ownerId : user?.uid
+
   const serviceDocRef = useMemoFirebase(() => {
-    if (!user || !serviceId) return null
-    return doc(firestore, `employees/${user.uid}/serviceRecords`, serviceId)
-  }, [firestore, user, serviceId])
+    if (!docOwnerId || !serviceId) return null
+    return doc(firestore, `employees/${docOwnerId}/serviceRecords`, serviceId)
+  }, [firestore, docOwnerId, serviceId])
 
   const { data: service, isLoading } = useDoc<ServiceRecord>(serviceDocRef)
   
@@ -116,7 +123,7 @@ export default function EditServicePage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!user || !serviceDocRef || !date) return
+    if (!serviceDocRef || !date) return
 
     const selectedDateStr = format(date, 'yyyy-MM-dd')
     const arrivalDateTime = new Date(`${selectedDateStr}T${startTime}`).toISOString()

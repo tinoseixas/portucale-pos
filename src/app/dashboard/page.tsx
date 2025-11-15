@@ -76,7 +76,9 @@ export default function DashboardPage() {
   const isLoading = isUserAdmin ? isLoadingAllServices : (isUserLoading || isLoadingUserServices);
   
   const handleEventClick = (service: ServiceRecord) => {
-    router.push(`/dashboard/edit/${service.id}`);
+    // Admin needs to know the owner of the service to build the correct path
+    const path = isUserAdmin ? `/dashboard/edit/${service.id}?ownerId=${service.employeeId}` : `/dashboard/edit/${service.id}`;
+    router.push(path);
   };
 
   return (

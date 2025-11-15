@@ -59,7 +59,8 @@ service cloud.firestore {
      * Admins can read any service record, users can only access their own.
      */
     match /employees/{employeeId}/serviceRecords/{serviceRecordId} {
-      allow get, list: if isOwner(employeeId) || isAdmin();
+      // Admin can read everything, owner can read their own. This is the fix.
+      allow get, list: if isAdmin() || isOwner(employeeId);
       allow create: if isOwner(employeeId) && request.resource.data.employeeId == employeeId;
       allow update: if isOwner(employeeId) && request.resource.data.employeeId == resource.data.employeeId;
       allow delete: if isOwner(employeeId);
