@@ -10,6 +10,7 @@ import { signOut } from 'firebase/auth'
 import { useRouter } from 'next/navigation'
 import type { Employee } from '@/lib/types'
 import { doc } from 'firebase/firestore'
+import { ADMIN_UID } from '@/lib/admin'
 
 
 export function Header() {
@@ -24,7 +25,7 @@ export function Header() {
   }, [firestore, user]);
 
   const { data: employee } = useDoc<Employee>(employeeDocRef);
-  const isUserAdmin = employee?.role === 'admin';
+  const isUserAdmin = user?.uid === ADMIN_UID;
 
   const handleLogout = async () => {
     await signOut(auth)

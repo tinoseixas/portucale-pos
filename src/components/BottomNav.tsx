@@ -6,20 +6,12 @@ import { LayoutDashboard, PlusCircle, FileText, User as UserIcon, Users } from '
 import { cn } from '@/lib/utils'
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase'
 import { doc } from 'firebase/firestore'
-import type { Employee } from '@/lib/types'
+import { ADMIN_UID } from '@/lib/admin'
 
 export function BottomNav() {
   const pathname = usePathname()
   const { user } = useUser()
-  const firestore = useFirestore()
-
-  const employeeDocRef = useMemoFirebase(() => {
-    if (!user) return null;
-    return doc(firestore, 'employees', user.uid);
-  }, [firestore, user]);
-
-  const { data: employee } = useDoc<Employee>(employeeDocRef);
-  const isUserAdmin = employee?.role === 'admin';
+  const isUserAdmin = user?.uid === ADMIN_UID
 
   const navItems = [
     { href: '/dashboard', icon: LayoutDashboard, label: 'Serveis' },
