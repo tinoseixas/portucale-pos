@@ -47,6 +47,11 @@ export function Header() {
         
         {user && (
           <div className="flex items-center gap-4">
+             {employee?.firstName && (
+                <span className="hidden sm:inline-block text-sm font-medium">
+                  Bona feina, {employee.firstName}!
+                </span>
+              )}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                  <Button variant="ghost" className="relative h-8 w-8 rounded-full">
