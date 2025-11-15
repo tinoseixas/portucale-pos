@@ -2,12 +2,13 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Clock, FileText, Camera, ArrowLeft, Save, Hash, Plus, X, Video, Calendar as CalendarIcon } from 'lucide-react'
+import { Clock, FileText, Camera, ArrowLeft, Save, Hash, Plus, X, Video, Calendar as CalendarIcon, LogIn } from 'lucide-react'
 import { useToast } from "@/hooks/use-toast"
 import { useFirestore, useUser } from '@/firebase'
 import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates'
@@ -37,7 +38,7 @@ export default function NewServicePage() {
   const [media, setMedia] = useState<MediaFile[]>([])
   const [albarans, setAlbarans] = useState<string[]>([''])
   const [showCamera, setShowCamera] = useState(false)
-  const { user } = useUser()
+  const { user, isUserLoading } = useUser()
   const firestore = useFirestore()
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -124,6 +125,35 @@ export default function NewServicePage() {
     })
     
     router.push('/dashboard')
+  }
+
+  if (isUserLoading) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <p>Carregant...</p>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="max-w-2xl mx-auto">
+        <Card className="text-center">
+          <CardHeader>
+            <CardTitle>Inicia Sessió</CardTitle>
+            <CardDescription>Necessites iniciar sessió per poder registrar un nou servei.</CardDescription>
+          </CardHeader>
+          <CardContent>
+             <Button asChild>
+                <Link href="/">
+                  <LogIn className="mr-2 h-4 w-4" />
+                  Iniciar Sessió
+                </Link>
+              </Button>
+          </CardContent>
+        </Card>
+      </div>
+    )
   }
   
   if (showCamera) {
