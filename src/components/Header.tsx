@@ -11,10 +11,11 @@ import { useRouter } from 'next/navigation'
 import type { Employee } from '@/lib/types'
 import { doc } from 'firebase/firestore'
 import { ADMIN_UID } from '@/lib/admin'
+import { useMemo } from 'react'
 
 
 export function Header() {
-  const { user } = useUser()
+  const { user, isUserLoading } = useUser()
   const auth = useAuth()
   const firestore = useFirestore()
   const router = useRouter()
@@ -25,7 +26,11 @@ export function Header() {
   }, [firestore, user]);
 
   const { data: employee } = useDoc<Employee>(employeeDocRef);
-  const isUserAdmin = user?.uid === ADMIN_UID;
+  
+  const isUserAdmin = useMemo(() => {
+    if (isUserLoading || !user) return false;
+    return user.uid === ADMIN_UID;
+  }, [user, isUserLoading]);
 
   const handleLogout = async () => {
     await signOut(auth)
@@ -54,7 +59,7 @@ export function Header() {
                     Bona feina, {employee.firstName}!
                     </span>
                 )}
-                {isUserAdmin && (
+                {!isUserLoading && isUserAdmin && (
                     <Button variant="outline" size="sm" onClick={() => router.push('/dashboard/users')}>
                         <Users className="mr-2 h-4 w-4" />
                         Gestionar Usuaris

@@ -6,11 +6,16 @@ import { LayoutDashboard, PlusCircle, FileText, User as UserIcon, Users } from '
 import { cn } from '@/lib/utils'
 import { useUser } from '@/firebase'
 import { ADMIN_UID } from '@/lib/admin'
+import { useMemo } from 'react'
 
 export function BottomNav() {
   const pathname = usePathname()
-  const { user } = useUser()
-  const isUserAdmin = user?.uid === ADMIN_UID
+  const { user, isUserLoading } = useUser()
+
+  const isUserAdmin = useMemo(() => {
+    if (isUserLoading || !user) return false;
+    return user.uid === ADMIN_UID;
+  }, [user, isUserLoading]);
 
   const navItems = [
     { href: '/dashboard', icon: LayoutDashboard, label: 'Serveis' },
@@ -18,7 +23,7 @@ export function BottomNav() {
     { href: '/dashboard/report', icon: FileText, label: 'Informe' },
   ];
 
-  if (isUserAdmin) {
+  if (!isUserLoading && isUserAdmin) {
     navItems.push({ href: '/dashboard/users', icon: Users, label: 'Usuaris' });
   }
   
