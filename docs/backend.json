@@ -1,0 +1,183 @@
+{
+  "entities": {
+    "Employee": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Employee",
+      "type": "object",
+      "description": "Represents an employee in the system.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the employee."
+        },
+        "firstName": {
+          "type": "string",
+          "description": "First name of the employee."
+        },
+        "lastName": {
+          "type": "string",
+          "description": "Last name of the employee."
+        },
+        "employeeId": {
+          "type": "string",
+          "description": "The employee's unique ID. This is to represent the ID in the company."
+        }
+      },
+      "required": [
+        "id",
+        "firstName",
+        "lastName",
+        "employeeId"
+      ]
+    },
+    "ServiceRecord": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "ServiceRecord",
+      "type": "object",
+      "description": "Represents a service record for an employee.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the service record."
+        },
+        "employeeId": {
+          "type": "string",
+          "description": "Reference to Employee. (Relationship: Employee 1:N ServiceRecord)"
+        },
+        "arrivalDateTime": {
+          "type": "string",
+          "description": "Date and time of arrival for the service.",
+          "format": "date-time"
+        },
+        "departureDateTime": {
+          "type": "string",
+          "description": "Date and time of departure for the service.",
+          "format": "date-time"
+        },
+        "description": {
+          "type": "string",
+          "description": "Description of the service performed."
+        },
+        "pendingTasks": {
+          "type": "string",
+          "description": "Description of pending tasks for the service."
+        },
+        "photoIds": {
+          "type": "array",
+          "description": "References to Photos. (Relationship: Photo 1:N ServiceRecord)",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "employeeId",
+        "arrivalDateTime",
+        "departureDateTime",
+        "description",
+        "pendingTasks"
+      ]
+    },
+    "Photo": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Photo",
+      "type": "object",
+      "description": "Represents a photo related to a service record.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the photo."
+        },
+        "serviceRecordId": {
+          "type": "string",
+          "description": "Reference to ServiceRecord. (Relationship: ServiceRecord 1:N Photo)"
+        },
+        "url": {
+          "type": "string",
+          "description": "URL of the photo."
+        },
+        "description": {
+          "type": "string",
+          "description": "Description of the photo."
+        }
+      },
+      "required": [
+        "id",
+        "serviceRecordId",
+        "url"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/employees/{employeeId}",
+        "definition": {
+          "entityName": "Employee",
+          "schema": {
+            "$ref": "#/backend/entities/Employee"
+          },
+          "description": "Stores employee profiles. The employeeId is the document ID.  Security rules ensure only the authenticated employee can access their profile.",
+          "params": [
+            {
+              "name": "employeeId",
+              "description": "Unique identifier for the employee."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/employees/{employeeId}/serviceRecords/{serviceRecordId}",
+        "definition": {
+          "entityName": "ServiceRecord",
+          "schema": {
+            "$ref": "#/backend/entities/ServiceRecord"
+          },
+          "description": "Stores service records for each employee. Provides path-based authorization. Only the employee who 'owns' the service record can access it.",
+          "params": [
+            {
+              "name": "employeeId",
+              "description": "Unique identifier for the employee."
+            },
+            {
+              "name": "serviceRecordId",
+              "description": "Unique identifier for the service record."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/employees/{employeeId}/serviceRecords/{serviceRecordId}/photos/{photoId}",
+        "definition": {
+          "entityName": "Photo",
+          "schema": {
+            "$ref": "#/backend/entities/Photo"
+          },
+          "description": "Stores photos related to a service record. Enables Authorization Independence. Only the employee owning the service record can manage its photos.",
+          "params": [
+            {
+              "name": "employeeId",
+              "description": "Unique identifier for the employee."
+            },
+            {
+              "name": "serviceRecordId",
+              "description": "Unique identifier for the service record."
+            },
+            {
+              "name": "photoId",
+              "description": "Unique identifier for the photo."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The Firestore data structure is designed to support the 'Registre Diari de Treball' application, focusing on simplicity, security, and scalability. It leverages path-based ownership for employee data and nested service records and photos. This structure ensures that security rules can be written clearly and efficiently, avoiding complex queries or document reads for authorization.\n\n**Authorization Independence and QAPs:**\n\n*   **Employees Collection:** The `/employees/{employeeId}` collection stores employee profiles. Security rules will ensure only the authenticated employee (or an admin, if roles are implemented later) can access their own profile. The employeeId is used as the document ID.\n*   **Service Records:** Each employee has a subcollection `/employees/{employeeId}/serviceRecords/{serviceRecordId}`. This structure provides path-based authorization, as only the employee who 'owns' the service record (identified by the employeeId) can access it. This ensures Authorization Independence. There is no need to query parent documents.\n*   **Photos:** Photos are stored in a subcollection `/employees/{employeeId}/serviceRecords/{serviceRecordId}/photos/{photoId}` under the service record they belong to. Again, this enables Authorization Independence. Only the employee owning the service record can manage its photos.\n\nThis design guarantees that list operations are always secure (QAPs), as security rules can filter based on the employeeId path segment, ensuring that users can only ever access their own resources or those explicitly shared with them via a different mechanism (which is not part of the current design).\n\n**Data Integrity and Clarity:**\n\n*   The use of explicit timestamps (arrivalDateTime, departureDateTime) and a description field provides clarity and avoids ambiguity. The data structure is designed for denormalization, allowing for future scalability and flexibility."
+  }
+}

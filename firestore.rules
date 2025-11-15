@@ -1,0 +1,122 @@
+/**
+ * @fileoverview Firestore Security Rules for the 'Registre Diari de Treball' application.
+ *
+ * Core Philosophy:
+ * This ruleset enforces a strict user-ownership model. Each employee can only access their own profile data,
+ * service records, and associated photos. This is achieved through path-based authorization, where the authenticated
+ * user's ID must match the employee ID in the document path.
+ *
+ * Data Structure:
+ * The data is organized hierarchically under the following structure:
+ * /employees/{employeeId} - Employee profile data
+ * /employees/{employeeId}/serviceRecords/{serviceRecordId} - Service records for an employee
+ * /employees/{employeeId}/serviceRecords/{serviceRecordId}/photos/{photoId} - Photos associated with a service record
+ *
+ * Key Security Decisions:
+ * - No listing of all employees is allowed to prevent information disclosure.
+ * - All write operations require the authenticated user's ID to match the employee ID in the path, ensuring ownership.
+ * - Data validation is limited to ensuring relational integrity: the employeeId in the document must match the employeeId in the path,
+ *   and that these IDs remain immutable.
+ *
+ * Denormalization for Authorization:
+ * The data structure is designed to avoid `get()` calls by embedding the `employeeId` in each document and using path-based
+ * authorization. This allows for efficient and secure rules without extra reads.
+ */
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    /**
+     * @description Protects access to the /employees/{employeeId} collection.
+     * @path /employees/{employeeId}
+     * @allow (create) User abc creates their profile with employeeId = abc.
+     * @deny (create) User def tries to create a profile with employeeId = abc.
+     * @deny (get) User abc tries to get user def's profile.
+     * @principle Enforces strict user ownership for profile data.
+     */
+    match /employees/{employeeId} {
+      // isSignedIn() checks if the request has valid authentication credentials.
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      // isOwner(userId) checks if the request is made by the user specified by userId.
+      function isOwner(userId) {
+        return isSignedIn() && request.auth.uid == userId;
+      }
+
+      // isExistingOwner(userId) checks if the specified document exists and is owned by the user.
+      function isExistingOwner(userId) {
+        return isOwner(userId) && resource != null;
+      }
+
+      allow get: if isOwner(employeeId);
+      allow list: if false;
+      allow create: if isOwner(employeeId) && request.resource.data.id == employeeId;
+      allow update: if isExistingOwner(employeeId) && request.resource.data.id == resource.data.id;
+      allow delete: if isExistingOwner(employeeId);
+    }
+
+    /**
+     * @description Protects access to the /employees/{employeeId}/serviceRecords/{serviceRecordId} collection.
+     * @path /employees/{employeeId}/serviceRecords/{serviceRecordId}
+     * @allow (create) User abc creates a service record under their employee profile.
+     * @deny (create) User def tries to create a service record under user abc's profile.
+     * @deny (get) User abc tries to get a service record from user def's profile.
+     * @principle Enforces strict user ownership for service records.
+     */
+    match /employees/{employeeId}/serviceRecords/{serviceRecordId} {
+      // isSignedIn() checks if the request has valid authentication credentials.
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      // isOwner(userId) checks if the request is made by the user specified by userId.
+      function isOwner(userId) {
+        return isSignedIn() && request.auth.uid == userId;
+      }
+
+      // isExistingOwner(userId) checks if the specified document exists and is owned by the user.
+      function isExistingOwner(userId) {
+        return isOwner(userId) && resource != null;
+      }
+
+      allow get: if isOwner(employeeId);
+      allow list: if isOwner(employeeId);
+      allow create: if isOwner(employeeId) && request.resource.data.employeeId == employeeId;
+      allow update: if isExistingOwner(employeeId) && request.resource.data.employeeId == resource.data.employeeId;
+      allow delete: if isExistingOwner(employeeId);
+    }
+
+    /**
+     * @description Protects access to the /employees/{employeeId}/serviceRecords/{serviceRecordId}/photos/{photoId} collection.
+     * @path /employees/{employeeId}/serviceRecords/{serviceRecordId}/photos/{photoId}
+     * @allow (create) User abc creates a photo under their service record.
+     * @deny (create) User def tries to create a photo under user abc's service record.
+     * @deny (get) User abc tries to get a photo from user def's service record.
+     * @principle Enforces strict user ownership for photos associated with service records.
+     */
+    match /employees/{employeeId}/serviceRecords/{serviceRecordId}/photos/{photoId} {
+      // isSignedIn() checks if the request has valid authentication credentials.
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      // isOwner(userId) checks if the request is made by the user specified by userId.
+      function isOwner(userId) {
+        return isSignedIn() && request.auth.uid == userId;
+      }
+
+      // isExistingOwner(userId) checks if the specified document exists and is owned by the user.
+      function isExistingOwner(userId) {
+        return isOwner(userId) && resource != null;
+      }
+
+      allow get: if isOwner(employeeId);
+      allow list: if isOwner(employeeId);
+      allow create: if isOwner(employeeId) && request.resource.data.serviceRecordId == serviceRecordId;
+      allow update: if isExistingOwner(employeeId) && request.resource.data.serviceRecordId == resource.data.serviceRecordId;
+      allow delete: if isExistingOwner(employeeId);
+    }
+  }
+}
