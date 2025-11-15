@@ -8,10 +8,9 @@
  * Data Structure:
  * /employees/{employeeId} - Employee profile data
  * /employees/{employeeId}/serviceRecords/{serviceRecordId} - Service records for an employee
- * /employees/{employeeId}/serviceRecords/{serviceRecordId}/photos/{photoId} - Photos for a service record
  *
  * Key Security Decisions:
- * - A hardcoded admin UID has full read access across all data.
+ * - A hardcoded admin EMAIL has full read access across all data.
  * - Non-admin users are restricted to their own data via path-based authorization.
  * - Write operations are strictly limited to data owners.
  */
@@ -31,10 +30,9 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == userId;
     }
     
-    // Per identificar l'administrador, si us plau, substitueix 'YOUR_ADMIN_UID_HERE' 
-    // amb el teu ID d'usuari real de Firebase.
+    // Identifies the administrator by email.
     function isAdmin() {
-        return request.auth.uid == 'tP4c49T8L4cFqCMiPWh85A5i5942';
+        return isSignedIn() && request.auth.token.email == 'tino@seixas.com';
     }
 
     // Checks if a document exists and is owned by the user.
@@ -64,17 +62,6 @@ service cloud.firestore {
       allow get, list: if isOwner(employeeId) || isAdmin();
       allow create: if isOwner(employeeId) && request.resource.data.employeeId == employeeId;
       allow update: if isOwner(employeeId) && request.resource.data.employeeId == resource.data.employeeId;
-      allow delete: if isOwner(employeeId);
-    }
-
-    /**
-     * @description Protects access to the photos subcollection.
-     * Admins can read any photo, users can only access their own.
-     */
-    match /employees/{employeeId}/serviceRecords/{serviceRecordId}/photos/{photoId} {
-      allow get, list: if isOwner(employeeId) || isAdmin();
-      allow create: if isOwner(employeeId) && request.resource.data.serviceRecordId == serviceRecordId;
-      allow update: if isOwner(employeeId) && request.resource.data.serviceRecordId == resource.data.serviceRecordId;
       allow delete: if isOwner(employeeId);
     }
   }

@@ -10,7 +10,7 @@ import { signOut } from 'firebase/auth'
 import { useRouter } from 'next/navigation'
 import type { Employee } from '@/lib/types'
 import { doc } from 'firebase/firestore'
-import { ADMIN_UID } from '@/lib/admin'
+import { ADMIN_EMAIL } from '@/lib/admin'
 import { useMemo } from 'react'
 
 
@@ -29,7 +29,7 @@ export function Header() {
   
   const isUserAdmin = useMemo(() => {
     if (isUserLoading || !user) return false;
-    return user.uid === ADMIN_UID;
+    return user.email === ADMIN_EMAIL;
   }, [user, isUserLoading]);
 
   const handleLogout = async () => {

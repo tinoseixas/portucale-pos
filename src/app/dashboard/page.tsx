@@ -10,7 +10,7 @@ import { ServiceCalendar } from '@/components/ServiceCalendar'
 import type { ServiceRecord, Employee } from '@/lib/types'
 import { useCollection, useUser, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, query, orderBy, getDocs } from 'firebase/firestore';
-import { ADMIN_UID } from '@/lib/admin'
+import { ADMIN_EMAIL } from '@/lib/admin'
 
 export default function DashboardPage() {
   const { user, isUserLoading } = useUser();
@@ -20,7 +20,7 @@ export default function DashboardPage() {
   const [allServices, setAllServices] = useState<ServiceRecord[]>([]);
   const [isLoadingAllServices, setIsLoadingAllServices] = useState(false);
 
-  const isUserAdmin = useMemo(() => user?.uid === ADMIN_UID, [user]);
+  const isUserAdmin = useMemo(() => user?.email === ADMIN_EMAIL, [user]);
 
   // Query for regular user's services
   const userServicesQuery = useMemoFirebase(() => {
@@ -120,7 +120,7 @@ export default function DashboardPage() {
         !isLoading && (
             <div className="text-center py-16 border-2 border-dashed rounded-lg">
                 <h2 className="text-xl font-semibold">No hi ha serveis registrats</h2>
-                <p className="text-muted-foreground mt-2">{isUserAdmin ? "Encara no hi ha serveis registrats per cap usuari." : "Comença afegint el teu primer servei del dia."}</p>
+                <p className="text-muted-foreground">{isUserAdmin ? "Encara no hi ha serveis registrats per cap usuari." : "Comença afegint el teu primer servei del dia."}</p>
                 <Button asChild className="mt-4 bg-accent hover:bg-accent/90 text-accent-foreground">
                     <Link href="/dashboard/new">
                     <PlusCircle className="mr-2 h-4 w-4" />

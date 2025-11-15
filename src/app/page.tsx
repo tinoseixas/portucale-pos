@@ -11,7 +11,7 @@ import { useToast } from "@/hooks/use-toast"
 import { useAuth, useUser, useFirestore } from '@/firebase'
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth'
 import { doc, setDoc } from 'firebase/firestore'
-import { ADMIN_UID } from '@/lib/admin'
+import { ADMIN_EMAIL } from '@/lib/admin'
 
 export default function Home() {
   const router = useRouter()
@@ -45,16 +45,15 @@ export default function Home() {
           const userCredential = await createUserWithEmailAndPassword(auth, email, password);
           const newUser = userCredential.user;
           
-          // Create employee document in Firestore
           const employeeRef = doc(firestore, 'employees', newUser.uid);
           await setDoc(employeeRef, {
             id: newUser.uid,
-            employeeId: newUser.uid.substring(0, 8), // Example employeeId
+            employeeId: newUser.uid.substring(0, 8),
             firstName: email.split('@')[0] || 'Nou',
             lastName: 'Usuari',
             email: newUser.email,
-            phoneNumber: '', // Initialize phone number
-            role: newUser.uid === ADMIN_UID ? 'admin' : 'user',
+            phoneNumber: '',
+            role: newUser.email === ADMIN_EMAIL ? 'admin' : 'user',
           }, { merge: true });
 
           toast({

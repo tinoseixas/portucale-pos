@@ -11,7 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { ADMIN_UID } from '@/lib/admin'
+import { ADMIN_EMAIL } from '@/lib/admin'
 
 const WhatsAppIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg
@@ -32,11 +32,10 @@ export default function UsersPage() {
 
   const isCurrentUserAdmin = useMemo(() => {
     if (isUserLoading || !user) return false;
-    return user.uid === ADMIN_UID;
+    return user.email === ADMIN_EMAIL;
   }, [user, isUserLoading]);
 
   const employeesQuery = useMemoFirebase(() => {
-    // Only fetch if the user is an admin
     if (!isCurrentUserAdmin || !firestore) return null;
     return collection(firestore, 'employees')
   }, [firestore, isCurrentUserAdmin])
@@ -44,7 +43,6 @@ export default function UsersPage() {
   const { data: employees, isLoading: isLoadingEmployees } = useCollection<Employee>(employeesQuery)
 
   useEffect(() => {
-    // If loading is finished and the user is not an admin, redirect them.
     if (!isUserLoading && !isCurrentUserAdmin) {
       router.push('/dashboard');
     }
@@ -62,13 +60,10 @@ export default function UsersPage() {
     return 'U'
   }
   
-  // Show a loading state until we confirm the user's admin status and load employees
   if (isUserLoading || isLoadingEmployees) {
     return <p>Carregant usuaris...</p>
   }
   
-  // If the user is definitely not an admin (and not loading), this page will redirect.
-  // This is a fallback display.
   if (!isCurrentUserAdmin) {
      return <p>Accés no autoritzat.</p>;
   }
@@ -108,8 +103,8 @@ export default function UsersPage() {
                   <TableCell>{employee.employeeId}</TableCell>
                   <TableCell>{employee.email || 'N/A'}</TableCell>
                   <TableCell>
-                    <Badge variant={employee.id === ADMIN_UID ? 'default' : 'secondary'}>
-                      {employee.id === ADMIN_UID ? 'admin' : 'user'}
+                    <Badge variant={employee.email === ADMIN_EMAIL ? 'default' : 'secondary'}>
+                      {employee.email === ADMIN_EMAIL ? 'admin' : 'user'}
                     </Badge>
                   </TableCell>
                   <TableCell>

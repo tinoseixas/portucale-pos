@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation'
 import { LayoutDashboard, PlusCircle, FileText, User as UserIcon, Users } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useUser } from '@/firebase'
-import { ADMIN_UID } from '@/lib/admin'
+import { ADMIN_EMAIL } from '@/lib/admin'
 import { useMemo } from 'react'
 
 export function BottomNav() {
@@ -14,7 +14,7 @@ export function BottomNav() {
 
   const isUserAdmin = useMemo(() => {
     if (isUserLoading || !user) return false;
-    return user.uid === ADMIN_UID;
+    return user.email === ADMIN_EMAIL;
   }, [user, isUserLoading]);
 
   const navItems = [
