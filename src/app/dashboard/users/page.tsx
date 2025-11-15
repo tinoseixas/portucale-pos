@@ -4,7 +4,7 @@ import { useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useCollection, useUser, useFirestore, useMemoFirebase } from '@/firebase'
-import { collection } from 'firebase/firestore'
+import { collection, query } from 'firebase/firestore'
 import type { Employee } from '@/lib/types'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
@@ -38,7 +38,7 @@ export default function UsersPage() {
   const employeesQuery = useMemoFirebase(() => {
     if (!isCurrentUserAdmin || !firestore) return null;
     // This query now fetches the entire document for all employees
-    return collection(firestore, 'employees')
+    return query(collection(firestore, 'employees'))
   }, [firestore, isCurrentUserAdmin])
 
   const { data: employees, isLoading: isLoadingEmployees } = useCollection<Employee>(employeesQuery)

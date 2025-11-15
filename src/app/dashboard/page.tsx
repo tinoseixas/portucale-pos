@@ -40,7 +40,7 @@ export default function DashboardPage() {
           const employeeSnapshot = await getDocs(employeesCollection);
           const employees = employeeSnapshot.docs.map(doc => doc.data() as Employee);
 
-          // 2. Fetch service records for each employee
+          // 2. Fetch service records for each employee in parallel
           const servicePromises = employees.map(employee => {
             const servicesCollection = collection(firestore, `employees/${employee.id}/serviceRecords`);
             return getDocs(query(servicesCollection, orderBy('arrivalDateTime', 'desc')));
