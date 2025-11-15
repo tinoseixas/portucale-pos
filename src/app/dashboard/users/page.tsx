@@ -60,11 +60,6 @@ export default function UsersPage() {
 
   const { data: employees, isLoading: isLoadingEmployees } = useCollection<Employee>(employeesQuery)
   
-  const displayedEmployees = useMemo(() => {
-    if (!employees) return [];
-    return employees.filter(e => e.email !== ADMIN_EMAIL);
-  }, [employees])
-
   useEffect(() => {
     if (!isUserLoading && !isCurrentUserAdmin) {
       router.push('/dashboard');
@@ -122,7 +117,7 @@ export default function UsersPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {displayedEmployees.map(employee => (
+              {employees?.filter(e => e.email !== ADMIN_EMAIL).map(employee => (
                 <TableRow key={employee.id}>
                   <TableCell>
                     <div className="flex items-center gap-3">
@@ -138,8 +133,8 @@ export default function UsersPage() {
                   <TableCell>{employee.employeeId}</TableCell>
                   <TableCell>{employee.email || 'N/A'}</TableCell>
                   <TableCell>
-                    <Badge variant={employee.email === ADMIN_EMAIL ? 'default' : 'secondary'}>
-                      {employee.email === ADMIN_EMAIL ? 'admin' : 'user'}
+                    <Badge variant={employee.role === 'admin' ? 'default' : 'secondary'}>
+                      {employee.role || 'user'}
                     </Badge>
                   </TableCell>
                   <TableCell className="text-right flex justify-end items-center gap-2">
