@@ -5,7 +5,7 @@ import Image from 'next/image'
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Button } from '@/components/ui/button'
-import { LogOut, User } from 'lucide-react'
+import { LogOut, User as UserIcon, Users } from 'lucide-react'
 import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase'
 import { signOut } from 'firebase/auth'
 import { useRouter } from 'next/navigation'
@@ -25,6 +25,7 @@ export function Header() {
   }, [firestore, user]);
 
   const { data: employee } = useDoc<Employee>(employeeDocRef);
+  const isUserAdmin = employee?.role === 'admin';
 
   const handleLogout = async () => {
     await signOut(auth)
@@ -65,9 +66,15 @@ export function Header() {
                 <DropdownMenuLabel>{employee?.firstName ? `${employee.firstName} ${employee.lastName}`: user.email}</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => router.push('/dashboard/profile')}>
-                    <User className="mr-2 h-4 w-4" />
+                    <UserIcon className="mr-2 h-4 w-4" />
                     <span>Perfil</span>
                 </DropdownMenuItem>
+                 {isUserAdmin && (
+                  <DropdownMenuItem onClick={() => router.push('/dashboard/users')}>
+                    <Users className="mr-2 h-4 w-4" />
+                    <span>Gestionar Usuaris</span>
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleLogout}>
                     <LogOut className="mr-2 h-4 w-4" />

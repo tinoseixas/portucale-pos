@@ -2,22 +2,36 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, PlusCircle, FileText, User } from 'lucide-react'
+import { LayoutDashboard, PlusCircle, FileText, User as UserIcon, Users } from 'lucide-react'
 import { cn } from '@/lib/utils'
-
-const navItems = [
-  { href: '/dashboard', icon: LayoutDashboard, label: 'Serveis' },
-  { href: '/dashboard/new', icon: PlusCircle, label: 'Nou' },
-  { href: '/dashboard/report', icon: FileText, label: 'Informe' },
-  { href: '/dashboard/profile', icon: User, label: 'Perfil' },
-]
+import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase'
+import { doc } from 'firebase/firestore'
+import type { Employee } from '@/lib/types'
 
 export function BottomNav() {
   const pathname = usePathname()
+  const { user } = useUser()
+  const firestore = useFirestore()
+
+  const employeeDocRef = useMemoFirebase(() => {
+    if (!user) return null;
+    return doc(firestore, 'employees', user.uid);
+  }, [firestore, user]);
+
+  const { data: employee } = useDoc<Employee>(employeeDocRef);
+  const isUserAdmin = employee?.role === 'admin';
+
+  const navItems = [
+    { href: '/dashboard', icon: LayoutDashboard, label: 'Serveis' },
+    { href: '/dashboard/new', icon: PlusCircle, label: 'Nou' },
+    { href: '/dashboard/report', icon: FileText, label: 'Informe' },
+    ...(isUserAdmin ? [{ href: '/dashboard/users', icon: Users, label: 'Usuaris' }] : []),
+    { href: '/dashboard/profile', icon: UserIcon, label: 'Perfil' },
+  ]
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-40 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 md:hidden">
-      <div className="container flex h-16 items-center justify-around">
+      <div className="container grid h-16 w-full grid-flow-col auto-cols-fr items-center">
         {navItems.map((item) => {
           const isActive = pathname === item.href;
           return (
@@ -25,7 +39,7 @@ export function BottomNav() {
               key={item.href}
               href={item.href}
               className={cn(
-                'flex flex-col items-center justify-center gap-1 transition-colors w-20 p-1 rounded-lg',
+                'flex flex-col items-center justify-center gap-1 transition-colors p-1 rounded-lg',
                 isActive ? 'text-primary bg-primary/10' : 'text-muted-foreground hover:text-foreground'
               )}
             >

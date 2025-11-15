@@ -15,6 +15,8 @@ export interface Employee {
   lastName: string;
   employeeId: string;
   avatar?: string;
+  email?: string;
+  role?: 'admin' | 'user';
 }
 
 export interface Photo {
