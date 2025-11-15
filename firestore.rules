@@ -34,7 +34,7 @@ service cloud.firestore {
     // Per identificar l'administrador, si us plau, substitueix 'YOUR_ADMIN_UID_HERE' 
     // amb el teu ID d'usuari real de Firebase.
     function isAdmin() {
-        return request.auth.uid == 'YOUR_ADMIN_UID_HERE';
+        return request.auth.uid == 'tP4c49T8L4cFqCMiPWh85A5i5942';
     }
 
     // Checks if a document exists and is owned by the user.
