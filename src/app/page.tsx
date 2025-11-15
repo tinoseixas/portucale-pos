@@ -30,6 +30,8 @@ export default function Home() {
   
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!auth || !firestore) return;
+
     try {
       await signInWithEmailAndPassword(auth, email, password)
       toast({
@@ -50,7 +52,7 @@ export default function Home() {
             employeeId: newUser.uid.substring(0, 8), // Example employeeId
             firstName: email.split('@')[0] || 'Nou',
             lastName: 'Usuari',
-            email: newUser.email, // THIS WAS THE MISSING PIECE
+            email: newUser.email, // THIS IS THE CRITICAL FIX
             role: newUser.uid === ADMIN_UID ? 'admin' : 'user',
           }, { merge: true });
 

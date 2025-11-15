@@ -45,7 +45,7 @@ export default function UsersPage() {
   }
   
   // Show a loading state until we confirm the user's admin status and load employees
-  if (isUserLoading || isLoadingEmployees || !isCurrentUserAdmin) {
+  if (isUserLoading || isLoadingEmployees) {
     return <p>Carregant usuaris...</p>
   }
   
