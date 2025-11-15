@@ -64,7 +64,7 @@ export default function ProfilePage() {
         firstName: employee.firstName,
         lastName: employee.lastName,
         employeeId: employee.employeeId,
-        phoneNumber: employee.phoneNumber,
+        phoneNumber: employee.phoneNumber || '',
       });
       if (employee.avatar) {
         setAvatarUrl(employee.avatar);
