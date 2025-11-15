@@ -111,19 +111,19 @@ export default function DashboardPage() {
     const servicesToFilter = isUserAdmin ? allServices : userServices;
     if (!servicesToFilter) return [];
 
-    const filtered = servicesToFilter.filter(service => {
+    let filtered = servicesToFilter.filter(service => {
         const userMatch = selectedUser === 'all' || service.employeeId === selectedUser;
         const dateMatch = !selectedDate || isSameDay(parseISO(service.arrivalDateTime), selectedDate);
         return userMatch && dateMatch;
     });
 
-    // Add row color for admin view
     if (isUserAdmin) {
         const dayColors = ['bg-white', 'bg-slate-50'];
         let currentColorIndex = 0;
         let lastDate: string | null = null;
         
-        return filtered.map(service => {
+        // Reverse for processing, then reverse back for display
+        const colored = filtered.slice().reverse().map(service => {
             const serviceDay = format(startOfDay(parseISO(service.arrivalDateTime)), 'yyyy-MM-dd');
             if (lastDate === null) {
                 lastDate = serviceDay;
@@ -136,6 +136,7 @@ export default function DashboardPage() {
                 rowColor: dayColors[currentColorIndex],
             };
         });
+        return colored.reverse();
     }
 
     return filtered;
