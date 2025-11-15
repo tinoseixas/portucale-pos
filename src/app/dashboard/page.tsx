@@ -1,31 +1,62 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { PlusCircle } from 'lucide-react'
 import { ServiceCard } from '@/components/ServiceCard'
-import type { ServiceRecord } from '@/lib/types'
+import type { ServiceRecord, Employee } from '@/lib/types'
 import { useCollection, useUser, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection } from 'firebase/firestore';
+import { collection, query, collectionGroup, getDocs } from 'firebase/firestore';
+import { ADMIN_UID } from '@/lib/admin'
 
 export default function DashboardPage() {
   const { user } = useUser();
   const firestore = useFirestore();
+  const [allServices, setAllServices] = useState<ServiceRecord[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
+  const isUserAdmin = user?.uid === ADMIN_UID;
+
+  // This query is for the regular user view
   const serviceRecordsQuery = useMemoFirebase(() => {
-    if (!user) return null;
+    if (!user || isUserAdmin) return null;
     return collection(firestore, `employees/${user.uid}/serviceRecords`);
-  }, [firestore, user]);
+  }, [firestore, user, isUserAdmin]);
 
-  const { data: services, isLoading } = useCollection<ServiceRecord>(serviceRecordsQuery);
+  const { data: userServices, isLoading: isLoadingUserServices } = useCollection<ServiceRecord>(serviceRecordsQuery);
+
+  useEffect(() => {
+    async function fetchAllServices() {
+      if (isUserAdmin && firestore) {
+        setIsLoading(true);
+        const servicesQuery = query(collectionGroup(firestore, 'serviceRecords'));
+        const querySnapshot = await getDocs(servicesQuery);
+        const services: ServiceRecord[] = [];
+        querySnapshot.forEach((doc) => {
+          services.push({ id: doc.id, ...doc.data() } as ServiceRecord);
+        });
+        setAllServices(services);
+        setIsLoading(false);
+      }
+    }
+    fetchAllServices();
+  }, [isUserAdmin, firestore]);
+  
+  useEffect(() => {
+    if (!isUserAdmin) {
+      setIsLoading(isLoadingUserServices);
+    }
+  }, [isLoadingUserServices, isUserAdmin])
+
+  const services = isUserAdmin ? allServices : userServices;
 
   return (
     <div className="space-y-8">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Serveis del Dia</h1>
-          <p className="text-muted-foreground">Un resum de la teva jornada laboral.</p>
+          <h1 className="text-3xl font-bold">{isUserAdmin ? "Tots els Serveis" : "Serveis del Dia"}</h1>
+          <p className="text-muted-foreground">{isUserAdmin ? "Una vista general de tots els registres." : "Un resum de la teva jornada laboral."}</p>
         </div>
         <div className="hidden md:block">
             <Button asChild className="bg-accent hover:bg-accent/90 text-accent-foreground">
