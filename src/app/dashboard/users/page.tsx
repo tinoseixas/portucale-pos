@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useCollection, useUser, useFirestore, useMemoFirebase, deleteDocumentNonBlocking } from '@/firebase'
-import { collection, query, doc, deleteDoc } from 'firebase/firestore'
+import { collection, query, doc } from 'firebase/firestore'
 import type { Employee } from '@/lib/types'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
@@ -71,8 +71,7 @@ export default function UsersPage() {
     if (!firestore) return;
     const employeeDocRef = doc(firestore, 'employees', employeeId);
     
-    // We don't await this. It's a non-blocking UI update.
-    deleteDoc(employeeDocRef);
+    deleteDocumentNonBlocking(employeeDocRef);
     
     toast({
       title: 'Utilizador Eliminado',
