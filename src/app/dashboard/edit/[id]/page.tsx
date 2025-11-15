@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Clock, FileText, Camera, ArrowLeft, Save, Trash2, AlertCircle } from 'lucide-react'
+import { Clock, FileText, Camera, ArrowLeft, Save, Trash2, Hash, Plus, X } from 'lucide-react'
 import { useToast } from "@/hooks/use-toast"
 import { useFirestore, useUser, useDoc, useMemoFirebase } from '@/firebase'
 import { doc, deleteDoc } from 'firebase/firestore'
@@ -47,6 +47,7 @@ export default function EditServicePage() {
   const [description, setDescription] = useState('')
   const [photos, setPhotos] = useState<File[]>([])
   const [existingPhotoIds, setExistingPhotoIds] = useState<string[]>([]);
+  const [albarans, setAlbarans] = useState<string[]>(['']);
 
 
   useEffect(() => {
@@ -57,6 +58,7 @@ export default function EditServicePage() {
       setEndTime(`${departure.getHours().toString().padStart(2, '0')}:${departure.getMinutes().toString().padStart(2, '0')}`)
       setDescription(service.description)
       setExistingPhotoIds(service.photoIds || [])
+      setAlbarans(service.albarans?.length > 0 ? service.albarans : [''])
     }
   }, [service])
 
@@ -64,6 +66,21 @@ export default function EditServicePage() {
     if (e.target.files) {
       setPhotos(Array.from(e.target.files))
     }
+  }
+
+  const handleAlbaranChange = (index: number, value: string) => {
+    const newAlbarans = [...albarans]
+    newAlbarans[index] = value
+    setAlbarans(newAlbarans)
+  }
+
+  const addAlbaranInput = () => {
+    setAlbarans([...albarans, ''])
+  }
+
+  const removeAlbaranInput = (index: number) => {
+    const newAlbarans = albarans.filter((_, i) => i !== index)
+    setAlbarans(newAlbarans)
   }
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -78,11 +95,14 @@ export default function EditServicePage() {
         return PlaceHolderImages[(existingPhotoIds.length + index) % PlaceHolderImages.length].id;
     });
 
+    const filteredAlbarans = albarans.filter(a => a.trim() !== '')
+
     const updatedData = {
       arrivalDateTime,
       departureDateTime,
       description,
-      photoIds: [...existingPhotoIds, ...newPhotoIds]
+      photoIds: [...existingPhotoIds, ...newPhotoIds],
+      albarans: filteredAlbarans,
     }
 
     updateDocumentNonBlocking(serviceDocRef, updatedData)
@@ -151,6 +171,30 @@ export default function EditServicePage() {
             <div className="space-y-2">
               <Label htmlFor="description" className="flex items-center gap-2"><FileText className="h-4 w-4 text-muted-foreground" /> Descripció del Servei</Label>
               <Textarea id="description" placeholder="Descriu les tasques realitzades..." required value={description} onChange={(e) => setDescription(e.target.value)} rows={5} />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="albarans" className="flex items-center gap-2"><Hash className="h-4 w-4 text-muted-foreground" /> Nº d'Albarà</Label>
+              <div className="space-y-2">
+                {albarans.map((albaran, index) => (
+                  <div key={index} className="flex items-center gap-2">
+                    <Input
+                      type="text"
+                      placeholder={`Albarà #${index + 1}`}
+                      value={albaran}
+                      onChange={(e) => handleAlbaranChange(index, e.target.value)}
+                    />
+                    {albarans.length > 1 && (
+                      <Button type="button" variant="ghost" size="icon" onClick={() => removeAlbaranInput(index)}>
+                        <X className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                ))}
+              </div>
+              <Button type="button" variant="outline" size="sm" onClick={addAlbaranInput} className="mt-2">
+                <Plus className="mr-2 h-4 w-4" /> Afegir Albarà
+              </Button>
             </div>
 
             <div className="space-y-2">

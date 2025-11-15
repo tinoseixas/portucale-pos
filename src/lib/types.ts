@@ -6,6 +6,7 @@ export interface ServiceRecord {
   description: string;
   pendingTasks: string;
   photoIds: string[];
+  albarans: string[];
 }
 
 export interface Employee {

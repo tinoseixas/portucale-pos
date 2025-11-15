@@ -1,7 +1,7 @@
 import type { ServiceRecord } from '@/lib/types'
 import Link from 'next/link'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Clock, Camera, Edit } from 'lucide-react'
+import { Clock, Camera, Edit, Hash } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { Button } from './ui/button'
 
@@ -24,8 +24,12 @@ export function ServiceCard({ service }: ServiceCardProps) {
           </div>
         </div>
       </CardHeader>
-      <CardContent className="flex-1">
+      <CardContent className="flex-1 space-y-4">
         <p className="text-muted-foreground mb-4 line-clamp-2 h-10">{service.description}</p>
+        <div className="flex items-center text-sm text-muted-foreground">
+            <Hash className="h-4 w-4 mr-2" />
+            <span>{service.albarans?.length || 0} albarà(ns)</span>
+        </div>
         <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Camera className="h-4 w-4" />

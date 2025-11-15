@@ -68,6 +68,13 @@
           "items": {
             "type": "string"
           }
+        },
+        "albarans": {
+          "type": "array",
+          "description": "List of 'albaran' numbers associated with the service record.",
+          "items": {
+            "type": "string"
+          }
         }
       },
       "required": [
