@@ -15,13 +15,14 @@ export default function UsersPage() {
   const router = useRouter()
   const { user, isUserLoading } = useUser()
   const firestore = useFirestore()
-  
+
   const isCurrentUserAdmin = useMemo(() => {
     if (isUserLoading || !user) return false;
     return user.uid === ADMIN_UID;
   }, [user, isUserLoading]);
 
   const employeesQuery = useMemoFirebase(() => {
+    // Only fetch if the user is an admin
     if (!isCurrentUserAdmin || !firestore) return null;
     return collection(firestore, 'employees')
   }, [firestore, isCurrentUserAdmin])
@@ -29,7 +30,7 @@ export default function UsersPage() {
   const { data: employees, isLoading: isLoadingEmployees } = useCollection<Employee>(employeesQuery)
 
   useEffect(() => {
-    // Wait until the user loading is complete before checking for admin status
+    // If loading is finished and the user is not an admin, redirect them.
     if (!isUserLoading && !isCurrentUserAdmin) {
       router.push('/dashboard');
     }
@@ -43,8 +44,15 @@ export default function UsersPage() {
     return 'U'
   }
   
+  // Show a loading state until we confirm the user's admin status and load employees
   if (isUserLoading || isLoadingEmployees || !isCurrentUserAdmin) {
     return <p>Carregant usuaris...</p>
+  }
+  
+  // If the user is definitely not an admin (and not loading), this page will redirect.
+  // This is a fallback display.
+  if (!isCurrentUserAdmin) {
+     return <p>Accés no autoritzat.</p>;
   }
 
   return (
