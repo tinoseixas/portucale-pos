@@ -28,9 +28,8 @@ export default function Home() {
     }
   }, [user, router])
   
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!auth || !firestore) return;
+  const handleSignIn = async () => {
+    if (!auth) return;
 
     try {
       await signInWithEmailAndPassword(auth, email, password)
@@ -40,40 +39,50 @@ export default function Home() {
       })
       router.push('/dashboard')
     } catch (error: any) {
-      if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') {
-        try {
-          const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-          const newUser = userCredential.user;
-          
-          const employeeRef = doc(firestore, 'employees', newUser.uid);
-          await setDoc(employeeRef, {
-            id: newUser.uid,
-            employeeId: newUser.uid.substring(0, 8),
-            firstName: email.split('@')[0] || 'Nou',
-            lastName: 'Usuari',
-            email: newUser.email,
-            phoneNumber: '',
-            role: newUser.email === ADMIN_EMAIL ? 'admin' : 'user',
-          }, { merge: true });
-
-          toast({
-            title: "Compte creat",
-            description: "El teu nou compte ha estat creat correctament.",
-          });
-          router.push('/dashboard');
-        } catch (signUpError: any) {
-          toast({
-            variant: "destructive",
-            title: "Error de registre",
-            description: signUpError.message || "No s'ha pogut crear el compte.",
-          });
-        }
-      } else {
-        toast({
+       toast({
           variant: "destructive",
           title: "Error d'inici de sessió",
-          description: error.message || "Credencials incorrectes. Intenta-ho de nou.",
+          description: "Credencials incorrectes o l'usuari no existeix. Intenta-ho de nou o registra't.",
         })
+    }
+  }
+
+  const handleSignUp = async () => {
+    if (!auth || !firestore) return;
+
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const newUser = userCredential.user;
+      
+      const employeeRef = doc(firestore, 'employees', newUser.uid);
+      await setDoc(employeeRef, {
+        id: newUser.uid,
+        employeeId: newUser.uid.substring(0, 8),
+        firstName: email.split('@')[0] || 'Nou',
+        lastName: 'Usuari',
+        email: newUser.email,
+        phoneNumber: '',
+        role: newUser.email === ADMIN_EMAIL ? 'admin' : 'user',
+      }, { merge: true });
+
+      toast({
+        title: "Compte creat",
+        description: "El teu nou compte ha estat creat correctament.",
+      });
+      router.push('/dashboard');
+    } catch (error: any) {
+      if (error.code === 'auth/email-already-in-use') {
+        toast({
+            variant: "destructive",
+            title: "Error de registre",
+            description: "Aquest correu electrònic ja està en ús. Prova d'iniciar sessió.",
+          });
+      } else {
+        toast({
+            variant: "destructive",
+            title: "Error de registre",
+            description: error.message || "No s'ha pogut crear el compte.",
+          });
       }
     }
   }
@@ -97,45 +106,46 @@ export default function Home() {
             <CardTitle className="text-3xl font-bold">Registre de Serveis</CardTitle>
             <CardDescription>Identifica't per registrar els serveis</CardDescription>
           </CardHeader>
-          <form onSubmit={handleLogin}>
-            <CardContent className="space-y-6">
-              <div className="space-y-2">
-                <Label htmlFor="employee-id">Correu electrònic</Label>
-                <div className="relative">
-                  <User className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                  <Input 
-                    id="email"
-                    type="email"
-                    placeholder="usuari@exemple.com" 
-                    required 
-                    className="pl-10"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                  />
-                </div>
+          <CardContent className="space-y-6">
+            <div className="space-y-2">
+              <Label htmlFor="employee-id">Correu electrònic</Label>
+              <div className="relative">
+                <User className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                <Input 
+                  id="email"
+                  type="email"
+                  placeholder="usuari@exemple.com" 
+                  required 
+                  className="pl-10"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="password">Contrasenya</Label>
-                 <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                  <Input 
-                    id="password" 
-                    type="password" 
-                    placeholder="Escriu la teva contrasenya"
-                    required 
-                    className="pl-10"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                  />
-                </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="password">Contrasenya</Label>
+               <div className="relative">
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                <Input 
+                  id="password" 
+                  type="password" 
+                  placeholder="Escriu la teva contrasenya"
+                  required 
+                  className="pl-10"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                />
               </div>
-            </CardContent>
-            <CardFooter>
-              <Button type="submit" className="w-full">
-                Entra o Registra't
-              </Button>
-            </CardFooter>
-          </form>
+            </div>
+          </CardContent>
+          <CardFooter className="flex flex-col gap-4">
+            <Button onClick={handleSignIn} className="w-full">
+              Entrar
+            </Button>
+            <Button onClick={handleSignUp} variant="outline" className="w-full">
+              Registar
+            </Button>
+          </CardFooter>
         </Card>
       </div>
     </main>
