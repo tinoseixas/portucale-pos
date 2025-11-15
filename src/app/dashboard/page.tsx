@@ -17,7 +17,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Calendar } from '@/components/ui/calendar'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { format, parseISO, isSameDay } from 'date-fns'
+import { format, parseISO, isSameDay, startOfDay } from 'date-fns'
 import { ca } from 'date-fns/locale'
 import { cn } from '@/lib/utils'
 
@@ -32,6 +32,8 @@ const getUserColor = (userId: string) => {
   }
   return userColors[Math.abs(hash) % userColors.length];
 };
+
+type ServiceWithRowColor = ServiceRecord & { rowColor: string };
 
 export default function DashboardPage() {
   const { user, isUserLoading } = useUser();
@@ -106,16 +108,42 @@ export default function DashboardPage() {
   }, [isUserAdmin, firestore, isUserLoading]);
 
   const filteredServices = useMemo(() => {
-    if (!isUserAdmin) return userServices;
-    
-    return allServices.filter(service => {
+    const servicesToFilter = isUserAdmin ? allServices : userServices;
+    if (!servicesToFilter) return [];
+
+    const filtered = servicesToFilter.filter(service => {
         const userMatch = selectedUser === 'all' || service.employeeId === selectedUser;
         const dateMatch = !selectedDate || isSameDay(parseISO(service.arrivalDateTime), selectedDate);
         return userMatch && dateMatch;
     });
+
+    // Add row color for admin view
+    if (isUserAdmin) {
+        const dayColors = ['bg-white', 'bg-slate-50'];
+        let currentColorIndex = 0;
+        let lastDate: string | null = null;
+        
+        return filtered.map(service => {
+            const serviceDay = format(startOfDay(parseISO(service.arrivalDateTime)), 'yyyy-MM-dd');
+            if (lastDate === null) {
+                lastDate = serviceDay;
+            } else if (serviceDay !== lastDate) {
+                lastDate = serviceDay;
+                currentColorIndex = (currentColorIndex + 1) % dayColors.length;
+            }
+            return {
+                ...service,
+                rowColor: dayColors[currentColorIndex],
+            };
+        });
+    }
+
+    return filtered;
+
   }, [isUserAdmin, allServices, userServices, selectedUser, selectedDate]);
 
-  const services = filteredServices;
+
+  const services = filteredServices as (ServiceRecord[] | ServiceWithRowColor[]);
   const isLoading = isUserAdmin ? (isLoadingAllServices || isLoadingEmployees) : (isUserLoading || isLoadingUserServices);
   
   const handleEventClick = (service: ServiceRecord) => {
@@ -191,8 +219,8 @@ export default function DashboardPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {services && services.length > 0 ? services.map(service => (
-              <TableRow key={service.id}>
+            {services && services.length > 0 ? (services as ServiceWithRowColor[]).map(service => (
+              <TableRow key={service.id} className={service.rowColor}>
                 <TableCell>
                   <div 
                     className="h-full w-1 rounded-full" 
@@ -229,7 +257,7 @@ export default function DashboardPage() {
   const renderUserView = () => (
       view === 'list' ? (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {services && services.map(service => (
+            {services && (services as ServiceRecord[]).map(service => (
               <ServiceCard 
                   key={service.id} 
                   service={service} 
@@ -238,7 +266,7 @@ export default function DashboardPage() {
             ))}
           </div>
       ) : (
-         <ServiceCalendar services={services || []} onSelectEvent={handleEventClick} />
+         <ServiceCalendar services={(services as ServiceRecord[]) || []} onSelectEvent={handleEventClick} />
       )
   );
 
@@ -309,5 +337,7 @@ export default function DashboardPage() {
     </div>
   )
 }
+
+    
 
     
