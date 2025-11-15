@@ -2,8 +2,8 @@
 
 import { useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { useCollection, useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase'
-import { collection, doc } from 'firebase/firestore'
+import { useCollection, useUser, useFirestore, useMemoFirebase } from '@/firebase'
+import { collection } from 'firebase/firestore'
 import type { Employee } from '@/lib/types'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
@@ -15,10 +15,14 @@ export default function UsersPage() {
   const router = useRouter()
   const { user, isUserLoading } = useUser()
   const firestore = useFirestore()
-  const isCurrentUserAdmin = user?.uid === ADMIN_UID
+  
+  const isCurrentUserAdmin = useMemo(() => {
+    if (isUserLoading || !user) return false;
+    return user.uid === ADMIN_UID;
+  }, [user, isUserLoading]);
 
   const employeesQuery = useMemoFirebase(() => {
-    if (!isCurrentUserAdmin) return null
+    if (!isCurrentUserAdmin || !firestore) return null;
     return collection(firestore, 'employees')
   }, [firestore, isCurrentUserAdmin])
 
@@ -43,7 +47,8 @@ export default function UsersPage() {
   }
   
   if (!isCurrentUserAdmin) {
-    return <p>Accés denegat.</p>
+    // This part will show for a brief moment before redirection for non-admins
+    return <p>Accés denegat. Redireccionant...</p>;
   }
 
   return (
@@ -81,7 +86,7 @@ export default function UsersPage() {
                   <TableCell>{employee.email}</TableCell>
                   <TableCell>
                     <Badge variant={employee.role === 'admin' ? 'default' : 'secondary'}>
-                      {employee.role}
+                      {employee.id === ADMIN_UID ? 'admin' : 'user'}
                     </Badge>
                   </TableCell>
                 </TableRow>
