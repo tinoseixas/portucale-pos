@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
@@ -44,6 +44,14 @@ export default function NewServicePage() {
 
   const { user, isUserLoading } = useUser()
   const firestore = useFirestore()
+  
+  useEffect(() => {
+    // This effect ensures that tracking stops when the user navigates away
+    return () => {
+      setIsTracking(false);
+    };
+  }, []);
+
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -103,45 +111,46 @@ export default function NewServicePage() {
       })
       return
     }
-
-    const selectedDateStr = format(date, 'yyyy-MM-dd')
-    const arrivalDateTime = new Date(`${selectedDateStr}T${startTime}`).toISOString();
-    const departureDateTime = new Date(`${selectedDateStr}T${endTime}`).toISOString();
     
-    const filteredAlbarans = albarans.filter(a => a.trim() !== '')
-
-    const serviceRecord = {
-        employeeId: user.uid,
-        arrivalDateTime,
-        departureDateTime,
-        description,
-        pendingTasks: '',
-        media: media.map(({type, dataUrl}) => ({type, dataUrl})),
-        albarans: filteredAlbarans,
-    };
-
-    const serviceRecordsCollection = collection(firestore, `employees/${user.uid}/serviceRecords`);
-    
-    try {
-        const docRef = await addDocumentNonBlocking(serviceRecordsCollection, serviceRecord);
-        if (docRef) {
-          setServiceId(docRef.id);
-        }
-
-        toast({
-            title: "Servei desat!",
-            description: "El nou servei ha estat registrat correctament.",
-        })
+    // If it's a new service, save it first to get an ID
+    if (!serviceId) {
+        const selectedDateStr = format(date, 'yyyy-MM-dd')
+        const arrivalDateTime = new Date(`${selectedDateStr}T${startTime || '00:00'}`).toISOString();
+        const departureDateTime = new Date(`${selectedDateStr}T${endTime || '00:00'}`).toISOString();
         
-        setIsTracking(false);
-        router.push('/dashboard')
+        const filteredAlbarans = albarans.filter(a => a.trim() !== '')
 
-    } catch (error) {
-         toast({
-            variant: "destructive",
-            title: "Error",
-            description: "No s'ha pogut desar el servei.",
-        })
+        const serviceRecord = {
+            employeeId: user.uid,
+            arrivalDateTime,
+            departureDateTime,
+            description,
+            pendingTasks: '',
+            media: media.map(({type, dataUrl}) => ({type, dataUrl})),
+            albarans: filteredAlbarans,
+        };
+
+        const serviceRecordsCollection = collection(firestore, `employees/${user.uid}/serviceRecords`);
+        
+        try {
+            const docRef = await addDocumentNonBlocking(serviceRecordsCollection, serviceRecord);
+            if (docRef) {
+                // Now we have an ID, start tracking and show the success message
+                setServiceId(docRef.id);
+                setIsTracking(true); 
+                toast({
+                    title: "Servei desat!",
+                    description: "El nou servei ha estat registrat. Rastreig GPS iniciat.",
+                })
+                 router.push(`/dashboard/edit/${docRef.id}`); // Redirect to edit page
+            }
+        } catch (error) {
+            toast({
+                variant: "destructive",
+                title: "Error",
+                description: "No s'ha pogut desar el servei.",
+            })
+        }
     }
   }
 
@@ -185,12 +194,12 @@ export default function NewServicePage() {
         Tornar
       </Button>
       
+      {/* The LocationTracker is now invisible and is controlled by the isTracking state */}
       {user && serviceId && (
         <LocationTracker
           employeeId={user.uid}
           serviceRecordId={serviceId}
           isTracking={isTracking}
-          setIsTracking={setIsTracking}
         />
       )}
 

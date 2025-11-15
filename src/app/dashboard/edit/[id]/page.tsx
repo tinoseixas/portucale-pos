@@ -87,8 +87,14 @@ export default function EditServicePage() {
       setDescription(service.description)
       setMedia(service.media || [])
       setAlbarans(service.albarans?.length > 0 ? service.albarans : [''])
+       if (!isUserAdmin) {
+        setIsTracking(true); // Start tracking automatically when editing
+      }
     }
-  }, [service])
+     return () => {
+      setIsTracking(false); // Stop tracking when leaving the page
+    };
+  }, [service, isUserAdmin])
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -190,18 +196,19 @@ export default function EditServicePage() {
 
   return (
     <div className="max-w-2xl mx-auto space-y-8">
-      <Button variant="ghost" onClick={() => router.back()} className="mb-4 -ml-4">
-        <ArrowLeft className="mr-2 h-4 w-4" />
-        Tornar
-      </Button>
+       {/* The LocationTracker is now invisible and manages its own state */}
       {!isUserAdmin && docOwnerId && serviceId && (
         <LocationTracker
           employeeId={docOwnerId}
           serviceRecordId={serviceId}
           isTracking={isTracking}
-          setIsTracking={setIsTracking}
         />
       )}
+      <Button variant="ghost" onClick={() => router.back()} className="mb-4 -ml-4">
+        <ArrowLeft className="mr-2 h-4 w-4" />
+        Tornar
+      </Button>
+
       <Card>
         <CardHeader>
           <CardTitle>Editar Servei #{serviceId.slice(-6)}</CardTitle>
