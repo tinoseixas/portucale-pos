@@ -57,10 +57,11 @@ service cloud.firestore {
     /**
      * @description Protects access to the serviceRecords subcollection.
      * Admins can read any service record, users can only access their own.
+     * The `list` rule is specifically for the admin's collectionGroup query.
      */
     match /employees/{employeeId}/serviceRecords/{serviceRecordId} {
-      // Admin can read everything, owner can read their own. This is the fix.
-      allow get, list: if isAdmin() || isOwner(employeeId);
+      allow get: if isOwner(employeeId) || isAdmin();
+      allow list: if isAdmin();
       allow create: if isOwner(employeeId) && request.resource.data.employeeId == employeeId;
       allow update: if isOwner(employeeId) && request.resource.data.employeeId == resource.data.employeeId;
       allow delete: if isOwner(employeeId);
