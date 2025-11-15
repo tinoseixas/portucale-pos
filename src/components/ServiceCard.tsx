@@ -1,18 +1,48 @@
-import type { ServiceRecord } from '@/lib/types'
+'use client'
+
+import type { ServiceRecord, Employee } from '@/lib/types'
 import Link from 'next/link'
 import Image from 'next/image'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Clock, Camera, Edit, Hash, Video, Calendar, User } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { Button } from './ui/button'
+import { useDoc, useFirestore, useMemoFirebase } from '@/firebase'
+import { doc } from 'firebase/firestore'
+import { Skeleton } from './ui/skeleton'
 
 interface ServiceCardProps {
   service: ServiceRecord;
-  employeeName?: string;
   isUserAdmin?: boolean;
 }
 
-export function ServiceCard({ service, employeeName, isUserAdmin }: ServiceCardProps) {
+// A new sub-component to fetch and display the employee name
+function EmployeeName({ employeeId }: { employeeId: string }) {
+  const firestore = useFirestore()
+  
+  const employeeDocRef = useMemoFirebase(() => {
+    if (!employeeId) return null;
+    return doc(firestore, 'employees', employeeId);
+  }, [firestore, employeeId]);
+
+  const { data: employee, isLoading } = useDoc<Employee>(employeeDocRef);
+
+  if (isLoading) {
+    return <Skeleton className="h-5 w-24" />;
+  }
+
+  const employeeName = employee ? `${employee.firstName} ${employee.lastName}` : 'Empleat desconegut';
+
+  return (
+    <div className="flex items-center text-sm text-muted-foreground font-medium">
+      <User className="h-4 w-4 mr-2" />
+      <span>{employeeName}</span>
+    </div>
+  )
+}
+
+
+export function ServiceCard({ service, isUserAdmin }: ServiceCardProps) {
   const startTime = service.arrivalDateTime ? format(parseISO(service.arrivalDateTime), 'HH:mm') : 'N/A'
   const endTime = service.departureDateTime ? format(parseISO(service.departureDateTime), 'HH:mm') : 'N/A'
   const serviceDate = service.arrivalDateTime ? format(parseISO(service.arrivalDateTime), 'dd/MM/yyyy') : 'N/A'
@@ -35,12 +65,8 @@ export function ServiceCard({ service, employeeName, isUserAdmin }: ServiceCardP
           </div>
       </CardHeader>
       <CardContent className="flex-1 space-y-4 flex flex-col">
-        {isUserAdmin && employeeName && (
-            <div className="flex items-center text-sm text-muted-foreground font-medium">
-                <User className="h-4 w-4 mr-2" />
-                <span>{employeeName}</span>
-            </div>
-        )}
+        {isUserAdmin && <EmployeeName employeeId={service.employeeId} />}
+
         <p className="text-muted-foreground line-clamp-2 h-10 flex-grow">{service.description}</p>
         
         {mediaItems.length > 0 && (
