@@ -7,13 +7,19 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Clock, FileText, Camera, ArrowLeft, Save, Hash, Plus, X, Video } from 'lucide-react'
+import { Clock, FileText, Camera, ArrowLeft, Save, Hash, Plus, X, Video, Calendar as CalendarIcon } from 'lucide-react'
 import { useToast } from "@/hooks/use-toast"
 import { useFirestore, useUser } from '@/firebase'
 import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates'
 import { collection } from 'firebase/firestore'
 import Image from 'next/image'
 import { CameraCapture } from '@/components/CameraCapture'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Calendar } from '@/components/ui/calendar'
+import { format } from 'date-fns'
+import { ca } from 'date-fns/locale'
+import { cn } from '@/lib/utils'
+
 
 type MediaFile = {
   type: 'image' | 'video';
@@ -24,6 +30,7 @@ type MediaFile = {
 export default function NewServicePage() {
   const router = useRouter()
   const { toast } = useToast()
+  const [date, setDate] = useState<Date | undefined>(new Date())
   const [startTime, setStartTime] = useState('')
   const [endTime, setEndTime] = useState('')
   const [description, setDescription] = useState('')
@@ -83,9 +90,18 @@ export default function NewServicePage() {
         return
     }
 
-    const today = new Date().toISOString().split('T')[0]
-    const arrivalDateTime = new Date(`${today}T${startTime}`).toISOString();
-    const departureDateTime = new Date(`${today}T${endTime}`).toISOString();
+     if (!date) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Si us plau, selecciona una data per al servei.",
+      })
+      return
+    }
+
+    const selectedDateStr = format(date, 'yyyy-MM-dd')
+    const arrivalDateTime = new Date(`${selectedDateStr}T${startTime}`).toISOString();
+    const departureDateTime = new Date(`${selectedDateStr}T${endTime}`).toISOString();
     
     const filteredAlbarans = albarans.filter(a => a.trim() !== '')
 
@@ -127,6 +143,34 @@ export default function NewServicePage() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
+            
+            <div className="space-y-2">
+                <Label htmlFor="date">Data del Servei</Label>
+                 <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant={"outline"}
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !date && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {date ? format(date, "PPP", { locale: ca }) : <span>Tria una data</span>}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                    <Calendar
+                      mode="single"
+                      selected={date}
+                      onSelect={setDate}
+                      initialFocus
+                      locale={ca}
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="start-time" className="flex items-center gap-2"><Clock className="h-4 w-4 text-muted-foreground" /> Hora d'Arribada</Label>

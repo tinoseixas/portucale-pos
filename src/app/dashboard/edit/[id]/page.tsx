@@ -6,8 +6,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Clock, FileText, Camera, ArrowLeft, Save, Trash2, Hash, Plus, X, Video } from 'lucide-react'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/componentsui/card'
+import { Clock, FileText, Camera, ArrowLeft, Save, Trash2, Hash, Plus, X, Video, Calendar as CalendarIcon } from 'lucide-react'
 import { useToast } from "@/hooks/use-toast"
 import { useFirestore, useUser, useDoc, useMemoFirebase } from '@/firebase'
 import { doc, deleteDoc } from 'firebase/firestore'
@@ -26,6 +26,11 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { CameraCapture } from '@/components/CameraCapture'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Calendar } from '@/components/ui/calendar'
+import { format } from 'date-fns'
+import { ca } from 'date-fns/locale'
+import { cn } from '@/lib/utils'
 
 type MediaFile = {
   type: 'image' | 'video';
@@ -47,7 +52,8 @@ export default function EditServicePage() {
   }, [firestore, user, serviceId])
 
   const { data: service, isLoading } = useDoc<ServiceRecord>(serviceDocRef)
-
+  
+  const [date, setDate] = useState<Date | undefined>(new Date())
   const [startTime, setStartTime] = useState('')
   const [endTime, setEndTime] = useState('')
   const [description, setDescription] = useState('')
@@ -60,6 +66,7 @@ export default function EditServicePage() {
     if (service) {
       const arrival = new Date(service.arrivalDateTime)
       const departure = new Date(service.departureDateTime)
+      setDate(arrival)
       setStartTime(`${arrival.getHours().toString().padStart(2, '0')}:${arrival.getMinutes().toString().padStart(2, '0')}`)
       setEndTime(`${departure.getHours().toString().padStart(2, '0' )}:${departure.getMinutes().toString().padStart(2, '0')}`)
       setDescription(service.description)
@@ -109,11 +116,11 @@ export default function EditServicePage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!user || !serviceDocRef) return
+    if (!user || !serviceDocRef || !date) return
 
-    const today = new Date(service?.arrivalDateTime || Date.now()).toISOString().split('T')[0]
-    const arrivalDateTime = new Date(`${today}T${startTime}`).toISOString()
-    const departureDateTime = new Date(`${today}T${endTime}`).toISOString()
+    const selectedDateStr = format(date, 'yyyy-MM-dd')
+    const arrivalDateTime = new Date(`${selectedDateStr}T${startTime}`).toISOString()
+    const departureDateTime = new Date(`${selectedDateStr}T${endTime}`).toISOString()
 
     const filteredAlbarans = albarans.filter(a => a.trim() !== '')
 
@@ -173,10 +180,38 @@ export default function EditServicePage() {
       <Card>
         <CardHeader>
           <CardTitle>Editar Servei #{serviceId.slice(-6)}</CardTitle>
-          <CardDescription>Modifica els detalls del servei realitzat.</CardDescription>
+          <CardDescription>Modifica els detalls do servei realitzat.</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
+            
+            <div className="space-y-2">
+                <Label htmlFor="date">Data del Servei</Label>
+                 <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant={"outline"}
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !date && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {date ? format(date, "PPP", { locale: ca }) : <span>Tria una data</span>}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                    <Calendar
+                      mode="single"
+                      selected={date}
+                      onSelect={setDate}
+                      initialFocus
+                      locale={ca}
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="start-time" className="flex items-center gap-2"><Clock className="h-4 w-4 text-muted-foreground" /> Hora d'Arribada</Label>
