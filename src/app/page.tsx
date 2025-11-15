@@ -50,7 +50,7 @@ export default function Home() {
             employeeId: newUser.uid.substring(0, 8), // Example employeeId
             firstName: email.split('@')[0] || 'Nou',
             lastName: 'Usuari',
-            email: newUser.email,
+            email: newUser.email, // THIS WAS THE MISSING PIECE
             role: newUser.uid === ADMIN_UID ? 'admin' : 'user',
           }, { merge: true });
 

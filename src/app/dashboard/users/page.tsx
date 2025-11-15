@@ -22,7 +22,6 @@ export default function UsersPage() {
   }, [user, isUserLoading]);
 
   const employeesQuery = useMemoFirebase(() => {
-    // We only want to run this query if the user is an admin.
     if (!isCurrentUserAdmin || !firestore) return null;
     return collection(firestore, 'employees')
   }, [firestore, isCurrentUserAdmin])
@@ -30,12 +29,8 @@ export default function UsersPage() {
   const { data: employees, isLoading: isLoadingEmployees } = useCollection<Employee>(employeesQuery)
 
   useEffect(() => {
-    // Wait until the user loading state is resolved.
-    if (!isUserLoading) {
-      // If the user is not an admin, redirect them away.
-      if (!isCurrentUserAdmin) {
-        router.push('/dashboard');
-      }
+    if (!isUserLoading && !isCurrentUserAdmin) {
+      router.push('/dashboard');
     }
   }, [isUserLoading, isCurrentUserAdmin, router]);
 
@@ -47,7 +42,6 @@ export default function UsersPage() {
     return 'U'
   }
   
-  // While loading user or employees, or if the user is not an admin yet (but might be), show a loading state.
   if (isUserLoading || isLoadingEmployees || !isCurrentUserAdmin) {
     return <p>Carregant usuaris...</p>
   }
@@ -84,7 +78,7 @@ export default function UsersPage() {
                     </div>
                   </TableCell>
                   <TableCell>{employee.employeeId}</TableCell>
-                  <TableCell>{employee.email}</TableCell>
+                  <TableCell>{employee.email || 'N/A'}</TableCell>
                   <TableCell>
                     <Badge variant={employee.id === ADMIN_UID ? 'default' : 'secondary'}>
                       {employee.id === ADMIN_UID ? 'admin' : 'user'}
