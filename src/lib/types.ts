@@ -5,7 +5,7 @@ export interface ServiceRecord {
   departureDateTime: string;
   description: string;
   pendingTasks: string;
-  photoIds: string[];
+  media: { type: 'image' | 'video'; dataUrl: string }[];
   albarans: string[];
 }
 

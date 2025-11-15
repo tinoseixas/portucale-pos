@@ -1,3 +1,4 @@
+
 {
   "entities": {
     "Employee": {
@@ -62,11 +63,22 @@
           "type": "string",
           "description": "Description of pending tasks for the service."
         },
-        "photoIds": {
+        "media": {
           "type": "array",
-          "description": "References to Photos. (Relationship: Photo 1:N ServiceRecord)",
+          "description": "Array of media objects (images or videos) as base64 data URLs.",
           "items": {
-            "type": "string"
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": ["image", "video"]
+              },
+              "dataUrl": {
+                "type": "string",
+                "format": "uri"
+              }
+            },
+            "required": ["type", "dataUrl"]
           }
         },
         "albarans": {
@@ -82,37 +94,7 @@
         "employeeId",
         "arrivalDateTime",
         "departureDateTime",
-        "description",
-        "pendingTasks"
-      ]
-    },
-    "Photo": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Photo",
-      "type": "object",
-      "description": "Represents a photo related to a service record.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the photo."
-        },
-        "serviceRecordId": {
-          "type": "string",
-          "description": "Reference to ServiceRecord. (Relationship: ServiceRecord 1:N Photo)"
-        },
-        "url": {
-          "type": "string",
-          "description": "URL of the photo."
-        },
-        "description": {
-          "type": "string",
-          "description": "Description of the photo."
-        }
-      },
-      "required": [
-        "id",
-        "serviceRecordId",
-        "url"
+        "description"
       ]
     }
   },
@@ -159,32 +141,8 @@
             }
           ]
         }
-      },
-      {
-        "path": "/employees/{employeeId}/serviceRecords/{serviceRecordId}/photos/{photoId}",
-        "definition": {
-          "entityName": "Photo",
-          "schema": {
-            "$ref": "#/backend/entities/Photo"
-          },
-          "description": "Stores photos related to a service record. Enables Authorization Independence. Only the employee owning the service record can manage its photos.",
-          "params": [
-            {
-              "name": "employeeId",
-              "description": "Unique identifier for the employee."
-            },
-            {
-              "name": "serviceRecordId",
-              "description": "Unique identifier for the service record."
-            },
-            {
-              "name": "photoId",
-              "description": "Unique identifier for the photo."
-            }
-          ]
-        }
       }
     ],
-    "reasoning": "The Firestore data structure is designed to support the 'Registre Diari de Treball' application, focusing on simplicity, security, and scalability. It leverages path-based ownership for employee data and nested service records and photos. This structure ensures that security rules can be written clearly and efficiently, avoiding complex queries or document reads for authorization.\n\n**Authorization Independence and QAPs:**\n\n*   **Employees Collection:** The `/employees/{employeeId}` collection stores employee profiles. Security rules will ensure only the authenticated employee (or an admin, if roles are implemented later) can access their own profile. The employeeId is used as the document ID.\n*   **Service Records:** Each employee has a subcollection `/employees/{employeeId}/serviceRecords/{serviceRecordId}`. This structure provides path-based authorization, as only the employee who 'owns' the service record (identified by the employeeId) can access it. This ensures Authorization Independence. There is no need to query parent documents.\n*   **Photos:** Photos are stored in a subcollection `/employees/{employeeId}/serviceRecords/{serviceRecordId}/photos/{photoId}` under the service record they belong to. Again, this enables Authorization Independence. Only the employee owning the service record can manage its photos.\n\nThis design guarantees that list operations are always secure (QAPs), as security rules can filter based on the employeeId path segment, ensuring that users can only ever access their own resources or those explicitly shared with them via a different mechanism (which is not part of the current design).\n\n**Data Integrity and Clarity:**\n\n*   The use of explicit timestamps (arrivalDateTime, departureDateTime) and a description field provides clarity and avoids ambiguity. The data structure is designed for denormalization, allowing for future scalability and flexibility."
+    "reasoning": "The Firestore data structure is designed to support the 'Registre Diari de Treball' application, focusing on simplicity, security, and scalability. It leverages path-based ownership for employee data and nested service records. The 'photos' collection has been replaced by a 'media' array within the ServiceRecord document to store base64 data URLs of images and videos directly. This simplifies data retrieval for each service record, as it avoids extra subcollection reads, but may increase document size. This design ensures that security rules can be written clearly and efficiently.\n\n**Authorization Independence and QAPs:**\n\n*   **Employees Collection:** The `/employees/{employeeId}` collection stores employee profiles. Security rules will ensure only the authenticated employee (or an admin) can access their own profile.\n*   **Service Records:** Each employee has a subcollection `/employees/{employeeId}/serviceRecords/{serviceRecordId}`. This structure provides path-based authorization. Only the employee who 'owns' the service record can access it.\n\nThis design guarantees that list operations are always secure (QAPs), as security rules can filter based on the employeeId path segment."
   }
 }

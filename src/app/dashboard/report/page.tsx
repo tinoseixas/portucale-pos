@@ -4,13 +4,12 @@ import { useMemo } from 'react'
 import Image from 'next/image'
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
-import { Clock, Briefcase, Camera } from 'lucide-react'
+import { Clock, Briefcase, Camera, Video } from 'lucide-react'
 import type { ServiceRecord, Employee } from '@/lib/types'
 import { format, differenceInMinutes, parseISO, isValid } from 'date-fns'
 import { ca } from 'date-fns/locale';
 import { useCollection, useDoc, useFirestore, useUser, useMemoFirebase } from '@/firebase'
 import { collection, doc } from 'firebase/firestore'
-import { PlaceHolderImages } from '@/lib/placeholder-images'
 
 function calculateTotalTime(services: ServiceRecord[]): string {
     if (!services) return '0h 0m';
@@ -60,11 +59,7 @@ export default function ReportPage() {
     const totalTime = useMemo(() => calculateTotalTime(services || []), [services]);
     const today = format(new Date(), 'dd MMMM, yyyy', { locale: ca });
 
-    const getPhotoUrl = (id: string) => {
-      return PlaceHolderImages.find(p => p.id === id)?.imageUrl || 'https://placehold.co/100x100';
-    }
-
-    const allPhotos = services?.flatMap(s => s.photoIds?.map(id => ({ id, url: getPhotoUrl(id) }))) || [];
+    const allMedia = services?.flatMap(s => s.media || []) || [];
 
     if (isLoadingServices || isLoadingEmployee) {
         return <p>Carregant informe...</p>;
@@ -100,11 +95,11 @@ export default function ReportPage() {
                         </Card>
                         <Card>
                             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                <CardTitle className="text-sm font-medium">Fotos</CardTitle>
+                                <CardTitle className="text-sm font-medium">Fotos/Vídeos</CardTitle>
                                 <Camera className="h-4 w-4 text-muted-foreground" />
                             </CardHeader>
                             <CardContent>
-                                <div className="text-2xl font-bold">{allPhotos.length}</div>
+                                <div className="text-2xl font-bold">{allMedia.length}</div>
                             </CardContent>
                         </Card>
                     </div>
@@ -141,20 +136,24 @@ export default function ReportPage() {
                     <Separator />
 
                     {/* Photos section */}
-                    {allPhotos.length > 0 && (
+                    {allMedia.length > 0 && (
                         <div>
-                            <h3 className="text-lg font-semibold mb-4">Galeria de Fotos</h3>
+                            <h3 className="text-lg font-semibold mb-4">Galeria de Fotos i Vídeos</h3>
                              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                                {allPhotos.map((photo, index) => (
+                                {allMedia.map((media, index) => (
                                     <div key={index} className="relative aspect-square rounded-lg overflow-hidden shadow-md group">
-                                        <Image
-                                            src={photo.url}
-                                            alt={`Foto del servei ${index + 1}`}
-                                            fill
-                                            sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, 20vw"
-                                            style={{ objectFit: 'cover' }}
-                                            className="transition-transform duration-300 group-hover:scale-105"
-                                        />
+                                       {media.type === 'image' ? (
+                                            <Image
+                                                src={media.dataUrl}
+                                                alt={`Media ${index + 1}`}
+                                                fill
+                                                sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, 20vw"
+                                                style={{ objectFit: 'cover' }}
+                                                className="transition-transform duration-300 group-hover:scale-105"
+                                            />
+                                        ) : (
+                                            <video src={media.dataUrl} className="w-full h-full object-cover" controls />
+                                        )}
                                     </div>
                                 ))}
                             </div>

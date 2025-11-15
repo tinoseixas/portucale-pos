@@ -1,19 +1,25 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Clock, FileText, Camera, ArrowLeft, Save, Hash, Plus, X } from 'lucide-react'
+import { Clock, FileText, Camera, ArrowLeft, Save, Hash, Plus, X, Video } from 'lucide-react'
 import { useToast } from "@/hooks/use-toast"
 import { useFirestore, useUser } from '@/firebase'
 import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates'
 import { collection } from 'firebase/firestore'
-import { PlaceHolderImages } from '@/lib/placeholder-images'
 import Image from 'next/image'
+import { CameraCapture } from '@/components/CameraCapture'
+
+type MediaFile = {
+  type: 'image' | 'video';
+  dataUrl: string;
+  file?: File;
+};
 
 export default function NewServicePage() {
   const router = useRouter()
@@ -21,27 +27,24 @@ export default function NewServicePage() {
   const [startTime, setStartTime] = useState('')
   const [endTime, setEndTime] = useState('')
   const [description, setDescription] = useState('')
-  const [photos, setPhotos] = useState<File[]>([])
-  const [photoPreviews, setPhotoPreviews] = useState<string[]>([])
+  const [media, setMedia] = useState<MediaFile[]>([])
   const [albarans, setAlbarans] = useState<string[]>([''])
+  const [showCamera, setShowCamera] = useState(false)
   const { user } = useUser()
   const firestore = useFirestore()
 
-  useEffect(() => {
-    // Cleanup object URLs to avoid memory leaks
-    return () => {
-      photoPreviews.forEach(url => URL.revokeObjectURL(url));
-    };
-  }, [photoPreviews]);
-
-  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const files = Array.from(e.target.files);
-      setPhotos(files);
-      
-      // Create preview URLs
-      const newPreviews = files.map(file => URL.createObjectURL(file));
-      setPhotoPreviews(newPreviews);
+      files.forEach(file => {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          const dataUrl = event.target?.result as string;
+          const type = file.type.startsWith('image/') ? 'image' : 'video';
+          setMedia(prev => [...prev, { type, dataUrl, file }]);
+        };
+        reader.readAsDataURL(file);
+      });
     }
   }
 
@@ -60,6 +63,15 @@ export default function NewServicePage() {
     setAlbarans(newAlbarans)
   }
 
+  const handleCapture = (dataUrl: string, type: 'image' | 'video') => {
+    setMedia(prev => [...prev, { type, dataUrl }]);
+    setShowCamera(false);
+  };
+  
+  const removeMedia = (index: number) => {
+    setMedia(prev => prev.filter((_, i) => i !== index));
+  }
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!user || !firestore) {
@@ -74,11 +86,6 @@ export default function NewServicePage() {
     const today = new Date().toISOString().split('T')[0]
     const arrivalDateTime = new Date(`${today}T${startTime}`).toISOString();
     const departureDateTime = new Date(`${today}T${endTime}`).toISOString();
-
-    // This logic remains to associate placeholders in the DB
-    const photoIds = photos.map((_, index) => {
-        return PlaceHolderImages[index % PlaceHolderImages.length].id;
-    });
     
     const filteredAlbarans = albarans.filter(a => a.trim() !== '')
 
@@ -88,7 +95,7 @@ export default function NewServicePage() {
         departureDateTime,
         description,
         pendingTasks: '',
-        photoIds: photoIds,
+        media: media.map(({type, dataUrl}) => ({type, dataUrl})),
         albarans: filteredAlbarans,
     };
 
@@ -101,6 +108,10 @@ export default function NewServicePage() {
     })
     
     router.push('/dashboard')
+  }
+  
+  if (showCamera) {
+    return <CameraCapture onCapture={handleCapture} onClose={() => setShowCamera(false)} />;
   }
 
   return (
@@ -157,22 +168,43 @@ export default function NewServicePage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="photos" className="flex items-center gap-2"><Camera className="h-4 w-4 text-muted-foreground" /> Captura de Fotos</Label>
+              <Label className="flex items-center gap-2"><Camera className="h-4 w-4 text-muted-foreground" /> Fotos i Vídeos</Label>
               
-              {photoPreviews.length > 0 && (
+              {media.length > 0 && (
                 <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2 my-4">
-                  {photoPreviews.map((previewUrl, index) => (
-                    <div key={index} className="relative aspect-square rounded-md overflow-hidden">
-                      <Image src={previewUrl} alt={`Previsualització ${index + 1}`} fill style={{ objectFit: 'cover' }} sizes="100px" />
+                  {media.map((m, index) => (
+                    <div key={index} className="relative group aspect-square rounded-md overflow-hidden">
+                      {m.type === 'image' ? (
+                        <Image src={m.dataUrl} alt={`Previsualització ${index + 1}`} fill style={{ objectFit: 'cover' }} sizes="100px" />
+                      ) : (
+                        <div className="w-full h-full bg-black flex items-center justify-center">
+                           <Video className="h-8 w-8 text-white" />
+                        </div>
+                      )}
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="icon"
+                        className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={() => removeMedia(index)}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
                     </div>
                   ))}
                 </div>
               )}
               
-              <Input id="photos" type="file" multiple onChange={handlePhotoChange} accept="image/*" />
-              {photos.length > 0 && (
-                <p className="text-sm text-muted-foreground mt-2">{photos.length} foto(s) seleccionada(s).</p>
-              )}
+              <div className="flex gap-2">
+                 <Button type="button" variant="outline" onClick={() => setShowCamera(true)} className="flex-1">
+                    <Camera className="mr-2 h-4 w-4" /> Usar Càmera
+                 </Button>
+                <Label htmlFor="media-upload" className="flex-1 cursor-pointer inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2">
+                    <Plus className="mr-2 h-4 w-4" /> Pujar Fitxer
+                </Label>
+                 <Input id="media-upload" type="file" multiple onChange={handleFileChange} accept="image/*,video/*" className="hidden" />
+              </div>
+              <p className="text-sm text-muted-foreground mt-2">{media.length} fitxer(s) seleccionat(s).</p>
             </div>
 
             <div className="flex justify-end pt-4">
