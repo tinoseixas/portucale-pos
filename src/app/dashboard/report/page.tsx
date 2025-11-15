@@ -1,27 +1,23 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo } from 'react'
 import Image from 'next/image'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import { Clock, Briefcase, Camera } from 'lucide-react'
-import { mockServices as initialServices } from '@/lib/data'
-import { mockEmployee } from '@/lib/data'
-import type { Service } from '@/lib/types'
-import { format, differenceInMinutes } from 'date-fns'
+import type { ServiceRecord, Employee } from '@/lib/types'
+import { format, differenceInMinutes, parseISO } from 'date-fns'
 import { ca } from 'date-fns/locale';
+import { useCollection, useDoc, useFirestore, useUser, useMemoFirebase } from '@/firebase'
+import { collection, doc } from 'firebase/firestore'
 
-function calculateTotalTime(services: Service[]): string {
+function calculateTotalTime(services: ServiceRecord[]): string {
+    if (!services) return '0h 0m';
+
     const totalMinutes = services.reduce((total, service) => {
-        if (service.startTime && service.endTime) {
-            const [startHour, startMinute] = service.startTime.split(':').map(Number);
-            const [endHour, endMinute] = service.endTime.split(':').map(Number);
-
-            const startDate = new Date(0);
-            startDate.setUTCHours(startHour, startMinute);
-
-            const endDate = new Date(0);
-            endDate.setUTCHours(endHour, endMinute);
+        if (service.arrivalDateTime && service.departureDateTime) {
+            const startDate = parseISO(service.arrivalDateTime);
+            const endDate = parseISO(service.departureDateTime);
 
             if (endDate < startDate) { // handles overnight shifts
                 endDate.setDate(endDate.getDate() + 1);
@@ -40,18 +36,36 @@ function calculateTotalTime(services: Service[]): string {
 
 
 export default function ReportPage() {
-    const [services] = useState<Service[]>(initialServices)
-    const [employee] = useState(mockEmployee);
-    const totalTime = calculateTotalTime(services);
+    const { user } = useUser();
+    const firestore = useFirestore();
+
+    const serviceRecordsQuery = useMemoFirebase(() => {
+        if (!user) return null;
+        return collection(firestore, `employees/${user.uid}/serviceRecords`);
+    }, [firestore, user]);
+
+    const employeeDocRef = useMemoFirebase(() => {
+        if (!user) return null;
+        return doc(firestore, `employees/${user.uid}`);
+    }, [firestore, user]);
+
+    const { data: services, isLoading: isLoadingServices } = useCollection<ServiceRecord>(serviceRecordsQuery);
+    const { data: employee, isLoading: isLoadingEmployee } = useDoc<Employee>(employeeDocRef);
+    
+    const totalTime = useMemo(() => calculateTotalTime(services || []), [services]);
     const today = format(new Date(), 'dd MMMM, yyyy', { locale: ca });
 
-    const allPhotos = services.flatMap(s => s.photos);
+    const allPhotos = services?.flatMap(s => s.photoIds.map(id => ({ id, url: 'https://placehold.co/600x400' }))) || [];
 
+    if (isLoadingServices || isLoadingEmployee) {
+        return <p>Carregant informe...</p>;
+    }
+    
     return (
         <div className="max-w-4xl mx-auto space-y-8">
              <div>
                 <h1 className="text-3xl font-bold">Informe Diari</h1>
-                <p className="text-muted-foreground">Resum de l'activitat per a {employee.name} el {today}.</p>
+                <p className="text-muted-foreground">Resum de l'activitat per a {employee?.firstName || user?.email} el {today}.</p>
             </div>
             <Card className="shadow-lg">
                 <CardHeader>
@@ -72,7 +86,7 @@ export default function ReportPage() {
                                 <Briefcase className="h-4 w-4 text-muted-foreground" />
                             </CardHeader>
                             <CardContent>
-                                <div className="text-2xl font-bold">{services.length}</div>
+                                <div className="text-2xl font-bold">{services?.length || 0}</div>
                             </CardContent>
                         </Card>
                         <Card>
@@ -93,14 +107,14 @@ export default function ReportPage() {
                     <div>
                         <h3 className="text-lg font-semibold mb-4">Detall de Serveis</h3>
                         <div className="space-y-4">
-                            {services.map(service => (
+                            {services && services.map(service => (
                                 <Card key={service.id} className="bg-background">
                                     <CardContent className="pt-6">
                                         <div className="flex flex-col sm:flex-row justify-between sm:items-start gap-4">
                                             <p className="text-muted-foreground flex-1 pr-4">{service.description}</p>
                                             <div className="flex items-center gap-2 text-sm font-medium text-primary flex-shrink-0">
                                                 <Clock className="h-4 w-4" />
-                                                <span>{service.startTime} - {service.endTime}</span>
+                                                <span>{format(parseISO(service.arrivalDateTime), 'HH:mm')} - {format(parseISO(service.departureDateTime), 'HH:mm')}</span>
                                             </div>
                                         </div>
                                     </CardContent>
@@ -116,10 +130,10 @@ export default function ReportPage() {
                         <div>
                             <h3 className="text-lg font-semibold mb-4">Galeria de Fotos</h3>
                              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                                {allPhotos.map((photoUrl, index) => (
+                                {allPhotos.map((photo, index) => (
                                     <div key={index} className="relative aspect-square rounded-lg overflow-hidden shadow-md group">
                                         <Image
-                                            src={photoUrl}
+                                            src={photo.url}
                                             alt={`Foto del servei ${index + 1}`}
                                             fill
                                             sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, 20vw"

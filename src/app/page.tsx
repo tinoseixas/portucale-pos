@@ -8,8 +8,9 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { User, Lock, Briefcase } from 'lucide-react'
 import { useToast } from "@/hooks/use-toast"
-import { useAuth, useUser } from '@/firebase'
+import { useAuth, useUser, useFirestore } from '@/firebase'
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth'
+import { doc, setDoc } from 'firebase/firestore'
 
 export default function Home() {
   const router = useRouter()
@@ -17,6 +18,7 @@ export default function Home() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const auth = useAuth()
+  const firestore = useFirestore()
   const { user, isUserLoading } = useUser()
 
   useEffect(() => {
@@ -35,10 +37,20 @@ export default function Home() {
       })
       router.push('/dashboard')
     } catch (error: any) {
-      // If user does not exist, create a new user
       if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') {
         try {
-          await createUserWithEmailAndPassword(auth, email, password);
+          const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+          const newUser = userCredential.user;
+          
+          // Create employee document in Firestore
+          const employeeRef = doc(firestore, 'employees', newUser.uid);
+          await setDoc(employeeRef, {
+            id: newUser.uid,
+            employeeId: newUser.uid.substring(0, 8), // Example employeeId
+            firstName: email.split('@')[0] || 'Nou',
+            lastName: 'Usuari',
+          });
+
           toast({
             title: "Compte creat",
             description: "El teu nou compte ha estat creat correctament.",
@@ -77,8 +89,8 @@ export default function Home() {
             <div className="mx-auto bg-primary/20 text-primary p-3 rounded-full w-fit mb-4">
                <Briefcase size={32} />
             </div>
-            <CardTitle className="text-3xl font-bold">Registre de Comandes</CardTitle>
-            <CardDescription>Identifica't per registrar les comandes</CardDescription>
+            <CardTitle className="text-3xl font-bold">Registre de Serveis</CardTitle>
+            <CardDescription>Identifica't per registrar els serveis</CardDescription>
           </CardHeader>
           <form onSubmit={handleLogin}>
             <CardContent className="space-y-6">
@@ -89,7 +101,7 @@ export default function Home() {
                   <Input 
                     id="email"
                     type="email"
-                    placeholder="Escriu el teu correu" 
+                    placeholder="usuari@exemple.com" 
                     required 
                     className="pl-10"
                     value={email}

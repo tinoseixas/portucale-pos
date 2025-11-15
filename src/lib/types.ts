@@ -1,14 +1,24 @@
-export interface Service {
+export interface ServiceRecord {
   id: string;
-  startTime: string;
-  endTime: string;
-  description: string;
-  photos: string[]; // URLs to images
   employeeId: string;
+  arrivalDateTime: string;
+  departureDateTime: string;
+  description: string;
+  pendingTasks: string;
+  photoIds: string[];
 }
 
 export interface Employee {
   id: string;
-  name: string;
-  avatar: string;
+  firstName: string;
+  lastName: string;
+  employeeId: string;
+  avatar?: string;
+}
+
+export interface Photo {
+  id: string;
+  serviceRecordId: string;
+  url: string;
+  description: string;
 }
