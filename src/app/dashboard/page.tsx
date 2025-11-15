@@ -7,7 +7,7 @@ import { PlusCircle } from 'lucide-react'
 import { ServiceCard } from '@/components/ServiceCard'
 import type { ServiceRecord, Employee } from '@/lib/types'
 import { useCollection, useUser, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query, collectionGroup, getDocs, Query } from 'firebase/firestore';
+import { collection, query, collectionGroup, getDocs, Query, onSnapshot } from 'firebase/firestore';
 import { ADMIN_UID } from '@/lib/admin'
 
 export default function DashboardPage() {
@@ -64,9 +64,6 @@ export default function DashboardPage() {
   const services = isUserAdmin ? allServices : userServices?.sort((a, b) => 
     new Date(b.arrivalDateTime).getTime() - new Date(a.arrivalDateTime).getTime()
   );
-  
-  // Need to import onSnapshot to avoid build errors
-  const { onSnapshot } = require("firebase/firestore");
 
   return (
     <div className="space-y-8">
