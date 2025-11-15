@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useCollection, useUser, useFirestore, useMemoFirebase } from '@/firebase'
 import { collection } from 'firebase/firestore'
@@ -9,7 +10,20 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { ADMIN_UID } from '@/lib/admin'
+
+const WhatsAppIcon = (props: React.SVGProps<SVGSVGElement>) => (
+  <svg
+    viewBox="0 0 24 24"
+    fill="currentColor"
+    {...props}
+  >
+    <path
+      d="M16.75 13.96c.25.13.43.2.6.38.2.19.3.4.38.63.09.25.12.5.12.78 0 .25-.03.5-.09.72s-.15.42-.28.59c-.13.16-.28.3-.48.42s-.42.2-.66.25c-.25.06-.5.09-.77.09-.53 0-1.04-.1-1.53-.28s-.95-.45-1.38-.78c-.43-.34-.8-.75-1.1-1.23s-.55-.98-.74-1.5c-.2-.5-.3-1.02-.3-1.56 0-.5.1-1 .3-1.48.2-.48.48-.9.82-1.24s.75-.6 1.2-.78c.45-.18.9-.28 1.4-.28.25 0 .5.03.75.09s.48.15.68.28c.2.13.38.28.5.48s.22.4.28.64c.06.25.09.48.09.75 0 .25-.03.48-.09.7s-.15.42-.28.58c-.13.16-.28.3-.48.42s-.42.2-.66.25c-.25.06-.5.09-.77.09-.28 0-.55-.03-.8-.09s-.48-.15-.68-.28c-.2-.13-.35-.28-.48-.48s-.2-.4-.2-.64v-.3l.6-.6c.3-.3.6-.5.9-.6.3-.1.6-.2.9-.2.3 0 .6.1.9.2s.5.2.7.4c.2.2.3.4.4.6.1.2.1.5.1.7zM12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8z"/>
+  </svg>
+);
+
 
 export default function UsersPage() {
   const router = useRouter()
@@ -36,6 +50,9 @@ export default function UsersPage() {
     }
   }, [isUserLoading, isCurrentUserAdmin, router]);
 
+  const handleWhatsAppClick = (phoneNumber: string) => {
+    window.open(`https://wa.me/${phoneNumber}`, '_blank');
+  };
 
   const getInitials = (employee: Employee) => {
     if (employee.firstName && employee.lastName) return `${employee.firstName[0]}${employee.lastName[0]}`.toUpperCase()
@@ -70,6 +87,7 @@ export default function UsersPage() {
                 <TableHead>ID d'Empleat</TableHead>
                 <TableHead>Correu electrònic</TableHead>
                 <TableHead>Rol</TableHead>
+                <TableHead>Accions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -92,6 +110,18 @@ export default function UsersPage() {
                     <Badge variant={employee.id === ADMIN_UID ? 'default' : 'secondary'}>
                       {employee.id === ADMIN_UID ? 'admin' : 'user'}
                     </Badge>
+                  </TableCell>
+                  <TableCell>
+                    {employee.phoneNumber && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleWhatsAppClick(employee.phoneNumber!)}
+                        aria-label={`Enviar WhatsApp a ${employee.firstName}`}
+                      >
+                        <WhatsAppIcon className="h-5 w-5 text-green-500" />
+                      </Button>
+                    )}
                   </TableCell>
                 </TableRow>
               ))}

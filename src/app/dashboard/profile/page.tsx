@@ -16,13 +16,14 @@ import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import type { Employee } from '@/lib/types';
-import { Camera, Save, ArrowLeft } from 'lucide-react';
+import { Camera, Save, ArrowLeft, Phone } from 'lucide-react';
 
 
 const profileSchema = z.object({
   firstName: z.string().min(1, 'El nom és obligatori'),
   lastName: z.string().min(1, 'El cognom és obligatori'),
   employeeId: z.string().min(1, "L'ID d'empleat és obligatori"),
+  phoneNumber: z.string().optional(),
 });
 
 type ProfileFormValues = z.infer<typeof profileSchema>;
@@ -53,6 +54,7 @@ export default function ProfilePage() {
       firstName: '',
       lastName: '',
       employeeId: '',
+      phoneNumber: '',
     },
   });
 
@@ -62,6 +64,7 @@ export default function ProfilePage() {
         firstName: employee.firstName,
         lastName: employee.lastName,
         employeeId: employee.employeeId,
+        phoneNumber: employee.phoneNumber,
       });
       if (employee.avatar) {
         setAvatarUrl(employee.avatar);
@@ -194,6 +197,16 @@ export default function ProfilePage() {
                 render={({ field }) => <Input id="employeeId" {...field} />}
               />
               {errors.employeeId && <p className="text-sm text-destructive">{errors.employeeId.message}</p>}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="phoneNumber" className="flex items-center gap-2"><Phone className="h-4 w-4 text-muted-foreground" /> Telemòbil</Label>
+              <Controller
+                name="phoneNumber"
+                control={control}
+                render={({ field }) => <Input id="phoneNumber" type="tel" placeholder="600123456" {...field} />}
+              />
+              {errors.phoneNumber && <p className="text-sm text-destructive">{errors.phoneNumber.message}</p>}
             </div>
 
             <div className="flex justify-between items-center pt-4">

@@ -16,6 +16,7 @@ export interface Employee {
   employeeId: string;
   avatar?: string;
   email?: string;
+  phoneNumber?: string;
   role?: 'admin' | 'user';
 }
 
