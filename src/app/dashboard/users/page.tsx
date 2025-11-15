@@ -12,6 +12,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { ADMIN_EMAIL } from '@/lib/admin'
+import { Edit } from 'lucide-react'
 
 const WhatsAppIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg
@@ -84,7 +85,7 @@ export default function UsersPage() {
                 <TableHead>ID d'Empleat</TableHead>
                 <TableHead>Correu electrònic</TableHead>
                 <TableHead>Rol</TableHead>
-                <TableHead>Accions</TableHead>
+                <TableHead className="text-right">Accions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -108,13 +109,20 @@ export default function UsersPage() {
                       {employee.email === ADMIN_EMAIL ? 'admin' : 'user'}
                     </Badge>
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="text-right">
+                     <Button asChild variant="outline" size="sm">
+                        <Link href={`/dashboard/users/edit/${employee.id}`}>
+                            <Edit className="mr-2 h-4 w-4" />
+                            Editar
+                        </Link>
+                    </Button>
                     {employee.phoneNumber && (
                       <Button
                         variant="ghost"
                         size="icon"
                         onClick={() => handleWhatsAppClick(employee.phoneNumber!)}
                         aria-label={`Enviar WhatsApp a ${employee.firstName}`}
+                        className="ml-2"
                       >
                         <WhatsAppIcon className="h-5 w-5 text-green-500" />
                       </Button>
