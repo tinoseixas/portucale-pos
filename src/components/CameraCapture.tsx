@@ -2,8 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
-import { useToast } from '@/hooks/use-toast'
-import { Camera, Video, StopCircle, SwitchCamera, X, Check } from 'lucide-react'
+import { SwitchCamera, X } from 'lucide-react'
 import {
   AlertDialog,
   AlertDialogContent,
@@ -18,14 +17,18 @@ interface CameraCaptureProps {
   onClose: () => void
 }
 
+const MAX_VIDEO_DURATION_MS = 15000; // 15 seconds
+
 export function CameraCapture({ onCapture, onClose }: CameraCaptureProps) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
+  const pressTimerRef = useRef<NodeJS.Timeout | null>(null);
+
   const [hasPermission, setHasPermission] = useState<boolean | null>(null)
   const [stream, setStream] = useState<MediaStream | null>(null)
   const [isRecording, setIsRecording] = useState(false)
   const [facingMode, setFacingMode] = useState<'user' | 'environment'>('environment')
-  const { toast } = useToast()
+  const [progress, setProgress] = useState(0);
 
   const cleanupStream = () => {
     if (stream) {
@@ -61,6 +64,24 @@ export function CameraCapture({ onCapture, onClose }: CameraCaptureProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [facingMode])
 
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (isRecording) {
+      const startTime = Date.now();
+      interval = setInterval(() => {
+        const elapsedTime = Date.now() - startTime;
+        const currentProgress = Math.min((elapsedTime / MAX_VIDEO_DURATION_MS) * 100, 100);
+        setProgress(currentProgress);
+        if (elapsedTime >= MAX_VIDEO_DURATION_MS) {
+          handleStopRecording();
+        }
+      }, 100);
+    } else {
+      setProgress(0);
+    }
+    return () => clearInterval(interval);
+  }, [isRecording]);
+
   const handleTakePhoto = () => {
     if (videoRef.current) {
       const canvas = document.createElement('canvas')
@@ -69,7 +90,7 @@ export function CameraCapture({ onCapture, onClose }: CameraCaptureProps) {
       const context = canvas.getContext('2d')
       if (context) {
         context.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height)
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.8)
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.9)
         onCapture(dataUrl, 'image')
       }
     }
@@ -79,7 +100,18 @@ export function CameraCapture({ onCapture, onClose }: CameraCaptureProps) {
     if (stream) {
       setIsRecording(true)
       const recordedChunks: Blob[] = []
-      mediaRecorderRef.current = new MediaRecorder(stream, { mimeType: 'video/webm' })
+      
+      let mimeType = 'video/webm';
+      if (!MediaRecorder.isTypeSupported(mimeType)) {
+          mimeType = 'video/mp4';
+          if(!MediaRecorder.isTypeSupported(mimeType)) {
+              // Fallback if neither is supported
+              console.error("Neither webm nor mp4 is supported");
+              return;
+          }
+      }
+      
+      mediaRecorderRef.current = new MediaRecorder(stream, { mimeType })
 
       mediaRecorderRef.current.ondataavailable = (event) => {
         if (event.data.size > 0) {
@@ -88,7 +120,7 @@ export function CameraCapture({ onCapture, onClose }: CameraCaptureProps) {
       }
 
       mediaRecorderRef.current.onstop = () => {
-        const blob = new Blob(recordedChunks, { type: 'video/webm' })
+        const blob = new Blob(recordedChunks, { type: mimeType })
         const reader = new FileReader()
         reader.onloadend = () => {
           onCapture(reader.result as string, 'video')
@@ -101,10 +133,35 @@ export function CameraCapture({ onCapture, onClose }: CameraCaptureProps) {
   }
 
   const handleStopRecording = () => {
-    if (mediaRecorderRef.current) {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
       mediaRecorderRef.current.stop()
     }
+    if (pressTimerRef.current) {
+        clearTimeout(pressTimerRef.current);
+        pressTimerRef.current = null;
+    }
+    setIsRecording(false);
   }
+
+  const handleMouseDown = () => {
+    pressTimerRef.current = setTimeout(() => {
+      handleStartRecording();
+    }, 250); // Start recording after 250ms press
+  };
+
+  const handleMouseUp = () => {
+    if (pressTimerRef.current) {
+      clearTimeout(pressTimerRef.current);
+      pressTimerRef.current = null;
+      if (!isRecording) {
+        handleTakePhoto();
+      } else {
+        handleStopRecording();
+      }
+    } else if (isRecording) {
+      handleStopRecording();
+    }
+  };
 
   const toggleCamera = () => {
     setFacingMode(prev => (prev === 'user' ? 'environment' : 'user'))
@@ -135,31 +192,55 @@ export function CameraCapture({ onCapture, onClose }: CameraCaptureProps) {
             playsInline
             muted
           />
-          <div className="absolute top-4 left-4">
-            <Button variant="ghost" size="icon" onClick={onClose} className="text-white bg-black/50 hover:bg-black/75">
+          <div className="absolute top-4 left-4 z-10">
+            <Button variant="ghost" size="icon" onClick={onClose} className="text-white bg-black/50 hover:bg-black/75 rounded-full">
               <X />
             </Button>
           </div>
           <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex items-center justify-center gap-4 w-full">
-            <Button variant="ghost" size="icon" onClick={toggleCamera} className="text-white bg-black/50 hover:bg-black/75">
-              <SwitchCamera />
-            </Button>
-
-            {!isRecording && (
-                <Button onClick={handleTakePhoto} size="icon" className="w-16 h-16 rounded-full bg-white text-black hover:bg-gray-200 border-4 border-black/50">
-                    <Camera className="h-8 w-8"/>
+            <div className="absolute left-10">
+                <Button variant="ghost" size="icon" onClick={toggleCamera} className="text-white bg-black/50 hover:bg-black/75 rounded-full">
+                    <SwitchCamera />
                 </Button>
-            )}
+            </div>
 
-            {isRecording ? (
-              <Button onClick={handleStopRecording} size="icon" className="w-16 h-16 rounded-full bg-red-500 text-white animate-pulse">
-                <StopCircle className="h-8 w-8" />
-              </Button>
-            ) : (
-               <Button onClick={handleStartRecording} variant="ghost" size="icon" className="text-white bg-black/50 hover:bg-black/75">
-                <Video />
-              </Button>
-            )}
+            <div className="relative flex items-center justify-center">
+                 <svg className="w-24 h-24 transform -rotate-90">
+                    <circle
+                        cx="48"
+                        cy="48"
+                        r="34"
+                        stroke="rgba(255,255,255,0.3)"
+                        strokeWidth="4"
+                        fill="transparent"
+                        className="text-gray-700"
+                    />
+                    <circle
+                        cx="48"
+                        cy="48"
+                        r="34"
+                        stroke="hsl(var(--primary))"
+                        strokeWidth="4"
+                        fill="transparent"
+                        strokeDasharray={2 * Math.PI * 34}
+                        strokeDashoffset={(2 * Math.PI * 34) * (1 - progress / 100)}
+                        className="text-blue-500 transition-all duration-300"
+                    />
+                 </svg>
+
+                <button
+                    onMouseDown={handleMouseDown}
+                    onTouchStart={handleMouseDown}
+                    onMouseUp={handleMouseUp}
+                    onTouchEnd={handleMouseUp}
+                    onMouseLeave={handleStopRecording} // Stop if mouse leaves button
+                    className="absolute w-16 h-16 rounded-full bg-white transition-transform duration-200 active:scale-90 focus:outline-none"
+                    aria-label="Capture"
+                >
+                    <div className={`w-full h-full rounded-full transition-all duration-200 ${isRecording ? 'bg-red-500 scale-75' : 'bg-white'}`}></div>
+                </button>
+            </div>
+
           </div>
         </div>
       )}
