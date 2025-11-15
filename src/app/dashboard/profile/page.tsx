@@ -67,7 +67,7 @@ export default function ProfilePage() {
       });
     }
     // Set initial avatar URL from user or employee data
-    setAvatarUrl(user?.photoURL ?? employee?.avatar ?? null);
+    setAvatarUrl(user?.photoURL ?? null);
   }, [employee, reset, user]);
 
   const onSubmit = (data: ProfileFormValues) => {
@@ -89,18 +89,28 @@ export default function ProfilePage() {
     const file = event.target.files?.[0];
     if (!file || !user) return;
     
+    // Find the placeholder image for the user avatar.
     const userAvatarPlaceholder = PlaceHolderImages.find(p => p.id === 'user_avatar');
+    // If not found, use a consistent fallback based on user ID.
     const photoURL = userAvatarPlaceholder?.imageUrl || `https://picsum.photos/seed/${user.uid}/200`;
     
     try {
+        // Update Firebase Auth user profile
         await updateProfile(user, { photoURL });
-         if (employeeDocRef) {
+
+        // Update the avatar URL in the Firestore document
+        if (employeeDocRef) {
             updateDocumentNonBlocking(employeeDocRef, { avatar: photoURL });
         }
-        setAvatarUrl(photoURL); // Update local state immediately
+
+        // Update local state to immediately reflect the change
+        setAvatarUrl(photoURL);
+        
         toast({
             title: 'Foto de perfil actualitzada',
+            description: 'La teva foto ha estat actualitzada. Pot ser que hagis de refrescar la pàgina per veure els canvis a tot arreu.'
         });
+
     } catch (error) {
         toast({
             variant: 'destructive',
@@ -126,6 +136,8 @@ export default function ProfilePage() {
     if (user?.email) return user.email[0].toUpperCase();
     return 'U';
   }
+  
+  const displayAvatar = avatarUrl || user?.photoURL;
 
   return (
     <div className="max-w-2xl mx-auto">
@@ -139,7 +151,7 @@ export default function ProfilePage() {
             <div className="flex flex-col items-center space-y-4">
               <div className="relative">
                 <Avatar className="h-24 w-24 cursor-pointer" onClick={handleAvatarClick}>
-                  <AvatarImage src={avatarUrl ?? undefined} alt="User avatar" />
+                  <AvatarImage src={displayAvatar ?? undefined} alt="User avatar" key={displayAvatar} />
                   <AvatarFallback>{getInitials(employee)}</AvatarFallback>
                 </Avatar>
                 <div className="absolute bottom-0 right-0 bg-primary text-primary-foreground rounded-full p-1.5" onClick={handleAvatarClick}>
