@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
-import { SwitchCamera, X } from 'lucide-react'
+import { SwitchCamera, X, AlertTriangle } from 'lucide-react'
 import {
   AlertDialog,
   AlertDialogContent,
@@ -11,6 +11,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert'
+
 
 interface CameraCaptureProps {
   onCapture: (dataUrl: string, type: 'image' | 'video') => void
@@ -25,44 +27,37 @@ export function CameraCapture({ onCapture, onClose }: CameraCaptureProps) {
   const pressTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const [hasPermission, setHasPermission] = useState<boolean | null>(null)
-  const [stream, setStream] = useState<MediaStream | null>(null)
   const [isRecording, setIsRecording] = useState(false)
   const [facingMode, setFacingMode] = useState<'user' | 'environment'>('environment')
   const [progress, setProgress] = useState(0);
 
-  const cleanupStream = () => {
-    if (stream) {
-      stream.getTracks().forEach(track => track.stop())
-      setStream(null)
-    }
-  }
-
   useEffect(() => {
+    let stream: MediaStream | null = null;
+    
     const getCameraPermission = async () => {
       try {
-        if (stream) cleanupStream();
-
-        const newStream = await navigator.mediaDevices.getUserMedia({
+        stream = await navigator.mediaDevices.getUserMedia({
           video: { facingMode },
           audio: true, // Request audio for video recording
         })
-        setStream(newStream)
         setHasPermission(true)
         if (videoRef.current) {
-          videoRef.current.srcObject = newStream
+          videoRef.current.srcObject = stream
         }
       } catch (error) {
         console.error('Error accessing camera:', error)
         setHasPermission(false)
       }
     }
-    getCameraPermission()
-
+    
+    getCameraPermission();
+    
     return () => {
-      cleanupStream()
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop())
+      }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [facingMode])
+  }, [facingMode]);
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -80,6 +75,7 @@ export function CameraCapture({ onCapture, onClose }: CameraCaptureProps) {
       setProgress(0);
     }
     return () => clearInterval(interval);
+     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isRecording]);
 
   const handleTakePhoto = () => {
@@ -97,7 +93,8 @@ export function CameraCapture({ onCapture, onClose }: CameraCaptureProps) {
   }
 
   const handleStartRecording = () => {
-    if (stream) {
+    if (videoRef.current && videoRef.current.srcObject) {
+      const stream = videoRef.current.srcObject as MediaStream;
       setIsRecording(true)
       const recordedChunks: Blob[] = []
       
@@ -105,7 +102,6 @@ export function CameraCapture({ onCapture, onClose }: CameraCaptureProps) {
       if (!MediaRecorder.isTypeSupported(mimeType)) {
           mimeType = 'video/mp4';
           if(!MediaRecorder.isTypeSupported(mimeType)) {
-              // Fallback if neither is supported
               console.error("Neither webm nor mp4 is supported");
               return;
           }
@@ -144,12 +140,14 @@ export function CameraCapture({ onCapture, onClose }: CameraCaptureProps) {
   }
 
   const handleMouseDown = () => {
+    if (!hasPermission) return;
     pressTimerRef.current = setTimeout(() => {
       handleStartRecording();
     }, 250); // Start recording after 250ms press
   };
 
   const handleMouseUp = () => {
+    if (!hasPermission) return;
     if (pressTimerRef.current) {
       clearTimeout(pressTimerRef.current);
       pressTimerRef.current = null;
@@ -169,34 +167,35 @@ export function CameraCapture({ onCapture, onClose }: CameraCaptureProps) {
 
   return (
     <div className="fixed inset-0 bg-black flex flex-col items-center justify-center z-50">
-       <AlertDialog open={hasPermission === false}>
-          <AlertDialogContent>
-              <AlertDialogHeader>
-              <AlertDialogTitle>Permís de Càmera Requerit</AlertDialogTitle>
-              <AlertDialogDescription>
-                  Per capturar fotos i vídeos, necessites donar permís a l'aplicació per accedir a la teva càmera. Si us plau, habilita el permís a la configuració del teu navegador.
-              </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <Button onClick={onClose}>Tancar</Button>
-              </AlertDialogFooter>
-          </AlertDialogContent>
-       </AlertDialog>
       
-      {hasPermission && (
-        <div className="relative w-full h-full">
-          <video
-            ref={videoRef}
-            className="w-full h-full object-cover"
-            autoPlay
-            playsInline
-            muted
-          />
-          <div className="absolute top-4 left-4 z-10">
-            <Button variant="ghost" size="icon" onClick={onClose} className="text-white bg-black/50 hover:bg-black/75 rounded-full">
-              <X />
-            </Button>
+      <div className="relative w-full h-full">
+        <video
+          ref={videoRef}
+          className="w-full h-full object-cover"
+          autoPlay
+          playsInline
+          muted
+        />
+        
+        {hasPermission === false && (
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-11/12">
+            <Alert variant="destructive">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertTitle>Permís de càmera necessari</AlertTitle>
+              <AlertDescription>
+                Si us plau, habilita el permís de càmera a la configuració del navegador per continuar.
+              </AlertDescription>
+            </Alert>
           </div>
+        )}
+
+        <div className="absolute top-4 left-4 z-10">
+          <Button variant="ghost" size="icon" onClick={onClose} className="text-white bg-black/50 hover:bg-black/75 rounded-full">
+            <X />
+          </Button>
+        </div>
+
+        {hasPermission && (
           <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex items-center justify-center gap-4 w-full">
             <div className="absolute left-10">
                 <Button variant="ghost" size="icon" onClick={toggleCamera} className="text-white bg-black/50 hover:bg-black/75 rounded-full">
@@ -236,21 +235,17 @@ export function CameraCapture({ onCapture, onClose }: CameraCaptureProps) {
                     onMouseLeave={handleStopRecording} // Stop if mouse leaves button
                     className="absolute w-16 h-16 rounded-full bg-white transition-transform duration-200 active:scale-90 focus:outline-none"
                     aria-label="Capture"
+                    disabled={!hasPermission}
                 >
                     <div className={`w-full h-full rounded-full transition-all duration-200 ${isRecording ? 'bg-red-500 scale-75' : 'bg-white'}`}></div>
                 </button>
             </div>
 
           </div>
-        </div>
-      )}
-       {!hasPermission && hasPermission !== null && (
-         <div className="text-white text-center">
-            <p>No s'ha pogut accedir a la càmera.</p>
-         </div>
-       )}
-        {hasPermission === null && (
-             <div className="text-white text-center">
+        )}
+      </div>
+       {hasPermission === null && (
+             <div className="text-white text-center absolute">
                 <p>Demanant permís de càmera...</p>
             </div>
         )}
