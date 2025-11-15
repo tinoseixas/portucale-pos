@@ -51,7 +51,8 @@ export default function UsersPage() {
   }, [isUserLoading, isCurrentUserAdmin, router]);
 
   const handleWhatsAppClick = (phoneNumber: string) => {
-    window.open(`https://wa.me/${phoneNumber}`, '_blank');
+    const internationalNumber = phoneNumber.startsWith('+') ? phoneNumber : `34${phoneNumber}`;
+    window.open(`https://wa.me/${internationalNumber.replace(/\s+/g, '')}`, '_blank');
   };
 
   const getInitials = (employee: Employee) => {
