@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useCollection, useUser, useFirestore, useMemoFirebase, deleteDocumentNonBlocking } from '@/firebase'
@@ -154,27 +154,27 @@ export default function UsersPage() {
                         <WhatsAppIcon className="h-5 w-5 text-green-500" />
                       </Button>
                     )}
-                    {employee.email !== ADMIN_EMAIL && (
-                       <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                           <Button variant="destructive" size="sm">
-                                <Trash2 className="h-4 w-4" />
-                           </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Estàs segur?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Aquesta acció no es pot desfer. Això eliminarà permanentment el registre de l'empleat <strong>{employee.firstName} {employee.lastName}</strong>.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel·lar</AlertDialogCancel>
-                            <AlertDialogAction onClick={() => handleDeleteUser(employee.id, `${employee.firstName} ${employee.lastName}`)} className="bg-destructive hover:bg-destructive/90">Eliminar</AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    )}
+                   
+                    <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                        <Button variant="destructive" size="sm">
+                            <Trash2 className="h-4 w-4" />
+                        </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                        <AlertDialogHeader>
+                        <AlertDialogTitle>Estàs segur?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Aquesta acció no es pot desfer. Això eliminarà permanentment el registre de l'empleat <strong>{employee.firstName} {employee.lastName}</strong>.
+                        </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel·lar</AlertDialogCancel>
+                        <AlertDialogAction onClick={() => handleDeleteUser(employee.id, `${employee.firstName} ${employee.lastName}`)} className="bg-destructive hover:bg-destructive/90">Eliminar</AlertDialogAction>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                    </AlertDialog>
+                  
                   </TableCell>
                 </TableRow>
               ))}
