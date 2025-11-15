@@ -27,10 +27,7 @@ export function Header() {
 
   const { data: employee } = useDoc<Employee>(employeeDocRef);
   
-  const isUserAdmin = useMemo(() => {
-    if (isUserLoading || !user) return false;
-    return user.email === ADMIN_EMAIL;
-  }, [user, isUserLoading]);
+  const isUserAdmin = user?.email === ADMIN_EMAIL;
 
   const handleLogout = async () => {
     if (!auth) return;
@@ -43,6 +40,19 @@ export function Header() {
     if (employee?.firstName) return employee.firstName[0].toUpperCase();
     if (!email) return 'U'
     return email[0].toUpperCase();
+  }
+
+  if (isUserLoading) {
+    return (
+        <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+            <div className="container flex h-16 items-center justify-between">
+                 <Link href="/dashboard" className="flex flex-col items-start">
+                    <span className="font-bold text-lg">TS Serveis</span>
+                    <span className="text-xs text-muted-foreground leading-tight">convertim les teves idees en realitat</span>
+                </Link>
+            </div>
+        </header>
+    )
   }
 
   return (
