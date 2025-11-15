@@ -48,11 +48,19 @@ export function Header() {
         
         {user && (
           <div className="flex items-center gap-4">
-             {employee?.firstName && (
-                <span className="hidden sm:inline-block text-sm font-medium">
-                  Bona feina, {employee.firstName}!
-                </span>
-              )}
+             <div className="hidden sm:flex items-center gap-4">
+                {employee?.firstName && (
+                    <span className="text-sm font-medium">
+                    Bona feina, {employee.firstName}!
+                    </span>
+                )}
+                {isUserAdmin && (
+                    <Button variant="outline" size="sm" onClick={() => router.push('/dashboard/users')}>
+                        <Users className="mr-2 h-4 w-4" />
+                        Gestionar Usuaris
+                    </Button>
+                )}
+              </div>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                  <Button variant="ghost" className="relative h-8 w-8 rounded-full">
@@ -69,12 +77,6 @@ export function Header() {
                     <UserIcon className="mr-2 h-4 w-4" />
                     <span>Perfil</span>
                 </DropdownMenuItem>
-                 {isUserAdmin && (
-                  <DropdownMenuItem onClick={() => router.push('/dashboard/users')}>
-                    <Users className="mr-2 h-4 w-4" />
-                    <span>Gestionar Usuaris</span>
-                  </DropdownMenuItem>
-                )}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleLogout}>
                     <LogOut className="mr-2 h-4 w-4" />

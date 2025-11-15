@@ -17,9 +17,15 @@ export function BottomNav() {
     { href: '/dashboard', icon: LayoutDashboard, label: 'Serveis' },
     { href: '/dashboard/new', icon: PlusCircle, label: 'Nou' },
     { href: '/dashboard/report', icon: FileText, label: 'Informe' },
-    ...(isUserAdmin ? [{ href: '/dashboard/users', icon: Users, label: 'Usuaris' }] : []),
     { href: '/dashboard/profile', icon: UserIcon, label: 'Perfil' },
   ]
+  
+  if (isUserAdmin) {
+    // Add users link for admin, before the profile link
+    const profileIndex = navItems.findIndex(item => item.href === '/dashboard/profile');
+    navItems.splice(profileIndex, 0, { href: '/dashboard/users', icon: Users, label: 'Usuaris' });
+  }
+
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-40 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 md:hidden">
