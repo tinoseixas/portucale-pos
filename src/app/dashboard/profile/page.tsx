@@ -12,7 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
-import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from '@/firebase';
+import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { doc, collectionGroup, query, orderBy, getDocs } from 'firebase/firestore';
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import type { Employee, ServiceRecord } from '@/lib/types';
@@ -42,18 +42,25 @@ function AdminProfileView() {
 
     const fetchAllServices = async () => {
       setIsLoading(true);
-      try {
-        const servicesQuery = query(collectionGroup(firestore, 'serviceRecords'), orderBy('arrivalDateTime', 'desc'));
-        const snapshot = await getDocs(servicesQuery);
-        const servicesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ServiceRecord));
-        setAllServices(servicesData);
-      } catch (error) {
-        console.error("Error fetching all services for admin:", error);
-        setAllServices([]);
-      } finally {
-        setIsLoading(false);
-      }
+      const servicesQuery = query(collectionGroup(firestore, 'serviceRecords'), orderBy('arrivalDateTime', 'desc'));
+      
+      getDocs(servicesQuery)
+        .then(snapshot => {
+          const servicesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ServiceRecord));
+          setAllServices(servicesData);
+          setIsLoading(false);
+        })
+        .catch(error => {
+            console.error("Admin service fetch failed, emitting contextual error:", error);
+            const contextualError = new FirestorePermissionError({
+                operation: 'list',
+                path: 'serviceRecords (collectionGroup)',
+            });
+            errorEmitter.emit('permission-error', contextualError);
+            setIsLoading(false);
+        });
     };
+    
     fetchAllServices();
   }, [firestore]);
   
