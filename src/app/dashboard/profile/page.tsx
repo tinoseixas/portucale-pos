@@ -90,7 +90,7 @@ export default function ProfilePage() {
     if (!file || !user) return;
     
     const userAvatarPlaceholder = PlaceHolderImages.find(p => p.id === 'user_avatar');
-    const photoURL = userAvatarPlaceholder?.imageUrl || 'https://picsum.photos/seed/user-avatar/200';
+    const photoURL = userAvatarPlaceholder?.imageUrl || `https://picsum.photos/seed/${user.uid}/200`;
     
     try {
         await updateProfile(user, { photoURL });
