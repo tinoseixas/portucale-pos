@@ -34,11 +34,6 @@ service cloud.firestore {
     function isAdmin() {
         return isSignedIn() && request.auth.token.email == 'tino@seixas.com';
     }
-
-    // Checks if a document exists and is owned by the user.
-    function isExistingOwner(userId) {
-      return isOwner(userId) && exists(path(resource.data.id));
-    }
     
     // --- Collection Rules ---
 
