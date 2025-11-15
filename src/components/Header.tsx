@@ -11,7 +11,6 @@ import { useRouter } from 'next/navigation'
 import type { Employee } from '@/lib/types'
 import { doc } from 'firebase/firestore'
 import { ADMIN_EMAIL } from '@/lib/admin'
-import { useMemo } from 'react'
 
 
 export function Header() {
@@ -27,7 +26,7 @@ export function Header() {
 
   const { data: employee } = useDoc<Employee>(employeeDocRef);
   
-  const isUserAdmin = user?.email === ADMIN_EMAIL;
+  const isUserAdmin = !isUserLoading && user?.email === ADMIN_EMAIL;
 
   const handleLogout = async () => {
     if (!auth) return;
@@ -42,19 +41,6 @@ export function Header() {
     return email[0].toUpperCase();
   }
 
-  if (isUserLoading) {
-    return (
-        <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-            <div className="container flex h-16 items-center justify-between">
-                 <Link href="/dashboard" className="flex flex-col items-start">
-                    <span className="font-bold text-lg">TS Serveis</span>
-                    <span className="text-xs text-muted-foreground leading-tight">convertim les teves idees en realitat</span>
-                </Link>
-            </div>
-        </header>
-    )
-  }
-
   return (
     <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 items-center justify-between">
@@ -63,7 +49,8 @@ export function Header() {
           <span className="text-xs text-muted-foreground leading-tight">convertim les teves idees en realitat</span>
         </Link>
         
-        {user && (
+        {/* Only render the user section once loading is complete */}
+        {!isUserLoading && user && (
           <div className="flex items-center gap-4">
              <div className="hidden sm:flex items-center gap-4">
                 {employee?.firstName && (
@@ -71,6 +58,7 @@ export function Header() {
                     Bona feina, {employee.firstName}!
                     </span>
                 )}
+                {/* Client-side render only for admin button */}
                 {isUserAdmin && (
                     <Button variant="outline" size="sm" onClick={() => router.push('/dashboard/users')}>
                         <Users className="mr-2 h-4 w-4" />

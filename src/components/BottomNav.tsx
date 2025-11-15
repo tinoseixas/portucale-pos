@@ -11,25 +11,27 @@ export function BottomNav() {
   const pathname = usePathname()
   const { user, isUserLoading } = useUser()
 
-  const isUserAdmin = user?.email === ADMIN_EMAIL;
+  const isUserAdmin = !isUserLoading && user?.email === ADMIN_EMAIL;
 
-  const navItems = [
+  const baseNavItems = [
     { href: '/dashboard', icon: LayoutDashboard, label: 'Serveis' },
     { href: '/dashboard/new', icon: PlusCircle, label: 'Nou' },
     { href: '/dashboard/report', icon: FileText, label: 'Informe' },
   ];
 
+  const navItems = [...baseNavItems];
   if (isUserAdmin) {
     navItems.push({ href: '/dashboard/users', icon: Users, label: 'Usuaris' });
   }
-  
   navItems.push({ href: '/dashboard/profile', icon: UserIcon, label: 'Perfil' });
 
+  // Render a placeholder during loading to prevent hydration mismatch
   if (isUserLoading) {
       return (
          <nav className="fixed bottom-0 left-0 right-0 z-40 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 md:hidden">
             <div className="container grid h-16 w-full grid-flow-col auto-cols-fr items-center">
-                {/* Render a placeholder or nothing while loading */}
+                {/* Render empty placeholders matching the number of final items to keep layout consistent */}
+                {Array.from({ length: 5 }).map((_, i) => <div key={i}></div>)}
             </div>
         </nav>
       )
