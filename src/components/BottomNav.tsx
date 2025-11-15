@@ -4,8 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { LayoutDashboard, PlusCircle, FileText, User as UserIcon, Users } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase'
-import { doc } from 'firebase/firestore'
+import { useUser } from '@/firebase'
 import { ADMIN_UID } from '@/lib/admin'
 
 export function BottomNav() {
@@ -17,14 +16,14 @@ export function BottomNav() {
     { href: '/dashboard', icon: LayoutDashboard, label: 'Serveis' },
     { href: '/dashboard/new', icon: PlusCircle, label: 'Nou' },
     { href: '/dashboard/report', icon: FileText, label: 'Informe' },
-    { href: '/dashboard/profile', icon: UserIcon, label: 'Perfil' },
-  ]
-  
+  ];
+
   if (isUserAdmin) {
-    // Add users link for admin, before the profile link
-    const profileIndex = navItems.findIndex(item => item.href === '/dashboard/profile');
-    navItems.splice(profileIndex, 0, { href: '/dashboard/users', icon: Users, label: 'Usuaris' });
+    navItems.push({ href: '/dashboard/users', icon: Users, label: 'Usuaris' });
   }
+  
+  // Perfil should always be the last item
+  navItems.push({ href: '/dashboard/profile', icon: UserIcon, label: 'Perfil' });
 
 
   return (

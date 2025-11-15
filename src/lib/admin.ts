@@ -1,5 +1,4 @@
-// Per identificar l'administrador, si us plau, substitueix 'YOUR_ADMIN_UID_HERE'
-// amb el teu ID d'usuari real de Firebase.
-// Aquest UID s'utilitzarà per concedir permisos de lectura a tots els registres.
-
+// Define o UID do administrador. O utilizador com este UID terá acesso
+// a funcionalidades especiais, como a gestão de utilizadores.
+// Para fins de demonstração, o utilizador com o email a@a.com foi definido como admin.
 export const ADMIN_UID = 'tP4c49T8L4cFqCMiPWh85A5i5942';
