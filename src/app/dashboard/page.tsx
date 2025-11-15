@@ -7,59 +7,44 @@ import { Button } from '@/components/ui/button'
 import { PlusCircle, List, Calendar } from 'lucide-react'
 import { ServiceCard } from '@/components/ServiceCard'
 import { ServiceCalendar } from '@/components/ServiceCalendar'
-import type { ServiceRecord, Employee } from '@/lib/types'
+import type { ServiceRecord } from '@/lib/types'
 import { useCollection, useUser, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy, getDocs } from 'firebase/firestore';
+import { collection, query, orderBy, getDocs, collectionGroup } from 'firebase/firestore';
 import { ADMIN_EMAIL } from '@/lib/admin'
+import { Skeleton } from '@/components/ui/skeleton'
 
 export default function DashboardPage() {
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
   const router = useRouter();
   const [view, setView] = useState<'list' | 'calendar'>('list');
+  
+  // State for admin's view of all services
   const [allServices, setAllServices] = useState<ServiceRecord[]>([]);
-  const [isLoadingAllServices, setIsLoadingAllServices] = useState(false);
+  const [isLoadingAllServices, setIsLoadingAllServices] = useState(true);
+
+  // State for regular user's services
+  const userServicesQuery = useMemoFirebase(() => {
+    if (!user || (user && user.email === ADMIN_EMAIL)) return null;
+    return query(collection(firestore, `employees/${user.uid}/serviceRecords`), orderBy('arrivalDateTime', 'desc'));
+  }, [firestore, user]);
+
+  const { data: userServices, isLoading: isLoadingUserServices } = useCollection<ServiceRecord>(userServicesQuery);
 
   const isUserAdmin = useMemo(() => user?.email === ADMIN_EMAIL, [user]);
 
-  // Query for regular user's services
-  const userServicesQuery = useMemoFirebase(() => {
-    if (isUserLoading || !firestore || isUserAdmin || !user) return null;
-    return query(collection(firestore, `employees/${user.uid}/serviceRecords`), orderBy('arrivalDateTime', 'desc'));
-  }, [firestore, user, isUserAdmin, isUserLoading]);
-  
-  const { data: userServices, isLoading: isLoadingUserServices } = useCollection<ServiceRecord>(userServicesQuery);
-
   useEffect(() => {
-    if (isUserAdmin && firestore && !isUserLoading) {
+    if (isUserLoading || !firestore) return;
+
+    if (isUserAdmin) {
       const fetchAllServices = async () => {
         setIsLoadingAllServices(true);
         try {
-          // 1. Fetch all employees
-          const employeesCollection = collection(firestore, 'employees');
-          const employeeSnapshot = await getDocs(employeesCollection);
-          const employees = employeeSnapshot.docs.map(doc => doc.data() as Employee);
-
-          // 2. Fetch service records for each employee in parallel
-          const servicePromises = employees.map(employee => {
-            const servicesCollection = collection(firestore, `employees/${employee.id}/serviceRecords`);
-            return getDocs(query(servicesCollection, orderBy('arrivalDateTime', 'desc')));
-          });
-          
-          const serviceSnapshots = await Promise.all(servicePromises);
-          
-          // 3. Aggregate all services
-          const combinedServices: ServiceRecord[] = [];
-          serviceSnapshots.forEach(snapshot => {
-            snapshot.docs.forEach(doc => {
-              combinedServices.push({ id: doc.id, ...(doc.data() as Omit<ServiceRecord, 'id'>) });
-            });
-          });
-
-          // 4. Sort all services by date
-          combinedServices.sort((a, b) => new Date(b.arrivalDateTime).getTime() - new Date(a.arrivalDateTime).getTime());
-          
-          setAllServices(combinedServices);
+          // Use collectionGroup to fetch all serviceRecords across all employees
+          const servicesQuery = query(collectionGroup(firestore, 'serviceRecords'), orderBy('arrivalDateTime', 'desc'));
+          const snapshot = await getDocs(servicesQuery);
+          const servicesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ServiceRecord));
+          setAllServices(servicesData);
         } catch (error) {
           console.error("Error fetching all services for admin:", error);
           setAllServices([]);
@@ -67,19 +52,41 @@ export default function DashboardPage() {
           setIsLoadingAllServices(false);
         }
       };
-
       fetchAllServices();
+    } else {
+        // If not admin, no need to load all services
+        setIsLoadingAllServices(false);
     }
   }, [isUserAdmin, firestore, isUserLoading]);
-  
+
   const services = isUserAdmin ? allServices : userServices;
   const isLoading = isUserAdmin ? isLoadingAllServices : (isUserLoading || isLoadingUserServices);
   
   const handleEventClick = (service: ServiceRecord) => {
-    // Admin needs to know the owner of the service to build the correct path
     const path = isUserAdmin ? `/dashboard/edit/${service.id}?ownerId=${service.employeeId}` : `/dashboard/edit/${service.id}`;
     router.push(path);
   };
+
+  const renderSkeletons = () => (
+    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        {Array.from({ length: 3 }).map((_, i) => (
+            <Card key={i}>
+                <CardHeader>
+                    <Skeleton className="h-6 w-3/4 mb-2" />
+                    <Skeleton className="h-4 w-1/2" />
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-4 w-5/6" />
+                    <div className="flex justify-between items-center pt-2">
+                        <Skeleton className="h-5 w-1/4" />
+                        <Skeleton className="h-8 w-1/3" />
+                    </div>
+                </CardContent>
+            </Card>
+        ))}
+    </div>
+  );
 
   return (
     <div className="space-y-8">
@@ -102,34 +109,32 @@ export default function DashboardPage() {
         </div>
       </div>
       
-      {isLoading && <p>{isUserAdmin ? "Carregant tots els serveis..." : "Carregant serveis..."}</p>}
-
-      {!isLoading && services && services.length > 0 ? (
-        view === 'list' ? (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {services.map(service => (
-                <ServiceCard 
-                    key={service.id} 
-                    service={service} 
-                    isUserAdmin={isUserAdmin}
-                />
-              ))}
-            </div>
+      {isLoading ? renderSkeletons() : (
+        !services || services.length === 0 ? (
+          <div className="text-center py-16 border-2 border-dashed rounded-lg">
+              <h2 className="text-xl font-semibold">No hi ha serveis registrats</h2>
+              <p className="text-muted-foreground">{isUserAdmin ? "Encara no hi ha serveis registrats per cap usuari." : "Comença afegint el teu primer servei del dia."}</p>
+              <Button asChild className="mt-4 bg-accent hover:bg-accent/90 text-accent-foreground">
+                  <Link href="/dashboard/new">
+                  <PlusCircle className="mr-2 h-4 w-4" />
+                  Afegeix un Servei
+                  </Link>
+              </Button>
+          </div>
         ) : (
-           <ServiceCalendar services={services} onSelectEvent={handleEventClick} />
-        )
-      ) : (
-        !isLoading && (
-            <div className="text-center py-16 border-2 border-dashed rounded-lg">
-                <h2 className="text-xl font-semibold">No hi ha serveis registrats</h2>
-                <p className="text-muted-foreground">{isUserAdmin ? "Encara no hi ha serveis registrats per cap usuari." : "Comença afegint el teu primer servei del dia."}</p>
-                <Button asChild className="mt-4 bg-accent hover:bg-accent/90 text-accent-foreground">
-                    <Link href="/dashboard/new">
-                    <PlusCircle className="mr-2 h-4 w-4" />
-                    Afegeix un Servei
-                    </Link>
-                </Button>
-            </div>
+          view === 'list' ? (
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {services.map(service => (
+                  <ServiceCard 
+                      key={service.id} 
+                      service={service} 
+                      isUserAdmin={isUserAdmin}
+                  />
+                ))}
+              </div>
+          ) : (
+             <ServiceCalendar services={services} onSelectEvent={handleEventClick} />
+          )
         )
       )}
     </div>
