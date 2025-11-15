@@ -33,6 +33,7 @@ export function Header() {
   }, [user, isUserLoading]);
 
   const handleLogout = async () => {
+    if (!auth) return;
     await signOut(auth)
     router.push('/')
   }
@@ -47,8 +48,9 @@ export function Header() {
   return (
     <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 items-center justify-between">
-        <Link href="/dashboard" className="flex items-center gap-2 font-bold text-lg">
-          <span>TS Serveis</span>
+        <Link href="/dashboard" className="flex flex-col items-start">
+          <span className="font-bold text-lg">TS Serveis</span>
+          <span className="text-xs text-muted-foreground leading-tight">convertim les teves idees en realitat</span>
         </Link>
         
         {user && (
