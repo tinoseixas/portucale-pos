@@ -83,6 +83,8 @@ export default function DashboardPage() {
 
     if (isUserAdmin) {
       const fetchAdminData = async () => {
+        let adminUserId: string | undefined;
+
         // Fetch all employees for the filter
         setIsLoadingEmployees(true);
         const employeesQuery = query(collection(firestore, 'employees'));
@@ -90,6 +92,8 @@ export default function DashboardPage() {
           const employeeSnapshot = await getDocs(employeesQuery);
           const employeesData = employeeSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Employee));
           setEmployees(employeesData);
+          // Find the admin user ID
+          adminUserId = employeesData.find(e => e.email === ADMIN_EMAIL)?.id;
         } catch (error) {
           console.error("Failed to fetch employees:", error);
         } finally {
@@ -102,7 +106,13 @@ export default function DashboardPage() {
         
         try {
           const snapshot = await getDocs(servicesQuery);
-          const servicesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ServiceRecord));
+          let servicesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ServiceRecord));
+          
+          // Filter out services belonging to the admin user
+          if (adminUserId) {
+            servicesData = servicesData.filter(service => service.employeeId !== adminUserId);
+          }
+          
           setAllServices(servicesData);
         } catch (error) {
           console.error("Admin service fetch failed, emitting contextual error:", error);
@@ -239,7 +249,7 @@ export default function DashboardPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Tots els Usuaris</SelectItem>
-                {employees.map(emp => (
+                {employees.filter(emp => emp.email !== ADMIN_EMAIL).map(emp => (
                   <SelectItem key={emp.id} value={emp.id}>{emp.firstName} {emp.lastName}</SelectItem>
                 ))}
               </SelectContent>
@@ -429,3 +439,5 @@ export default function DashboardPage() {
     </div>
   )
 }
+
+    
