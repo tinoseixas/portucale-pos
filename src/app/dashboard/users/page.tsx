@@ -22,6 +22,7 @@ export default function UsersPage() {
   }, [user, isUserLoading]);
 
   const employeesQuery = useMemoFirebase(() => {
+    // We only want to run this query if the user is an admin.
     if (!isCurrentUserAdmin || !firestore) return null;
     return collection(firestore, 'employees')
   }, [firestore, isCurrentUserAdmin])
@@ -29,10 +30,14 @@ export default function UsersPage() {
   const { data: employees, isLoading: isLoadingEmployees } = useCollection<Employee>(employeesQuery)
 
   useEffect(() => {
-    if (!isUserLoading && !isCurrentUserAdmin) {
-      router.push('/dashboard')
+    // Wait until the user loading state is resolved.
+    if (!isUserLoading) {
+      // If the user is not an admin, redirect them away.
+      if (!isCurrentUserAdmin) {
+        router.push('/dashboard');
+      }
     }
-  }, [isUserLoading, isCurrentUserAdmin, router])
+  }, [isUserLoading, isCurrentUserAdmin, router]);
 
 
   const getInitials = (employee: Employee) => {
@@ -41,14 +46,10 @@ export default function UsersPage() {
     if (employee.email) return employee.email[0].toUpperCase()
     return 'U'
   }
-
-  if (isUserLoading || isLoadingEmployees) {
-    return <p>Carregant usuaris...</p>
-  }
   
-  if (!isCurrentUserAdmin) {
-    // This part will show for a brief moment before redirection for non-admins
-    return <p>Accés denegat. Redireccionant...</p>;
+  // While loading user or employees, or if the user is not an admin yet (but might be), show a loading state.
+  if (isUserLoading || isLoadingEmployees || !isCurrentUserAdmin) {
+    return <p>Carregant usuaris...</p>
   }
 
   return (
@@ -85,7 +86,7 @@ export default function UsersPage() {
                   <TableCell>{employee.employeeId}</TableCell>
                   <TableCell>{employee.email}</TableCell>
                   <TableCell>
-                    <Badge variant={employee.role === 'admin' ? 'default' : 'secondary'}>
+                    <Badge variant={employee.id === ADMIN_UID ? 'default' : 'secondary'}>
                       {employee.id === ADMIN_UID ? 'admin' : 'user'}
                     </Badge>
                   </TableCell>
