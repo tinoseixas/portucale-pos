@@ -28,7 +28,7 @@ function EmployeeName({ employeeId }: { employeeId: string }) {
   const { data: employee, isLoading } = useDoc<Employee>(employeeDocRef);
 
   if (isLoading) {
-    return <Skeleton className="h-5 w-24" />;
+    return <Skeleton className="h-5 w-32" />;
   }
 
   const employeeName = employee ? `${employee.firstName} ${employee.lastName}` : 'Empleat desconegut';
