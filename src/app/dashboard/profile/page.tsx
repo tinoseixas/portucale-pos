@@ -17,7 +17,7 @@ import { doc } from 'firebase/firestore';
 import { updateProfile } from 'firebase/auth';
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import type { Employee } from '@/lib/types';
-import { Camera, Save } from 'lucide-react';
+import { Camera, Save, ArrowLeft } from 'lucide-react';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 
 
@@ -198,7 +198,11 @@ export default function ProfilePage() {
               {errors.employeeId && <p className="text-sm text-destructive">{errors.employeeId.message}</p>}
             </div>
 
-            <div className="flex justify-end pt-4">
+            <div className="flex justify-between items-center pt-4">
+              <Button type="button" variant="outline" onClick={() => router.push('/dashboard')}>
+                  <ArrowLeft className="mr-2 h-4 w-4"/>
+                  Tornar
+              </Button>
               <Button type="submit" disabled={!isDirty} className="bg-accent hover:bg-accent/90 text-accent-foreground">
                 <Save className="mr-2 h-4 w-4"/>
                 Desa els Canvis
