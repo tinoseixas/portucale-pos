@@ -101,12 +101,14 @@ export default function DashboardPage() {
                 {view === 'list' ? <Calendar className="mr-2 h-4 w-4" /> : <List className="mr-2 h-4 w-4" />}
                 {view === 'list' ? 'Calendari' : 'Llista'}
             </Button>
-            <Button asChild className="bg-accent hover:bg-accent/90 text-accent-foreground">
-                <Link href="/dashboard/new">
-                    <PlusCircle className="mr-2 h-4 w-4" />
-                    Nou Servei
-                </Link>
-            </Button>
+            {!isUserAdmin && (
+              <Button asChild className="bg-accent hover:bg-accent/90 text-accent-foreground">
+                  <Link href="/dashboard/new">
+                      <PlusCircle className="mr-2 h-4 w-4" />
+                      Nou Servei
+                  </Link>
+              </Button>
+            )}
         </div>
       </div>
       
@@ -115,12 +117,14 @@ export default function DashboardPage() {
           <div className="text-center py-16 border-2 border-dashed rounded-lg">
               <h2 className="text-xl font-semibold">No hi ha serveis registrats</h2>
               <p className="text-muted-foreground">{isUserAdmin ? "Encara no hi ha serveis registrats per cap usuari." : "Comença afegint el teu primer servei del dia."}</p>
-              <Button asChild className="mt-4 bg-accent hover:bg-accent/90 text-accent-foreground">
-                  <Link href="/dashboard/new">
-                  <PlusCircle className="mr-2 h-4 w-4" />
-                  Afegeix un Servei
-                  </Link>
-              </Button>
+              {!isUserAdmin && (
+                <Button asChild className="mt-4 bg-accent hover:bg-accent/90 text-accent-foreground">
+                    <Link href="/dashboard/new">
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    Afegeix un Servei
+                    </Link>
+                </Button>
+              )}
           </div>
         ) : (
           view === 'list' ? (
