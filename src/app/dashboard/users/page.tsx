@@ -29,6 +29,7 @@ export default function UsersPage() {
   const { data: employees, isLoading: isLoadingEmployees } = useCollection<Employee>(employeesQuery)
 
   useEffect(() => {
+    // Wait until the user loading is complete before checking for admin status
     if (!isUserLoading && !isCurrentUserAdmin) {
       router.push('/dashboard');
     }
