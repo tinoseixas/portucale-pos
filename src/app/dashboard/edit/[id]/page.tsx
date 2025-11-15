@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Clock, FileText, Camera, ArrowLeft, Save, Trash2, Hash, Plus, X, Video, Calendar as CalendarIcon, Map } from 'lucide-react'
+import { Clock, FileText, Camera, ArrowLeft, Save, Trash2, Hash, Plus, X, Video, Calendar as CalendarIcon, Map, Info } from 'lucide-react'
 import { useToast } from "@/hooks/use-toast"
 import { useFirestore, useUser, useDoc, useMemoFirebase } from '@/firebase'
 import { doc, deleteDoc } from 'firebase/firestore'
@@ -145,6 +145,7 @@ export default function EditServicePage() {
       description,
       media: media.map(({type, dataUrl}) => ({type, dataUrl})),
       albarans: filteredAlbarans,
+      updatedAt: new Date().toISOString(),
     }
 
     updateDocumentNonBlocking(serviceDocRef, updatedData)
@@ -205,6 +206,12 @@ export default function EditServicePage() {
         <CardHeader>
           <CardTitle>Editar Servei #{serviceId.slice(-6)}</CardTitle>
           <CardDescription>Modifica els detalls do servei realitzat.</CardDescription>
+          {isUserAdmin && service.updatedAt && (
+             <p className="text-xs text-muted-foreground pt-2 flex items-center gap-1">
+              <Info className="h-3 w-3" />
+              Última modificació: {format(new Date(service.updatedAt), "dd/MM/yyyy 'a les' HH:mm", { locale: ca })}
+            </p>
+          )}
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">

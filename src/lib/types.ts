@@ -7,6 +7,7 @@ export interface ServiceRecord {
   pendingTasks: string;
   media: { type: 'image' | 'video'; dataUrl: string }[];
   albarans: string[];
+  updatedAt?: string;
 }
 
 export interface Employee {

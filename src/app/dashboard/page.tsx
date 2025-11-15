@@ -186,6 +186,7 @@ export default function DashboardPage() {
               <TableHead>Funcionari</TableHead>
               <TableHead>Data</TableHead>
               <TableHead>Descripció</TableHead>
+              <TableHead>Última Modificació</TableHead>
               <TableHead className="text-right">Accions</TableHead>
             </TableRow>
           </TableHeader>
@@ -201,6 +202,9 @@ export default function DashboardPage() {
                 <TableCell className="font-medium">{getEmployeeName(service.employeeId)}</TableCell>
                 <TableCell>{format(parseISO(service.arrivalDateTime), 'dd/MM/yyyy HH:mm')}</TableCell>
                 <TableCell className="max-w-[300px] truncate">{service.description}</TableCell>
+                <TableCell>
+                  {service.updatedAt ? format(parseISO(service.updatedAt), 'dd/MM/yy HH:mm') : '-'}
+                </TableCell>
                 <TableCell className="text-right">
                   <Button variant="outline" size="sm" asChild>
                      <Link href={`/dashboard/edit/${service.id}?ownerId=${service.employeeId}`}>
@@ -211,7 +215,7 @@ export default function DashboardPage() {
               </TableRow>
             )) : (
               <TableRow>
-                <TableCell colSpan={5} className="h-24 text-center">
+                <TableCell colSpan={6} className="h-24 text-center">
                   No s'han trobat serveis per als filtres seleccionats.
                 </TableCell>
               </TableRow>
