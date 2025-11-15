@@ -59,6 +59,11 @@ export default function UsersPage() {
   }, [firestore, isCurrentUserAdmin])
 
   const { data: employees, isLoading: isLoadingEmployees } = useCollection<Employee>(employeesQuery)
+  
+  const displayedEmployees = useMemo(() => {
+    if (!employees) return [];
+    return employees.filter(e => e.email !== ADMIN_EMAIL);
+  }, [employees])
 
   useEffect(() => {
     if (!isUserLoading && !isCurrentUserAdmin) {
@@ -117,7 +122,7 @@ export default function UsersPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {employees && employees.filter(e => e.email !== ADMIN_EMAIL).map(employee => (
+              {displayedEmployees.map(employee => (
                 <TableRow key={employee.id}>
                   <TableCell>
                     <div className="flex items-center gap-3">
