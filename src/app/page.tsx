@@ -52,7 +52,8 @@ export default function Home() {
             employeeId: newUser.uid.substring(0, 8), // Example employeeId
             firstName: email.split('@')[0] || 'Nou',
             lastName: 'Usuari',
-            email: newUser.email, // THIS IS THE CRITICAL FIX
+            email: newUser.email,
+            phoneNumber: '', // Initialize phone number
             role: newUser.uid === ADMIN_UID ? 'admin' : 'user',
           }, { merge: true });
 
