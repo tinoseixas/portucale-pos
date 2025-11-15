@@ -165,7 +165,7 @@ export default function UsersPage() {
                           <AlertDialogHeader>
                             <AlertDialogTitle>Estàs segur?</AlertDialogTitle>
                             <AlertDialogDescription>
-                              Aquesta acció no es pot desfer. Això eliminarà permanentment o registo do empregado <strong>{employee.firstName} {employee.lastName}</strong>.
+                              Aquesta acció no es pot desfer. Això eliminarà permanentment el registre de l'empleat <strong>{employee.firstName} {employee.lastName}</strong>.
                             </AlertDialogDescription>
                           </AlertDialogHeader>
                           <AlertDialogFooter>
