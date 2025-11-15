@@ -14,7 +14,6 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
-import { updateProfile } from 'firebase/auth';
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import type { Employee } from '@/lib/types';
 import { Camera, Save, ArrowLeft } from 'lucide-react';
@@ -90,19 +89,14 @@ export default function ProfilePage() {
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (!file || !user) return;
+    if (!file || !user || !employeeDocRef) return;
 
     const reader = new FileReader();
-    reader.onloadend = async () => {
+    reader.onloadend = () => {
         const dataUrl = reader.result as string;
         try {
-            // Update Firebase Auth user profile
-            await updateProfile(user, { photoURL: dataUrl });
-
-            // Update the avatar URL in the Firestore document
-            if (employeeDocRef) {
-                updateDocumentNonBlocking(employeeDocRef, { avatar: dataUrl });
-            }
+            // Update the avatar URL in the Firestore document only
+            updateDocumentNonBlocking(employeeDocRef, { avatar: dataUrl });
 
             // Update local state to immediately reflect the change
             setAvatarUrl(dataUrl);
