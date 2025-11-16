@@ -83,24 +83,21 @@ export default function DashboardPage() {
 
     if (isUserAdmin) {
       const fetchAdminData = async () => {
-        let adminUserId: string | undefined;
-
-        // Fetch all employees for the filter
+        // Fetch all employees first
         setIsLoadingEmployees(true);
         const employeesQuery = query(collection(firestore, 'employees'));
+        let employeesData: Employee[] = [];
         try {
           const employeeSnapshot = await getDocs(employeesQuery);
-          const employeesData = employeeSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Employee));
+          employeesData = employeeSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Employee));
           setEmployees(employeesData);
-          // Find the admin user ID
-          adminUserId = employeesData.find(e => e.email === ADMIN_EMAIL)?.id;
         } catch (error) {
           console.error("Failed to fetch employees:", error);
         } finally {
           setIsLoadingEmployees(false);
         }
 
-        // Fetch all services
+        // Now fetch all services
         setIsLoadingAllServices(true);
         const servicesQuery = query(collectionGroup(firestore, 'serviceRecords'), orderBy('arrivalDateTime', 'desc'));
         
@@ -108,6 +105,9 @@ export default function DashboardPage() {
           const snapshot = await getDocs(servicesQuery);
           let servicesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ServiceRecord));
           
+          // Find the admin user ID from the already fetched employees
+          const adminUserId = employeesData.find(e => e.email === ADMIN_EMAIL)?.id;
+
           // Filter out services belonging to the admin user
           if (adminUserId) {
             servicesData = servicesData.filter(service => service.employeeId !== adminUserId);
@@ -439,5 +439,3 @@ export default function DashboardPage() {
     </div>
   )
 }
-
-    
