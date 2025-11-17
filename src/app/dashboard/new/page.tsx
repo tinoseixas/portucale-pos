@@ -120,50 +120,82 @@ export default function NewServicePage() {
       return
     }
     
-    // If it's a new service, save it first to get an ID
-    if (!serviceId) {
-        const selectedDateStr = format(date, 'yyyy-MM-dd')
-        const arrivalDateTime = new Date(`${selectedDateStr}T${startTime || '00:00'}`).toISOString();
-        const departureDateTime = new Date(`${selectedDateStr}T${endTime || '00:00'}`).toISOString();
-        
-        const filteredAlbarans = albarans.filter(a => a.trim() !== '')
+    // Stop tracking before navigating away
+    setIsTracking(false);
+    
+    const selectedDateStr = format(date, 'yyyy-MM-dd')
+    const arrivalDateTime = new Date(`${selectedDateStr}T${startTime || '00:00'}`).toISOString();
+    const departureDateTime = new Date(`${selectedDateStr}T${endTime || '00:00'}`).toISOString();
+    
+    const filteredAlbarans = albarans.filter(a => a.trim() !== '')
 
+    const serviceRecord = {
+        employeeId: user.uid,
+        arrivalDateTime,
+        departureDateTime,
+        description,
+        pendingTasks: '',
+        media: media.map(({type, dataUrl}) => ({type, dataUrl})),
+        albarans: filteredAlbarans,
+        createdAt: new Date().toISOString(),
+    };
+
+    const serviceRecordsCollection = collection(firestore, `employees/${user.uid}/serviceRecords`);
+    
+    try {
+        const docRef = await addDocumentNonBlocking(serviceRecordsCollection, serviceRecord);
+        if (docRef) {
+            // No need to start tracking here, just show success and redirect
+            setServiceId(docRef.id);
+            
+            toast({
+                title: `Gràcies, ${employee?.firstName || 'company'}!`,
+                description: "El teu servei ha estat registrat.",
+            })
+            
+            router.push(`/dashboard`); // Redirect to dashboard page
+        }
+    } catch (error) {
+        toast({
+            variant: "destructive",
+            title: "Error",
+            description: "No s'ha pogut desar el servei.",
+        })
+    }
+  }
+  
+  const handleStartServiceAndTracking = async () => {
+    if (!user || !firestore) {
+        toast({ variant: "destructive", title: "Error", description: "Has d'iniciar sessió." });
+        return;
+    }
+    if (!serviceId) { // Only create a new service if one doesn't exist
+        const now = new Date();
         const serviceRecord = {
             employeeId: user.uid,
-            arrivalDateTime,
-            departureDateTime,
-            description,
+            arrivalDateTime: now.toISOString(),
+            departureDateTime: now.toISOString(), // Temporary
+            description: "Servei en curs...",
             pendingTasks: '',
-            media: media.map(({type, dataUrl}) => ({type, dataUrl})),
-            albarans: filteredAlbarans,
-            createdAt: new Date().toISOString(),
+            media: [],
+            albarans: [],
+            createdAt: now.toISOString(),
         };
-
         const serviceRecordsCollection = collection(firestore, `employees/${user.uid}/serviceRecords`);
-        
         try {
             const docRef = await addDocumentNonBlocking(serviceRecordsCollection, serviceRecord);
             if (docRef) {
-                // Now we have an ID, start tracking and show the success message
                 setServiceId(docRef.id);
-                setIsTracking(true); 
-                
-                toast({
-                    title: `Gràcies, ${employee?.firstName || 'company'}!`,
-                    description: "El teu servei ha estat registrat.",
-                })
-                
-                 router.push(`/dashboard`); // Redirect to dashboard page
+                setIsTracking(true);
+                toast({ title: "Servei iniciat!", description: "S'ha iniciat el registre i el rastreig GPS." });
+                router.push(`/dashboard/edit/${docRef.id}`);
             }
         } catch (error) {
-            toast({
-                variant: "destructive",
-                title: "Error",
-                description: "No s'ha pogut desar el servei.",
-            })
+            toast({ variant: "destructive", title: "Error", description: "No s'ha pogut iniciar el servei." });
         }
     }
-  }
+  };
+
 
   if (isUserLoading) {
     return (
@@ -205,7 +237,6 @@ export default function NewServicePage() {
         Tornar
       </Button>
       
-      {/* The LocationTracker is now invisible and is controlled by the isTracking state */}
       {user && serviceId && (
         <LocationTracker
           employeeId={user.uid}
@@ -341,5 +372,3 @@ export default function NewServicePage() {
     </div>
   )
 }
-
-    

@@ -8,6 +8,7 @@ export interface ServiceRecord {
   media: { type: 'image' | 'video'; dataUrl: string }[];
   albarans: string[];
   updatedAt?: string;
+  createdAt?: string; // Add createdAt for sorting and tracking
 }
 
 export interface Employee {
@@ -21,9 +22,11 @@ export interface Employee {
   role?: 'admin' | 'user';
 }
 
-export interface Photo {
+export interface LocationRecord {
   id: string;
+  employeeId: string;
   serviceRecordId: string;
-  url: string;
-  description: string;
+  latitude: number;
+  longitude: number;
+  timestamp: string;
 }
