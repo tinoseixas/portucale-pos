@@ -1,198 +1,68 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Clock, FileText, Camera, ArrowLeft, Save, Hash, Plus, X, Video, Calendar as CalendarIcon, LogIn } from 'lucide-react'
+import { LogIn, MapPin } from 'lucide-react'
 import { useToast } from "@/hooks/use-toast"
 import { useFirestore, useUser, useDoc, useMemoFirebase } from '@/firebase'
 import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates'
-import { collection, doc } from 'firebase/firestore'
-import Image from 'next/image'
-import { CameraCapture } from '@/components/CameraCapture'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { Calendar } from '@/components/ui/calendar'
-import { format } from 'date-fns'
-import { ca } from 'date-fns/locale'
-import { cn } from '@/lib/utils'
-import { LocationTracker } from '@/components/LocationTracker'
+import { collection } from 'firebase/firestore'
 import type { Employee } from '@/lib/types'
 
-
-type MediaFile = {
-  type: 'image' | 'video';
-  dataUrl: string;
-  file?: File;
-};
 
 export default function NewServicePage() {
   const router = useRouter()
   const { toast } = useToast()
-  const [date, setDate] = useState<Date | undefined>(new Date())
-  const [startTime, setStartTime] = useState('')
-  const [endTime, setEndTime] = useState('')
-  const [description, setDescription] = useState('')
-  const [media, setMedia] = useState<MediaFile[]>([])
-  const [albarans, setAlbarans] = useState<string[]>([''])
-  const [showCamera, setShowCamera] = useState(false)
-  const [isTracking, setIsTracking] = useState(false);
-  const [serviceId, setServiceId] = useState<string | null>(null);
-
+  const [isStarting, setIsStarting] = useState(false);
   const { user, isUserLoading } = useUser()
   const firestore = useFirestore()
   
   const employeeDocRef = useMemoFirebase(() => {
     if (!user) return null;
-    return doc(firestore, 'employees', user.uid);
+    return collection(firestore, 'employees');
   }, [firestore, user]);
 
   const { data: employee } = useDoc<Employee>(employeeDocRef);
 
-  useEffect(() => {
-    // This effect ensures that tracking stops when the user navigates away
-    return () => {
-      setIsTracking(false);
-    };
-  }, []);
 
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      const files = Array.from(e.target.files);
-      files.forEach(file => {
-        const reader = new FileReader();
-        reader.onload = (event) => {
-          const dataUrl = event.target?.result as string;
-          const type = file.type.startsWith('image/') ? 'image' : 'video';
-          setMedia(prev => [...prev, { type, dataUrl, file }]);
-        };
-        reader.readAsDataURL(file);
-      });
-    }
-  }
-
-  const handleAlbaranChange = (index: number, value: string) => {
-    const newAlbarans = [...albarans]
-    newAlbarans[index] = value
-    setAlbarans(newAlbarans)
-  }
-
-  const addAlbaranInput = () => {
-    setAlbarans([...albarans, ''])
-  }
-
-  const removeAlbaranInput = (index: number) => {
-    const newAlbarans = albarans.filter((_, i) => i !== index)
-    setAlbarans(newAlbarans)
-  }
-
-  const handleCapture = (dataUrl: string, type: 'image' | 'video') => {
-    setMedia(prev => [...prev, { type, dataUrl }]);
-    setShowCamera(false);
-  };
-  
-  const removeMedia = (index: number) => {
-    setMedia(prev => prev.filter((_, i) => i !== index));
-  }
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!user || !firestore) {
-        toast({
-            variant: "destructive",
-            title: "Error",
-            description: "Has d'iniciar sessió per registrar un servei.",
-        })
-        return
-    }
-
-     if (!date) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Si us plau, selecciona una data per al servei.",
-      })
-      return
-    }
-    
-    // Stop tracking before navigating away
-    setIsTracking(false);
-    
-    const selectedDateStr = format(date, 'yyyy-MM-dd')
-    const arrivalDateTime = new Date(`${selectedDateStr}T${startTime || '00:00'}`).toISOString();
-    const departureDateTime = new Date(`${selectedDateStr}T${endTime || '00:00'}`).toISOString();
-    
-    const filteredAlbarans = albarans.filter(a => a.trim() !== '')
-
-    const serviceRecord = {
-        employeeId: user.uid,
-        arrivalDateTime,
-        departureDateTime,
-        description,
-        pendingTasks: '',
-        media: media.map(({type, dataUrl}) => ({type, dataUrl})),
-        albarans: filteredAlbarans,
-        createdAt: new Date().toISOString(),
-    };
-
-    const serviceRecordsCollection = collection(firestore, `employees/${user.uid}/serviceRecords`);
-    
-    try {
-        const docRef = await addDocumentNonBlocking(serviceRecordsCollection, serviceRecord);
-        if (docRef) {
-            // No need to start tracking here, just show success and redirect
-            setServiceId(docRef.id);
-            
-            toast({
-                title: `Gràcies, ${employee?.firstName || 'company'}!`,
-                description: "El teu servei ha estat registrat.",
-            })
-            
-            router.push(`/dashboard`); // Redirect to dashboard page
-        }
-    } catch (error) {
-        toast({
-            variant: "destructive",
-            title: "Error",
-            description: "No s'ha pogut desar el servei.",
-        })
-    }
-  }
-  
   const handleStartServiceAndTracking = async () => {
     if (!user || !firestore) {
         toast({ variant: "destructive", title: "Error", description: "Has d'iniciar sessió." });
         return;
     }
-    if (!serviceId) { // Only create a new service if one doesn't exist
-        const now = new Date();
-        const serviceRecord = {
-            employeeId: user.uid,
-            arrivalDateTime: now.toISOString(),
-            departureDateTime: now.toISOString(), // Temporary
-            description: "Servei en curs...",
-            pendingTasks: '',
-            media: [],
-            albarans: [],
-            createdAt: now.toISOString(),
-        };
-        const serviceRecordsCollection = collection(firestore, `employees/${user.uid}/serviceRecords`);
-        try {
-            const docRef = await addDocumentNonBlocking(serviceRecordsCollection, serviceRecord);
-            if (docRef) {
-                setServiceId(docRef.id);
-                setIsTracking(true);
-                toast({ title: "Servei iniciat!", description: "S'ha iniciat el registre i el rastreig GPS." });
-                router.push(`/dashboard/edit/${docRef.id}`);
-            }
-        } catch (error) {
-            toast({ variant: "destructive", title: "Error", description: "No s'ha pogut iniciar el servei." });
+    
+    setIsStarting(true);
+
+    const now = new Date();
+    // Use the same timestamp for start and end initially to signify it's "in-progress"
+    const serviceRecord = {
+        employeeId: user.uid,
+        arrivalDateTime: now.toISOString(),
+        departureDateTime: now.toISOString(), 
+        description: "Servei en curs...",
+        pendingTasks: '',
+        media: [],
+        albarans: [],
+        createdAt: now.toISOString(),
+    };
+    
+    const serviceRecordsCollection = collection(firestore, `employees/${user.uid}/serviceRecords`);
+
+    try {
+        const docRef = await addDocumentNonBlocking(serviceRecordsCollection, serviceRecord);
+        if (docRef) {
+            toast({ title: "Servei iniciat!", description: "S'ha iniciat el registre i el rastreig GPS." });
+            // Redirect to the edit page to fill details
+            router.push(`/dashboard/edit/${docRef.id}`);
+        } else {
+           throw new Error("Failed to get document reference after creation.");
         }
+    } catch (error) {
+        setIsStarting(false);
+        toast({ variant: "destructive", title: "Error", description: "No s'ha pogut iniciar el servei." });
     }
   };
 
@@ -225,148 +95,24 @@ export default function NewServicePage() {
       </div>
     )
   }
-  
-  if (showCamera) {
-    return <CameraCapture onCapture={handleCapture} onClose={() => setShowCamera(false)} />;
-  }
 
   return (
-    <div className="max-w-2xl mx-auto">
-       <Button variant="ghost" onClick={() => router.back()} className="mb-4 -ml-4">
-        <ArrowLeft className="mr-2 h-4 w-4" />
-        Tornar
-      </Button>
-      
-      {user && serviceId && (
-        <LocationTracker
-          employeeId={user.uid}
-          serviceRecordId={serviceId}
-          isTracking={isTracking}
-        />
-      )}
-
-      <Card>
+    <div className="max-w-2xl mx-auto flex items-center justify-center" style={{ height: '60vh' }}>
+      <Card className="w-full text-center">
         <CardHeader>
-          <CardTitle>Registrar Nou Servei</CardTitle>
-          <CardDescription>Omple els detalls del servei realitzat.</CardDescription>
+          <CardTitle>Preparat per començar?</CardTitle>
+          <CardDescription>Clica el botó per iniciar un nou servei i activar el rastreig GPS.</CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-6">
-            
-            <div className="space-y-2">
-                <Label htmlFor="date">Data del Servei</Label>
-                 <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant={"outline"}
-                      className={cn(
-                        "w-full justify-start text-left font-normal",
-                        !date && "text-muted-foreground"
-                      )}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {date ? format(date, "PPP", { locale: ca }) : <span>Tria una data</span>}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
-                    <Calendar
-                      mode="single"
-                      selected={date}
-                      onSelect={setDate}
-                      initialFocus
-                      locale={ca}
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="start-time" className="flex items-center gap-2"><Clock className="h-4 w-4 text-muted-foreground" /> Hora d'Arribada</Label>
-                <Input id="start-time" type="time" required value={startTime} onChange={(e) => setStartTime(e.target.value)} />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="end-time" className="flex items-center gap-2"><Clock className="h-4 w-4 text-muted-foreground" /> Hora de Sortida</Label>
-                <Input id="end-time" type="time" required value={endTime} onChange={(e) => setEndTime(e.target.value)} />
-              </div>
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="description" className="flex items-center gap-2"><FileText className="h-4 w-4 text-muted-foreground" /> Descripció del Servei</Label>
-              <Textarea id="description" placeholder="Descriu les tasques realitzades..." required value={description} onChange={(e) => setDescription(e.target.value)} rows={5} />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="albarans" className="flex items-center gap-2"><Hash className="h-4 w-4 text-muted-foreground" /> Nº d'Albarà</Label>
-              <div className="space-y-2">
-                {albarans.map((albaran, index) => (
-                  <div key={index} className="flex items-center gap-2">
-                    <Input
-                      type="text"
-                      placeholder={`Albarà #${index + 1}`}
-                      value={albaran}
-                      onChange={(e) => handleAlbaranChange(index, e.target.value)}
-                    />
-                    {albarans.length > 1 && (
-                      <Button type="button" variant="ghost" size="icon" onClick={() => removeAlbaranInput(index)}>
-                        <X className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </div>
-                ))}
-              </div>
-              <Button type="button" variant="outline" size="sm" onClick={addAlbaranInput} className="mt-2">
-                <Plus className="mr-2 h-4 w-4" /> Afegir Albarà
-              </Button>
-            </div>
-
-            <div className="space-y-2">
-              <Label className="flex items-center gap-2"><Camera className="h-4 w-4 text-muted-foreground" /> Fotos i Vídeos</Label>
-              
-              {media.length > 0 && (
-                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2 my-4">
-                  {media.map((m, index) => (
-                    <div key={index} className="relative group aspect-square rounded-md overflow-hidden">
-                      {m.type === 'image' ? (
-                        <Image src={m.dataUrl} alt={`Previsualització ${index + 1}`} fill style={{ objectFit: 'cover' }} sizes="100px" />
-                      ) : (
-                        <div className="w-full h-full bg-black flex items-center justify-center">
-                           <Video className="h-8 w-8 text-white" />
-                        </div>
-                      )}
-                      <Button
-                        type="button"
-                        variant="destructive"
-                        size="icon"
-                        className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
-                        onClick={() => removeMedia(index)}
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              )}
-              
-              <div className="flex gap-2">
-                 <Button type="button" variant="outline" onClick={() => setShowCamera(true)} className="flex-1">
-                    <Camera className="mr-2 h-4 w-4" /> Usar Càmera
-                 </Button>
-                <Label htmlFor="media-upload" className="flex-1 cursor-pointer inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2">
-                    <Plus className="mr-2 h-4 w-4" /> Pujar Fitxer
-                </Label>
-                 <Input id="media-upload" type="file" multiple onChange={handleFileChange} accept="image/*,video/*" className="hidden" />
-              </div>
-              <p className="text-sm text-muted-foreground mt-2">{media.length} fitxer(s) seleccionat(s).</p>
-            </div>
-
-            <div className="flex justify-end pt-4">
-              <Button type="submit" className="bg-accent hover:bg-accent/90 text-accent-foreground">
-                <Save className="mr-2 h-4 w-4"/>
-                Desa el Servei
-              </Button>
-            </div>
-          </form>
+            <Button 
+                size="lg" 
+                className="w-full h-16 text-lg bg-accent hover:bg-accent/90 text-accent-foreground"
+                onClick={handleStartServiceAndTracking}
+                disabled={isStarting}
+            >
+                <MapPin className="mr-3 h-6 w-6" />
+                {isStarting ? "Iniciant..." : "Iniciar Servei i Rastreig GPS"}
+            </Button>
         </CardContent>
       </Card>
     </div>

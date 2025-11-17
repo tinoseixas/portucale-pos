@@ -29,7 +29,7 @@ import {
 import { CameraCapture } from '@/components/CameraCapture'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Calendar } from '@/components/ui/calendar'
-import { format } from 'date-fns'
+import { format, parseISO, isValid } from 'date-fns'
 import { ca } from 'date-fns/locale'
 import { cn } from '@/lib/utils'
 import { ADMIN_EMAIL } from '@/lib/admin'
@@ -79,12 +79,22 @@ export default function EditServicePage() {
 
   useEffect(() => {
     if (service) {
-      const arrival = new Date(service.arrivalDateTime)
-      const departure = new Date(service.departureDateTime)
-      setDate(arrival)
-      setStartTime(`${arrival.getHours().toString().padStart(2, '0')}:${arrival.getMinutes().toString().padStart(2, '0')}`)
-      setEndTime(`${departure.getHours().toString().padStart(2, '0')}:${departure.getMinutes().toString().padStart(2, '0')}`)
-      setDescription(service.description)
+      const arrival = parseISO(service.arrivalDateTime);
+      const departure = parseISO(service.departureDateTime);
+      
+      if (isValid(arrival)) {
+        setDate(arrival)
+        setStartTime(format(arrival, 'HH:mm'))
+      }
+      
+      // Don't set end time if it's the same as the start time (placeholder for "in-progress")
+      if (isValid(departure) && arrival.getTime() !== departure.getTime()) {
+        setEndTime(format(departure, 'HH:mm'))
+      } else {
+        setEndTime('')
+      }
+      
+      setDescription(service.description !== "Servei en curs..." ? service.description : '')
       setMedia(service.media || [])
       setAlbarans(service.albarans?.length > 0 ? service.albarans : [''])
        if (!isUserAdmin) {
@@ -137,7 +147,14 @@ export default function EditServicePage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!serviceDocRef || !date) return
+    if (!serviceDocRef || !date || !startTime || !endTime) {
+        toast({
+            variant: 'destructive',
+            title: 'Camps obligatoris',
+            description: "Si us plau, omple la data i les hores d'inici i final.",
+        });
+        return;
+    }
 
     const selectedDateStr = format(date, 'yyyy-MM-dd')
     const arrivalDateTime = new Date(`${selectedDateStr}T${startTime}`).toISOString()
@@ -148,7 +165,7 @@ export default function EditServicePage() {
     const updatedData = {
       arrivalDateTime,
       departureDateTime,
-      description,
+      description: description || "Servei finalitzat",
       media: media.map(({type, dataUrl}) => ({type, dataUrl})),
       albarans: filteredAlbarans,
       updatedAt: new Date().toISOString(),
@@ -263,7 +280,7 @@ export default function EditServicePage() {
             
             <div className="space-y-2">
               <Label htmlFor="description" className="flex items-center gap-2"><FileText className="h-4 w-4 text-muted-foreground" /> Descripció del Servei</Label>
-              <Textarea id="description" placeholder="Descriu les tasques realitzades..." required value={description} onChange={(e) => setDescription(e.target.value)} rows={5} />
+              <Textarea id="description" placeholder="Descriu les tasques realitzades..." value={description} onChange={(e) => setDescription(e.target.value)} rows={5} />
             </div>
 
             <div className="space-y-2">
