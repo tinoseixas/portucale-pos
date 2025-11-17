@@ -35,42 +35,66 @@ export default function NewServicePage() {
     }
     
     setIsStarting(true);
-
-    const now = new Date();
-    // Use the same timestamp for start and end initially to signify it's "in-progress"
-    const serviceRecord = {
-        employeeId: user.uid,
-        arrivalDateTime: now.toISOString(),
-        departureDateTime: now.toISOString(), 
-        description: "Servei en curs...",
-        pendingTasks: '',
-        media: [],
-        albarans: [],
-        createdAt: now.toISOString(),
-    };
     
-    const serviceRecordsCollection = collection(firestore, `employees/${user.uid}/serviceRecords`);
-
-    try {
-        // IMPORTANT: Await the creation to get the document ID for redirection.
-        const docRef = await addDoc(serviceRecordsCollection, serviceRecord);
-        
-        if (docRef.id) {
-            const userName = employee?.firstName || 'funcionari';
-            toast({ 
-                title: `Gràcies, ${userName}!`,
-                description: "S'ha iniciat el registre i el rastreig GPS."
-            });
-            // Redirect to the EDIT page for the newly created service.
-            router.push(`/dashboard/edit/${docRef.id}`);
-        } else {
-           throw new Error("Failed to get document reference after creation.");
-        }
-    } catch (error) {
-        console.error("Error creating service record:", error);
+    // Check for Geolocation permission BEFORE creating the service
+    if (!navigator.geolocation) {
+        toast({
+            variant: "destructive",
+            title: "Error de Geolocalització",
+            description: "El teu navegador no suporta la geolocalització.",
+        });
         setIsStarting(false);
-        toast({ variant: "destructive", title: "Error", description: "No s'ha pogut iniciar el servei." });
+        return;
     }
+
+    navigator.geolocation.getCurrentPosition(
+        async (position) => {
+            // Permission granted, proceed to create the service
+            const now = new Date();
+            const serviceRecord = {
+                employeeId: user.uid,
+                arrivalDateTime: now.toISOString(),
+                departureDateTime: now.toISOString(), 
+                description: "Servei en curs...",
+                pendingTasks: '',
+                media: [],
+                albarans: [],
+                createdAt: now.toISOString(),
+            };
+            
+            const serviceRecordsCollection = collection(firestore, `employees/${user.uid}/serviceRecords`);
+
+            try {
+                const docRef = await addDoc(serviceRecordsCollection, serviceRecord);
+                
+                if (docRef.id) {
+                    const userName = employee?.firstName || 'funcionari';
+                    toast({ 
+                        title: `Gràcies, ${userName}!`,
+                        description: "S'ha iniciat el registre i el rastreig GPS."
+                    });
+                    router.push(`/dashboard/edit/${docRef.id}`);
+                } else {
+                   throw new Error("Failed to get document reference after creation.");
+                }
+            } catch (error) {
+                console.error("Error creating service record:", error);
+                setIsStarting(false);
+                toast({ variant: "destructive", title: "Error", description: "No s'ha pogut iniciar el servei." });
+            }
+        },
+        (error) => {
+            // Permission denied or other error
+            toast({
+                variant: "destructive",
+                title: "Permís de Localització Requerit",
+                description: "Si us plau, activa el GPS i concedeix permís de localització al navegador per poder iniciar un servei.",
+                duration: 5000,
+            });
+            setIsStarting(false);
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    );
   };
 
 
