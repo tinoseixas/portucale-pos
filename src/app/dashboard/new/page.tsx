@@ -87,9 +87,9 @@ export default function NewServicePage() {
             // Permission denied or other error
             toast({
                 variant: "destructive",
-                title: "Permís de Localització Requerit",
-                description: "Si us plau, activa el GPS i concedeix permís de localització al navegador per poder iniciar un servei.",
-                duration: 5000,
+                title: "GPS Necessari",
+                description: "Per garantir el registre i la identificació de la localització del servei, si us plau, activa el teu GPS.",
+                duration: 6000,
             });
             setIsStarting(false);
         },
