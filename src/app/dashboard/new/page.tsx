@@ -10,9 +10,9 @@ import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Clock, FileText, Camera, ArrowLeft, Save, Hash, Plus, X, Video, Calendar as CalendarIcon, LogIn } from 'lucide-react'
 import { useToast } from "@/hooks/use-toast"
-import { useFirestore, useUser } from '@/firebase'
+import { useFirestore, useUser, useDoc, useMemoFirebase } from '@/firebase'
 import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates'
-import { collection } from 'firebase/firestore'
+import { collection, doc } from 'firebase/firestore'
 import Image from 'next/image'
 import { CameraCapture } from '@/components/CameraCapture'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
@@ -21,6 +21,7 @@ import { format } from 'date-fns'
 import { ca } from 'date-fns/locale'
 import { cn } from '@/lib/utils'
 import { LocationTracker } from '@/components/LocationTracker'
+import type { Employee } from '@/lib/types'
 
 
 type MediaFile = {
@@ -45,6 +46,13 @@ export default function NewServicePage() {
   const { user, isUserLoading } = useUser()
   const firestore = useFirestore()
   
+  const employeeDocRef = useMemoFirebase(() => {
+    if (!user) return null;
+    return doc(firestore, 'employees', user.uid);
+  }, [firestore, user]);
+
+  const { data: employee } = useDoc<Employee>(employeeDocRef);
+
   useEffect(() => {
     // This effect ensures that tracking stops when the user navigates away
     return () => {
@@ -128,6 +136,7 @@ export default function NewServicePage() {
             pendingTasks: '',
             media: media.map(({type, dataUrl}) => ({type, dataUrl})),
             albarans: filteredAlbarans,
+            createdAt: new Date().toISOString(),
         };
 
         const serviceRecordsCollection = collection(firestore, `employees/${user.uid}/serviceRecords`);
@@ -138,11 +147,13 @@ export default function NewServicePage() {
                 // Now we have an ID, start tracking and show the success message
                 setServiceId(docRef.id);
                 setIsTracking(true); 
+                
                 toast({
-                    title: "Servei desat!",
-                    description: "El nou servei ha estat registrat.",
+                    title: `Gràcies, ${employee?.firstName || 'company'}!`,
+                    description: "El teu servei ha estat registrat.",
                 })
-                 router.push(`/dashboard/edit/${docRef.id}`); // Redirect to edit page
+                
+                 router.push(`/dashboard`); // Redirect to dashboard page
             }
         } catch (error) {
             toast({
@@ -330,3 +341,5 @@ export default function NewServicePage() {
     </div>
   )
 }
+
+    
