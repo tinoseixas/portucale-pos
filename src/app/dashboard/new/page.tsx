@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { LogIn, MapPin } from 'lucide-react'
 import { useToast } from "@/hooks/use-toast"
 import { useFirestore, useUser, useDoc, useMemoFirebase } from '@/firebase'
-import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates'
+import { addDoc } from 'firebase/firestore'
 import { collection, doc } from 'firebase/firestore'
 import type { Employee } from '@/lib/types'
 
@@ -52,19 +52,22 @@ export default function NewServicePage() {
     const serviceRecordsCollection = collection(firestore, `employees/${user.uid}/serviceRecords`);
 
     try {
-        const docRef = await addDocumentNonBlocking(serviceRecordsCollection, serviceRecord);
-        if (docRef) {
+        // IMPORTANT: Await the creation to get the document ID for redirection.
+        const docRef = await addDoc(serviceRecordsCollection, serviceRecord);
+        
+        if (docRef.id) {
             const userName = employee?.firstName || 'funcionari';
             toast({ 
                 title: `Gràcies, ${userName}!`,
                 description: "S'ha iniciat el registre i el rastreig GPS."
             });
-            // Redirect to the dashboard page
-            router.push(`/dashboard`);
+            // Redirect to the EDIT page for the newly created service.
+            router.push(`/dashboard/edit/${docRef.id}`);
         } else {
            throw new Error("Failed to get document reference after creation.");
         }
     } catch (error) {
+        console.error("Error creating service record:", error);
         setIsStarting(false);
         toast({ variant: "destructive", title: "Error", description: "No s'ha pogut iniciar el servei." });
     }
