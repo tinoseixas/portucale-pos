@@ -17,7 +17,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Calendar } from '@/components/ui/calendar'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { format, parseISO, isSameDay, startOfDay } from 'date-fns'
+import { format, parseISO, isSameDay, startOfDay, isToday } from 'date-fns'
 import { ca } from 'date-fns/locale'
 import { cn } from '@/lib/utils'
 import { Checkbox } from "@/components/ui/checkbox"
@@ -84,26 +84,20 @@ export default function DashboardPage() {
       const fetchAdminData = async () => {
         setIsLoadingAllData(true);
         try {
-          // Fetch employees and services in parallel
-          const [employeeSnapshot, serviceSnapshot] = await Promise.all([
-            getDocs(query(collection(firestore, 'employees'))),
-            getDocs(query(collectionGroup(firestore, 'serviceRecords'), orderBy('arrivalDateTime', 'desc')))
-          ]);
-  
+          const employeeSnapshot = await getDocs(query(collection(firestore, 'employees')));
           const employeesData = employeeSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Employee));
           setEmployees(employeesData);
           
-          const adminUser = employeesData.find(e => e.email === ADMIN_EMAIL);
-          const adminUserId = adminUser?.id;
-  
+          const serviceSnapshot = await getDocs(query(collectionGroup(firestore, 'serviceRecords'), orderBy('arrivalDateTime', 'desc')));
           let servicesData = serviceSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ServiceRecord));
-  
-          // Filter out services belonging to the admin user
-          if (adminUserId) {
-            servicesData = servicesData.filter(service => service.employeeId !== adminUserId);
+          
+          const adminUser = employeesData.find(e => e.email === ADMIN_EMAIL);
+          if (adminUser) {
+            servicesData = servicesData.filter(service => service.employeeId !== adminUser.id);
           }
           
           setAllServices(servicesData);
+
         } catch (error) {
           console.error("Admin data fetch failed:", error);
           if (error instanceof FirestorePermissionError || (error as any)?.code === 'permission-denied') {
@@ -124,6 +118,27 @@ export default function DashboardPage() {
       setIsLoadingAllData(false);
     }
   }, [isUserAdmin, firestore, isUserLoading]);
+  
+  // Effect to show reminder notification
+  useEffect(() => {
+    if (!isUserAdmin && !isLoadingUserServices && userServices) {
+      const now = new Date();
+      const currentHour = now.getHours();
+      
+      // Check if it's between 8 AM and 5 PM (17:00)
+      if (currentHour >= 8 && currentHour < 17) {
+        const hasServiceToday = userServices.some(service => isToday(parseISO(service.arrivalDateTime)));
+        
+        if (!hasServiceToday) {
+          toast({
+            title: "Recordatori",
+            description: "Encara no has registrat cap servei avui. No t'oblidis de fer-ho!",
+          });
+        }
+      }
+    }
+  }, [isUserAdmin, isLoadingUserServices, userServices, toast]);
+
 
   const filteredServices = useMemo(() => {
     const servicesToFilter = isUserAdmin ? allServices : userServices;
