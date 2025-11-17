@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
@@ -9,7 +9,7 @@ import { LogIn, MapPin } from 'lucide-react'
 import { useToast } from "@/hooks/use-toast"
 import { useFirestore, useUser, useDoc, useMemoFirebase } from '@/firebase'
 import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates'
-import { collection } from 'firebase/firestore'
+import { collection, doc } from 'firebase/firestore'
 import type { Employee } from '@/lib/types'
 
 
@@ -22,7 +22,7 @@ export default function NewServicePage() {
   
   const employeeDocRef = useMemoFirebase(() => {
     if (!user) return null;
-    return collection(firestore, 'employees');
+    return doc(firestore, 'employees', user.uid);
   }, [firestore, user]);
 
   const { data: employee } = useDoc<Employee>(employeeDocRef);
@@ -54,9 +54,13 @@ export default function NewServicePage() {
     try {
         const docRef = await addDocumentNonBlocking(serviceRecordsCollection, serviceRecord);
         if (docRef) {
-            toast({ title: "Servei iniciat!", description: "S'ha iniciat el registre i el rastreig GPS." });
-            // Redirect to the edit page to fill details
-            router.push(`/dashboard/edit/${docRef.id}`);
+            const userName = employee?.firstName || 'funcionari';
+            toast({ 
+                title: `Gràcies, ${userName}!`,
+                description: "S'ha iniciat el registre i el rastreig GPS."
+            });
+            // Redirect to the dashboard page
+            router.push(`/dashboard`);
         } else {
            throw new Error("Failed to get document reference after creation.");
         }

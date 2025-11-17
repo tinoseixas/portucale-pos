@@ -54,6 +54,16 @@ export function useDoc<T = any>(
       setError(null);
       return;
     }
+    
+    // Safety check: Ensure this is a DocumentReference, not a CollectionReference
+    if (memoizedDocRef.type !== 'document') {
+      const typeError = new Error(`useDoc was called with a reference of type '${memoizedDocRef.type}' instead of 'document'. Path: ${memoizedDocRef.path}`);
+      setError(typeError);
+      setIsLoading(false);
+      setData(null);
+      console.error(typeError); // Log this critical error
+      return;
+    }
 
     setIsLoading(true);
     setError(null);

@@ -19,7 +19,7 @@ function calculateTotalTime(services: ServiceRecord[]): string {
             const startDate = parseISO(service.arrivalDateTime);
             const endDate = parseISO(service.departureDateTime);
 
-            if (!isValid(startDate) || !isValid(endDate)) {
+            if (!isValid(startDate) || !isValid(endDate) || startDate.getTime() === endDate.getTime()) {
               return total;
             }
 
@@ -155,6 +155,7 @@ export default function ReportPage() {
                                         {data.services.map(service => {
                                             const arrival = parseISO(service.arrivalDateTime);
                                             const departure = parseISO(service.departureDateTime);
+                                            const isInProgress = arrival.getTime() === departure.getTime();
                                             return (
                                                 <div key={service.id} className="p-3 rounded-md border bg-card/50">
                                                     <div className="flex justify-between items-start gap-4">
@@ -162,7 +163,7 @@ export default function ReportPage() {
                                                              <div className="flex items-center gap-2 text-sm font-medium text-primary mb-1">
                                                                 <Clock className="h-4 w-4" />
                                                                 <span>
-                                                                    {isValid(arrival) ? format(arrival, 'HH:mm') : 'N/A'} - {isValid(departure) ? format(departure, 'HH:mm') : 'N/A'}
+                                                                    {isValid(arrival) ? format(arrival, 'HH:mm') : 'N/A'} - {isInProgress ? 'En curs' : (isValid(departure) ? format(departure, 'HH:mm') : 'N/A')}
                                                                 </span>
                                                             </div>
                                                             <p className="text-muted-foreground flex items-start gap-2">
