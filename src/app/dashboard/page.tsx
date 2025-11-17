@@ -59,8 +59,7 @@ export default function DashboardPage() {
   // Admin state
   const [allServices, setAllServices] = useState<ServiceRecord[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
-  const [isLoadingAllServices, setIsLoadingAllServices] = useState(true);
-  const [isLoadingEmployees, setIsLoadingEmployees] = useState(true);
+  const [isLoadingAllData, setIsLoadingAllData] = useState(true);
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
 
   // Filters state
@@ -80,34 +79,25 @@ export default function DashboardPage() {
   
   useEffect(() => {
     if (isUserLoading || !firestore) return;
-
+  
     if (isUserAdmin) {
       const fetchAdminData = async () => {
-        // Fetch all employees first
-        setIsLoadingEmployees(true);
-        const employeesQuery = query(collection(firestore, 'employees'));
-        let employeesData: Employee[] = [];
+        setIsLoadingAllData(true);
         try {
-          const employeeSnapshot = await getDocs(employeesQuery);
-          employeesData = employeeSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Employee));
+          // Fetch employees and services in parallel
+          const [employeeSnapshot, serviceSnapshot] = await Promise.all([
+            getDocs(query(collection(firestore, 'employees'))),
+            getDocs(query(collectionGroup(firestore, 'serviceRecords'), orderBy('arrivalDateTime', 'desc')))
+          ]);
+  
+          const employeesData = employeeSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Employee));
           setEmployees(employeesData);
-        } catch (error) {
-          console.error("Failed to fetch employees:", error);
-        } finally {
-          setIsLoadingEmployees(false);
-        }
-
-        // Now fetch all services
-        setIsLoadingAllServices(true);
-        const servicesQuery = query(collectionGroup(firestore, 'serviceRecords'), orderBy('arrivalDateTime', 'desc'));
-        
-        try {
-          const snapshot = await getDocs(servicesQuery);
-          let servicesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ServiceRecord));
           
-          // Find the admin user ID from the already fetched employees
-          const adminUserId = employeesData.find(e => e.email === ADMIN_EMAIL)?.id;
-
+          const adminUser = employeesData.find(e => e.email === ADMIN_EMAIL);
+          const adminUserId = adminUser?.id;
+  
+          let servicesData = serviceSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ServiceRecord));
+  
           // Filter out services belonging to the admin user
           if (adminUserId) {
             servicesData = servicesData.filter(service => service.employeeId !== adminUserId);
@@ -115,21 +105,23 @@ export default function DashboardPage() {
           
           setAllServices(servicesData);
         } catch (error) {
-          console.error("Admin service fetch failed, emitting contextual error:", error);
-          const contextualError = new FirestorePermissionError({
+          console.error("Admin data fetch failed:", error);
+          if (error instanceof FirestorePermissionError || (error as any)?.code === 'permission-denied') {
+             const contextualError = new FirestorePermissionError({
               operation: 'list',
               path: 'serviceRecords (collectionGroup)',
-          });
-          errorEmitter.emit('permission-error', contextualError);
+            });
+            errorEmitter.emit('permission-error', contextualError);
+          }
           setAllServices([]);
+          setEmployees([]);
         } finally {
-          setIsLoadingAllServices(false);
+          setIsLoadingAllData(false);
         }
       };
       fetchAdminData();
     } else {
-        setIsLoadingAllServices(false);
-        setIsLoadingEmployees(false);
+      setIsLoadingAllData(false);
     }
   }, [isUserAdmin, firestore, isUserLoading]);
 
@@ -176,7 +168,7 @@ export default function DashboardPage() {
 
 
   const services = filteredServices as (ServiceRecord[] | ServiceWithRowColor[]);
-  const isLoading = isUserAdmin ? (isLoadingAllServices || isLoadingEmployees) : (isUserLoading || isLoadingUserServices);
+  const isLoading = isUserAdmin ? isLoadingAllData : (isUserLoading || isLoadingUserServices);
   
   const handleEventClick = (service: ServiceRecord) => {
     const path = isUserAdmin ? `/dashboard/edit/${service.id}?ownerId=${service.employeeId}` : `/dashboard/edit/${service.id}`;
@@ -439,3 +431,5 @@ export default function DashboardPage() {
     </div>
   )
 }
+
+    
