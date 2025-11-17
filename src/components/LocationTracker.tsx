@@ -26,11 +26,7 @@ export function LocationTracker({
       if (!firestore) return;
 
       if (!('geolocation' in navigator)) {
-        toast({
-          variant: 'destructive',
-          title: 'Geolocalització no suportada',
-          description: 'El teu navegador no suporta la geolocalització.',
-        });
+        console.error('Geolocation is not supported by this browser.');
         return;
       }
       
@@ -53,13 +49,6 @@ export function LocationTracker({
 
       const errorCallback: PositionErrorCallback = (error) => {
         console.error('Error de geolocalització:', error)
-         if(error.code === error.PERMISSION_DENIED) {
-             toast({
-              variant: 'destructive',
-              title: 'Permís de localització denegat',
-              description: "Si us plau, habiliteu el permís de localització per registrar la ruta.",
-            })
-         }
       }
 
       const options: PositionOptions = {
@@ -70,27 +59,26 @@ export function LocationTracker({
       
       // Try to get permission silently first
       navigator.permissions.query({ name: 'geolocation' }).then(permissionStatus => {
-          if (permissionStatus.state === 'granted') {
-             watchIdRef.current = navigator.geolocation.watchPosition(
-                successCallback,
-                errorCallback,
-                options
-            );
-          } else if (permissionStatus.state === 'prompt') {
+          if (permissionStatus.state === 'granted' || permissionStatus.state === 'prompt') {
+             // If we have permission or the browser will prompt, start watching.
+             // We get the initial position to trigger the prompt if needed.
              navigator.geolocation.getCurrentPosition(
-                (pos) => { // Got permission
-                     watchIdRef.current = navigator.geolocation.watchPosition(
-                        successCallback,
-                        errorCallback,
-                        options
-                    );
+                (pos) => { // Got permission and initial position
+                     if (watchIdRef.current === null) { // Avoid multiple watchers
+                         watchIdRef.current = navigator.geolocation.watchPosition(
+                            successCallback,
+                            errorCallback,
+                            options
+                        );
+                     }
                      successCallback(pos); // Log initial position
                 },
                 errorCallback,
                 options
              );
-          } else {
-            errorCallback({ code: 1, message: "Permission denied.", PERMISSION_DENIED: 1, POSITION_UNAVAILABLE: 2, TIMEOUT: 3 });
+          } else if (permissionStatus.state === 'denied') {
+             // Permission is denied, do nothing silently.
+             console.error("Geolocation permission has been denied.");
           }
       });
     }
