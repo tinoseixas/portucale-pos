@@ -79,19 +79,23 @@ export default function DashboardPage() {
   
   useEffect(() => {
     if (isUserLoading || !firestore) return;
-  
+
     if (isUserAdmin) {
       const fetchAdminData = async () => {
         setIsLoadingAllData(true);
         try {
+          // Fetch employees first to identify the admin
           const employeeSnapshot = await getDocs(query(collection(firestore, 'employees')));
           const employeesData = employeeSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Employee));
           setEmployees(employeesData);
           
+          const adminUser = employeesData.find(e => e.email === ADMIN_EMAIL);
+          
+          // Then fetch all services
           const serviceSnapshot = await getDocs(query(collectionGroup(firestore, 'serviceRecords'), orderBy('arrivalDateTime', 'desc')));
           let servicesData = serviceSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ServiceRecord));
           
-          const adminUser = employeesData.find(e => e.email === ADMIN_EMAIL);
+          // Filter out admin's own services
           if (adminUser) {
             servicesData = servicesData.filter(service => service.employeeId !== adminUser.id);
           }
@@ -100,13 +104,15 @@ export default function DashboardPage() {
 
         } catch (error) {
           console.error("Admin data fetch failed:", error);
-          if (error instanceof FirestorePermissionError || (error as any)?.code === 'permission-denied') {
+          // Only emit a permission error if that's what it is
+          if ((error as any)?.code === 'permission-denied') {
              const contextualError = new FirestorePermissionError({
               operation: 'list',
               path: 'serviceRecords (collectionGroup)',
             });
             errorEmitter.emit('permission-error', contextualError);
           }
+          // Reset state on error
           setAllServices([]);
           setEmployees([]);
         } finally {
