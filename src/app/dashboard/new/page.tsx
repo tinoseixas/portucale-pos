@@ -8,8 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { LogIn, MapPin } from 'lucide-react'
 import { useToast } from "@/hooks/use-toast"
 import { useFirestore, useUser, useDoc, useMemoFirebase } from '@/firebase'
-import { addDoc } from 'firebase/firestore'
-import { collection, doc } from 'firebase/firestore'
+import { addDoc, collection, doc } from 'firebase/firestore'
 import type { Employee } from '@/lib/types'
 
 
