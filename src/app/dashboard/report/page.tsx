@@ -4,9 +4,9 @@ import { useMemo } from 'react'
 import Image from 'next/image'
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
-import { Clock, Briefcase, Camera, Video } from 'lucide-react'
+import { Clock, Briefcase, Camera, Video, Calendar as CalendarIcon, FileText } from 'lucide-react'
 import type { ServiceRecord, Employee } from '@/lib/types'
-import { format, differenceInMinutes, parseISO, isValid } from 'date-fns'
+import { format, differenceInMinutes, parseISO, isValid, startOfDay } from 'date-fns'
 import { ca } from 'date-fns/locale';
 import { useCollection, useDoc, useFirestore, useUser, useMemoFirebase } from '@/firebase'
 import { collection, doc } from 'firebase/firestore'
@@ -38,6 +38,12 @@ function calculateTotalTime(services: ServiceRecord[]): string {
     return `${hours}h ${minutes}m`;
 }
 
+type GroupedServices = {
+    [key: string]: {
+        services: ServiceRecord[];
+        totalTime: string;
+    }
+};
 
 export default function ReportPage() {
     const { user } = useUser();
@@ -56,10 +62,28 @@ export default function ReportPage() {
     const { data: services, isLoading: isLoadingServices } = useCollection<ServiceRecord>(serviceRecordsQuery);
     const { data: employee, isLoading: isLoadingEmployee } = useDoc<Employee>(employeeDocRef);
     
-    const totalTime = useMemo(() => calculateTotalTime(services || []), [services]);
+    const totalTimeOverall = useMemo(() => calculateTotalTime(services || []), [services]);
     const today = format(new Date(), 'dd MMMM, yyyy', { locale: ca });
-
     const allMedia = services?.flatMap(s => s.media || []) || [];
+
+    const groupedServices = useMemo(() => {
+        if (!services) return {};
+        
+        const sortedServices = [...services].sort((a, b) => parseISO(b.arrivalDateTime).getTime() - parseISO(a.arrivalDateTime).getTime());
+
+        return sortedServices.reduce((acc: GroupedServices, service) => {
+            const day = format(startOfDay(parseISO(service.arrivalDateTime)), 'yyyy-MM-dd');
+            if (!acc[day]) {
+                acc[day] = { services: [], totalTime: '' };
+            }
+            acc[day].services.push(service);
+            return acc;
+        }, {});
+    }, [services]);
+
+     Object.keys(groupedServices).forEach(day => {
+        groupedServices[day].totalTime = calculateTotalTime(groupedServices[day].services);
+    });
 
     if (isLoadingServices || isLoadingEmployee) {
         return <p>Carregant informe...</p>;
@@ -68,25 +92,26 @@ export default function ReportPage() {
     return (
         <div className="max-w-4xl mx-auto space-y-8">
              <div>
-                <h1 className="text-3xl font-bold">Informe Diari</h1>
-                <p className="text-muted-foreground">Resum de l'activitat per a {employee?.firstName || user?.email} el {today}.</p>
+                <h1 className="text-3xl font-bold">Informe d'Activitat</h1>
+                <p className="text-muted-foreground">Resum de l'activitat per a {employee?.firstName || user?.email}.</p>
             </div>
             <Card className="shadow-lg">
                 <CardHeader>
                     {/* Summary section */}
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
+                    <CardTitle>Resum General</CardTitle>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center pt-4">
                         <Card>
                             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                                 <CardTitle className="text-sm font-medium">Hores Totals</CardTitle>
                                 <Clock className="h-4 w-4 text-muted-foreground" />
                             </CardHeader>
                             <CardContent>
-                                <div className="text-2xl font-bold">{totalTime}</div>
+                                <div className="text-2xl font-bold">{totalTimeOverall}</div>
                             </CardContent>
                         </Card>
                          <Card>
                             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                <CardTitle className="text-sm font-medium">Serveis</CardTitle>
+                                <CardTitle className="text-sm font-medium">Serveis Totals</CardTitle>
                                 <Briefcase className="h-4 w-4 text-muted-foreground" />
                             </CardHeader>
                             <CardContent>
@@ -104,41 +129,65 @@ export default function ReportPage() {
                         </Card>
                     </div>
                 </CardHeader>
-                <CardContent className="space-y-8">
+                <CardContent className="space-y-6">
                     <Separator />
 
-                    {/* Services list section */}
+                    {/* Daily Services section */}
                     <div>
-                        <h3 className="text-lg font-semibold mb-4">Detall de Serveis</h3>
-                        <div className="space-y-4">
-                            {services && services.map(service => {
-                                const arrival = parseISO(service.arrivalDateTime);
-                                const departure = parseISO(service.departureDateTime);
-                                
-                                return (
-                                <Card key={service.id} className="bg-background">
-                                    <CardContent className="pt-6">
-                                        <div className="flex flex-col sm:flex-row justify-between sm:items-start gap-4">
-                                            <p className="text-muted-foreground flex-1 pr-4">{service.description}</p>
-                                            <div className="flex items-center gap-2 text-sm font-medium text-primary flex-shrink-0">
-                                                <Clock className="h-4 w-4" />
-                                                <span>
-                                                    {isValid(arrival) ? format(arrival, 'HH:mm') : 'N/A'} - {isValid(departure) ? format(departure, 'HH:mm') : 'N/A'}
-                                                </span>
+                        <h3 className="text-xl font-semibold mb-4">Detall per Dia</h3>
+                        <div className="space-y-6">
+                            {Object.keys(groupedServices).length > 0 ? (
+                                Object.entries(groupedServices).map(([day, data]) => (
+                                <Card key={day} className="bg-background/50">
+                                    <CardHeader>
+                                        <div className="flex flex-col sm:flex-row justify-between sm:items-center">
+                                            <CardTitle className="text-lg flex items-center gap-2">
+                                                <CalendarIcon className="h-5 w-5" />
+                                                {format(parseISO(day), 'EEEE, dd MMMM yyyy', { locale: ca })}
+                                            </CardTitle>
+                                            <div className="flex items-center gap-2 font-bold text-primary text-lg mt-2 sm:mt-0">
+                                                <Clock className="h-5 w-5" />
+                                                <span>{data.totalTime}</span>
                                             </div>
                                         </div>
+                                    </CardHeader>
+                                    <CardContent className="space-y-3">
+                                        {data.services.map(service => {
+                                            const arrival = parseISO(service.arrivalDateTime);
+                                            const departure = parseISO(service.departureDateTime);
+                                            return (
+                                                <div key={service.id} className="p-3 rounded-md border bg-card/50">
+                                                    <div className="flex justify-between items-start gap-4">
+                                                        <div className="flex-1">
+                                                             <div className="flex items-center gap-2 text-sm font-medium text-primary mb-1">
+                                                                <Clock className="h-4 w-4" />
+                                                                <span>
+                                                                    {isValid(arrival) ? format(arrival, 'HH:mm') : 'N/A'} - {isValid(departure) ? format(departure, 'HH:mm') : 'N/A'}
+                                                                </span>
+                                                            </div>
+                                                            <p className="text-muted-foreground flex items-start gap-2">
+                                                                <FileText className="h-4 w-4 mt-1 flex-shrink-0" />
+                                                                <span>{service.description}</span>
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )
+                                        })}
                                     </CardContent>
                                 </Card>
-                            )})}
+                            ))
+                            ) : (
+                                <p className="text-muted-foreground text-center py-4">No s'han trobat serveis per mostrar.</p>
+                            )}
                         </div>
                     </div>
                     
-                    <Separator />
-
-                    {/* Photos section */}
                     {allMedia.length > 0 && (
+                       <>
+                        <Separator />
                         <div>
-                            <h3 className="text-lg font-semibold mb-4">Galeria de Fotos i Vídeos</h3>
+                            <h3 className="text-xl font-semibold mb-4">Galeria de Multimèdia</h3>
                              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                                 {allMedia.map((media, index) => (
                                     <div key={index} className="relative aspect-square rounded-lg overflow-hidden shadow-md group">
@@ -158,6 +207,7 @@ export default function ReportPage() {
                                 ))}
                             </div>
                         </div>
+                       </>
                     )}
                 </CardContent>
                 <CardFooter>
