@@ -27,7 +27,7 @@ export default function NewServicePage() {
   const { data: employee } = useDoc<Employee>(employeeDocRef);
 
 
-  const handleStartServiceAndTracking = async () => {
+  const handleStartService = async () => {
     if (!user || !firestore) {
         toast({ variant: "destructive", title: "Error", description: "Has d'iniciar sessió." });
         return;
@@ -35,65 +35,38 @@ export default function NewServicePage() {
     
     setIsStarting(true);
     
-    // Check for Geolocation permission BEFORE creating the service
-    if (!navigator.geolocation) {
-        toast({
-            variant: "destructive",
-            title: "Error de Geolocalització",
-            description: "El teu navegador no suporta la geolocalització.",
-        });
-        setIsStarting(false);
-        return;
-    }
+    const now = new Date();
+    const serviceRecord = {
+        employeeId: user.uid,
+        arrivalDateTime: now.toISOString(),
+        departureDateTime: now.toISOString(), 
+        description: "Servei en curs...",
+        pendingTasks: '',
+        media: [],
+        albarans: [],
+        createdAt: now.toISOString(),
+    };
+    
+    const serviceRecordsCollection = collection(firestore, `employees/${user.uid}/serviceRecords`);
 
-    navigator.geolocation.getCurrentPosition(
-        async (position) => {
-            // Permission granted, proceed to create the service
-            const now = new Date();
-            const serviceRecord = {
-                employeeId: user.uid,
-                arrivalDateTime: now.toISOString(),
-                departureDateTime: now.toISOString(), 
-                description: "Servei en curs...",
-                pendingTasks: '',
-                media: [],
-                albarans: [],
-                createdAt: now.toISOString(),
-            };
-            
-            const serviceRecordsCollection = collection(firestore, `employees/${user.uid}/serviceRecords`);
-
-            try {
-                const docRef = await addDoc(serviceRecordsCollection, serviceRecord);
-                
-                if (docRef.id) {
-                    const userName = employee?.firstName || 'funcionari';
-                    toast({ 
-                        title: `Gràcies, ${userName}!`,
-                        description: "S'ha iniciat el registre i el rastreig GPS."
-                    });
-                    router.push(`/dashboard/edit/${docRef.id}`);
-                } else {
-                   throw new Error("Failed to get document reference after creation.");
-                }
-            } catch (error) {
-                console.error("Error creating service record:", error);
-                setIsStarting(false);
-                toast({ variant: "destructive", title: "Error", description: "No s'ha pogut iniciar el servei." });
-            }
-        },
-        (error) => {
-            // Permission denied or other error
-            toast({
-                variant: "destructive",
-                title: "GPS Necessari",
-                description: "Per garantir el registre i la identificació de la localització del servei, si us plau, activa el teu GPS.",
-                duration: 6000,
+    try {
+        const docRef = await addDoc(serviceRecordsCollection, serviceRecord);
+        
+        if (docRef.id) {
+            const userName = employee?.firstName || 'funcionari';
+            toast({ 
+                title: `Gràcies, ${userName}!`,
+                description: "S'ha iniciat el registre del servei."
             });
-            setIsStarting(false);
-        },
-        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-    );
+            router.push(`/dashboard/edit/${docRef.id}`);
+        } else {
+           throw new Error("Failed to get document reference after creation.");
+        }
+    } catch (error) {
+        console.error("Error creating service record:", error);
+        setIsStarting(false);
+        toast({ variant: "destructive", title: "Error", description: "No s'ha pogut iniciar el servei." });
+    }
   };
 
 
@@ -131,17 +104,17 @@ export default function NewServicePage() {
       <Card className="w-full text-center">
         <CardHeader>
           <CardTitle>Preparat per començar?</CardTitle>
-          <CardDescription>Clica el botó per iniciar un nou servei i activar el rastreig GPS.</CardDescription>
+          <CardDescription>Clica el botó per iniciar un nou servei.</CardDescription>
         </CardHeader>
         <CardContent>
             <Button 
                 size="lg" 
                 className="w-full h-16 text-lg bg-accent hover:bg-accent/90 text-accent-foreground"
-                onClick={handleStartServiceAndTracking}
+                onClick={handleStartService}
                 disabled={isStarting}
             >
                 <MapPin className="mr-3 h-6 w-6" />
-                {isStarting ? "Iniciant..." : "Iniciar Servei i Rastreig GPS"}
+                {isStarting ? "Iniciant..." : "Iniciar Servei"}
             </Button>
         </CardContent>
       </Card>

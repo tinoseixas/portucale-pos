@@ -120,40 +120,6 @@
         "departureDateTime",
         "description"
       ]
-    },
-     "LocationRecord": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "LocationRecord",
-      "type": "object",
-      "description": "Represents a single location data point for an employee during a service.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the location record."
-        },
-        "employeeId": {
-          "type": "string",
-          "description": "The ID of the employee this location record belongs to."
-        },
-        "serviceRecordId": {
-          "type": "string",
-          "description": "The ID of the service record this location point is associated with."
-        },
-        "latitude": {
-          "type": "number",
-          "description": "The latitude of the location."
-        },
-        "longitude": {
-          "type": "number",
-          "description": "The longitude of the location."
-        },
-        "timestamp": {
-          "type": "string",
-          "format": "date-time",
-          "description": "The ISO 8601 timestamp when the location was recorded."
-        }
-      },
-      "required": ["id", "employeeId", "serviceRecordId", "latitude", "longitude", "timestamp"]
     }
   },
   "auth": {
@@ -196,30 +162,6 @@
             {
               "name": "serviceRecordId",
               "description": "Unique identifier for the service record."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/employees/{employeeId}/serviceRecords/{serviceRecordId}/locations/{locationId}",
-        "definition": {
-          "entityName": "LocationRecord",
-          "schema": {
-            "$ref": "#/backend/entities/LocationRecord"
-          },
-          "description": "Stores location tracking data points for a specific service record. Security rules ensure only the employee can write their own location, and only admins can read any location data.",
-          "params": [
-            {
-              "name": "employeeId",
-              "description": "Unique identifier for the employee."
-            },
-            {
-              "name": "serviceRecordId",
-              "description": "Unique identifier for the service record."
-            },
-            {
-              "name": "locationId",
-              "description": "Unique identifier for the location record."
             }
           ]
         }

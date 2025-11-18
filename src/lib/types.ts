@@ -21,12 +21,3 @@ export interface Employee {
   phoneNumber?: string;
   role?: 'admin' | 'user';
 }
-
-export interface LocationRecord {
-  id: string;
-  employeeId: string;
-  serviceRecordId: string;
-  latitude: number;
-  longitude: number;
-  timestamp: string;
-}
