@@ -4,7 +4,7 @@ import { useState, useMemo, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
-import { PlusCircle, List, Calendar as CalendarIcon, User, Edit, Search, Trash2 } from 'lucide-react'
+import { PlusCircle, List, Calendar as CalendarIcon, User, Edit, Search, Trash2, Briefcase } from 'lucide-react'
 import { ServiceCard } from '@/components/ServiceCard'
 import { ServiceCalendar } from '@/components/ServiceCalendar'
 import type { ServiceRecord, Employee } from '@/lib/types'
@@ -65,6 +65,7 @@ export default function DashboardPage() {
   // Filters state
   const [selectedUser, setSelectedUser] = useState<string>('all');
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
+  const [selectedProject, setSelectedProject] = useState<string>('all');
 
 
   // Regular user's services
@@ -144,6 +145,13 @@ export default function DashboardPage() {
       }
     }
   }, [isUserAdmin, isLoadingUserServices, userServices, toast]);
+  
+  const projectNames = useMemo(() => {
+    const servicesToUse = isUserAdmin ? allServices : userServices;
+    if (!servicesToUse) return [];
+    const names = servicesToUse.map(service => service.projectName).filter(Boolean);
+    return [...new Set(names)];
+  }, [isUserAdmin, allServices, userServices]);
 
 
   const filteredServices = useMemo(() => {
@@ -153,7 +161,8 @@ export default function DashboardPage() {
     let filtered = servicesToFilter.filter(service => {
         const userMatch = selectedUser === 'all' || service.employeeId === selectedUser;
         const dateMatch = !selectedDate || isSameDay(parseISO(service.arrivalDateTime), selectedDate);
-        return userMatch && dateMatch;
+        const projectMatch = selectedProject === 'all' || service.projectName === selectedProject;
+        return userMatch && dateMatch && projectMatch;
     });
 
     if (isUserAdmin) {
@@ -180,7 +189,7 @@ export default function DashboardPage() {
 
     return filtered;
 
-  }, [isUserAdmin, allServices, userServices, selectedUser, selectedDate]);
+  }, [isUserAdmin, allServices, userServices, selectedUser, selectedDate, selectedProject]);
   
   // Clear selected rows when filters change
   useEffect(() => {
@@ -254,7 +263,7 @@ export default function DashboardPage() {
                 </AlertDialog>
             )}
         </div>
-        <div className="flex flex-col sm:flex-row gap-4 pt-4">
+        <div className="flex flex-col sm:flex-row gap-4 pt-4 flex-wrap">
             <Select value={selectedUser} onValueChange={setSelectedUser}>
               <SelectTrigger className="w-full sm:w-[200px]">
                 <User className="mr-2 h-4 w-4 text-muted-foreground" />
@@ -291,9 +300,22 @@ export default function DashboardPage() {
                 />
               </PopoverContent>
             </Popover>
+
+            <Select value={selectedProject} onValueChange={setSelectedProject}>
+              <SelectTrigger className="w-full sm:w-[200px]">
+                <Briefcase className="mr-2 h-4 w-4 text-muted-foreground" />
+                <SelectValue placeholder="Filtrar per obra" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Totes les Obres</SelectItem>
+                {projectNames.map(name => (
+                  <SelectItem key={name} value={name}>{name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             
-            {(selectedUser !== 'all' || selectedDate) && (
-              <Button variant="ghost" onClick={() => { setSelectedUser('all'); setSelectedDate(undefined); }}>
+            {(selectedUser !== 'all' || selectedDate || selectedProject !== 'all') && (
+              <Button variant="ghost" onClick={() => { setSelectedUser('all'); setSelectedDate(undefined); setSelectedProject('all'); }}>
                 Neteja filtres
               </Button>
             )}
@@ -305,7 +327,7 @@ export default function DashboardPage() {
             <TableRow>
               <TableHead className="w-[40px] px-2">
                  <Checkbox
-                    checked={selectedRows.length > 0 && selectedRows.length === services.length}
+                    checked={selectedRows.length > 0 && services.length > 0 && selectedRows.length === services.length}
                     onCheckedChange={(checked) => {
                        setSelectedRows(checked ? services.map(s => s.id) : []);
                     }}
@@ -315,6 +337,7 @@ export default function DashboardPage() {
               <TableHead className="w-[10px]"></TableHead>
               <TableHead>Funcionari</TableHead>
               <TableHead>Data</TableHead>
+              <TableHead>Obra</TableHead>
               <TableHead>Descripció</TableHead>
               <TableHead>Última Modificació</TableHead>
               <TableHead className="text-right">Accions</TableHead>
@@ -344,6 +367,7 @@ export default function DashboardPage() {
                 </TableCell>
                 <TableCell className="font-medium">{getEmployeeName(service.employeeId)}</TableCell>
                 <TableCell>{format(parseISO(service.arrivalDateTime), 'dd/MM/yyyy HH:mm')}</TableCell>
+                <TableCell className="max-w-[200px] truncate">{service.projectName}</TableCell>
                 <TableCell className="max-w-[300px] truncate">{service.description}</TableCell>
                 <TableCell>
                   {service.updatedAt ? format(parseISO(service.updatedAt), 'dd/MM/yy HH:mm') : '-'}
@@ -358,7 +382,7 @@ export default function DashboardPage() {
               </TableRow>
             )) : (
               <TableRow>
-                <TableCell colSpan={7} className="h-24 text-center">
+                <TableCell colSpan={8} className="h-24 text-center">
                   No s'han trobat serveis per als filtres seleccionats.
                 </TableCell>
               </TableRow>

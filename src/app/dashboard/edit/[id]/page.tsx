@@ -9,8 +9,8 @@ import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Clock, FileText, Camera, ArrowLeft, Save, Trash2, Hash, Plus, X, Video, Calendar as CalendarIcon, Info, Briefcase, AlertTriangle } from 'lucide-react'
 import { useToast } from "@/hooks/use-toast"
-import { useFirestore, useUser, useDoc, useMemoFirebase } from '@/firebase'
-import { doc, deleteDoc } from 'firebase/firestore'
+import { useFirestore, useUser, useDoc, useMemoFirebase, useCollection } from '@/firebase'
+import { doc, deleteDoc, collection, query } from 'firebase/firestore'
 import type { ServiceRecord } from '@/lib/types'
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates'
 import Image from 'next/image'
@@ -56,6 +56,21 @@ export default function EditServicePage() {
     if (!docOwnerId || !serviceId) return null
     return doc(firestore, `employees/${docOwnerId}/serviceRecords`, serviceId)
   }, [firestore, docOwnerId, serviceId])
+
+  // Fetch all services to get project names for suggestions
+  const allServicesQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return query(collection(firestore, `employees/${user?.uid}/serviceRecords`))
+  }, [firestore, user?.uid]);
+  const { data: allServicesData } = useCollection<ServiceRecord>(allServicesQuery)
+  const [projectNames, setProjectNames] = useState<string[]>([]);
+  
+  useEffect(() => {
+    if(allServicesData) {
+      const uniqueProjectNames = [...new Set(allServicesData.map(s => s.projectName).filter(Boolean))];
+      setProjectNames(uniqueProjectNames);
+    }
+  }, [allServicesData]);
 
   const { data: service, isLoading } = useDoc<ServiceRecord>(serviceDocRef)
   
@@ -261,7 +276,12 @@ export default function EditServicePage() {
 
             <div className="space-y-2">
               <Label htmlFor="projectName" className="flex items-center gap-2"><Briefcase className="h-4 w-4 text-muted-foreground" /> Nom de l'Obra</Label>
-              <Input id="projectName" placeholder="Ex: Reforma Client A" value={projectName} onChange={(e) => setProjectName(e.target.value)} />
+              <Input id="projectName" placeholder="Ex: Reforma Client A" value={projectName} onChange={(e) => setProjectName(e.target.value)} list="project-names" />
+              <datalist id="project-names">
+                {projectNames.map((name) => (
+                  <option key={name} value={name} />
+                ))}
+              </datalist>
             </div>
             
             <div className="space-y-2">
