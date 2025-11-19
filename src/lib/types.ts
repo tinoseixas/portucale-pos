@@ -4,7 +4,7 @@ export interface ServiceRecord {
   arrivalDateTime: string;
   departureDateTime: string;
   description: string;
-  projectName?: string; // Nome da obra
+  projectName: string;
   pendingTasks: string;
   media: { type: 'image' | 'video'; dataUrl: string }[];
   albarans: string[];
