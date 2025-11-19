@@ -9,8 +9,8 @@ import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Clock, FileText, Camera, ArrowLeft, Save, Trash2, Hash, Plus, X, Video, Calendar as CalendarIcon, Info, Briefcase, AlertTriangle } from 'lucide-react'
 import { useToast } from "@/hooks/use-toast"
-import { useFirestore, useUser, useDoc, useMemoFirebase, useCollection } from '@/firebase'
-import { doc, deleteDoc, collection, query } from 'firebase/firestore'
+import { useFirestore, useUser, useDoc, useMemoFirebase } from '@/firebase'
+import { doc, deleteDoc, collection, query, getDocs } from 'firebase/firestore'
 import type { ServiceRecord } from '@/lib/types'
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates'
 import Image from 'next/image'
@@ -57,20 +57,23 @@ export default function EditServicePage() {
     return doc(firestore, `employees/${docOwnerId}/serviceRecords`, serviceId)
   }, [firestore, docOwnerId, serviceId])
 
-  // Fetch all services to get project names for suggestions
-  const allServicesQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return query(collection(firestore, `employees/${user?.uid}/serviceRecords`))
-  }, [firestore, user?.uid]);
-  const { data: allServicesData } = useCollection<ServiceRecord>(allServicesQuery)
   const [projectNames, setProjectNames] = useState<string[]>([]);
   
   useEffect(() => {
-    if(allServicesData) {
-      const uniqueProjectNames = [...new Set(allServicesData.map(s => s.projectName).filter(Boolean))];
-      setProjectNames(uniqueProjectNames);
+    async function fetchProjectNames() {
+      if (!firestore || !user?.uid) return;
+      const allServicesQuery = query(collection(firestore, `employees/${user.uid}/serviceRecords`));
+      try {
+        const querySnapshot = await getDocs(allServicesQuery);
+        const uniqueProjectNames = [...new Set(querySnapshot.docs.map(d => d.data().projectName).filter(Boolean))];
+        setProjectNames(uniqueProjectNames);
+      } catch (error) {
+        console.error("Error fetching project names:", error);
+      }
     }
-  }, [allServicesData]);
+    fetchProjectNames();
+  }, [firestore, user?.uid]);
+
 
   const { data: service, isLoading } = useDoc<ServiceRecord>(serviceDocRef)
   
@@ -392,3 +395,5 @@ export default function EditServicePage() {
     </div>
   )
 }
+
+    
