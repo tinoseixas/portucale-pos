@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { LogIn, MapPin } from 'lucide-react'
 import { useToast } from "@/hooks/use-toast"
-import { useFirestore, useUser, useDoc, useMemoFirebase } from '@/firebase'
+import { useFirestore, useUser, useDoc } from '@/firebase'
 import { addDoc, collection, doc } from 'firebase/firestore'
 import type { Employee } from '@/lib/types'
 
@@ -19,7 +19,7 @@ export default function NewServicePage() {
   const { user, isUserLoading } = useUser()
   const firestore = useFirestore()
   
-  const employeeDocRef = useMemoFirebase(() => {
+  const employeeDocRef = useMemo(() => {
     if (!user) return null;
     return doc(firestore, 'employees', user.uid);
   }, [firestore, user]);
@@ -41,6 +41,7 @@ export default function NewServicePage() {
         arrivalDateTime: now.toISOString(),
         departureDateTime: now.toISOString(), 
         description: "Servei en curs...",
+        projectName: '',
         pendingTasks: '',
         media: [],
         albarans: [],

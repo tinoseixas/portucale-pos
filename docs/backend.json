@@ -64,6 +64,10 @@
           "type": "string",
           "description": "Reference to Employee. (Relationship: Employee 1:N ServiceRecord)"
         },
+        "projectName": {
+          "type": "string",
+          "description": "Name of the construction project or work site."
+        },
         "arrivalDateTime": {
           "type": "string",
           "description": "Date and time of arrival for the service.",
@@ -80,7 +84,7 @@
         },
         "pendingTasks": {
           "type": "string",
-          "description": "Description of pending tasks for the service."
+          "description": "Description of pending tasks for the service. If this field has text, the record is considered to have pending items."
         },
         "media": {
           "type": "array",

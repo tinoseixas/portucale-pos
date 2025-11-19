@@ -1,13 +1,13 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { useRouter, useParams, useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Clock, FileText, Camera, ArrowLeft, Save, Trash2, Hash, Plus, X, Video, Calendar as CalendarIcon, Info } from 'lucide-react'
+import { Clock, FileText, Camera, ArrowLeft, Save, Trash2, Hash, Plus, X, Video, Calendar as CalendarIcon, Info, Briefcase, AlertTriangle } from 'lucide-react'
 import { useToast } from "@/hooks/use-toast"
 import { useFirestore, useUser, useDoc, useMemoFirebase } from '@/firebase'
 import { doc, deleteDoc } from 'firebase/firestore'
@@ -48,7 +48,6 @@ export default function EditServicePage() {
   const firestore = useFirestore()
   const serviceId = params.id as string
 
-  // For admins, the owner's ID might be in the query params
   const ownerId = searchParams.get('ownerId')
   const isUserAdmin = user?.email === ADMIN_EMAIL
   const docOwnerId = isUserAdmin && ownerId ? ownerId : user?.uid
@@ -64,6 +63,8 @@ export default function EditServicePage() {
   const [startTime, setStartTime] = useState('')
   const [endTime, setEndTime] = useState('')
   const [description, setDescription] = useState('')
+  const [projectName, setProjectName] = useState('');
+  const [pendingTasks, setPendingTasks] = useState('');
   const [media, setMedia] = useState<MediaFile[]>([])
   const [albarans, setAlbarans] = useState<string[]>(['']);
   const [showCamera, setShowCamera] = useState(false);
@@ -79,7 +80,6 @@ export default function EditServicePage() {
         setStartTime(format(arrival, 'HH:mm'))
       }
       
-      // Don't set end time if it's the same as the start time (placeholder for "in-progress")
       if (isValid(departure) && arrival.getTime() !== departure.getTime()) {
         setEndTime(format(departure, 'HH:mm'))
       } else {
@@ -87,6 +87,8 @@ export default function EditServicePage() {
       }
       
       setDescription(service.description !== "Servei en curs..." ? service.description : '')
+      setProjectName(service.projectName || '');
+      setPendingTasks(service.pendingTasks || '');
       setMedia(service.media || [])
       setAlbarans(service.albarans?.length > 0 ? service.albarans : [''])
     }
@@ -152,6 +154,8 @@ export default function EditServicePage() {
       arrivalDateTime,
       departureDateTime,
       description: description || "Servei finalitzat",
+      projectName,
+      pendingTasks,
       media: media.map(({type, dataUrl}) => ({type, dataUrl})),
       albarans: filteredAlbarans,
       updatedAt: new Date().toISOString(),
@@ -254,10 +258,20 @@ export default function EditServicePage() {
                 <Input id="end-time" type="time" required value={endTime} onChange={(e) => setEndTime(e.target.value)} />
               </div>
             </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="projectName" className="flex items-center gap-2"><Briefcase className="h-4 w-4 text-muted-foreground" /> Nom de l'Obra</Label>
+              <Input id="projectName" placeholder="Ex: Reforma Client A" value={projectName} onChange={(e) => setProjectName(e.target.value)} />
+            </div>
             
             <div className="space-y-2">
               <Label htmlFor="description" className="flex items-center gap-2"><FileText className="h-4 w-4 text-muted-foreground" /> Descripció del Servei</Label>
-              <Textarea id="description" placeholder="Descriu les tasques realitzades..." value={description} onChange={(e) => setDescription(e.target.value)} rows={5} />
+              <Textarea id="description" placeholder="Descriu les tasques realitzades..." value={description} onChange={(e) => setDescription(e.target.value)} rows={3} />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="pendingTasks" className="flex items-center gap-2"><AlertTriangle className="h-4 w-4 text-muted-foreground" /> Pendents de l'Obra</Label>
+              <Textarea id="pendingTasks" placeholder="Descriu tasques o materials pendents..." value={pendingTasks} onChange={(e) => setPendingTasks(e.target.value)} rows={3} />
             </div>
 
             <div className="space-y-2">
