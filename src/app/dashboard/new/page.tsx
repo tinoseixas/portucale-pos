@@ -131,7 +131,6 @@ export default function NewServicePage() {
                   <SelectValue placeholder={isLoadingCustomers ? "A carregar clients..." : "Selecciona un client..."} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Cap client</SelectItem>
                   {customers?.map(c => (
                     <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
                   ))}
