@@ -12,6 +12,7 @@ import { Building, Briefcase, FileDown, Loader2 } from 'lucide-react'
 import jsPDF from 'jspdf'
 import html2canvas from 'html2canvas'
 import { ReportPreview } from '@/components/ReportPreview'
+import { ADMIN_EMAIL } from '@/lib/admin'
 
 export default function ReportsPage() {
     const firestore = useFirestore()
@@ -27,6 +28,8 @@ export default function ReportsPage() {
             router.push('/dashboard')
         }
     }, [isUserLoading, user, router])
+
+    const isAdmin = useMemo(() => user?.email === ADMIN_EMAIL, [user]);
 
     const customersQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'customers')) : null, [firestore])
     const { data: customers } = useCollection<Customer>(customersQuery)
@@ -165,6 +168,7 @@ export default function ReportsPage() {
                                 customer={selectedCustomer}
                                 projectName={selectedProject}
                                 services={filteredServices}
+                                showPricing={isAdmin}
                             />
                         )}
                     </CardContent>

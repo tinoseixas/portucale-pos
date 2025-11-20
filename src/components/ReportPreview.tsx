@@ -12,6 +12,7 @@ interface ReportPreviewProps {
   customer: Customer | undefined;
   projectName: string;
   services: ServiceRecord[];
+  showPricing: boolean;
 }
 
 function calculateTotalTime(services: ServiceRecord[]): string {
@@ -37,7 +38,7 @@ function calculateTotalTime(services: ServiceRecord[]): string {
 }
 
 
-export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ customer, projectName, services }, ref) => {
+export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ customer, projectName, services, showPricing }, ref) => {
 
     const totalTime = calculateTotalTime(services);
     const allMedia = services?.flatMap(s => s.media || []) || [];
@@ -91,51 +92,53 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
             </section>
             
             {/* Materials & Labor Table */}
-            <section className="mb-8">
-                 <h3 className="font-bold text-lg mb-2">Detall de Materials i Mà d'Obra</h3>
-                <table className="w-full text-sm">
-                    <thead className="bg-gray-100">
-                        <tr className="border-b border-gray-300">
-                            <th className="text-left py-2 px-3 font-semibold text-gray-700">DESCRIPCIÓ</th>
-                            <th className="text-right py-2 px-3 font-semibold text-gray-700 w-24">QUANT.</th>
-                            <th className="text-right py-2 px-3 font-semibold text-gray-700 w-24">PREU/UNIT.</th>
-                            <th className="text-right py-2 px-3 font-semibold text-gray-700 w-24">TOTAL</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {allMaterials.map((material, index) => (
-                             <tr key={index} className="border-b border-gray-200">
-                                <td className="py-3 px-3">{material.description}</td>
-                                <td className="text-right py-3 px-3 tabular-nums">{material.quantity.toFixed(2)}</td>
-                                <td className="text-right py-3 px-3 tabular-nums">{material.unitPrice.toFixed(2)} €</td>
-                                <td className="text-right py-3 px-3 font-medium tabular-nums">{(material.quantity * material.unitPrice).toFixed(2)} €</td>
-                            </tr>
-                        ))}
-                         {allMaterials.length === 0 && (
-                            <tr>
-                                <td colSpan={4} className="text-center py-8 text-gray-500">No s'han registrat materials.</td>
-                            </tr>
-                        )}
-                    </tbody>
-                </table>
-                 <div className="flex justify-end mt-4">
-                    <div className="w-full max-w-sm space-y-2 text-sm">
-                        <div className="flex justify-between">
-                            <span className="font-semibold text-gray-700">Subtotal:</span>
-                            <span className="font-medium tabular-nums">{subtotal.toFixed(2)} €</span>
-                        </div>
-                         <div className="flex justify-between">
-                            <span className="font-semibold text-gray-700">IVA ({(ivaRate * 100).toFixed(0)}%):</span>
-                            <span className="font-medium tabular-nums">{iva.toFixed(2)} €</span>
-                        </div>
-                        <Separator />
-                        <div className="flex justify-between font-bold text-base items-center">
-                            <span>Total General:</span>
-                            <span className="text-xl">{totalGeneral.toFixed(2)} €</span>
-                        </div>
-                    </div>
-                </div>
-            </section>
+            {showPricing && (
+              <section className="mb-8">
+                  <h3 className="font-bold text-lg mb-2">Detall de Materials i Mà d'Obra</h3>
+                  <table className="w-full text-sm">
+                      <thead className="bg-gray-100">
+                          <tr className="border-b border-gray-300">
+                              <th className="text-left py-2 px-3 font-semibold text-gray-700">DESCRIPCIÓ</th>
+                              <th className="text-right py-2 px-3 font-semibold text-gray-700 w-24">QUANT.</th>
+                              <th className="text-right py-2 px-3 font-semibold text-gray-700 w-24">PREU/UNIT.</th>
+                              <th className="text-right py-2 px-3 font-semibold text-gray-700 w-24">TOTAL</th>
+                          </tr>
+                      </thead>
+                      <tbody>
+                          {allMaterials.map((material, index) => (
+                              <tr key={index} className="border-b border-gray-200">
+                                  <td className="py-3 px-3">{material.description}</td>
+                                  <td className="text-right py-3 px-3 tabular-nums">{material.quantity.toFixed(2)}</td>
+                                  <td className="text-right py-3 px-3 tabular-nums">{material.unitPrice.toFixed(2)} €</td>
+                                  <td className="text-right py-3 px-3 font-medium tabular-nums">{(material.quantity * material.unitPrice).toFixed(2)} €</td>
+                              </tr>
+                          ))}
+                          {allMaterials.length === 0 && (
+                              <tr>
+                                  <td colSpan={4} className="text-center py-8 text-gray-500">No s'han registrat materials.</td>
+                              </tr>
+                          )}
+                      </tbody>
+                  </table>
+                  <div className="flex justify-end mt-4">
+                      <div className="w-full max-w-sm space-y-2 text-sm">
+                          <div className="flex justify-between">
+                              <span className="font-semibold text-gray-700">Subtotal:</span>
+                              <span className="font-medium tabular-nums">{subtotal.toFixed(2)} €</span>
+                          </div>
+                          <div className="flex justify-between">
+                              <span className="font-semibold text-gray-700">IVA ({(ivaRate * 100).toFixed(0)}%):</span>
+                              <span className="font-medium tabular-nums">{iva.toFixed(2)} €</span>
+                          </div>
+                          <Separator />
+                          <div className="flex justify-between font-bold text-base items-center">
+                              <span>Total General:</span>
+                              <span className="text-xl">{totalGeneral.toFixed(2)} €</span>
+                          </div>
+                      </div>
+                  </div>
+              </section>
+            )}
             
              {sortedServices.length > 0 && (
                 <>

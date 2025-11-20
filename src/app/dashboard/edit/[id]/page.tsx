@@ -32,6 +32,7 @@ import { format, parseISO, isValid, differenceInMinutes } from 'date-fns'
 import { ca } from 'date-fns/locale'
 import { cn } from '@/lib/utils'
 import { CustomerSelectionDialog } from '@/components/CustomerSelectionDialog'
+import { ADMIN_EMAIL } from '@/lib/admin'
 
 type MediaFile = {
   type: 'image' | 'video';
@@ -97,6 +98,8 @@ export default function EditServicePage() {
   const [customerId, setCustomerId] = useState<string>('');
   const [isCustomerDialogOpen, setIsCustomerDialogOpen] = useState(false)
 
+  const isAdmin = useMemo(() => user?.email === ADMIN_EMAIL, [user]);
+
   useEffect(() => {
     if (service) {
       const arrival = parseISO(service.arrivalDateTime);
@@ -124,7 +127,9 @@ export default function EditServicePage() {
   }, [service])
 
   useEffect(() => {
-    if (!date && service === undefined) {
+    // This effect runs only once on the client, after hydration.
+    // It sets the initial date for a *new* record, preventing the hydration mismatch error.
+    if (!date && service === undefined) { // Only set if date is not yet set and we are not editing an existing service
       setDate(new Date());
     }
   }, [date, service]); 
@@ -189,7 +194,7 @@ export default function EditServicePage() {
   };
   
   const removeMedia = (index: number) => {
-    setMedia(prev => prev.filter((_, i) => i !== index));
+    setMedia(prev => prev.filter((_, i) => !== index));
   }
   
   const handleCustomerSelect = (customer: Customer) => {
@@ -218,14 +223,13 @@ export default function EditServicePage() {
 
     const filteredAlbarans = albarans.filter(a => a.trim() !== '')
     
-    // Auto-calculate labor cost
     let processedMaterials = materials.filter(m => m.description.trim() !== '' && m.description.toLowerCase() !== 'mão de obra');
     
     if (user && isValid(arrivalDate) && isValid(departureDate) && departureDate > arrivalDate) {
         const durationInMinutes = differenceInMinutes(departureDate, arrivalDate);
         const durationInHours = durationInMinutes / 60;
         
-        const pricePerHour = user.email === 'tino@seixas.com' ? 35 : 25;
+        const pricePerHour = user.email === ADMIN_EMAIL ? 35 : 25;
 
         processedMaterials.unshift({
             description: 'Mão de obra',
@@ -391,53 +395,56 @@ export default function EditServicePage() {
               <Textarea id="pendingTasks" placeholder="Descriu tasques o materials pendents..." value={pendingTasks} onChange={(e) => setPendingTasks(e.target.value)} rows={3} />
             </div>
             
-             <div className="space-y-4 rounded-lg border p-4">
-                <Label className="flex items-center gap-2 text-base font-semibold"><Package className="h-5 w-5 text-muted-foreground" /> Materials i Mà d'Obra</Label>
-                <div className="space-y-3">
-                    {materials.map((material, index) => (
-                        <div key={index} className="grid grid-cols-12 gap-2 items-center">
-                            <Input
-                                type="text"
-                                placeholder="Descripció (ex: mà d'obra, tub PVC)"
-                                value={material.description}
-                                onChange={(e) => handleMaterialChange(index, 'description', e.target.value)}
-                                className="col-span-6"
-                            />
-                            <div className="col-span-2 relative">
+             {isAdmin && (
+                <div className="space-y-4 rounded-lg border p-4">
+                    <Label className="flex items-center gap-2 text-base font-semibold"><Package className="h-5 w-5 text-muted-foreground" /> Materials i Mà d'Obra</Label>
+                    <div className="space-y-3">
+                        {materials.map((material, index) => (
+                            <div key={index} className="grid grid-cols-12 gap-2 items-center">
                                 <Input
-                                    type="number"
-                                    value={material.quantity}
-                                    onChange={(e) => handleMaterialChange(index, 'quantity', e.target.value)}
-                                    className="pl-2 pr-1"
-                                    min="0"
-                                    step="any"
+                                    type="text"
+                                    placeholder="Descripció (ex: mà d'obra, tub PVC)"
+                                    value={material.description}
+                                    onChange={(e) => handleMaterialChange(index, 'description', e.target.value)}
+                                    className="col-span-6"
+                                    readOnly={material.description.toLowerCase() === 'mão de obra'}
                                 />
+                                <div className="col-span-2 relative">
+                                    <Input
+                                        type="number"
+                                        value={material.quantity}
+                                        onChange={(e) => handleMaterialChange(index, 'quantity', e.target.value)}
+                                        className="pl-2 pr-1"
+                                        min="0"
+                                        step="any"
+                                    />
+                                </div>
+                                <div className="col-span-3 relative">
+                                    <Input
+                                        type="number"
+                                        value={material.unitPrice}
+                                        onChange={(e) => handleMaterialChange(index, 'unitPrice', e.target.value)}
+                                        className="pl-7 pr-1"
+                                        min="0"
+                                        step="any"
+                                    />
+                                    <Euro className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                </div>
+                                <div className="col-span-1 flex justify-end">
+                                    {material.description.toLowerCase() !== 'mão de obra' && (
+                                    <Button type="button" variant="ghost" size="icon" onClick={() => removeMaterialInput(index)}>
+                                        <X className="h-4 w-4 text-destructive" />
+                                    </Button>
+                                    )}
+                                </div>
                             </div>
-                             <div className="col-span-3 relative">
-                                <Input
-                                    type="number"
-                                    value={material.unitPrice}
-                                    onChange={(e) => handleMaterialChange(index, 'unitPrice', e.target.value)}
-                                    className="pl-7 pr-1"
-                                    min="0"
-                                    step="any"
-                                />
-                                <Euro className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                            </div>
-                            <div className="col-span-1 flex justify-end">
-                                {materials.length > 1 && (
-                                <Button type="button" variant="ghost" size="icon" onClick={() => removeMaterialInput(index)}>
-                                    <X className="h-4 w-4 text-destructive" />
-                                </Button>
-                                )}
-                            </div>
-                        </div>
-                    ))}
+                        ))}
+                    </div>
+                    <Button type="button" variant="outline" size="sm" onClick={addMaterialInput} className="mt-2">
+                        <Plus className="mr-2 h-4 w-4" /> Afegir Línia
+                    </Button>
                 </div>
-                <Button type="button" variant="outline" size="sm" onClick={addMaterialInput} className="mt-2">
-                    <Plus className="mr-2 h-4 w-4" /> Afegir Línia
-                </Button>
-             </div>
+             )}
 
             <div className="space-y-2">
               <Label htmlFor="albarans" className="flex items-center gap-2"><Hash className="h-4 w-4 text-muted-foreground" /> Nº d'Albarà</Label>
