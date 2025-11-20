@@ -17,7 +17,6 @@ import { doc } from 'firebase/firestore';
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import type { Employee } from '@/lib/types';
 import { Camera, Save, ArrowLeft, Phone, User as UserIcon, Shield } from 'lucide-react';
-import { ADMIN_EMAIL } from '@/lib/admin';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 
@@ -40,8 +39,6 @@ export default function EditUserPage() {
   const firestore = useFirestore();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
-
-  const isCurrentUserAdmin = !isUserLoading && currentUser?.email === ADMIN_EMAIL;
 
   const employeeDocRef = useMemoFirebase(() => {
     if (!userId) return null;
@@ -67,11 +64,11 @@ export default function EditUserPage() {
   });
 
   useEffect(() => {
-    if (!isUserLoading && !isCurrentUserAdmin) {
+    if (!isUserLoading && !currentUser) {
       toast({ variant: 'destructive', title: 'Accés no autoritzat' });
       router.push('/dashboard');
     }
-  }, [isUserLoading, isCurrentUserAdmin, router, toast]);
+  }, [isUserLoading, currentUser, router, toast]);
 
   useEffect(() => {
     if (employee) {
@@ -134,7 +131,7 @@ export default function EditUserPage() {
     return <p>Carregant perfil d'usuari...</p>;
   }
 
-  if (!isCurrentUserAdmin) {
+  if (!currentUser) {
     return null; // Redirect is handled by useEffect
   }
   

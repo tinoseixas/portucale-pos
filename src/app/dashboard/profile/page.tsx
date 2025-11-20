@@ -12,14 +12,11 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
-import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection, errorEmitter, FirestorePermissionError } from '@/firebase';
-import { doc, collectionGroup, query, orderBy, getDocs } from 'firebase/firestore';
+import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
+import { doc } from 'firebase/firestore';
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
-import type { Employee, ServiceRecord } from '@/lib/types';
+import type { Employee } from '@/lib/types';
 import { Camera, Save, ArrowLeft, Phone } from 'lucide-react';
-import { ADMIN_EMAIL } from '@/lib/admin';
-import { ServiceCard } from '@/components/ServiceCard';
-import { Skeleton } from '@/components/ui/skeleton';
 
 
 const profileSchema = z.object({
@@ -31,94 +28,7 @@ const profileSchema = z.object({
 
 type ProfileFormValues = z.infer<typeof profileSchema>;
 
-
-function AdminProfileView() {
-  const firestore = useFirestore();
-  const [allServices, setAllServices] = useState<ServiceRecord[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    if (!firestore) return;
-
-    const fetchAllServices = async () => {
-      setIsLoading(true);
-      const servicesQuery = query(collectionGroup(firestore, 'serviceRecords'), orderBy('arrivalDateTime', 'desc'));
-      
-      getDocs(servicesQuery)
-        .then(snapshot => {
-          const servicesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ServiceRecord));
-          setAllServices(servicesData);
-          setIsLoading(false);
-        })
-        .catch(error => {
-            console.error("Admin service fetch failed, emitting contextual error:", error);
-            const contextualError = new FirestorePermissionError({
-                operation: 'list',
-                path: 'serviceRecords (collectionGroup)',
-            });
-            errorEmitter.emit('permission-error', contextualError);
-            setIsLoading(false);
-        });
-    };
-    
-    fetchAllServices();
-  }, [firestore]);
-  
-  const renderSkeletons = () => (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {Array.from({ length: 3 }).map((_, i) => (
-            <Card key={i}>
-                <CardHeader>
-                    <Skeleton className="h-6 w-3/4 mb-2" />
-                    <Skeleton className="h-4 w-1/2" />
-                </CardHeader>
-                <CardContent className="space-y-4">
-                    <Skeleton className="h-4 w-full" />
-                    <Skeleton className="h-4 w-5/6" />
-                    <div className="flex justify-between items-center pt-2">
-                        <Skeleton className="h-5 w-1/4" />
-                        <Skeleton className="h-8 w-1/3" />
-                    </div>
-                </CardContent>
-            </Card>
-        ))}
-    </div>
-  );
-
-
-  return (
-     <div className="space-y-8">
-      <Card>
-        <CardHeader>
-          <CardTitle>Vista d'Administrador</CardTitle>
-          <CardDescription>Visualització de tots els registres de servei de tots els empleats.</CardDescription>
-        </CardHeader>
-      </Card>
-      
-       {isLoading ? renderSkeletons() : (
-        !allServices || allServices.length === 0 ? (
-          <div className="text-center py-16 border-2 border-dashed rounded-lg">
-              <h2 className="text-xl font-semibold">No hi ha serveis registrats</h2>
-              <p className="text-muted-foreground">Encara no hi ha serveis registrats per cap usuari.</p>
-          </div>
-        ) : (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {allServices.map(service => (
-              <ServiceCard 
-                  key={service.id} 
-                  service={service} 
-                  isUserAdmin={true}
-              />
-            ))}
-          </div>
-        )
-      )}
-    </div>
-  );
-}
-
-
-function UserProfilePage() {
+export default function ProfilePage() {
   const router = useRouter();
   const { toast } = useToast();
   const { user, isUserLoading } = useUser();
@@ -314,21 +224,4 @@ function UserProfilePage() {
       </Card>
     </div>
   );
-}
-
-
-export default function ProfilePage() {
-  const { user, isUserLoading } = useUser();
-
-  if (isUserLoading) {
-    return <p>Carregant...</p>;
-  }
-
-  const isUserAdmin = user?.email === ADMIN_EMAIL;
-
-  if (isUserAdmin) {
-    return <AdminProfileView />;
-  }
-
-  return <UserProfilePage />;
 }

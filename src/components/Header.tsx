@@ -10,7 +10,6 @@ import { signOut } from 'firebase/auth'
 import { useRouter } from 'next/navigation'
 import type { Employee } from '@/lib/types'
 import { doc } from 'firebase/firestore'
-import { ADMIN_EMAIL } from '@/lib/admin'
 
 
 export function Header() {
@@ -26,8 +25,6 @@ export function Header() {
 
   const { data: employee } = useDoc<Employee>(employeeDocRef);
   
-  const isUserAdmin = user?.email === ADMIN_EMAIL;
-
   const handleLogout = async () => {
     if (!auth) return;
     await signOut(auth)
@@ -70,22 +67,20 @@ export function Header() {
                     Bona feina, {employee.firstName}!
                     </span>
                 )}
-                {isUserAdmin && (
-                    <>
-                        <Button variant="outline" size="sm" onClick={() => router.push('/dashboard/reports')}>
-                            <FileText className="mr-2 h-4 w-4" />
-                            Informes PDF
-                        </Button>
-                        <Button variant="outline" size="sm" onClick={() => router.push('/dashboard/customers')}>
-                            <Building className="mr-2 h-4 w-4" />
-                            Gestionar Clients
-                        </Button>
-                        <Button variant="outline" size="sm" onClick={() => router.push('/dashboard/users')}>
-                            <Users className="mr-2 h-4 w-4" />
-                            Gestionar Usuaris
-                        </Button>
-                    </>
-                )}
+                <>
+                    <Button variant="outline" size="sm" onClick={() => router.push('/dashboard/reports')}>
+                        <FileText className="mr-2 h-4 w-4" />
+                        Informes PDF
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => router.push('/dashboard/customers')}>
+                        <Building className="mr-2 h-4 w-4" />
+                        Gestionar Clients
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => router.push('/dashboard/users')}>
+                        <Users className="mr-2 h-4 w-4" />
+                        Gestionar Usuaris
+                    </Button>
+                </>
               </div>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>

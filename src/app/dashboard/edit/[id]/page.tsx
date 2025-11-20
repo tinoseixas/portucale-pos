@@ -31,7 +31,6 @@ import { Calendar } from '@/components/ui/calendar'
 import { format, parseISO, isValid } from 'date-fns'
 import { ca } from 'date-fns/locale'
 import { cn } from '@/lib/utils'
-import { ADMIN_EMAIL } from '@/lib/admin'
 import { CustomerSelectionDialog } from '@/components/CustomerSelectionDialog'
 
 type MediaFile = {
@@ -49,14 +48,15 @@ export default function EditServicePage() {
   const firestore = useFirestore()
   const serviceId = params.id as string
 
-  const ownerId = searchParams.get('ownerId')
-  const isUserAdmin = user?.email === ADMIN_EMAIL
-  const docOwnerId = isUserAdmin && ownerId ? ownerId : user?.uid
-
+  // With the new simplified permissions, we only need the user's own UID
+  const ownerId = user?.uid
+  
   const serviceDocRef = useMemoFirebase(() => {
-    if (!docOwnerId || !serviceId || !firestore) return null
-    return doc(firestore, `employees/${docOwnerId}/serviceRecords`, serviceId)
-  }, [firestore, docOwnerId, serviceId])
+    if (!ownerId || !serviceId || !firestore) return null
+    // The path still includes the original employeeId who created the record
+    const recordOwnerId = searchParams.get('ownerId') || ownerId;
+    return doc(firestore, `employees/${recordOwnerId}/serviceRecords`, serviceId)
+  }, [firestore, ownerId, serviceId, searchParams])
 
   const { data: service, isLoading } = useDoc<ServiceRecord>(serviceDocRef)
   
@@ -68,7 +68,7 @@ export default function EditServicePage() {
   const { data: customers, isLoading: isLoadingCustomers } = useCollection<Customer>(customersQuery);
 
   const projectNamesQuery = useMemoFirebase(() => {
-      if (!firestore || !user) return null;
+      if (!firestore || !user) return null; // Wait for user authentication
       return query(collectionGroup(firestore, 'serviceRecords'));
   }, [firestore, user]);
 
@@ -122,10 +122,10 @@ export default function EditServicePage() {
   useEffect(() => {
     // If date is not set by the service data, initialize it to today's date.
     // This runs only once on the client after mount.
-    if (!date) {
+    if (!date && service === undefined) {
       setDate(new Date());
     }
-  }, []); // Empty dependency array ensures this runs once on mount
+  }, [date, service]); 
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -266,7 +266,7 @@ export default function EditServicePage() {
         <CardHeader>
           <CardTitle>Editar Servei #{serviceId.slice(-6)}</CardTitle>
           <CardDescription>Modifica els detalls do servei realitzat.</CardDescription>
-          {isUserAdmin && service.updatedAt && (
+          {service.updatedAt && (
              <p className="text-xs text-muted-foreground pt-2 flex items-center gap-1">
               <Info className="h-3 w-3" />
               Última modificació: {format(new Date(service.updatedAt), "dd/MM/yyyy 'a les' HH:mm", { locale: ca })}

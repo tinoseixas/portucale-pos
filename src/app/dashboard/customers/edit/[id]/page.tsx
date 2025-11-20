@@ -15,7 +15,6 @@ import { doc, setDoc, addDoc, collection } from 'firebase/firestore';
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import type { Customer } from '@/lib/types';
 import { Save, ArrowLeft, Building, MapPin, Phone, Mail, Hash } from 'lucide-react';
-import { ADMIN_EMAIL } from '@/lib/admin';
 
 
 const customerSchema = z.object({
@@ -36,8 +35,6 @@ export default function EditCustomerPage() {
   const { toast } = useToast();
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
-
-  const isCurrentUserAdmin = !isUserLoading && user?.email === ADMIN_EMAIL;
 
   const customerDocRef = useMemoFirebase(() => {
     if (isNew || !firestore || !customerId) return null;
@@ -63,11 +60,11 @@ export default function EditCustomerPage() {
   });
 
   useEffect(() => {
-    if (!isUserLoading && !isCurrentUserAdmin) {
+    if (!isUserLoading && !user) {
       toast({ variant: 'destructive', title: 'Accés no autoritzat' });
-      router.push('/dashboard');
+      router.push('/');
     }
-  }, [isUserLoading, isCurrentUserAdmin, router, toast]);
+  }, [isUserLoading, user, router, toast]);
 
   useEffect(() => {
     if (customer && !isNew) {
@@ -106,7 +103,7 @@ export default function EditCustomerPage() {
     return <p>Carregant dades del client...</p>;
   }
 
-  if (!isCurrentUserAdmin) {
+  if (!user) {
     return null; // Redirect is handled by useEffect
   }
   

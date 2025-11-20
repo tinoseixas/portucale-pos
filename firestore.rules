@@ -2,20 +2,14 @@
  * @fileoverview Firestore Security Rules for the 'Registre Diari de Treball' application.
  *
  * Core Philosophy:
- * This ruleset enforces a strict user-ownership model, with an exception for a designated admin user.
- * Each employee can only access their own data. The admin can read all data for reporting purposes.
- * Customer data can be read by any authenticated user, but only modified by an admin.
+ * This ruleset has been simplified to allow any authenticated user full access.
+ * All signed-in users can read, write, update, and delete any data.
+ * This removes the complexity of owner-based and admin-based roles.
  *
  * Data Structure:
  * /employees/{employeeId} - Employee profile data
  * /employees/{employeeId}/serviceRecords/{serviceRecordId} - Service records for an employee
  * /customers/{customerId} - Customer profiles
- *
- * Key Security Decisions:
- * - A hardcoded admin EMAIL has full read access across all data.
- * - Non-admin users are restricted to their own data via path-based authorization.
- * - Write operations are strictly limited to data owners or admins.
- * - All authenticated users can read the customers list.
  */
 rules_version = '2';
 service cloud.firestore {
@@ -27,56 +21,38 @@ service cloud.firestore {
     function isSignedIn() {
       return request.auth != null;
     }
-
-    // Checks if the request is made by the user specified by userId.
-    function isOwner(userId) {
-      return isSignedIn() && request.auth.uid == userId;
-    }
-    
-    // Identifies the administrator by email.
-    function isAdmin() {
-        return isSignedIn() && request.auth.token.email == 'tino@seixas.com';
-    }
     
     // --- Collection Rules ---
 
     /**
      * @description Protects access to the /employees/{employeeId} collection.
-     * Admins can get/list/delete any profile, users can only manage their own.
+     * Any signed-in user can manage all profiles.
      */
     match /employees/{employeeId} {
-      allow get: if isOwner(employeeId) || isAdmin();
-      allow list: if isAdmin(); // Only admin can list all employees
-      allow create: if isOwner(employeeId) && request.resource.data.id == employeeId;
-      allow update: if isOwner(employeeId) || isAdmin();
-      allow delete: if isOwner(employeeId) || isAdmin();
+      allow read, write: if isSignedIn();
 
       /**
-       * @description Protects access to the serviceRecords subcollection for direct queries.
-       * Users can only access their own service records. Admins can access all.
+       * @description Protects access to the serviceRecords subcollection.
+       * Any signed-in user can manage all service records.
        */
       match /serviceRecords/{serviceRecordId} {
-        allow get, list: if isOwner(employeeId) || isAdmin();
-        allow create: if isOwner(employeeId) && request.resource.data.employeeId == employeeId;
-        allow update: if isOwner(employeeId) || isAdmin();
-        allow delete: if isOwner(employeeId) || isAdmin();
+        allow read, write: if isSignedIn();
       }
     }
 
     /**
      * @description Protects access to the /customers/{customerId} collection.
-     * Admins can manage customers. All signed-in employees can read them.
+     * Any signed-in user can manage all customers.
      */
     match /customers/{customerId} {
-      allow get, list: if isSignedIn();
-      allow create, update, delete: if isAdmin();
+      allow read, write: if isSignedIn();
     }
     
     // --- Collection Group Rules ---
     
     /**
-     * @description Enables admin-only cross-user queries on serviceRecords.
-     * This is essential for the administrator dashboard to view all records.
+     * @description Enables cross-user queries on serviceRecords.
+     * Essential for the main dashboard to view all records.
      */
     match /{path=**}/serviceRecords/{serviceRecordId} {
        allow get, list: if isSignedIn();

@@ -5,29 +5,19 @@ import { usePathname } from 'next/navigation'
 import { LayoutDashboard, PlusCircle, FileText, User as UserIcon, Users, Building } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useUser } from '@/firebase'
-import { ADMIN_EMAIL } from '@/lib/admin'
 
 export function BottomNav() {
   const pathname = usePathname()
   const { user, isUserLoading } = useUser()
 
-  const isUserAdmin = !isUserLoading && user?.email === ADMIN_EMAIL;
-
-  const baseNavItems = [
+  const navItems = [
     { href: '/dashboard', icon: LayoutDashboard, label: 'Serveis' },
     { href: '/dashboard/new', icon: PlusCircle, label: 'Nou' },
+    { href: '/dashboard/reports', icon: FileText, label: 'Informes' },
+    { href: '/dashboard/customers', icon: Building, label: 'Clients' },
+    { href: '/dashboard/users', icon: Users, label: 'Usuaris' },
+    { href: '/dashboard/profile', icon: UserIcon, label: 'Perfil' },
   ];
-  
-  if (isUserAdmin) {
-    baseNavItems.push({ href: '/dashboard/reports', icon: FileText, label: 'Informes' });
-    baseNavItems.push({ href: '/dashboard/customers', icon: Building, label: 'Clients' });
-    baseNavItems.push({ href: '/dashboard/users', icon: Users, label: 'Usuaris' });
-  } else {
-    baseNavItems.push({ href: '/dashboard/report', icon: FileText, label: 'El Meu Informe' });
-  }
-  
-  const navItems = [...baseNavItems];
-  navItems.push({ href: '/dashboard/profile', icon: UserIcon, label: 'Perfil' });
 
   // Render a placeholder during loading to prevent hydration mismatch
   if (isUserLoading) {
@@ -35,10 +25,14 @@ export function BottomNav() {
          <nav className="fixed bottom-0 left-0 right-0 z-40 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 md:hidden">
             <div className="container grid h-16 w-full grid-flow-col auto-cols-fr items-center">
                 {/* Render empty placeholders matching the number of final items to keep layout consistent */}
-                {Array.from({ length: 5 }).map((_, i) => <div key={i}></div>)}
+                {Array.from({ length: navItems.length }).map((_, i) => <div key={i}></div>)}
             </div>
         </nav>
       )
+  }
+  
+  if (!user) {
+    return null; // Don't show nav if not logged in
   }
 
 

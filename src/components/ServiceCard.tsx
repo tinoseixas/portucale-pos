@@ -15,7 +15,6 @@ import { cn } from '@/lib/utils'
 
 interface ServiceCardProps {
   service: ServiceRecord;
-  isUserAdmin?: boolean;
 }
 
 // A new sub-component to fetch and display the employee name
@@ -53,7 +52,7 @@ function EmployeeName({ employeeId }: { employeeId: string }) {
 }
 
 
-export function ServiceCard({ service, isUserAdmin }: ServiceCardProps) {
+export function ServiceCard({ service }: ServiceCardProps) {
   // Defensive check to prevent crash if service is undefined
   if (!service) {
     return (
@@ -85,8 +84,8 @@ export function ServiceCard({ service, isUserAdmin }: ServiceCardProps) {
   
   const mediaItems = service.media?.slice(0, 3) || [];
 
-  // For admins, the edit link needs to include the owner's ID
-  const editLink = isUserAdmin ? `/dashboard/edit/${service.id}?ownerId=${service.employeeId}` : `/dashboard/edit/${service.id}`;
+  // With simplified permissions, the link is always the same structure.
+  const editLink = `/dashboard/edit/${service.id}?ownerId=${service.employeeId}`;
 
   return (
     <Card className={cn(
@@ -115,7 +114,7 @@ export function ServiceCard({ service, isUserAdmin }: ServiceCardProps) {
             <Calendar className="h-4 w-4" />
             <span>{serviceDate}</span>
           </div>
-          {isUserAdmin && service.employeeId && <EmployeeName employeeId={service.employeeId} />}
+          {service.employeeId && <EmployeeName employeeId={service.employeeId} />}
           {service.customerName && (
              <div className="flex items-center gap-2 text-sm text-muted-foreground font-medium">
                 <Building className="h-4 w-4" />

@@ -11,7 +11,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { ADMIN_EMAIL } from '@/lib/admin'
 import { Edit, Trash2 } from 'lucide-react'
 import {
   AlertDialog,
@@ -48,25 +47,18 @@ export default function UsersPage() {
   const { user, isUserLoading } = useUser()
   const firestore = useFirestore()
 
-  const isCurrentUserAdmin = useMemo(() => {
-    if (isUserLoading || !user) return false;
-    return user.email === ADMIN_EMAIL;
-  }, [user, isUserLoading]);
-
   const employeesQuery = useMemoFirebase(() => {
-    // Only construct the query if we know the user is an admin.
-    if (!isCurrentUserAdmin || !firestore) return null;
+    if (!user || !firestore) return null;
     return query(collection(firestore, 'employees'))
-  }, [firestore, isCurrentUserAdmin])
+  }, [firestore, user])
 
   const { data: employees, isLoading: isLoadingEmployees } = useCollection<Employee>(employeesQuery)
   
   useEffect(() => {
-    // This effect redirects non-admins away from the page.
-    if (!isUserLoading && !isCurrentUserAdmin) {
+    if (!isUserLoading && !user) {
       router.push('/dashboard');
     }
-  }, [isUserLoading, isCurrentUserAdmin, router]);
+  }, [isUserLoading, user, router]);
 
   const handleWhatsAppClick = (phoneNumber: string) => {
     const internationalNumber = phoneNumber.startsWith('+') ? phoneNumber : `34${phoneNumber}`;
@@ -96,8 +88,7 @@ export default function UsersPage() {
     return <p>Carregant usuaris...</p>
   }
   
-  // Render this message if the user is not an admin, while redirecting.
-  if (!isCurrentUserAdmin) {
+  if (!user) {
      return <p>Accés no autoritzat.</p>;
   }
 
@@ -120,7 +111,7 @@ export default function UsersPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {employees?.filter(e => e.email !== ADMIN_EMAIL).map(employee => (
+              {employees?.map(employee => (
                 <TableRow key={employee.id}>
                   <TableCell>
                     <div className="flex items-center gap-3">

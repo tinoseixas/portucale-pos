@@ -12,7 +12,6 @@ import { Building, Briefcase, FileDown, Loader2 } from 'lucide-react'
 import jsPDF from 'jspdf'
 import html2canvas from 'html2canvas'
 import { ReportPreview } from '@/components/ReportPreview'
-import { ADMIN_EMAIL } from '@/lib/admin'
 
 export default function ReportsPage() {
     const firestore = useFirestore()
@@ -23,22 +22,20 @@ export default function ReportsPage() {
     const [isGenerating, setIsGenerating] = useState(false)
     const reportRef = useRef<HTMLDivElement>(null)
 
-    const isCurrentUserAdmin = !isUserLoading && user?.email === ADMIN_EMAIL
-
     useEffect(() => {
-        if (!isUserLoading && !isCurrentUserAdmin) {
+        if (!isUserLoading && !user) {
             router.push('/dashboard')
         }
-    }, [isUserLoading, isCurrentUserAdmin, router])
+    }, [isUserLoading, user, router])
 
     const customersQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'customers')) : null, [firestore])
     const { data: customers } = useCollection<Customer>(customersQuery)
 
-    // Use collectionGroup to query across all 'serviceRecords' subcollections for admins
+    // Use collectionGroup to query across all 'serviceRecords' subcollections
     const allServicesQuery = useMemoFirebase(() => {
-        if (!firestore || !isCurrentUserAdmin) return null
+        if (!firestore || !user) return null
         return query(collectionGroup(firestore, 'serviceRecords'), orderBy('arrivalDateTime', 'desc'))
-    }, [firestore, isCurrentUserAdmin])
+    }, [firestore, user])
 
     const { data: allServices, isLoading: isLoadingAllServices } = useCollection<ServiceRecord>(allServicesQuery)
 
@@ -94,7 +91,7 @@ export default function ReportsPage() {
         }
     }
 
-    if (isUserLoading || !isCurrentUserAdmin) {
+    if (isUserLoading) {
         return <p>Carregant...</p>
     }
 

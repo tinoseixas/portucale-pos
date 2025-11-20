@@ -3,12 +3,11 @@
 import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useCollection, useUser, useFirestore, useMemoFirebase, deleteDocumentNonBlocking } from '@/firebase'
-import { collection, query, addDoc, doc, writeBatch } from 'firebase/firestore'
+import { collection, query, addDoc, doc, writeBatch, orderBy } from 'firebase/firestore'
 import type { Customer } from '@/lib/types'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
-import { ADMIN_EMAIL } from '@/lib/admin'
 import { Edit, Trash2, PlusCircle, Building, Mail, Phone, Hash, Upload } from 'lucide-react'
 import {
   AlertDialog,
@@ -19,7 +18,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { useToast } from '@/hooks/use-toast'
 
@@ -129,17 +127,10 @@ export default function CustomersPage() {
   const firestore = useFirestore()
   const [isImporting, setIsImporting] = useState(false)
 
-  const isCurrentUserAdmin = useMemo(() => {
-    if (isUserLoading || !user) return false;
-    return user.email === ADMIN_EMAIL;
-  }, [user, isUserLoading]);
-
   const customersQuery = useMemoFirebase(() => {
-    // Only admins can see this page, but we secure the query anyway
-    // Crucially, we wait until we know the user is an admin.
-    if (!firestore || !isCurrentUserAdmin) return null;
-    return query(collection(firestore, 'customers'));
-  }, [firestore, isCurrentUserAdmin])
+    if (!firestore || !user) return null;
+    return query(collection(firestore, 'customers'), orderBy('name', 'asc'));
+  }, [firestore, user])
 
   const { data: customers, isLoading: isLoadingCustomers } = useCollection<Customer>(customersQuery)
   
@@ -190,7 +181,7 @@ export default function CustomersPage() {
     return <p>Carregant clients...</p>
   }
   
-  if (!isCurrentUserAdmin) {
+  if (!user) {
      return <p>Accés no autoritzat.</p>;
   }
 
