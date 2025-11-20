@@ -92,7 +92,7 @@ export default function EditServicePage() {
   const [customerId, setCustomerId] = useState<string>('');
   const [isCustomerDialogOpen, setIsCustomerDialogOpen] = useState(false)
 
-
+  // This useEffect populates the form when the service data is loaded from Firestore.
   useEffect(() => {
     if (service) {
       const arrival = parseISO(service.arrivalDateTime);
@@ -115,13 +115,16 @@ export default function EditServicePage() {
       setCustomerId(service.customerId || '');
       setMedia(service.media || [])
       setAlbarans(service.albarans?.length > 0 ? service.albarans : [''])
-    } else {
-        // Set date only on client-side if it's not already set from service data
-        if (!date) {
-            setDate(new Date());
-        }
     }
   }, [service])
+
+  // This useEffect ensures the date is set on the client-side to prevent hydration errors.
+  useEffect(() => {
+    // If the date is not yet set (either from 'service' or initially), set it to the current date.
+    if (!date) {
+      setDate(new Date());
+    }
+  }, []); // The empty dependency array ensures this runs only once on the client.
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -438,3 +441,5 @@ export default function EditServicePage() {
     </div>
   )
 }
+
+    
