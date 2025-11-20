@@ -80,11 +80,11 @@ export default function EditServicePage() {
   const { data: service, isLoading } = useDoc<ServiceRecord>(serviceDocRef)
   
   const customersQuery = useMemoFirebase(() => {
-      // Only fetch customers if the user is an admin. Regular users don't need the list.
-      if (!firestore || !isUserAdmin) return null;
-      return query(collection(firestore, 'customers'))
-  }, [firestore, isUserAdmin]);
-  const { data: customers } = useCollection<Customer>(customersQuery);
+      // Fetch customers for admin or if a customer is already assigned to the service
+      if (!firestore) return null;
+       return query(collection(firestore, 'customers'))
+  }, [firestore]);
+  const { data: customers, isLoading: isLoadingCustomers } = useCollection<Customer>(customersQuery);
   
   const [date, setDate] = useState<Date | undefined>(new Date())
   const [startTime, setStartTime] = useState('')
@@ -187,7 +187,7 @@ export default function EditServicePage() {
       projectName,
       pendingTasks,
       customerId,
-      customerName: selectedCustomer?.name || '',
+      customerName: selectedCustomer?.name || service?.customerName || '',
       media: media.map(({type, dataUrl}) => ({type, dataUrl})),
       albarans: filteredAlbarans,
       updatedAt: new Date().toISOString(),
@@ -220,7 +220,12 @@ export default function EditServicePage() {
     }
   }
 
-  if (isLoading) {
+  const customerName = useMemo(() => {
+      if (isLoadingCustomers || !customers) return service?.customerName || '';
+      return customers.find(c => c.id === customerId)?.name || service?.customerName || 'Cap client assignat';
+  }, [customerId, customers, isLoadingCustomers, service]);
+
+  if (isLoading || isLoadingCustomers) {
     return <p>Carregant servei...</p>
   }
 
@@ -291,22 +296,24 @@ export default function EditServicePage() {
               </div>
             </div>
             
-            {isUserAdmin && (
             <div className="space-y-2">
               <Label htmlFor="customerId" className="flex items-center gap-2"><Users className="h-4 w-4 text-muted-foreground" /> Client</Label>
-              <Select value={customerId} onValueChange={setCustomerId}>
-                <SelectTrigger id="customerId">
-                  <SelectValue placeholder="Selecciona un client" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="">Cap client</SelectItem>
-                  {customers?.map(c => (
-                    <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {isUserAdmin ? (
+                  <Select value={customerId} onValueChange={setCustomerId}>
+                    <SelectTrigger id="customerId">
+                      <SelectValue placeholder="Selecciona un client" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">Cap client</SelectItem>
+                      {customers?.map(c => (
+                        <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+              ) : (
+                <Input value={customerName} readOnly disabled className="bg-muted" />
+              )}
             </div>
-            )}
 
             <div className="space-y-2">
               <Label htmlFor="projectName" className="flex items-center gap-2"><Briefcase className="h-4 w-4 text-muted-foreground" /> Nom de l'Obra</Label>
