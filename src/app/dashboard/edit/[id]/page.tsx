@@ -310,11 +310,9 @@ export default function EditServicePage() {
               <Label htmlFor="customerId" className="flex items-center gap-2"><Users className="h-4 w-4 text-muted-foreground" /> Client</Label>
                 <div className="flex items-center gap-2">
                     <Input value={customerName} readOnly disabled className="flex-grow bg-muted" />
-                    {isUserAdmin && (
-                        <Button type="button" variant="outline" onClick={() => setIsCustomerDialogOpen(true)}>
-                            Seleccionar
-                        </Button>
-                    )}
+                    <Button type="button" variant="outline" onClick={() => setIsCustomerDialogOpen(true)}>
+                        Seleccionar
+                    </Button>
                 </div>
             </div>
 
