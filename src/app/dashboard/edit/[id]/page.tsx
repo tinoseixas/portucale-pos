@@ -121,7 +121,12 @@ export default function EditServicePage() {
       setCustomerId(service.customerId || '');
       setMedia(service.media || [])
       setAlbarans(service.albarans?.length > 0 ? service.albarans : [''])
-      setMaterials(service.materials?.length > 0 ? service.materials : [{ description: '', quantity: 1, unitPrice: 0 }])
+      // Set materials only if they exist, otherwise keep the default empty line
+      if (service.materials && service.materials.length > 0) {
+        setMaterials(service.materials)
+      } else {
+        setMaterials([{ description: '', quantity: 1, unitPrice: 0 }]);
+      }
     }
   }, [service])
 
@@ -217,8 +222,8 @@ export default function EditServicePage() {
     const arrivalDate = new Date(`${selectedDateStr}T${startTime}`);
     const departureDate = new Date(`${selectedDateStr}T${endTime}`);
     
-    if (!isValid(arrivalDate) || !isValid(departureDate)) {
-        toast({ variant: 'destructive', title: 'Data/hora invàlida' });
+    if (!isValid(arrivalDate) || !isValid(departureDate) || departureDate <= arrivalDate) {
+        toast({ variant: 'destructive', title: 'Data/hora invàlida', description: "La hora de sortida ha de ser posterior a la d'arribada." });
         return;
     }
     
@@ -227,14 +232,18 @@ export default function EditServicePage() {
 
     const filteredAlbarans = albarans.filter(a => a.trim() !== '')
     
+    // Start with a clean list of materials, removing any empty lines or previous labor costs
     let processedMaterials = materials.filter(m => m.description.trim() !== '' && m.description.toLowerCase() !== 'mão de obra');
     
-    if (user && departureDate > arrivalDate) {
+    // Always calculate labor cost if user is logged in
+    if (user) {
         const durationInMinutes = differenceInMinutes(departureDate, arrivalDate);
         const durationInHours = durationInMinutes / 60;
         
+        // Determine price based on logged-in user's email
         const pricePerHour = user.email === 'tino@seixas.com' ? 35 : 25;
 
+        // Add the new labor cost line at the beginning of the array
         processedMaterials.unshift({
             description: 'Mão de obra',
             quantity: parseFloat(durationInHours.toFixed(2)),
@@ -293,7 +302,6 @@ export default function EditServicePage() {
   if (isUserLoading || isLoading || isLoadingCustomers || isLoadingAllServices) {
     return <p>Carregant servei...</p>
   }
-
 
   if (!service) {
     return <p>No s'ha trobat el servei.</p>
