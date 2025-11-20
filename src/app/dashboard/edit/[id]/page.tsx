@@ -58,36 +58,29 @@ export default function EditServicePage() {
     return doc(firestore, `employees/${docOwnerId}/serviceRecords`, serviceId)
   }, [firestore, docOwnerId, serviceId])
 
-  // State to hold project name suggestions
-  const [projectNames, setProjectNames] = useState<string[]>([]);
-  
-  // Effect to fetch all unique project names once
-  useEffect(() => {
-    async function fetchProjectNames() {
-      if (!firestore) return;
-      // Use collectionGroup to fetch all services across all employees
-      const allServicesQuery = query(collectionGroup(firestore, 'serviceRecords'));
-      try {
-        const querySnapshot = await getDocs(allServicesQuery);
-        const uniqueProjectNames = [...new Set(querySnapshot.docs.map(d => d.data().projectName).filter(Boolean))];
-        setProjectNames(uniqueProjectNames);
-      } catch (error) {
-        console.error("Error fetching project names:", error);
-      }
-    }
-    fetchProjectNames();
-  }, [firestore]);
-
-
   const { data: service, isLoading } = useDoc<ServiceRecord>(serviceDocRef)
   
-  // Simplified customer query, runs for any authenticated user
+  // Always fetch customers if user is logged in
   const customersQuery = useMemoFirebase(() => {
       if (!firestore || !user) return null
       return query(collection(firestore, 'customers'))
   }, [firestore, user]);
-
+  
   const { data: customers, isLoading: isLoadingCustomers } = useCollection<Customer>(customersQuery);
+
+  // Always fetch all project names if user is logged in
+  const projectNamesQuery = useMemoFirebase(() => {
+      if (!firestore || !user) return null;
+      return query(collectionGroup(firestore, 'serviceRecords'));
+  }, [firestore, user]);
+
+  const { data: allServices } = useCollection<ServiceRecord>(projectNamesQuery);
+
+  const projectNames = useMemo(() => {
+      if (!allServices) return [];
+      const uniqueProjectNames = [...new Set(allServices.map(d => d.projectName).filter(Boolean))];
+      return uniqueProjectNames;
+  }, [allServices]);
   
   const [date, setDate] = useState<Date | undefined>(new Date())
   const [startTime, setStartTime] = useState('')
@@ -302,9 +295,9 @@ export default function EditServicePage() {
             <div className="space-y-2">
               <Label htmlFor="customerId" className="flex items-center gap-2"><Users className="h-4 w-4 text-muted-foreground" /> Client</Label>
               {isUserAdmin ? (
-                  <Select value={customerId} onValueChange={setCustomerId}>
+                  <Select value={customerId} onValueChange={setCustomerId} disabled={isLoadingCustomers}>
                     <SelectTrigger id="customerId">
-                      <SelectValue placeholder="Selecciona un client" />
+                      <SelectValue placeholder={isLoadingCustomers ? "Carregant..." : "Selecciona un client"} />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="">Cap client</SelectItem>
