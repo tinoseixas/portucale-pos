@@ -30,10 +30,11 @@ export default function NewServicePage() {
   const { data: employee } = useDoc<Employee>(employeeDocRef);
   
   // This query will now be used for all authenticated users.
+  // CRITICAL: We must wait for the user to be authenticated before trying to fetch customers.
   const customersQuery = useMemoFirebase(() => {
-      if (!firestore) return null
+      if (!firestore || !user) return null
       return query(collection(firestore, 'customers'), orderBy('name', 'asc'))
-  }, [firestore]);
+  }, [firestore, user]);
 
   const { data: customers, isLoading: isLoadingCustomers } = useCollection<Customer>(customersQuery)
 
@@ -86,7 +87,7 @@ export default function NewServicePage() {
   };
 
 
-  if (isUserLoading || isLoadingCustomers) {
+  if (isUserLoading) {
     return (
       <div className="flex items-center justify-center h-full">
         <p>Carregant...</p>
@@ -125,9 +126,9 @@ export default function NewServicePage() {
         <CardContent className="space-y-6">
             <div className="space-y-2 text-left">
               <Label htmlFor="customerId" className="flex items-center gap-2"><Users className="h-4 w-4 text-muted-foreground" /> Client</Label>
-              <Select value={selectedCustomerId} onValueChange={setSelectedCustomerId}>
+              <Select value={selectedCustomerId} onValueChange={setSelectedCustomerId} disabled={isLoadingCustomers}>
                 <SelectTrigger id="customerId">
-                  <SelectValue placeholder="Selecciona un client..." />
+                  <SelectValue placeholder={isLoadingCustomers ? "A carregar clients..." : "Selecciona un client..."} />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="">Cap client</SelectItem>
