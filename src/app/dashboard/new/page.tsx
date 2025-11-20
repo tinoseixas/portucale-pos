@@ -11,7 +11,7 @@ import { useFirestore, useUser, useDoc, useCollection, useMemoFirebase } from '@
 import { addDoc, collection, doc, query, orderBy } from 'firebase/firestore'
 import type { Employee, Customer } from '@/lib/types'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { ADMIN_EMAIL } from '@/lib/admin'
+import { Label } from '@/components/ui/label'
 
 
 export default function NewServicePage() {
@@ -29,6 +29,7 @@ export default function NewServicePage() {
 
   const { data: employee } = useDoc<Employee>(employeeDocRef);
   
+  // This query will now be used for all authenticated users.
   const customersQuery = useMemoFirebase(() => {
       if (!firestore) return null
       return query(collection(firestore, 'customers'), orderBy('name', 'asc'))
