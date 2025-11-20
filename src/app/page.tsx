@@ -10,7 +10,7 @@ import { User, Lock, Briefcase } from 'lucide-react'
 import { useToast } from "@/hooks/use-toast"
 import { useAuth, useUser, useFirestore } from '@/firebase'
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth'
-import { doc, setDoc } from 'firebase/firestore'
+import { doc, setDoc, getDoc } from 'firebase/firestore'
 import { ADMIN_EMAIL } from '@/lib/admin'
 
 export default function Home() {
@@ -29,10 +29,28 @@ export default function Home() {
   }, [user, router])
   
   const handleSignIn = async () => {
-    if (!auth) return;
+    if (!auth || !firestore) return;
 
     try {
-      await signInWithEmailAndPassword(auth, email, password)
+      const userCredential = await signInWithEmailAndPassword(auth, email, password)
+      const loggedInUser = userCredential.user;
+
+      // Ensure employee profile exists
+      const employeeRef = doc(firestore, 'employees', loggedInUser.uid);
+      const employeeSnap = await getDoc(employeeRef);
+
+      if (!employeeSnap.exists()) {
+        await setDoc(employeeRef, {
+            id: loggedInUser.uid,
+            employeeId: loggedInUser.uid.substring(0, 8),
+            firstName: loggedInUser.email?.split('@')[0] || 'Nou',
+            lastName: 'Usuari',
+            email: loggedInUser.email,
+            phoneNumber: '',
+            role: loggedInUser.email === ADMIN_EMAIL ? 'admin' : 'user',
+        }, { merge: true });
+      }
+
       toast({
         title: "Sessió iniciada",
         description: "Benvingut de nou!",

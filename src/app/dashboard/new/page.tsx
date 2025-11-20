@@ -20,7 +20,7 @@ export default function NewServicePage() {
   const [isStarting, setIsStarting] = useState(false);
   const { user, isUserLoading } = useUser()
   const firestore = useFirestore()
-  const [selectedCustomerId, setSelectedCustomerId] = useState<string>('');
+  const [selectedCustomerId, setSelectedCustomerId] = useState<string>('none');
   
   const employeeDocRef = useMemoFirebase(() => {
     if (!user) return null;
@@ -38,8 +38,9 @@ export default function NewServicePage() {
 
 
   const handleStartService = async () => {
-    if (!user || !firestore || !employee) {
-        toast({ variant: "destructive", title: "Error", description: "No s'han pogut carregar les dades de l'empleat." });
+    // The !employee check is removed to prevent blocking, as the login page now ensures the profile exists.
+    if (!user || !firestore) {
+        toast({ variant: "destructive", title: "Error", description: "No s'han pogut carregar les dades de l'usuari." });
         return;
     }
     
@@ -50,14 +51,14 @@ export default function NewServicePage() {
     const now = new Date();
     const serviceRecord = {
         employeeId: user.uid,
-        employeeName: `${employee.firstName} ${employee.lastName}`,
+        employeeName: (employee ? `${employee.firstName} ${employee.lastName}`: (user.email || "Desconegut")),
         arrivalDateTime: now.toISOString(),
         departureDateTime: now.toISOString(), 
         description: "Servei en curs...",
         projectName: '',
         pendingTasks: '',
-        customerId: selectedCustomer?.id || '',
-        customerName: selectedCustomer?.name || '',
+        customerId: selectedCustomerId !== 'none' ? selectedCustomer?.id || '' : '',
+        customerName: selectedCustomerId !== 'none' ? selectedCustomer?.name || '' : '',
         media: [],
         albarans: [],
         createdAt: now.toISOString(),
@@ -70,7 +71,7 @@ export default function NewServicePage() {
         
         if (docRef.id) {
             toast({ 
-                title: `Gràcies, ${employee.firstName}!`,
+                title: `Gràcies, ${employee?.firstName || user.email}!`,
                 description: "S'ha iniciat el registre del servei."
             });
             router.push(`/dashboard/edit/${docRef.id}`);
