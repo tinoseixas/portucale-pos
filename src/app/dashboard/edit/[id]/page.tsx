@@ -58,13 +58,15 @@ export default function EditServicePage() {
     return doc(firestore, `employees/${docOwnerId}/serviceRecords`, serviceId)
   }, [firestore, docOwnerId, serviceId])
 
+  // State to hold project name suggestions
   const [projectNames, setProjectNames] = useState<string[]>([]);
   
+  // Effect to fetch all unique project names once
   useEffect(() => {
     async function fetchProjectNames() {
       if (!firestore) return;
-      // Fetch all services just once to get the project names for the datalist
-      const allServicesQuery = query(collectionGroup(firestore, `serviceRecords`));
+      // Use collectionGroup to fetch all services across all employees
+      const allServicesQuery = query(collectionGroup(firestore, 'serviceRecords'));
       try {
         const querySnapshot = await getDocs(allServicesQuery);
         const uniqueProjectNames = [...new Set(querySnapshot.docs.map(d => d.data().projectName).filter(Boolean))];
@@ -79,11 +81,12 @@ export default function EditServicePage() {
 
   const { data: service, isLoading } = useDoc<ServiceRecord>(serviceDocRef)
   
+  // Simplified customer query, runs for any authenticated user
   const customersQuery = useMemoFirebase(() => {
-      // Fetch customers for admin or if a customer is already assigned to the service
-      if (!firestore) return null;
-       return query(collection(firestore, 'customers'))
-  }, [firestore]);
+      if (!firestore || !user) return null
+      return query(collection(firestore, 'customers'))
+  }, [firestore, user]);
+
   const { data: customers, isLoading: isLoadingCustomers } = useCollection<Customer>(customersQuery);
   
   const [date, setDate] = useState<Date | undefined>(new Date())
