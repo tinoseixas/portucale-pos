@@ -5,11 +5,13 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { LogIn, MapPin } from 'lucide-react'
+import { LogIn, MapPin, Users } from 'lucide-react'
 import { useToast } from "@/hooks/use-toast"
-import { useFirestore, useUser, useDoc } from '@/firebase'
-import { addDoc, collection, doc } from 'firebase/firestore'
-import type { Employee } from '@/lib/types'
+import { useFirestore, useUser, useDoc, useCollection, useMemoFirebase } from '@/firebase'
+import { addDoc, collection, doc, query } from 'firebase/firestore'
+import type { Employee, Customer } from '@/lib/types'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { ADMIN_EMAIL } from '@/lib/admin'
 
 
 export default function NewServicePage() {
@@ -18,14 +20,26 @@ export default function NewServicePage() {
   const [isStarting, setIsStarting] = useState(false);
   const { user, isUserLoading } = useUser()
   const firestore = useFirestore()
+  const [selectedCustomerId, setSelectedCustomerId] = useState<string>('');
   
-  const employeeDocRef = useMemo(() => {
+  const employeeDocRef = useMemoFirebase(() => {
     if (!user) return null;
     return doc(firestore, 'employees', user.uid);
   }, [firestore, user]);
 
   const { data: employee } = useDoc<Employee>(employeeDocRef);
+  
+  const customersQuery = useMemoFirebase(() => {
+      if (!firestore || !user) return null
+      return query(collection(firestore, 'customers'))
+  }, [firestore, user]);
 
+  const { data: customers, isLoading: isLoadingCustomers } = useCollection<Customer>(customersQuery)
+
+  const sortedCustomers = useMemo(() => {
+    if (!customers) return [];
+    return [...customers].sort((a, b) => a.name.localeCompare(b.name));
+  }, [customers]);
 
   const handleStartService = async () => {
     if (!user || !firestore) {
@@ -35,6 +49,8 @@ export default function NewServicePage() {
     
     setIsStarting(true);
     
+    const selectedCustomer = customers?.find(c => c.id === selectedCustomerId);
+    
     const now = new Date();
     const serviceRecord = {
         employeeId: user.uid,
@@ -43,8 +59,8 @@ export default function NewServicePage() {
         description: "Servei en curs...",
         projectName: '',
         pendingTasks: '',
-        customerId: '',
-        customerName: '',
+        customerId: selectedCustomer?.id || '',
+        customerName: selectedCustomer?.name || '',
         media: [],
         albarans: [],
         createdAt: now.toISOString(),
@@ -73,7 +89,7 @@ export default function NewServicePage() {
   };
 
 
-  if (isUserLoading) {
+  if (isUserLoading || isLoadingCustomers) {
     return (
       <div className="flex items-center justify-center h-full">
         <p>Carregant...</p>
@@ -107,9 +123,23 @@ export default function NewServicePage() {
       <Card className="w-full text-center">
         <CardHeader>
           <CardTitle>Preparat per començar?</CardTitle>
-          <CardDescription>Clica el botó per iniciar un nou servei.</CardDescription>
+          <CardDescription>Selecciona un client (opcional) i clica el botó per iniciar un nou servei.</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-6">
+            <div className="space-y-2 text-left">
+              <Label htmlFor="customerId" className="flex items-center gap-2"><Users className="h-4 w-4 text-muted-foreground" /> Client</Label>
+              <Select value={selectedCustomerId} onValueChange={setSelectedCustomerId}>
+                <SelectTrigger id="customerId">
+                  <SelectValue placeholder="Selecciona un client..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Cap client</SelectItem>
+                  {sortedCustomers?.map(c => (
+                    <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             <Button 
                 size="lg" 
                 className="w-full h-16 text-lg bg-accent hover:bg-accent/90 text-accent-foreground"

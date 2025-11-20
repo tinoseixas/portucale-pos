@@ -69,7 +69,7 @@ service cloud.firestore {
      */
     match /customers/{customerId} {
       allow get: if isSignedIn();
-      allow list: if isAdmin();
+      allow list: if isSignedIn(); // Allow any signed-in user to list customers for selection
       allow create, update, delete: if isAdmin();
     }
     
