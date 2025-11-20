@@ -219,16 +219,15 @@ export default function EditServicePage() {
     const filteredAlbarans = albarans.filter(a => a.trim() !== '')
     
     // Auto-calculate labor cost
-    let finalMaterials = materials.filter(m => m.description.trim() !== '' && m.description.toLowerCase() !== 'mão de obra' && m.quantity > 0);
+    let processedMaterials = materials.filter(m => m.description.trim() !== '' && m.description.toLowerCase() !== 'mão de obra');
     
     if (user && isValid(arrivalDate) && isValid(departureDate) && departureDate > arrivalDate) {
         const durationInMinutes = differenceInMinutes(departureDate, arrivalDate);
         const durationInHours = durationInMinutes / 60;
         
-        // Use user's email to determine price
         const pricePerHour = user.email === 'tino@seixas.com' ? 35 : 25;
 
-        finalMaterials.unshift({
+        processedMaterials.unshift({
             description: 'Mão de obra',
             quantity: parseFloat(durationInHours.toFixed(2)),
             unitPrice: pricePerHour
@@ -247,7 +246,7 @@ export default function EditServicePage() {
       customerName: selectedCustomer?.name || service?.customerName || '',
       media: media.map(({type, dataUrl}) => ({type, dataUrl})),
       albarans: filteredAlbarans,
-      materials: finalMaterials,
+      materials: processedMaterials,
       updatedAt: new Date().toISOString(),
     }
 
@@ -538,5 +537,3 @@ export default function EditServicePage() {
     </div>
   );
 }
-
-    
