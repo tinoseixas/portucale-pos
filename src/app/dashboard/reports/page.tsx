@@ -31,7 +31,7 @@ export default function ReportsPage() {
 
     const isAdmin = useMemo(() => user?.email === ADMIN_EMAIL, [user]);
 
-    const customersQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'customers')) : null, [firestore])
+    const customersQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'customers'), orderBy('name', 'asc')) : null, [firestore]);
     const { data: customers } = useCollection<Customer>(customersQuery)
 
     // Use collectionGroup to query across all 'serviceRecords' subcollections

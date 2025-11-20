@@ -46,7 +46,7 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
     const sortedServices = services.sort((a,b) => parseISO(a.arrivalDateTime).getTime() - parseISO(b.arrivalDateTime).getTime());
     
     const subtotal = allMaterials.reduce((acc, material) => acc + (material.quantity * material.unitPrice), 0);
-    const ivaRate = 0.21; // 21%
+    const ivaRate = 0.045; // 4.5% IGI for Andorra
     const iva = subtotal * ivaRate;
     const totalGeneral = subtotal + iva;
 
@@ -127,7 +127,7 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
                               <span className="font-medium tabular-nums">{subtotal.toFixed(2)} €</span>
                           </div>
                           <div className="flex justify-between">
-                              <span className="font-semibold text-gray-700">IVA ({(ivaRate * 100).toFixed(0)}%):</span>
+                              <span className="font-semibold text-gray-700">IGI ({(ivaRate * 100).toFixed(1)}%):</span>
                               <span className="font-medium tabular-nums">{iva.toFixed(2)} €</span>
                           </div>
                           <Separator />
