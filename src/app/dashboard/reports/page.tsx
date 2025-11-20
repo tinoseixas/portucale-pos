@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useMemo, useRef } from 'react'
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase'
-import { collection, query, where, orderBy } from 'firebase/firestore'
+import { useState, useMemo, useRef, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import { useCollection, useUser, useFirestore, useMemoFirebase } from '@/firebase'
+import { collection, query, where, orderBy, collectionGroup } from 'firebase/firestore'
 import type { Customer, ServiceRecord } from '@/lib/types'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -11,27 +12,40 @@ import { Building, Briefcase, FileDown, Loader2 } from 'lucide-react'
 import jsPDF from 'jspdf'
 import html2canvas from 'html2canvas'
 import { ReportPreview } from '@/components/ReportPreview'
+import { ADMIN_EMAIL } from '@/lib/admin'
 
 export default function ReportsPage() {
     const firestore = useFirestore()
+    const router = useRouter()
+    const { user, isUserLoading } = useUser()
     const [selectedCustomerId, setSelectedCustomerId] = useState<string>('all')
     const [selectedProject, setSelectedProject] = useState<string>('all')
     const [isGenerating, setIsGenerating] = useState(false)
     const reportRef = useRef<HTMLDivElement>(null)
 
+    const isCurrentUserAdmin = !isUserLoading && user?.email === ADMIN_EMAIL
+
+    useEffect(() => {
+        if (!isUserLoading && !isCurrentUserAdmin) {
+            router.push('/dashboard')
+        }
+    }, [isUserLoading, isCurrentUserAdmin, router])
+
     const customersQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'customers')) : null, [firestore])
     const { data: customers } = useCollection<Customer>(customersQuery)
 
+    // Use collectionGroup to query across all 'serviceRecords' subcollections for admins
     const allServicesQuery = useMemoFirebase(() => {
-        if (!firestore) return null
-        return query(collection(firestore, 'serviceRecords'), orderBy('arrivalDateTime', 'desc'))
-    }, [firestore])
+        if (!firestore || !isCurrentUserAdmin) return null
+        return query(collectionGroup(firestore, 'serviceRecords'), orderBy('arrivalDateTime', 'desc'))
+    }, [firestore, isCurrentUserAdmin])
+
     const { data: allServices, isLoading: isLoadingAllServices } = useCollection<ServiceRecord>(allServicesQuery)
 
     const projectNames = useMemo(() => {
         if (!allServices) return []
-        const customerServices = selectedCustomerId === 'all' 
-            ? allServices 
+        const customerServices = selectedCustomerId === 'all'
+            ? allServices
             : allServices.filter(s => s.customerId === selectedCustomerId)
         const names = customerServices.map(service => service.projectName).filter(Boolean)
         return [...new Set(names)]
@@ -45,7 +59,7 @@ export default function ReportsPage() {
             return customerMatch && projectMatch
         })
     }, [allServices, selectedCustomerId, selectedProject])
-    
+
     const selectedCustomer = useMemo(() => customers?.find(c => c.id === selectedCustomerId), [customers, selectedCustomerId])
 
     const handleExportPDF = async () => {
@@ -53,7 +67,7 @@ export default function ReportsPage() {
         if (!reportElement) return
 
         setIsGenerating(true)
-        
+
         try {
             const canvas = await html2canvas(reportElement, {
                 scale: 2, // Higher scale for better quality
@@ -69,7 +83,7 @@ export default function ReportsPage() {
             })
 
             pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height)
-            
+
             const fileName = `Informe_${selectedCustomer?.name || 'General'}_${selectedProject || 'Tots'}.pdf`;
             pdf.save(fileName)
 
@@ -78,6 +92,10 @@ export default function ReportsPage() {
         } finally {
             setIsGenerating(false)
         }
+    }
+
+    if (isUserLoading || !isCurrentUserAdmin) {
+        return <p>Carregant...</p>
     }
 
 
