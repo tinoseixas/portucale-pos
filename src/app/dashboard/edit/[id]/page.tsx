@@ -227,18 +227,14 @@ export default function EditServicePage() {
 
     const filteredAlbarans = albarans.filter(a => a.trim() !== '')
     
-    // Start with a clean list of materials, excluding any old 'Mão de obra' or empty lines
     let processedMaterials = materials.filter(m => m.description.trim() !== '' && m.description.toLowerCase() !== 'mão de obra');
     
-    // Now, calculate and add the labor cost if applicable
     if (user && departureDate > arrivalDate) {
         const durationInMinutes = differenceInMinutes(departureDate, arrivalDate);
         const durationInHours = durationInMinutes / 60;
         
-        // Determine price based on current user's email
         const pricePerHour = user.email === 'tino@seixas.com' ? 35 : 25;
 
-        // Add the new 'Mão de obra' line at the beginning of the array
         processedMaterials.unshift({
             description: 'Mão de obra',
             quantity: parseFloat(durationInHours.toFixed(2)),
