@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Clock, FileText, Camera, ArrowLeft, Save, Trash2, Hash, Plus, X, Video, Calendar as CalendarIcon, Info, Briefcase, AlertTriangle, Users } from 'lucide-react'
 import { useToast } from "@/hooks/use-toast"
 import { useFirestore, useUser, useDoc, useMemoFirebase, useCollection } from '@/firebase'
-import { doc, deleteDoc, collection, query, getDocs, collectionGroup } from 'firebase/firestore'
+import { doc, deleteDoc, collection, query, getDocs, collectionGroup, orderBy } from 'firebase/firestore'
 import type { ServiceRecord, Customer } from '@/lib/types'
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates'
 import Image from 'next/image'
@@ -23,7 +23,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { CameraCapture } from '@/components/CameraCapture'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
@@ -45,7 +44,7 @@ export default function EditServicePage() {
   const params = useParams()
   const searchParams = useSearchParams()
   const { toast } = useToast()
-  const { user } = useUser()
+  const { user, isUserLoading } = useUser()
   const firestore = useFirestore()
   const serviceId = params.id as string
 
@@ -60,21 +59,19 @@ export default function EditServicePage() {
 
   const { data: service, isLoading } = useDoc<ServiceRecord>(serviceDocRef)
   
-  // Always fetch customers if user is logged in
   const customersQuery = useMemoFirebase(() => {
-      if (!firestore || !user) return null
-      return query(collection(firestore, 'customers'))
+    if (!firestore || !user) return null
+    return query(collection(firestore, 'customers'), orderBy('name', 'asc'))
   }, [firestore, user]);
   
   const { data: customers, isLoading: isLoadingCustomers } = useCollection<Customer>(customersQuery);
 
-  // Always fetch all project names if user is logged in
   const projectNamesQuery = useMemoFirebase(() => {
       if (!firestore || !user) return null;
       return query(collectionGroup(firestore, 'serviceRecords'));
   }, [firestore, user]);
 
-  const { data: allServices } = useCollection<ServiceRecord>(projectNamesQuery);
+  const { data: allServices, isLoading: isLoadingAllServices } = useCollection<ServiceRecord>(projectNamesQuery);
 
   const projectNames = useMemo(() => {
       if (!allServices) return [];
@@ -228,9 +225,10 @@ export default function EditServicePage() {
       return customers.find(c => c.id === customerId)?.name || service?.customerName || 'Cap client assignat';
   }, [customerId, customers, isLoadingCustomers, service]);
 
-  if (isLoading || isLoadingCustomers) {
+  if (isLoading || isLoadingCustomers || (user && isLoadingAllServices)) {
     return <p>Carregant servei...</p>
   }
+
 
   if (!service) {
     return <p>No s'ha trobat el servei.</p>
