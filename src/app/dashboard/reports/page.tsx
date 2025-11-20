@@ -81,7 +81,7 @@ export default function ReportsPage() {
 
             pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height)
 
-            const fileName = `Informe_${selectedCustomer?.name || 'General'}_${selectedProject || 'Tots'}.pdf`;
+            const fileName = `Albara_${selectedCustomer?.name || 'General'}_${selectedProject || 'Tots'}.pdf`;
             pdf.save(fileName)
 
         } catch (error) {
@@ -100,8 +100,8 @@ export default function ReportsPage() {
         <div className="space-y-8 max-w-5xl mx-auto">
             <Card>
                 <CardHeader>
-                    <CardTitle>Generador d'Informes PDF</CardTitle>
-                    <CardDescription>Selecciona un client i una obra per generar un informe detallat.</CardDescription>
+                    <CardTitle>Generador d'Albarans (PDF)</CardTitle>
+                    <CardDescription>Selecciona un client i una obra per generar un albarà detallat.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                     <div className="flex flex-col sm:flex-row gap-4">
@@ -154,11 +154,11 @@ export default function ReportsPage() {
             {(selectedCustomerId !== 'all' && selectedProject !== 'all') && (
                 <Card>
                     <CardHeader>
-                        <CardTitle>Previsualització de l'Informe</CardTitle>
+                        <CardTitle>Previsualització de l'Albarà</CardTitle>
                     </CardHeader>
                     <CardContent>
                         {isLoadingAllServices ? (
-                             <p>Carregant dades de l'informe...</p>
+                             <p>Carregant dades de l'albarà...</p>
                         ) : (
                            <ReportPreview
                                 ref={reportRef}

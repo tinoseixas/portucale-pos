@@ -10,6 +10,11 @@ export interface ServiceRecord {
   pendingTasks: string;
   media: { type: 'image' | 'video'; dataUrl: string }[];
   albarans: string[];
+  materials?: {
+    description: string;
+    quantity: number;
+    unitPrice: number;
+  }[];
   updatedAt?: string;
   createdAt?: string; // Add createdAt for sorting and tracking
 }

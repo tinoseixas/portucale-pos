@@ -41,13 +41,19 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
 
     const totalTime = calculateTotalTime(services);
     const allMedia = services?.flatMap(s => s.media || []) || [];
+    const allMaterials = services?.flatMap(s => s.materials || []) || [];
     const sortedServices = services.sort((a,b) => parseISO(a.arrivalDateTime).getTime() - parseISO(b.arrivalDateTime).getTime());
+    
+    const subtotal = allMaterials.reduce((acc, material) => acc + (material.quantity * material.unitPrice), 0);
+    const ivaRate = 0.21;
+    const iva = subtotal * ivaRate;
+    const totalGeneral = subtotal + iva;
 
     return (
         <div ref={ref} className="bg-white p-8 font-sans text-gray-800">
             <header className="flex justify-between items-start mb-8">
                 <div>
-                     <h1 className="text-4xl font-bold text-gray-900">Informe de Serveis</h1>
+                     <h1 className="text-4xl font-bold text-gray-900">Albarà de Serveis</h1>
                      <p className="text-gray-600">Generat el: {format(new Date(), 'dd MMMM yyyy', { locale: ca })}</p>
                 </div>
                 <div className="text-right">
@@ -79,71 +85,80 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
             <Separator className="my-8" />
 
             <section className="mb-8">
-                 <h3 className="font-bold text-2xl mb-4 text-center">Resum de l'Activitat</h3>
-                 <div className="grid grid-cols-3 gap-4 text-center">
-                    <div>
-                        <p className="text-sm text-gray-500">Hores Totals</p>
-                        <p className="text-2xl font-bold">{totalTime}</p>
-                    </div>
-                     <div>
-                        <p className="text-sm text-gray-500">Serveis Realitzats</p>
-                        <p className="text-2xl font-bold">{services.length}</p>
-                    </div>
-                     <div>
-                        <p className="text-sm text-gray-500">Fotos Adjuntades</p>
-                        <p className="text-2xl font-bold">{allMedia.length}</p>
-                    </div>
-                 </div>
-            </section>
-
-            <Separator className="my-8" />
-
-            <section>
-                 <h3 className="font-bold text-2xl mb-4 text-center">Detall de Serveis</h3>
-                 <div className="space-y-4">
-                    {sortedServices.map(service => (
-                        <div key={service.id} className="border p-4 rounded-lg break-inside-avoid">
-                            <h4 className="font-bold text-base flex items-center justify-between">
-                                <span className="flex items-center gap-2">
-                                    <CalendarIcon className="h-4 w-4" /> 
-                                    {format(parseISO(service.arrivalDateTime), 'EEEE, dd MMMM yyyy', {locale: ca})}
-                                </span>
-                                <span className="text-sm text-primary font-medium flex items-center gap-2">
-                                     <Clock className="h-4 w-4" /> 
-                                     {format(parseISO(service.arrivalDateTime), 'HH:mm')} - {format(parseISO(service.departureDateTime), 'HH:mm')}
-                                </span>
-                            </h4>
-                            <p className="my-2 text-sm text-gray-600">{service.description}</p>
-                             {service.pendingTasks && (
-                                <div className="mt-2 text-sm text-red-700 bg-red-50 border border-red-200 p-2 rounded">
-                                    <h5 className="font-bold">Pendents:</h5>
-                                    <p>{service.pendingTasks}</p>
-                                </div>
-                            )}
+                 <h3 className="font-bold text-2xl mb-4 text-center">Detall de Serveis i Materials</h3>
+                <table className="w-full text-sm">
+                    <thead>
+                        <tr className="border-b">
+                            <th className="text-left py-2 px-3 font-semibold">Descripció</th>
+                            <th className="text-right py-2 px-3 font-semibold w-24">Quantitat</th>
+                            <th className="text-right py-2 px-3 font-semibold w-24">Preu Unit.</th>
+                            <th className="text-right py-2 px-3 font-semibold w-24">Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {allMaterials.map((material, index) => (
+                             <tr key={index} className="border-b">
+                                <td className="py-2 px-3">{material.description}</td>
+                                <td className="text-right py-2 px-3">{material.quantity.toFixed(2)}</td>
+                                <td className="text-right py-2 px-3">{material.unitPrice.toFixed(2)} €</td>
+                                <td className="text-right py-2 px-3">{(material.quantity * material.unitPrice).toFixed(2)} €</td>
+                            </tr>
+                        ))}
+                         {allMaterials.length === 0 && (
+                            <tr>
+                                <td colSpan={4} className="text-center py-4 text-gray-500">No s'han registrat materials.</td>
+                            </tr>
+                        )}
+                    </tbody>
+                </table>
+                <div className="flex justify-end mt-4">
+                    <div className="w-64 space-y-2 text-sm">
+                        <div className="flex justify-between">
+                            <span className="font-semibold">Subtotal:</span>
+                            <span>{subtotal.toFixed(2)} €</span>
                         </div>
-                    ))}
-                 </div>
+                         <div className="flex justify-between">
+                            <span className="font-semibold">IVA ({(ivaRate * 100).toFixed(0)}%):</span>
+                            <span>{iva.toFixed(2)} €</span>
+                        </div>
+                        <div className="flex justify-between font-bold text-base border-t pt-2">
+                            <span>Total General:</span>
+                            <span>{totalGeneral.toFixed(2)} €</span>
+                        </div>
+                    </div>
+                </div>
             </section>
             
-             {allMedia.length > 0 && (
+             {sortedServices.length > 0 && (
                 <>
                 <Separator className="my-8" />
-                <section className="break-before-page">
-                    <h3 className="font-bold text-2xl mb-4 text-center">Galeria de Fotos</h3>
-                     <div className="grid grid-cols-2 gap-4">
-                        {allMedia.map((media, index) => media.type === 'image' && (
-                             <div key={index} className="border p-2 rounded-lg break-inside-avoid">
-                                <div className="relative w-full" style={{paddingBottom: '75%'}}>
-                                     <Image
-                                        src={media.dataUrl}
-                                        alt={`Media ${index + 1}`}
-                                        layout="fill"
-                                        objectFit="cover"
-                                        className="rounded"
-                                    />
-                                </div>
+                <section>
+                    <h3 className="font-bold text-2xl mb-4 text-center">Resum d'Hores</h3>
+                    <div className="space-y-4">
+                        {sortedServices.map(service => (
+                            <div key={service.id} className="border p-4 rounded-lg break-inside-avoid">
+                                <h4 className="font-bold text-base flex items-center justify-between">
+                                    <span className="flex items-center gap-2">
+                                        <CalendarIcon className="h-4 w-4" /> 
+                                        {format(parseISO(service.arrivalDateTime), 'EEEE, dd MMMM yyyy', {locale: ca})}
+                                    </span>
+                                    <span className="text-sm text-primary font-medium flex items-center gap-2">
+                                        <Clock className="h-4 w-4" /> 
+                                        {format(parseISO(service.arrivalDateTime), 'HH:mm')} - {format(parseISO(service.departureDateTime), 'HH:mm')}
+                                    </span>
+                                </h4>
+                                <p className="my-2 text-sm text-gray-600">{service.description}</p>
+                                {service.pendingTasks && (
+                                    <div className="mt-2 text-sm text-red-700 bg-red-50 border border-red-200 p-2 rounded">
+                                        <h5 className="font-bold">Pendents:</h5>
+                                        <p>{service.pendingTasks}</p>
+                                    </div>
+                                )}
                             </div>
                         ))}
+                    </div>
+                     <div className="text-right font-bold text-lg mt-4">
+                        Total Hores Treballades: {totalTime}
                     </div>
                 </section>
                 </>

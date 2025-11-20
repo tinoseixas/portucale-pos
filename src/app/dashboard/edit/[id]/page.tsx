@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Clock, FileText, Camera, ArrowLeft, Save, Trash2, Hash, Plus, X, Video, Calendar as CalendarIcon, Info, Briefcase, AlertTriangle, Users } from 'lucide-react'
+import { Clock, FileText, Camera, ArrowLeft, Save, Trash2, Hash, Plus, X, Video, Calendar as CalendarIcon, Info, Briefcase, AlertTriangle, Users, Package, Euro } from 'lucide-react'
 import { useToast } from "@/hooks/use-toast"
 import { useFirestore, useUser, useDoc, useMemoFirebase, useCollection } from '@/firebase'
 import { doc, deleteDoc, collection, query, getDocs, collectionGroup, orderBy } from 'firebase/firestore'
@@ -39,6 +39,12 @@ type MediaFile = {
   file?: File;
 };
 
+type Material = {
+    description: string;
+    quantity: number;
+    unitPrice: number;
+}
+
 export default function EditServicePage() {
   const router = useRouter()
   const params = useParams()
@@ -48,12 +54,10 @@ export default function EditServicePage() {
   const firestore = useFirestore()
   const serviceId = params.id as string
 
-  // With the new simplified permissions, we only need the user's own UID
   const ownerId = user?.uid
   
   const serviceDocRef = useMemoFirebase(() => {
     if (!ownerId || !serviceId || !firestore) return null
-    // The path still includes the original employeeId who created the record
     const recordOwnerId = searchParams.get('ownerId') || ownerId;
     return doc(firestore, `employees/${recordOwnerId}/serviceRecords`, serviceId)
   }, [firestore, ownerId, serviceId, searchParams])
@@ -68,7 +72,7 @@ export default function EditServicePage() {
   const { data: customers, isLoading: isLoadingCustomers } = useCollection<Customer>(customersQuery);
 
   const projectNamesQuery = useMemoFirebase(() => {
-      if (!firestore || !user) return null; // Wait for user authentication
+      if (!firestore || !user) return null;
       return query(collectionGroup(firestore, 'serviceRecords'));
   }, [firestore, user]);
 
@@ -88,11 +92,11 @@ export default function EditServicePage() {
   const [pendingTasks, setPendingTasks] = useState('');
   const [media, setMedia] = useState<MediaFile[]>([])
   const [albarans, setAlbarans] = useState<string[]>(['']);
+  const [materials, setMaterials] = useState<Material[]>([{ description: '', quantity: 1, unitPrice: 0 }]);
   const [showCamera, setShowCamera] = useState(false);
   const [customerId, setCustomerId] = useState<string>('');
   const [isCustomerDialogOpen, setIsCustomerDialogOpen] = useState(false)
 
-  // This useEffect populates the form when the service data is loaded from Firestore.
   useEffect(() => {
     if (service) {
       const arrival = parseISO(service.arrivalDateTime);
@@ -115,13 +119,11 @@ export default function EditServicePage() {
       setCustomerId(service.customerId || '');
       setMedia(service.media || [])
       setAlbarans(service.albarans?.length > 0 ? service.albarans : [''])
+      setMaterials(service.materials?.length > 0 ? service.materials : [{ description: '', quantity: 1, unitPrice: 0 }])
     }
   }, [service])
 
-  // This useEffect ensures the date is set only on the client-side to prevent hydration errors.
   useEffect(() => {
-    // If date is not set by the service data, initialize it to today's date.
-    // This runs only once on the client after mount.
     if (!date && service === undefined) {
       setDate(new Date());
     }
@@ -157,6 +159,30 @@ export default function EditServicePage() {
     setAlbarans(newAlbarans)
   }
   
+  const handleMaterialChange = (index: number, field: keyof Material, value: string | number) => {
+    const newMaterials = [...materials];
+    const material = newMaterials[index];
+    if (field === 'description') {
+        material.description = value as string;
+    } else {
+        const numValue = Number(value);
+        if (!isNaN(numValue) && numValue >= 0) {
+            if (field === 'quantity') material.quantity = numValue;
+            if (field === 'unitPrice') material.unitPrice = numValue;
+        }
+    }
+    setMaterials(newMaterials);
+  };
+
+  const addMaterialInput = () => {
+    setMaterials([...materials, { description: '', quantity: 1, unitPrice: 0 }]);
+  };
+
+  const removeMaterialInput = (index: number) => {
+    const newMaterials = materials.filter((_, i) => i !== index);
+    setMaterials(newMaterials);
+  };
+  
   const handleCapture = (dataUrl: string, type: 'image' | 'video') => {
     setMedia(prev => [...prev, { type, dataUrl }]);
     setShowCamera(false);
@@ -188,6 +214,7 @@ export default function EditServicePage() {
     const departureDateTime = new Date(`${selectedDateStr}T${endTime}`).toISOString()
 
     const filteredAlbarans = albarans.filter(a => a.trim() !== '')
+    const filteredMaterials = materials.filter(m => m.description.trim() !== '' && m.quantity > 0);
     const selectedCustomer = customers?.find(c => c.id === customerId);
 
     const updatedData = {
@@ -200,6 +227,7 @@ export default function EditServicePage() {
       customerName: selectedCustomer?.name || service?.customerName || '',
       media: media.map(({type, dataUrl}) => ({type, dataUrl})),
       albarans: filteredAlbarans,
+      materials: filteredMaterials,
       updatedAt: new Date().toISOString(),
     }
 
@@ -343,6 +371,54 @@ export default function EditServicePage() {
               <Label htmlFor="pendingTasks" className="flex items-center gap-2"><AlertTriangle className="h-4 w-4 text-muted-foreground" /> Pendents de l'Obra</Label>
               <Textarea id="pendingTasks" placeholder="Descriu tasques o materials pendents..." value={pendingTasks} onChange={(e) => setPendingTasks(e.target.value)} rows={3} />
             </div>
+            
+             <div className="space-y-4 rounded-lg border p-4">
+                <Label className="flex items-center gap-2 text-base font-semibold"><Package className="h-5 w-5 text-muted-foreground" /> Materials i Mà d'Obra</Label>
+                <div className="space-y-3">
+                    {materials.map((material, index) => (
+                        <div key={index} className="grid grid-cols-12 gap-2 items-center">
+                            <Input
+                                type="text"
+                                placeholder="Descripció (ex: mà d'obra, tub PVC)"
+                                value={material.description}
+                                onChange={(e) => handleMaterialChange(index, 'description', e.target.value)}
+                                className="col-span-6"
+                            />
+                            <div className="col-span-2 relative">
+                                <Input
+                                    type="number"
+                                    value={material.quantity}
+                                    onChange={(e) => handleMaterialChange(index, 'quantity', e.target.value)}
+                                    className="pl-2 pr-1"
+                                    min="0"
+                                    step="any"
+                                />
+                            </div>
+                             <div className="col-span-3 relative">
+                                <Input
+                                    type="number"
+                                    value={material.unitPrice}
+                                    onChange={(e) => handleMaterialChange(index, 'unitPrice', e.target.value)}
+                                    className="pl-7 pr-1"
+                                    min="0"
+                                    step="any"
+                                />
+                                <Euro className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                            </div>
+                            <div className="col-span-1 flex justify-end">
+                                {materials.length > 1 && (
+                                <Button type="button" variant="ghost" size="icon" onClick={() => removeMaterialInput(index)}>
+                                    <X className="h-4 w-4 text-destructive" />
+                                </Button>
+                                )}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+                <Button type="button" variant="outline" size="sm" onClick={addMaterialInput} className="mt-2">
+                    <Plus className="mr-2 h-4 w-4" /> Afegir Línia
+                </Button>
+             </div>
 
             <div className="space-y-2">
               <Label htmlFor="albarans" className="flex items-center gap-2"><Hash className="h-4 w-4 text-muted-foreground" /> Nº d'Albarà</Label>
