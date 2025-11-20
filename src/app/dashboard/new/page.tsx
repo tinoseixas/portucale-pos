@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { LogIn, MapPin, Users } from 'lucide-react'
+import { LogIn, MapPin, Users, Loader2 } from 'lucide-react'
 import { useToast } from "@/hooks/use-toast"
 import { useFirestore, useUser, useDoc, useCollection, useMemoFirebase } from '@/firebase'
 import { addDoc, collection, doc, query, orderBy } from 'firebase/firestore'
@@ -27,10 +27,8 @@ export default function NewServicePage() {
     return doc(firestore, 'employees', user.uid);
   }, [firestore, user]);
 
-  const { data: employee } = useDoc<Employee>(employeeDocRef);
+  const { data: employee, isLoading: isLoadingEmployee } = useDoc<Employee>(employeeDocRef);
   
-  // This query will now be used for all authenticated users.
-  // CRITICAL: We must wait for the user to be authenticated before trying to fetch customers.
   const customersQuery = useMemoFirebase(() => {
       if (!firestore || !user) return null
       return query(collection(firestore, 'customers'), orderBy('name', 'asc'))
@@ -40,8 +38,8 @@ export default function NewServicePage() {
 
 
   const handleStartService = async () => {
-    if (!user || !firestore) {
-        toast({ variant: "destructive", title: "Error", description: "Has d'iniciar sessió." });
+    if (!user || !firestore || !employee) {
+        toast({ variant: "destructive", title: "Error", description: "No s'han pogut carregar les dades de l'empleat." });
         return;
     }
     
@@ -52,7 +50,7 @@ export default function NewServicePage() {
     const now = new Date();
     const serviceRecord = {
         employeeId: user.uid,
-        employeeName: employee ? `${employee.firstName} ${employee.lastName}` : user.email || 'Desconegut',
+        employeeName: `${employee.firstName} ${employee.lastName}`,
         arrivalDateTime: now.toISOString(),
         departureDateTime: now.toISOString(), 
         description: "Servei en curs...",
@@ -71,9 +69,8 @@ export default function NewServicePage() {
         const docRef = await addDoc(serviceRecordsCollection, serviceRecord);
         
         if (docRef.id) {
-            const userName = employee?.firstName || user.email || 'funcionari';
             toast({ 
-                title: `Gràcies, ${userName}!`,
+                title: `Gràcies, ${employee.firstName}!`,
                 description: "S'ha iniciat el registre del servei."
             });
             router.push(`/dashboard/edit/${docRef.id}`);
@@ -86,6 +83,9 @@ export default function NewServicePage() {
         toast({ variant: "destructive", title: "Error", description: "No s'ha pogut iniciar el servei." });
     }
   };
+  
+  const isDataLoading = isUserLoading || isLoadingEmployee;
+  const buttonText = isStarting ? "Iniciant..." : "Iniciar Servei";
 
 
   if (isUserLoading) {
@@ -143,10 +143,10 @@ export default function NewServicePage() {
                 size="lg" 
                 className="w-full h-16 text-lg bg-accent hover:bg-accent/90 text-accent-foreground"
                 onClick={handleStartService}
-                disabled={isStarting}
+                disabled={isStarting || isDataLoading}
             >
-                <MapPin className="mr-3 h-6 w-6" />
-                {isStarting ? "Iniciant..." : "Iniciar Servei"}
+                {isDataLoading ? <Loader2 className="mr-3 h-6 w-6 animate-spin" /> : <MapPin className="mr-3 h-6 w-6" />}
+                {isDataLoading ? "Carregant dades..." : buttonText}
             </Button>
         </CardContent>
       </Card>
