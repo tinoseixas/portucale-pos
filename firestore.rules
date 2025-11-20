@@ -68,7 +68,8 @@ service cloud.firestore {
      * Admins can manage customers. All signed-in employees can read them.
      */
     match /customers/{customerId} {
-      allow get, list: if isSignedIn();
+      allow get: if isSignedIn();
+      allow list: if isAdmin();
       allow create, update, delete: if isAdmin();
     }
     
