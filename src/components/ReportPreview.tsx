@@ -3,7 +3,7 @@ import React, { forwardRef } from 'react';
 import Image from 'next/image';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { Clock, Briefcase, Camera, Video, Calendar as CalendarIcon, FileText, Building, Mail, Phone, Hash } from 'lucide-react';
+import { Clock, Briefcase, Camera, Video, Calendar as CalendarIcon, FileText, Building, Mail, Phone, Hash, User } from 'lucide-react';
 import type { ServiceRecord, Customer, Employee } from '@/lib/types';
 import { format, differenceInMinutes, parseISO, isValid, startOfDay } from 'date-fns';
 import { ca } from 'date-fns/locale';
@@ -149,7 +149,7 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
                         <div className="space-y-4">
                             {sortedServices.map(service => (
                                 <div key={service.id} className="border border-gray-200 p-4 rounded-lg break-inside-avoid">
-                                    <div className="flex justify-between items-baseline mb-2">
+                                    <div className="flex justify-between items-baseline mb-2 flex-wrap">
                                         <h4 className="font-bold text-base flex items-center gap-2">
                                             <CalendarIcon className="h-4 w-4 text-gray-500" /> 
                                             {format(parseISO(service.arrivalDateTime), 'EEEE, dd MMMM yyyy', {locale: ca})}
@@ -159,13 +159,21 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
                                             {format(parseISO(service.arrivalDateTime), 'HH:mm')} - {format(parseISO(service.departureDateTime), 'HH:mm')}
                                         </span>
                                     </div>
-                                    <p className="pl-6 text-gray-700">{service.description}</p>
-                                    {service.pendingTasks && (
-                                        <div className="mt-2 text-sm text-amber-800 bg-amber-50 border border-amber-200 p-2 rounded-md ml-6">
-                                            <h5 className="font-bold">Tasques Pendents:</h5>
-                                            <p className="text-amber-700">{service.pendingTasks}</p>
-                                        </div>
-                                    )}
+                                    <div className="pl-6">
+                                        {service.employeeName && (
+                                            <p className="text-sm text-gray-600 flex items-center gap-2 mb-1">
+                                                <User className="h-4 w-4" />
+                                                <span>{service.employeeName}</span>
+                                            </p>
+                                        )}
+                                        <p className="text-gray-700">{service.description}</p>
+                                        {service.pendingTasks && (
+                                            <div className="mt-2 text-sm text-amber-800 bg-amber-50 border border-amber-200 p-2 rounded-md">
+                                                <h5 className="font-bold">Tasques Pendents:</h5>
+                                                <p className="text-amber-700">{service.pendingTasks}</p>
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
                             ))}
                         </div>

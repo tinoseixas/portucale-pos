@@ -52,6 +52,7 @@ export default function NewServicePage() {
     const now = new Date();
     const serviceRecord = {
         employeeId: user.uid,
+        employeeName: employee ? `${employee.firstName} ${employee.lastName}` : user.email || 'Desconegut',
         arrivalDateTime: now.toISOString(),
         departureDateTime: now.toISOString(), 
         description: "Servei en curs...",
