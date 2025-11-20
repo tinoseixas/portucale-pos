@@ -439,5 +439,5 @@ export default function EditServicePage() {
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }
