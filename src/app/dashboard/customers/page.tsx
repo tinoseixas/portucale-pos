@@ -62,9 +62,10 @@ export default function CustomersPage() {
   }, [user, isUserLoading]);
 
   const customersQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
     // Only admins can see this page, but we secure the query anyway
-    return isCurrentUserAdmin ? query(collection(firestore, 'customers')) : null;
+    // Crucially, we wait until we know the user is an admin.
+    if (!firestore || !isCurrentUserAdmin) return null;
+    return query(collection(firestore, 'customers'));
   }, [firestore, isCurrentUserAdmin])
 
   const { data: customers, isLoading: isLoadingCustomers } = useCollection<Customer>(customersQuery)

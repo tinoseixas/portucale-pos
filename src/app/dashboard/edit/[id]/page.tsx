@@ -79,7 +79,11 @@ export default function EditServicePage() {
 
   const { data: service, isLoading } = useDoc<ServiceRecord>(serviceDocRef)
   
-  const customersQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'customers')) : null, [firestore]);
+  const customersQuery = useMemoFirebase(() => {
+      // Only fetch customers if the user is an admin. Regular users don't need the list.
+      if (!firestore || !isUserAdmin) return null;
+      return query(collection(firestore, 'customers'))
+  }, [firestore, isUserAdmin]);
   const { data: customers } = useCollection<Customer>(customersQuery);
   
   const [date, setDate] = useState<Date | undefined>(new Date())
@@ -287,6 +291,7 @@ export default function EditServicePage() {
               </div>
             </div>
             
+            {isUserAdmin && (
             <div className="space-y-2">
               <Label htmlFor="customerId" className="flex items-center gap-2"><Users className="h-4 w-4 text-muted-foreground" /> Client</Label>
               <Select value={customerId} onValueChange={setCustomerId}>
@@ -301,6 +306,7 @@ export default function EditServicePage() {
                 </SelectContent>
               </Select>
             </div>
+            )}
 
             <div className="space-y-2">
               <Label htmlFor="projectName" className="flex items-center gap-2"><Briefcase className="h-4 w-4 text-muted-foreground" /> Nom de l'Obra</Label>
