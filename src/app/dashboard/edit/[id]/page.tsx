@@ -97,8 +97,6 @@ export default function EditServicePage() {
   const [customerId, setCustomerId] = useState<string>('');
   const [isCustomerDialogOpen, setIsCustomerDialogOpen] = useState(false)
 
-  const isAdmin = useMemo(() => user?.email === 'tino@seixas.com', [user]);
-
   useEffect(() => {
     if (service) {
       const arrival = parseISO(service.arrivalDateTime);
@@ -407,7 +405,7 @@ export default function EditServicePage() {
               <Textarea id="pendingTasks" placeholder="Descriu tasques o materials pendents..." value={pendingTasks} onChange={(e) => setPendingTasks(e.target.value)} rows={3} />
             </div>
             
-             {isAdmin && (
+             {user?.email === 'tino@seixas.com' && (
                 <div className="space-y-4 rounded-lg border p-4">
                     <Label className="flex items-center gap-2 text-base font-semibold"><Package className="h-5 w-5 text-muted-foreground" /> Materials i Mà d'Obra</Label>
                     <div className="space-y-3">
@@ -429,6 +427,7 @@ export default function EditServicePage() {
                                         className="pl-2 pr-1"
                                         min="0"
                                         step="any"
+                                        readOnly={material.description.toLowerCase() === 'mão de obra'}
                                     />
                                 </div>
                                 <div className="col-span-3 relative">
@@ -439,6 +438,7 @@ export default function EditServicePage() {
                                         className="pl-7 pr-1"
                                         min="0"
                                         step="any"
+                                        readOnly={material.description.toLowerCase() === 'mão de obra'}
                                     />
                                     <Euro className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                                 </div>
