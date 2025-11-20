@@ -71,7 +71,7 @@ export default function NewServicePage() {
         const docRef = await addDoc(serviceRecordsCollection, serviceRecord);
         
         if (docRef.id) {
-            const userName = employee?.firstName || 'funcionari';
+            const userName = employee?.firstName || user.email || 'funcionari';
             toast({ 
                 title: `Gràcies, ${userName}!`,
                 description: "S'ha iniciat el registre del servei."
@@ -132,6 +132,7 @@ export default function NewServicePage() {
                   <SelectValue placeholder={isLoadingCustomers ? "A carregar clients..." : "Selecciona un client..."} />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="none">Cap client</SelectItem>
                   {customers?.map(c => (
                     <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
                   ))}
