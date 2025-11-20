@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Clock, FileText, Camera, ArrowLeft, Save, Trash2, Hash, Plus, X, Video, Calendar as CalendarIcon, Info, Briefcase, AlertTriangle, Users } from 'lucide-react'
 import { useToast } from "@/hooks/use-toast"
 import { useFirestore, useUser, useDoc, useMemoFirebase, useCollection } from '@/firebase'
-import { doc, deleteDoc, collection, query, getDocs } from 'firebase/firestore'
+import { doc, deleteDoc, collection, query, getDocs, collectionGroup } from 'firebase/firestore'
 import type { ServiceRecord, Customer } from '@/lib/types'
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates'
 import Image from 'next/image'
@@ -62,9 +62,9 @@ export default function EditServicePage() {
   
   useEffect(() => {
     async function fetchProjectNames() {
-      if (!firestore || !user?.uid) return;
+      if (!firestore) return;
       // Fetch all services just once to get the project names for the datalist
-      const allServicesQuery = query(collection(firestore, `employees/${user.uid}/serviceRecords`));
+      const allServicesQuery = query(collectionGroup(firestore, `serviceRecords`));
       try {
         const querySnapshot = await getDocs(allServicesQuery);
         const uniqueProjectNames = [...new Set(querySnapshot.docs.map(d => d.data().projectName).filter(Boolean))];
@@ -74,7 +74,7 @@ export default function EditServicePage() {
       }
     }
     fetchProjectNames();
-  }, [firestore, user?.uid]);
+  }, [firestore]);
 
 
   const { data: service, isLoading } = useDoc<ServiceRecord>(serviceDocRef)
