@@ -54,6 +54,7 @@ export default function UsersPage() {
   }, [user, isUserLoading]);
 
   const employeesQuery = useMemoFirebase(() => {
+    // Only construct the query if we know the user is an admin.
     if (!isCurrentUserAdmin || !firestore) return null;
     return query(collection(firestore, 'employees'))
   }, [firestore, isCurrentUserAdmin])
@@ -61,6 +62,7 @@ export default function UsersPage() {
   const { data: employees, isLoading: isLoadingEmployees } = useCollection<Employee>(employeesQuery)
   
   useEffect(() => {
+    // This effect redirects non-admins away from the page.
     if (!isUserLoading && !isCurrentUserAdmin) {
       router.push('/dashboard');
     }
@@ -94,6 +96,7 @@ export default function UsersPage() {
     return <p>Carregant usuaris...</p>
   }
   
+  // Render this message if the user is not an admin, while redirecting.
   if (!isCurrentUserAdmin) {
      return <p>Accés no autoritzat.</p>;
   }
