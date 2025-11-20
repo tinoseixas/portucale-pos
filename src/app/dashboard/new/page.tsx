@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { LogIn, MapPin, Users } from 'lucide-react'
 import { useToast } from "@/hooks/use-toast"
 import { useFirestore, useUser, useDoc, useCollection, useMemoFirebase } from '@/firebase'
-import { addDoc, collection, doc, query } from 'firebase/firestore'
+import { addDoc, collection, doc, query, orderBy } from 'firebase/firestore'
 import type { Employee, Customer } from '@/lib/types'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { ADMIN_EMAIL } from '@/lib/admin'
@@ -30,16 +30,12 @@ export default function NewServicePage() {
   const { data: employee } = useDoc<Employee>(employeeDocRef);
   
   const customersQuery = useMemoFirebase(() => {
-      if (!firestore || !user) return null
-      return query(collection(firestore, 'customers'))
-  }, [firestore, user]);
+      if (!firestore) return null
+      return query(collection(firestore, 'customers'), orderBy('name', 'asc'))
+  }, [firestore]);
 
   const { data: customers, isLoading: isLoadingCustomers } = useCollection<Customer>(customersQuery)
 
-  const sortedCustomers = useMemo(() => {
-    if (!customers) return [];
-    return [...customers].sort((a, b) => a.name.localeCompare(b.name));
-  }, [customers]);
 
   const handleStartService = async () => {
     if (!user || !firestore) {
@@ -134,7 +130,7 @@ export default function NewServicePage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="">Cap client</SelectItem>
-                  {sortedCustomers?.map(c => (
+                  {customers?.map(c => (
                     <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
                   ))}
                 </SelectContent>
