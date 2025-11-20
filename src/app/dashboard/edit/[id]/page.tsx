@@ -54,7 +54,7 @@ export default function EditServicePage() {
   const docOwnerId = isUserAdmin && ownerId ? ownerId : user?.uid
 
   const serviceDocRef = useMemoFirebase(() => {
-    if (!docOwnerId || !serviceId) return null
+    if (!docOwnerId || !serviceId || !firestore) return null
     return doc(firestore, `employees/${docOwnerId}/serviceRecords`, serviceId)
   }, [firestore, docOwnerId, serviceId])
 
@@ -226,7 +226,7 @@ export default function EditServicePage() {
       return customers.find(c => c.id === customerId)?.name || service?.customerName || 'Cap client assignat';
   }, [customerId, customers, isLoadingCustomers, service]);
 
-  if (isLoading || isLoadingCustomers || (user && isLoadingAllServices)) {
+  if (isUserLoading || isLoading || isLoadingCustomers || isLoadingAllServices) {
     return <p>Carregant servei...</p>
   }
 
@@ -433,3 +433,5 @@ export default function EditServicePage() {
     </div>
   )
 }
+
+    
