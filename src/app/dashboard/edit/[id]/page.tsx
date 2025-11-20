@@ -80,7 +80,7 @@ export default function EditServicePage() {
       return uniqueProjectNames;
   }, [allServices]);
   
-  const [date, setDate] = useState<Date | undefined>(new Date())
+  const [date, setDate] = useState<Date | undefined>()
   const [startTime, setStartTime] = useState('')
   const [endTime, setEndTime] = useState('')
   const [description, setDescription] = useState('')
@@ -115,8 +115,11 @@ export default function EditServicePage() {
       setCustomerId(service.customerId || '');
       setMedia(service.media || [])
       setAlbarans(service.albarans?.length > 0 ? service.albarans : [''])
+    } else if (!date) {
+        // Set date only on client-side if it's not already set from service data
+        setDate(new Date());
     }
-  }, [service])
+  }, [service, date])
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -433,5 +436,3 @@ export default function EditServicePage() {
     </div>
   )
 }
-
-    
