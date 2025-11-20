@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { useToast } from '@/hooks/use-toast'
 
-// Dades de client de mostra per importar. Substitueix-les per les teves dades reals.
+// Dades de client de mostra per importar, agora ordenadas alfabeticamente.
 const mockCustomers: Omit<Customer, 'id'>[] = [
   { name: 'Adiel Serveis', nrt: 'F333016-C', address: 'Cami de engolasters 2', email: '', contact: '' },
   { name: 'ADVOCADA EVA LOPEZ HERRERO', nrt: 'F-216873-R', address: 'C/LES CANALS N°5 1°18', email: '', contact: '' },
@@ -74,8 +74,8 @@ const mockCustomers: Omit<Customer, 'id'>[] = [
   { name: 'Joan Armengol Armengol', nrt: 'F-001395-F', address: 'Urb. Rutllan 26', email: '', contact: '' },
   { name: 'JOAN SALA GÓMEZ', nrt: '006894-W', address: 'Prat de la Creu , 16 Escala Canòlich 1-4', email: '', contact: '' },
   { name: 'Joao Vitor Marracho Rodrigues', nrt: 'L-718454-N', address: 'Av.Dr.Mitjavila 13 2-1 Edifici Montnegre', email: 'guiropatrimonia@gmail.com', contact: '' },
-  { name: 'Jordi Sansa', nrt: '', address: 'Av. Meritxell, 42 4t', email: 'jordicoletes@gmail.com', contact: '326013' },
   { name: 'Jordi Pérez Miquel Pérez', nrt: '', address: 'Avinguda francois Mitterrand 66 1-1', email: '', contact: '' },
+  { name: 'Jordi Sansa', nrt: '', address: 'Av. Meritxell, 42 4t', email: 'jordicoletes@gmail.com', contact: '326013' },
   { name: 'JORGE CASTELLS TEIXIDO', nrt: '', address: 'Andorra la Vella', email: '', contact: '' },
   { name: 'Josep Baro', nrt: '', address: 'S.Julian', email: '', contact: '332650' },
   { name: 'Josep Garcia Fernandez', nrt: 'F-012972-X', address: 'Carretera General d’Escàs, Xalet Daniela, 57', email: 'info@carracedo-and.com', contact: '' },
@@ -118,7 +118,7 @@ const mockCustomers: Omit<Customer, 'id'>[] = [
   { name: 'Undergroud Bar', nrt: '', address: 'Pas de la casa', email: '', contact: '' },
   { name: 'VILADOMAT, SAU', nrt: 'A-700966-G', address: 'Carrer Roureda de Sansa, 10', email: 'immasopena@viladomat.com', contact: '' },
   { name: 'WW REAL ESTATE SL', nrt: 'L716982b', address: 'c. de l\'aigüeta 22, 1', email: '', contact: '' }
-];
+].sort((a, b) => a.name.localeCompare(b.name, 'ca', { sensitivity: 'base' }));
 
 
 export default function CustomersPage() {
@@ -285,3 +285,5 @@ export default function CustomersPage() {
     </div>
   )
 }
+
+    
