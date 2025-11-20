@@ -115,11 +115,13 @@ export default function EditServicePage() {
       setCustomerId(service.customerId || '');
       setMedia(service.media || [])
       setAlbarans(service.albarans?.length > 0 ? service.albarans : [''])
-    } else if (!date) {
+    } else {
         // Set date only on client-side if it's not already set from service data
-        setDate(new Date());
+        if (!date) {
+            setDate(new Date());
+        }
     }
-  }, [service, date])
+  }, [service])
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
