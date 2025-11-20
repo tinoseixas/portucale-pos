@@ -118,13 +118,14 @@ export default function EditServicePage() {
     }
   }, [service])
 
-  // This useEffect ensures the date is set on the client-side to prevent hydration errors.
+  // This useEffect ensures the date is set only on the client-side to prevent hydration errors.
   useEffect(() => {
-    // If the date is not yet set (either from 'service' or initially), set it to the current date.
+    // If date is not set by the service data, initialize it to today's date.
+    // This runs only once on the client after mount.
     if (!date) {
       setDate(new Date());
     }
-  }, []); // The empty dependency array ensures this runs only once on the client.
+  }, []); // Empty dependency array ensures this runs once on mount
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
