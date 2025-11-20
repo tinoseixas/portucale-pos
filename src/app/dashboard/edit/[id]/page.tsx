@@ -28,7 +28,7 @@ import {
 import { CameraCapture } from '@/components/CameraCapture'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Calendar } from '@/components/ui/calendar'
-import { format, parseISO, isValid } from 'date-fns'
+import { format, parseISO, isValid, differenceInMinutes } from 'date-fns'
 import { ca } from 'date-fns/locale'
 import { cn } from '@/lib/utils'
 import { CustomerSelectionDialog } from '@/components/CustomerSelectionDialog'
@@ -210,11 +210,31 @@ export default function EditServicePage() {
     }
 
     const selectedDateStr = format(date, 'yyyy-MM-dd')
-    const arrivalDateTime = new Date(`${selectedDateStr}T${startTime}`).toISOString()
-    const departureDateTime = new Date(`${selectedDateStr}T${endTime}`).toISOString()
+    const arrivalDate = new Date(`${selectedDateStr}T${startTime}`);
+    const departureDate = new Date(`${selectedDateStr}T${endTime}`);
+    
+    const arrivalDateTime = arrivalDate.toISOString();
+    const departureDateTime = departureDate.toISOString();
 
     const filteredAlbarans = albarans.filter(a => a.trim() !== '')
-    const filteredMaterials = materials.filter(m => m.description.trim() !== '' && m.quantity > 0);
+    
+    // Auto-calculate labor cost
+    let finalMaterials = materials.filter(m => m.description.trim() !== '' && m.description.toLowerCase() !== 'mão de obra' && m.quantity > 0);
+    
+    if (user && isValid(arrivalDate) && isValid(departureDate) && departureDate > arrivalDate) {
+        const durationInMinutes = differenceInMinutes(departureDate, arrivalDate);
+        const durationInHours = durationInMinutes / 60;
+        
+        // Use user's email to determine price
+        const pricePerHour = user.email === 'tino@seixas.com' ? 35 : 25;
+
+        finalMaterials.unshift({
+            description: 'Mão de obra',
+            quantity: parseFloat(durationInHours.toFixed(2)),
+            unitPrice: pricePerHour
+        });
+    }
+
     const selectedCustomer = customers?.find(c => c.id === customerId);
 
     const updatedData = {
@@ -227,7 +247,7 @@ export default function EditServicePage() {
       customerName: selectedCustomer?.name || service?.customerName || '',
       media: media.map(({type, dataUrl}) => ({type, dataUrl})),
       albarans: filteredAlbarans,
-      materials: filteredMaterials,
+      materials: finalMaterials,
       updatedAt: new Date().toISOString(),
     }
 
@@ -293,7 +313,7 @@ export default function EditServicePage() {
       <Card>
         <CardHeader>
           <CardTitle>Editar Servei #{serviceId.slice(-6)}</CardTitle>
-          <CardDescription>Modifica els detalls do servei realitzat.</CardDescription>
+          <CardDescription>Modifica os detalls do servei realitzat.</CardDescription>
           {service.updatedAt && (
              <p className="text-xs text-muted-foreground pt-2 flex items-center gap-1">
               <Info className="h-3 w-3" />
@@ -518,3 +538,5 @@ export default function EditServicePage() {
     </div>
   );
 }
+
+    
