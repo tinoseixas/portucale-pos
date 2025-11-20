@@ -193,7 +193,7 @@ export default function EditServicePage() {
   };
   
   const removeMedia = (index: number) => {
-    setMedia(prev => prev.filter((_, i) => !== index));
+    setMedia(prev => prev.filter((_, i) => i !== index));
   }
   
   const handleCustomerSelect = (customer: Customer) => {
@@ -480,32 +480,28 @@ export default function EditServicePage() {
 
              <div className="space-y-2">
               <Label className="flex items-center gap-2"><Camera className="h-4 w-4 text-muted-foreground" /> Fotos i Vídeos</Label>
-              
-              {media.length > 0 && (
-                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2 my-4">
-                  {media.map((m, index) => (
-                    <div key={index} className="relative group aspect-square rounded-md overflow-hidden">
-                      {m.type === 'image' ? (
-                        <Image src={m.dataUrl} alt={`Previsualització ${index + 1}`} fill style={{ objectFit: 'cover' }} sizes="100px" />
-                      ) : (
-                        <div className="w-full h-full bg-black flex items-center justify-center">
-                           <Video className="h-8 w-8 text-white" />
-                        </div>
-                      )}
-                      <Button
-                        type="button"
-                        variant="destructive"
-                        size="icon"
-                        className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
-                        onClick={() => removeMedia(index)}
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              )}
-              
+              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2 my-4">
+                {media.map((m, index) => (
+                  <div key={index} className="relative group aspect-square rounded-md overflow-hidden">
+                    {m.type === 'image' ? (
+                      <Image src={m.dataUrl} alt={`Previsualització ${index + 1}`} fill style={{ objectFit: 'cover' }} sizes="100px" />
+                    ) : (
+                      <div className="w-full h-full bg-black flex items-center justify-center">
+                         <Video className="h-8 w-8 text-white" />
+                      </div>
+                    )}
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="icon"
+                      className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={() => removeMedia(index)}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
               <div className="flex gap-2">
                  <Button type="button" variant="outline" onClick={() => setShowCamera(true)} className="flex-1">
                     <Camera className="mr-2 h-4 w-4" /> Usar Càmera
