@@ -3,13 +3,13 @@
 import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useCollection, useUser, useFirestore, useMemoFirebase, deleteDocumentNonBlocking } from '@/firebase'
-import { collection, query, addDoc, doc } from 'firebase/firestore'
+import { collection, query, addDoc, doc, writeBatch } from 'firebase/firestore'
 import type { Customer } from '@/lib/types'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
 import { ADMIN_EMAIL } from '@/lib/admin'
-import { Edit, Trash2, PlusCircle, Building, Mail, Phone, Hash } from 'lucide-react'
+import { Edit, Trash2, PlusCircle, Building, Mail, Phone, Hash, Upload } from 'lucide-react'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -23,11 +23,38 @@ import {
 } from "@/components/ui/alert-dialog"
 import { useToast } from '@/hooks/use-toast'
 
+// Dades de client de mostra per importar. Substitueix-les per les teves dades reals.
+const mockCustomers: Omit<Customer, 'id'>[] = [
+  {
+    name: 'Constructora Solida',
+    address: 'Carrer de la Construcció, 10, Barcelona',
+    contact: '932001122',
+    email: 'info@solidaconstruct.com',
+    nrt: 'A12345678',
+  },
+  {
+    name: 'Reformes Integrals PobleNou',
+    address: 'Rambla del Poblenou, 55, Barcelona',
+    contact: '933004455',
+    email: 'contacte@reformespoblenou.es',
+    nrt: 'B87654321',
+  },
+  {
+    name: 'Jardineria El Pi',
+    address: 'Carrer del Bosc, 2, Sant Cugat',
+    contact: '935896677',
+    email: 'jardineria@elpi.cat',
+    nrt: 'C12312312',
+  },
+];
+
+
 export default function CustomersPage() {
   const router = useRouter()
   const { toast } = useToast()
   const { user, isUserLoading } = useUser()
   const firestore = useFirestore()
+  const [isImporting, setIsImporting] = useState(false)
 
   const isCurrentUserAdmin = useMemo(() => {
     if (isUserLoading || !user) return false;
@@ -42,6 +69,37 @@ export default function CustomersPage() {
 
   const { data: customers, isLoading: isLoadingCustomers } = useCollection<Customer>(customersQuery)
   
+  const handleImportMockData = async () => {
+    if (!firestore) return;
+    setIsImporting(true);
+
+    try {
+      const batch = writeBatch(firestore);
+      const customersCollection = collection(firestore, 'customers');
+      
+      mockCustomers.forEach(customerData => {
+        const docRef = doc(customersCollection); // Create a new doc with a random ID
+        batch.set(docRef, customerData);
+      });
+
+      await batch.commit();
+
+      toast({
+        title: 'Importació Completa',
+        description: `${mockCustomers.length} clients de mostra han estat afegits.`,
+      });
+    } catch (error) {
+      console.error("Error en importar clients:", error);
+      toast({
+        variant: 'destructive',
+        title: 'Error en la importació',
+        description: 'No s\'han pogut afegir els clients de mostra.',
+      });
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
   const handleDeleteCustomer = (customerId: string, customerName: string) => {
     if (!firestore) return;
     const customerDocRef = doc(firestore, 'customers', customerId);
@@ -70,10 +128,16 @@ export default function CustomersPage() {
             <CardTitle>Gestió de Clients</CardTitle>
             <CardDescription>Visualitza, afegeix i gestiona tots els clients registrats.</CardDescription>
           </div>
-           <Button onClick={() => router.push('/dashboard/customers/edit/new')}>
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Nou Client
-           </Button>
+           <div className="flex gap-2">
+            <Button variant="outline" onClick={handleImportMockData} disabled={isImporting}>
+              <Upload className="mr-2 h-4 w-4" />
+              {isImporting ? 'Important...' : 'Importar Dades de Mostra'}
+            </Button>
+            <Button onClick={() => router.push('/dashboard/customers/edit/new')}>
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Nou Client
+            </Button>
+           </div>
         </CardHeader>
         <CardContent>
           <Table>
@@ -144,7 +208,7 @@ export default function CustomersPage() {
               )) : (
                  <TableRow>
                     <TableCell colSpan={5} className="h-24 text-center">
-                        No s'han trobat clients. Comença afegint-ne un.
+                        No s'han trobat clients. Comença afegint-ne un o important dades de mostra.
                     </TableCell>
                 </TableRow>
               )}
