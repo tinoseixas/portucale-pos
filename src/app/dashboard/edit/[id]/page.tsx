@@ -32,7 +32,6 @@ import { format, parseISO, isValid, differenceInMinutes } from 'date-fns'
 import { ca } from 'date-fns/locale'
 import { cn } from '@/lib/utils'
 import { CustomerSelectionDialog } from '@/components/CustomerSelectionDialog'
-import { ADMIN_EMAIL } from '@/lib/admin'
 
 type MediaFile = {
   type: 'image' | 'video';
@@ -98,7 +97,7 @@ export default function EditServicePage() {
   const [customerId, setCustomerId] = useState<string>('');
   const [isCustomerDialogOpen, setIsCustomerDialogOpen] = useState(false)
 
-  const isAdmin = useMemo(() => user?.email === ADMIN_EMAIL, [user]);
+  const isAdmin = useMemo(() => user?.email === 'tino@seixas.com', [user]);
 
   useEffect(() => {
     if (service) {
@@ -218,19 +217,28 @@ export default function EditServicePage() {
     const arrivalDate = new Date(`${selectedDateStr}T${startTime}`);
     const departureDate = new Date(`${selectedDateStr}T${endTime}`);
     
+    if (!isValid(arrivalDate) || !isValid(departureDate)) {
+        toast({ variant: 'destructive', title: 'Data/hora invàlida' });
+        return;
+    }
+    
     const arrivalDateTime = arrivalDate.toISOString();
     const departureDateTime = departureDate.toISOString();
 
     const filteredAlbarans = albarans.filter(a => a.trim() !== '')
     
+    // Start with a clean list of materials, excluding any old 'Mão de obra' or empty lines
     let processedMaterials = materials.filter(m => m.description.trim() !== '' && m.description.toLowerCase() !== 'mão de obra');
     
-    if (user && isValid(arrivalDate) && isValid(departureDate) && departureDate > arrivalDate) {
+    // Now, calculate and add the labor cost if applicable
+    if (user && departureDate > arrivalDate) {
         const durationInMinutes = differenceInMinutes(departureDate, arrivalDate);
         const durationInHours = durationInMinutes / 60;
         
-        const pricePerHour = user.email === ADMIN_EMAIL ? 35 : 25;
+        // Determine price based on current user's email
+        const pricePerHour = user.email === 'tino@seixas.com' ? 35 : 25;
 
+        // Add the new 'Mão de obra' line at the beginning of the array
         processedMaterials.unshift({
             description: 'Mão de obra',
             quantity: parseFloat(durationInHours.toFixed(2)),
