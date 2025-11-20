@@ -1,6 +1,8 @@
 export interface ServiceRecord {
   id: string;
   employeeId: string;
+  customerId?: string;
+  customerName?: string;
   arrivalDateTime: string;
   departureDateTime: string;
   description: string;
@@ -21,4 +23,13 @@ export interface Employee {
   email?: string;
   phoneNumber?: string;
   role?: 'admin' | 'user';
+}
+
+export interface Customer {
+  id: string;
+  name: string;
+  address?: string;
+  contact?: string;
+  email?: string;
+  nrt?: string; // Tax ID number
 }

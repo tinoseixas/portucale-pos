@@ -4,7 +4,7 @@ import type { ServiceRecord, Employee } from '@/lib/types'
 import Link from 'next/link'
 import Image from 'next/image'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Clock, Camera, Edit, Hash, Video, Calendar, User, AlertCircle, AlertTriangle, Briefcase } from 'lucide-react'
+import { Clock, Camera, Edit, Hash, Video, Calendar, User, AlertCircle, AlertTriangle, Briefcase, Building } from 'lucide-react'
 import { format, parseISO, isValid } from 'date-fns'
 import { Button } from './ui/button'
 import { useDoc, useFirestore, useMemoFirebase } from '@/firebase'
@@ -95,7 +95,10 @@ export function ServiceCard({ service, isUserAdmin }: ServiceCardProps) {
       )}>
       <CardHeader>
         <div className="flex justify-between items-start gap-2">
-          <CardTitle className="text-lg line-clamp-1">{service.projectName || `Servei #${service.id.slice(-6)}`}</CardTitle>
+          <CardTitle className="text-lg line-clamp-1 flex items-center gap-2">
+            <Briefcase className="h-5 w-5 text-primary" />
+            {service.projectName || `Servei #${service.id.slice(-6)}`}
+          </CardTitle>
            {isInProgress ? (
              <Badge variant="outline" className="flex items-center gap-1.5 border-yellow-500 text-yellow-600">
                 <AlertCircle className="h-3 w-3" />
@@ -113,6 +116,12 @@ export function ServiceCard({ service, isUserAdmin }: ServiceCardProps) {
             <span>{serviceDate}</span>
           </div>
           {isUserAdmin && service.employeeId && <EmployeeName employeeId={service.employeeId} />}
+          {service.customerName && (
+             <div className="flex items-center gap-2 text-sm text-muted-foreground font-medium">
+                <Building className="h-4 w-4" />
+                <span>{service.customerName}</span>
+            </div>
+          )}
       </CardHeader>
       <CardContent className="flex-1 space-y-4 flex flex-col">
         

@@ -43,6 +43,8 @@ export default function NewServicePage() {
         description: "Servei en curs...",
         projectName: '',
         pendingTasks: '',
+        customerId: '',
+        customerName: '',
         media: [],
         albarans: [],
         createdAt: now.toISOString(),

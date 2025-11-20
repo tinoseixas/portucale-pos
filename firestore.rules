@@ -4,15 +4,18 @@
  * Core Philosophy:
  * This ruleset enforces a strict user-ownership model, with an exception for a designated admin user.
  * Each employee can only access their own data. The admin can read all data for reporting purposes.
+ * Customer data can be read by any authenticated user, but only modified by an admin.
  *
  * Data Structure:
  * /employees/{employeeId} - Employee profile data
  * /employees/{employeeId}/serviceRecords/{serviceRecordId} - Service records for an employee
+ * /customers/{customerId} - Customer profiles
  *
  * Key Security Decisions:
  * - A hardcoded admin EMAIL has full read access across all data.
  * - Non-admin users are restricted to their own data via path-based authorization.
- * - Write operations are strictly limited to data owners.
+ * - Write operations are strictly limited to data owners or admins.
+ * - All authenticated users can read the customers list.
  */
 rules_version = '2';
 service cloud.firestore {
@@ -58,6 +61,15 @@ service cloud.firestore {
         allow update: if isOwner(employeeId) || isAdmin();
         allow delete: if isOwner(employeeId) || isAdmin();
       }
+    }
+
+    /**
+     * @description Protects access to the /customers/{customerId} collection.
+     * Admins can manage customers. All signed-in employees can read them.
+     */
+    match /customers/{customerId} {
+      allow get, list: if isSignedIn();
+      allow create, update, delete: if isAdmin();
     }
     
     // --- Collection Group Rules ---

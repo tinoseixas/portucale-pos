@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Button } from '@/components/ui/button'
-import { LogOut, User as UserIcon, Users } from 'lucide-react'
+import { LogOut, User as UserIcon, Users, Building, FileText } from 'lucide-react'
 import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase'
 import { signOut } from 'firebase/auth'
 import { useRouter } from 'next/navigation'
@@ -71,10 +71,20 @@ export function Header() {
                     </span>
                 )}
                 {isUserAdmin && (
-                    <Button variant="outline" size="sm" onClick={() => router.push('/dashboard/users')}>
-                        <Users className="mr-2 h-4 w-4" />
-                        Gestionar Usuaris
-                    </Button>
+                    <>
+                        <Button variant="outline" size="sm" onClick={() => router.push('/dashboard/reports')}>
+                            <FileText className="mr-2 h-4 w-4" />
+                            Informes PDF
+                        </Button>
+                        <Button variant="outline" size="sm" onClick={() => router.push('/dashboard/customers')}>
+                            <Building className="mr-2 h-4 w-4" />
+                            Gestionar Clients
+                        </Button>
+                        <Button variant="outline" size="sm" onClick={() => router.push('/dashboard/users')}>
+                            <Users className="mr-2 h-4 w-4" />
+                            Gestionar Usuaris
+                        </Button>
+                    </>
                 )}
               </div>
             <DropdownMenu>
@@ -93,8 +103,7 @@ export function Header() {
                     <UserIcon className="mr-2 h-4 w-4" />
                     <span>Perfil</span>
                 </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleLogout}>
+                 <DropdownMenuItem onClick={handleLogout}>
                     <LogOut className="mr-2 h-4 w-4" />
                     <span>Tanca la sessió</span>
                 </DropdownMenuItem>

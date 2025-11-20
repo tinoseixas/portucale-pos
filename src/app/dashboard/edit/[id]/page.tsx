@@ -7,11 +7,11 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Clock, FileText, Camera, ArrowLeft, Save, Trash2, Hash, Plus, X, Video, Calendar as CalendarIcon, Info, Briefcase, AlertTriangle } from 'lucide-react'
+import { Clock, FileText, Camera, ArrowLeft, Save, Trash2, Hash, Plus, X, Video, Calendar as CalendarIcon, Info, Briefcase, AlertTriangle, Users } from 'lucide-react'
 import { useToast } from "@/hooks/use-toast"
-import { useFirestore, useUser, useDoc, useMemoFirebase } from '@/firebase'
+import { useFirestore, useUser, useDoc, useMemoFirebase, useCollection } from '@/firebase'
 import { doc, deleteDoc, collection, query, getDocs } from 'firebase/firestore'
-import type { ServiceRecord } from '@/lib/types'
+import type { ServiceRecord, Customer } from '@/lib/types'
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates'
 import Image from 'next/image'
 import {
@@ -28,6 +28,7 @@ import {
 import { CameraCapture } from '@/components/CameraCapture'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Calendar } from '@/components/ui/calendar'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { format, parseISO, isValid } from 'date-fns'
 import { ca } from 'date-fns/locale'
 import { cn } from '@/lib/utils'
@@ -62,6 +63,7 @@ export default function EditServicePage() {
   useEffect(() => {
     async function fetchProjectNames() {
       if (!firestore || !user?.uid) return;
+      // Fetch all services just once to get the project names for the datalist
       const allServicesQuery = query(collection(firestore, `employees/${user.uid}/serviceRecords`));
       try {
         const querySnapshot = await getDocs(allServicesQuery);
@@ -77,6 +79,9 @@ export default function EditServicePage() {
 
   const { data: service, isLoading } = useDoc<ServiceRecord>(serviceDocRef)
   
+  const customersQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'customers')) : null, [firestore]);
+  const { data: customers } = useCollection<Customer>(customersQuery);
+  
   const [date, setDate] = useState<Date | undefined>(new Date())
   const [startTime, setStartTime] = useState('')
   const [endTime, setEndTime] = useState('')
@@ -86,6 +91,7 @@ export default function EditServicePage() {
   const [media, setMedia] = useState<MediaFile[]>([])
   const [albarans, setAlbarans] = useState<string[]>(['']);
   const [showCamera, setShowCamera] = useState(false);
+  const [customerId, setCustomerId] = useState<string>('');
 
 
   useEffect(() => {
@@ -107,6 +113,7 @@ export default function EditServicePage() {
       setDescription(service.description !== "Servei en curs..." ? service.description : '')
       setProjectName(service.projectName || '');
       setPendingTasks(service.pendingTasks || '');
+      setCustomerId(service.customerId || '');
       setMedia(service.media || [])
       setAlbarans(service.albarans?.length > 0 ? service.albarans : [''])
     }
@@ -167,6 +174,7 @@ export default function EditServicePage() {
     const departureDateTime = new Date(`${selectedDateStr}T${endTime}`).toISOString()
 
     const filteredAlbarans = albarans.filter(a => a.trim() !== '')
+    const selectedCustomer = customers?.find(c => c.id === customerId);
 
     const updatedData = {
       arrivalDateTime,
@@ -174,6 +182,8 @@ export default function EditServicePage() {
       description: description || "Servei finalitzat",
       projectName,
       pendingTasks,
+      customerId,
+      customerName: selectedCustomer?.name || '',
       media: media.map(({type, dataUrl}) => ({type, dataUrl})),
       albarans: filteredAlbarans,
       updatedAt: new Date().toISOString(),
@@ -275,6 +285,21 @@ export default function EditServicePage() {
                 <Label htmlFor="end-time" className="flex items-center gap-2"><Clock className="h-4 w-4 text-muted-foreground" /> Hora de Sortida</Label>
                 <Input id="end-time" type="time" required value={endTime} onChange={(e) => setEndTime(e.target.value)} />
               </div>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="customerId" className="flex items-center gap-2"><Users className="h-4 w-4 text-muted-foreground" /> Client</Label>
+              <Select value={customerId} onValueChange={setCustomerId}>
+                <SelectTrigger id="customerId">
+                  <SelectValue placeholder="Selecciona un client" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Cap client</SelectItem>
+                  {customers?.map(c => (
+                    <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="space-y-2">
@@ -395,5 +420,3 @@ export default function EditServicePage() {
     </div>
   )
 }
-
-    

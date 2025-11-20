@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, PlusCircle, FileText, User as UserIcon, Users } from 'lucide-react'
+import { LayoutDashboard, PlusCircle, FileText, User as UserIcon, Users, Building } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useUser } from '@/firebase'
 import { ADMIN_EMAIL } from '@/lib/admin'
@@ -16,13 +16,17 @@ export function BottomNav() {
   const baseNavItems = [
     { href: '/dashboard', icon: LayoutDashboard, label: 'Serveis' },
     { href: '/dashboard/new', icon: PlusCircle, label: 'Nou' },
-    { href: '/dashboard/report', icon: FileText, label: 'Informe' },
   ];
-
-  const navItems = [...baseNavItems];
+  
   if (isUserAdmin) {
-    navItems.push({ href: '/dashboard/users', icon: Users, label: 'Usuaris' });
+    baseNavItems.push({ href: '/dashboard/reports', icon: FileText, label: 'Informes' });
+    baseNavItems.push({ href: '/dashboard/customers', icon: Building, label: 'Clients' });
+    baseNavItems.push({ href: '/dashboard/users', icon: Users, label: 'Usuaris' });
+  } else {
+    baseNavItems.push({ href: '/dashboard/report', icon: FileText, label: 'El Meu Informe' });
   }
+  
+  const navItems = [...baseNavItems];
   navItems.push({ href: '/dashboard/profile', icon: UserIcon, label: 'Perfil' });
 
   // Render a placeholder during loading to prevent hydration mismatch

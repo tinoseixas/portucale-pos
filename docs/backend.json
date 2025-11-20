@@ -50,6 +50,43 @@
         "employeeId"
       ]
     },
+    "Customer": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Customer",
+      "type": "object",
+      "description": "Represents a customer in the system.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the customer."
+        },
+        "name": {
+          "type": "string",
+          "description": "The full name or company name of the customer."
+        },
+        "address": {
+          "type": "string",
+          "description": "The physical address of the customer."
+        },
+        "contact": {
+          "type": "string",
+          "description": "Primary contact phone number."
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "The customer's email address."
+        },
+        "nrt": {
+          "type": "string",
+          "description": "The tax registration number (NRT/NIF) of the customer."
+        }
+      },
+      "required": [
+        "id",
+        "name"
+      ]
+    },
     "ServiceRecord": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "ServiceRecord",
@@ -63,6 +100,14 @@
         "employeeId": {
           "type": "string",
           "description": "Reference to Employee. (Relationship: Employee 1:N ServiceRecord)"
+        },
+        "customerId": {
+          "type": "string",
+          "description": "Reference to Customer. (Relationship: Customer 1:N ServiceRecord)"
+        },
+        "customerName": {
+            "type": "string",
+            "description": "Denormalized customer name for quick display."
         },
         "projectName": {
           "type": "string",
@@ -169,8 +214,24 @@
             }
           ]
         }
+      },
+      {
+        "path": "/customers/{customerId}",
+        "definition": {
+          "entityName": "Customer",
+          "schema": {
+            "$ref": "#/backend/entities/Customer"
+          },
+          "description": "Stores customer profiles. All authenticated users (employees) can read the list of customers to assign them to service records, but only admins can create, update, or delete customers.",
+          "params": [
+            {
+              "name": "customerId",
+              "description": "Unique identifier for the customer."
+            }
+          ]
+        }
       }
     ],
-    "reasoning": "The Firestore data structure is designed to support the 'Registre Diari de Treball' application, focusing on simplicity, security, and scalability. It leverages path-based ownership for employee data and nested service records. The 'photos' collection has been replaced by a 'media' array within the ServiceRecord document to store base64 data URLs of images and videos directly. This simplifies data retrieval for each service record, as it avoids extra subcollection reads, but may increase document size. This design ensures that security rules can be written clearly and efficiently.\n\n**Authorization Independence and QAPs:**\n\n*   **Employees Collection:** The `/employees/{employeeId}` collection stores employee profiles. Security rules will ensure only the authenticated employee (or an admin) can access their own profile.\n*   **Service Records:** Each employee has a subcollection `/employees/{employeeId}/serviceRecords/{serviceRecordId}`. This structure provides path-based authorization. Only the employee who 'owns' the service record can access it.\n\nThis design guarantees that list operations are always secure (QAPs), as security rules can filter based on the employeeId path segment."
+    "reasoning": "The Firestore data structure is designed to support the 'Registre Diari de Treball' application, focusing on simplicity, security, and scalability. It leverages path-based ownership for employee data and nested service records. The 'photos' collection has been replaced by a 'media' array within the ServiceRecord document to store base64 data URLs of images and videos directly. This simplifies data retrieval for each service record, as it avoids extra subcollection reads, but may increase document size. This design ensures that security rules can be written clearly and efficiently.\n\n**Authorization Independence and QAPs:**\n\n*   **Employees Collection:** The `/employees/{employeeId}` collection stores employee profiles. Security rules will ensure only the authenticated employee (or an admin) can access their own profile.\n*   **Service Records:** Each employee has a subcollection `/employees/{employeeId}/serviceRecords/{serviceRecordId}`. This structure provides path-based authorization. Only the employee who 'owns' the service record can access it.\n*   **Customers Collection:** The `/customers/{customerId}` collection is readable by all authenticated users to allow assignment, but write access is restricted to admins to maintain data integrity."
   }
 }
