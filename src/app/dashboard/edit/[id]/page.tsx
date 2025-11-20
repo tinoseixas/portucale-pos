@@ -28,11 +28,11 @@ import {
 import { CameraCapture } from '@/components/CameraCapture'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Calendar } from '@/components/ui/calendar'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { format, parseISO, isValid } from 'date-fns'
 import { ca } from 'date-fns/locale'
 import { cn } from '@/lib/utils'
 import { ADMIN_EMAIL } from '@/lib/admin'
+import { CustomerSelectionDialog } from '@/components/CustomerSelectionDialog'
 
 type MediaFile = {
   type: 'image' | 'video';
@@ -92,6 +92,7 @@ export default function EditServicePage() {
   const [albarans, setAlbarans] = useState<string[]>(['']);
   const [showCamera, setShowCamera] = useState(false);
   const [customerId, setCustomerId] = useState<string>('');
+  const [isCustomerDialogOpen, setIsCustomerDialogOpen] = useState(false)
 
 
   useEffect(() => {
@@ -157,6 +158,12 @@ export default function EditServicePage() {
   const removeMedia = (index: number) => {
     setMedia(prev => prev.filter((_, i) => i !== index));
   }
+  
+  const handleCustomerSelect = (customer: Customer) => {
+    setCustomerId(customer.id);
+    setIsCustomerDialogOpen(false);
+  };
+
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -239,6 +246,13 @@ export default function EditServicePage() {
         <ArrowLeft className="mr-2 h-4 w-4" />
         Tornar
       </Button>
+      
+      <CustomerSelectionDialog
+        open={isCustomerDialogOpen}
+        onOpenChange={setIsCustomerDialogOpen}
+        customers={customers || []}
+        onCustomerSelect={handleCustomerSelect}
+      />
 
       <Card>
         <CardHeader>
@@ -294,21 +308,14 @@ export default function EditServicePage() {
             
             <div className="space-y-2">
               <Label htmlFor="customerId" className="flex items-center gap-2"><Users className="h-4 w-4 text-muted-foreground" /> Client</Label>
-              {isUserAdmin ? (
-                  <Select value={customerId} onValueChange={setCustomerId} disabled={isLoadingCustomers}>
-                    <SelectTrigger id="customerId">
-                      <SelectValue placeholder={isLoadingCustomers ? "Carregant..." : "Selecciona un client"} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="">Cap client</SelectItem>
-                      {customers?.map(c => (
-                        <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-              ) : (
-                <Input value={customerName} readOnly disabled className="bg-muted" />
-              )}
+                <div className="flex items-center gap-2">
+                    <Input value={customerName} readOnly disabled className="flex-grow bg-muted" />
+                    {isUserAdmin && (
+                        <Button type="button" variant="outline" onClick={() => setIsCustomerDialogOpen(true)}>
+                            Seleccionar
+                        </Button>
+                    )}
+                </div>
             </div>
 
             <div className="space-y-2">
