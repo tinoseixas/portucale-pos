@@ -23,6 +23,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
+  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { CameraCapture } from '@/components/CameraCapture'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
