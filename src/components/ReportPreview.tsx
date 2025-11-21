@@ -141,29 +141,29 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
                                     </div>
                                     
                                      {showPricing && service.materials && service.materials.length > 0 && (
-                                    <div className="mt-4">
-                                        <h5 className="font-semibold text-sm mb-2">Materials i Mà d'Obra:</h5>
-                                        <table className="w-full text-xs">
-                                            <thead className="bg-gray-50">
-                                                <tr className="border-b border-gray-200">
-                                                    <th className="text-left py-1 px-2 font-semibold text-gray-600">DESCRIPCIÓ</th>
-                                                    <th className="text-right py-1 px-2 font-semibold text-gray-600 w-20">QUANT.</th>
-                                                    <th className="text-right py-1 px-2 font-semibold text-gray-600 w-20">PREU/UNIT.</th>
-                                                    <th className="text-right py-1 px-2 font-semibold text-gray-600 w-20">TOTAL</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {service.materials.map((material, index) => (
-                                                    <tr key={index} className="border-b border-gray-100">
-                                                        <td className="py-2 px-2">{material.description}</td>
-                                                        <td className="text-right py-2 px-2 tabular-nums">{material.quantity.toFixed(2)}</td>
-                                                        <td className="text-right py-2 px-2 tabular-nums">{material.unitPrice.toFixed(2)} €</td>
-                                                        <td className="text-right py-2 px-2 font-medium tabular-nums">{(material.quantity * material.unitPrice).toFixed(2)} €</td>
+                                        <div className="mt-4">
+                                            <h5 className="font-semibold text-sm mb-2">Materials i Mà d'Obra:</h5>
+                                            <table className="w-full text-xs">
+                                                <thead className="bg-gray-50">
+                                                    <tr className="border-b border-gray-200">
+                                                        <th className="text-left py-1 px-2 font-semibold text-gray-600">DESCRIPCIÓ</th>
+                                                        <th className="text-right py-1 px-2 font-semibold text-gray-600 w-20">QUANT.</th>
+                                                        <th className="text-right py-1 px-2 font-semibold text-gray-600 w-20">PREU/UNIT.</th>
+                                                        <th className="text-right py-1 px-2 font-semibold text-gray-600 w-20">TOTAL</th>
                                                     </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
-                                    </div>
+                                                </thead>
+                                                <tbody>
+                                                    {service.materials.map((material, index) => (
+                                                        <tr key={index} className="border-b border-gray-100">
+                                                            <td className="py-2 px-2">{material.description}</td>
+                                                            <td className="text-right py-2 px-2 tabular-nums">{material.quantity.toFixed(2)}</td>
+                                                            <td className="text-right py-2 px-2 tabular-nums">{material.unitPrice.toFixed(2)} €</td>
+                                                            <td className="text-right py-2 px-2 font-medium tabular-nums">{(material.quantity * material.unitPrice).toFixed(2)} €</td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
                                     )}
 
                                 </div>

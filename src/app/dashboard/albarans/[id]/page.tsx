@@ -3,7 +3,7 @@
 import { useState, useMemo, useRef, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { useDoc, useUser, useFirestore, useMemoFirebase } from '@/firebase'
-import { collection, query, where, getDocs, doc } from 'firebase/firestore'
+import { collection, query, where, getDocs, doc, collectionGroup } from 'firebase/firestore'
 import type { Customer, ServiceRecord, Albaran } from '@/lib/types'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -28,7 +28,6 @@ export default function AlbaranDetailPage() {
     const albaranDocRef = useMemoFirebase(() => firestore && albaranId ? doc(firestore, 'albarans', albaranId) : null, [firestore, albaranId])
     const { data: albaran, isLoading: isLoadingAlbaran } = useDoc<Albaran>(albaranDocRef)
     
-    const isAdmin = useMemo(() => user?.email === 'tino@seixas.com', [user]);
 
     useEffect(() => {
         if (!isUserLoading && !user) {
@@ -134,7 +133,7 @@ export default function AlbaranDetailPage() {
                         customer={customer}
                         projectName={albaran.projectName}
                         services={services}
-                        showPricing={isAdmin}
+                        showPricing={true}
                         albaranNumber={albaran.albaranNumber}
                     />
                 </CardContent>

@@ -10,6 +10,8 @@
  * /employees/{employeeId} - Employee profile data
  * /employees/{employeeId}/serviceRecords/{serviceRecordId} - Service records for an employee
  * /customers/{customerId} - Customer profiles
+ * /albarans/{albaranId} - Generated albarà records
+ * /counters/albarans - Sequential counter for albaràs
  */
 rules_version = '2';
 service cloud.firestore {
@@ -46,6 +48,17 @@ service cloud.firestore {
      */
     match /customers/{customerId} {
       allow read, write: if isSignedIn();
+    }
+    
+    /**
+     * @description Protects access to albarans and counters.
+     * Any signed-in user can read and write.
+     */
+    match /albarans/{albaranId} {
+       allow read, write: if isSignedIn();
+    }
+    match /counters/{counterId} {
+       allow read, write: if isSignedIn();
     }
     
     // --- Collection Group Rules ---

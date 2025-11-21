@@ -31,8 +31,6 @@ export default function ReportsPage() {
         }
     }, [isUserLoading, user, router])
 
-    const isAdmin = useMemo(() => user?.email === 'tino@seixas.com', [user]);
-
     const customersQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'customers'), orderBy('name', 'asc')) : null, [firestore]);
     const { data: customers, isLoading: isLoadingCustomers } = useCollection<Customer>(customersQuery)
 
@@ -83,6 +81,13 @@ export default function ReportsPage() {
 
         if (selectedCustomerId === 'all' && selectedProject === 'all') {
             return [];
+        }
+        
+        if (selectedProject !== 'all' && selectedCustomerId === 'all') {
+             const customerIdForProject = services.find(s => s.projectName === selectedProject)?.customerId;
+             if(customerIdForProject) {
+                return services.filter(s => s.projectName === selectedProject && s.customerId === customerIdForProject);
+             }
         }
 
         return services;
@@ -200,7 +205,7 @@ export default function ReportsPage() {
                         </div>
                         <div className="flex-1 space-y-2">
                              <label className="text-sm font-medium flex items-center gap-2"><Briefcase className="h-4 w-4" /> Obra</label>
-                            <Select value={selectedProject} onValueChange={setSelectedProject} disabled={projectNames.length === 0}>
+                            <Select value={selectedProject} onValueChange={setSelectedProject}>
                                 <SelectTrigger>
                                     <SelectValue placeholder="Selecciona una obra" />
                                 </SelectTrigger>
@@ -244,7 +249,7 @@ export default function ReportsPage() {
                                 customer={associatedCustomer}
                                 projectName={selectedProject !== 'all' ? selectedProject : 'Varis Projectes'}
                                 services={filteredServices}
-                                showPricing={isAdmin}
+                                showPricing={true}
                                 albaranNumber={-1} // Placeholder number for preview
                             />
                         )}
