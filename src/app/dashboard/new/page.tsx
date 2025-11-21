@@ -94,6 +94,7 @@ export default function NewServicePage() {
             location: location || undefined,
             media: [],
             albarans: [],
+            materials: [],
             createdAt: now.toISOString(),
         };
         

@@ -233,24 +233,39 @@ export default function EditServicePage() {
     let processedMaterials: Material[] = materials.filter(m => m.description.trim() !== '' && m.description.toLowerCase() !== 'traball');
 
     if (user) {
-        let durationInMinutes = differenceInMinutes(departureDate, arrivalDate);
+        const durationInMinutes = differenceInMinutes(departureDate, arrivalDate);
         if (durationInMinutes > 0) {
             // Round up to the nearest half-hour (30 minutes)
             let roundedMinutes = Math.ceil(durationInMinutes / 30) * 30;
-
             // If it's less than an hour, count it as at least half an hour
-            if (durationInMinutes < 60) {
-                roundedMinutes = Math.max(roundedMinutes, 30);
+            if (durationInMinutes < 60 && roundedMinutes < 30) {
+                 roundedMinutes = 30;
             }
-            
+
             const durationInHours = roundedMinutes / 60;
             const pricePerHour = 30;
 
-            processedMaterials.push({
-                description: 'traball',
-                quantity: parseFloat(durationInHours.toFixed(2)),
-                unitPrice: pricePerHour
-            });
+            // Only add labor if it's not already there
+            const hasLabor = processedMaterials.some(m => m.description.toLowerCase() === 'traball');
+            if (!hasLabor) {
+                 processedMaterials.push({
+                    description: 'traball',
+                    quantity: parseFloat(durationInHours.toFixed(2)),
+                    unitPrice: pricePerHour
+                });
+            } else {
+                // Update existing labor entry
+                processedMaterials = processedMaterials.map(m => {
+                    if (m.description.toLowerCase() === 'traball') {
+                        return {
+                            ...m,
+                            quantity: parseFloat(durationInHours.toFixed(2)),
+                            unitPrice: pricePerHour
+                        };
+                    }
+                    return m;
+                });
+            }
         }
     }
 
