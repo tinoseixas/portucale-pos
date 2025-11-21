@@ -230,26 +230,7 @@ export default function EditServicePage() {
     const departureDateTime = departureDate.toISOString();
     const filteredAlbarans = albarans.filter(a => a.trim() !== '');
 
-    let processedMaterials: Material[] = materials.filter(m => m.description.trim() !== '' && m.description.toLowerCase() !== 'traball');
-
-    if (user) {
-        const durationInMinutes = differenceInMinutes(departureDate, arrivalDate);
-        if (durationInMinutes > 0) {
-            let roundedMinutes = Math.ceil(durationInMinutes / 30) * 30;
-            if (durationInMinutes > 0 && durationInMinutes < 30) {
-                roundedMinutes = 30;
-            }
-            const durationInHours = roundedMinutes / 60;
-            const pricePerHour = 30; // Preu fixat a 30
-
-            processedMaterials.push({
-                description: 'traball',
-                quantity: parseFloat(durationInHours.toFixed(2)),
-                unitPrice: pricePerHour
-            });
-        }
-    }
-
+    const processedMaterials = materials.filter(m => m.description.trim() !== '');
 
     const selectedCustomer = customers?.find(c => c.id === customerId);
     
@@ -425,11 +406,10 @@ export default function EditServicePage() {
                         <div key={index} className="grid grid-cols-12 gap-2 items-center">
                             <Input
                                 type="text"
-                                placeholder="Descripció (ex: mà d'obra, tub PVC)"
+                                placeholder="Descripció (ex: tub PVC, cable)"
                                 value={material.description}
                                 onChange={(e) => handleMaterialChange(index, 'description', e.target.value)}
                                 className="col-span-6"
-                                readOnly={material.description.toLowerCase() === 'traball'}
                             />
                             <div className="col-span-2 relative">
                                 <Input
@@ -439,7 +419,6 @@ export default function EditServicePage() {
                                     className="pl-2 pr-1"
                                     min="0"
                                     step="any"
-                                    readOnly={material.description.toLowerCase() === 'traball'}
                                 />
                             </div>
                             <div className="col-span-3 relative">
@@ -450,16 +429,13 @@ export default function EditServicePage() {
                                     className="pl-7 pr-1"
                                     min="0"
                                     step="any"
-                                    readOnly={material.description.toLowerCase() === 'traball'}
                                 />
                                 <Euro className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                             </div>
                             <div className="col-span-1 flex justify-end">
-                                {material.description.toLowerCase() !== 'traball' && (
                                 <Button type="button" variant="ghost" size="icon" onClick={() => removeMaterialInput(index)}>
                                     <X className="h-4 w-4 text-destructive" />
                                 </Button>
-                                )}
                             </div>
                         </div>
                     ))}

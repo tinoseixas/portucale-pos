@@ -22,10 +22,10 @@ type MaterialLine = {
     unitPrice: number;
 }
 
-function calculateTotalTime(services: ServiceRecord[]): string {
-    if (!services) return '0h 0m';
+function calculateTotalMinutes(services: ServiceRecord[]): number {
+    if (!services) return 0;
 
-    const totalMinutes = services.reduce((total, service) => {
+    return services.reduce((total, service) => {
         if (service.arrivalDateTime && service.departureDateTime) {
             const startDate = parseISO(service.arrivalDateTime);
             const endDate = parseISO(service.departureDateTime);
@@ -37,11 +37,6 @@ function calculateTotalTime(services: ServiceRecord[]): string {
         }
         return total;
     }, 0);
-
-    const hours = Math.floor(totalMinutes / 60);
-    const minutes = totalMinutes % 60;
-
-    return `${hours}h ${minutes}m`;
 }
 
 
@@ -52,10 +47,20 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
     const allMaterials = useMemo(() => {
         return services.flatMap(service => service.materials || []);
     }, [services]);
-    
-    const totalTime = useMemo(() => calculateTotalTime(services), [services]);
 
-    const subtotal = allMaterials.reduce((acc, material) => acc + (material.quantity * material.unitPrice), 0);
+    const totalMinutes = useMemo(() => calculateTotalMinutes(services), [services]);
+    const totalHours = totalMinutes / 60;
+    const totalTimeFormatted = `${Math.floor(totalHours)}h ${totalMinutes % 60}m`;
+    
+    const laborLine: MaterialLine = {
+        description: "Mano de Obra",
+        quantity: parseFloat(totalHours.toFixed(2)),
+        unitPrice: 30, // Preu fixat
+    };
+    
+    const materialsWithLabor = [...allMaterials, laborLine];
+    
+    const subtotal = materialsWithLabor.reduce((acc, material) => acc + (material.quantity * material.unitPrice), 0);
     const ivaRate = 0.045; // 4.5% IGI for Andorra
     const iva = subtotal * ivaRate;
     const totalGeneral = subtotal + iva;
@@ -110,7 +115,7 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
                 <div className="page-break-before-auto">
                     <Separator className="my-8" />
                     <section>
-                        <h3 className="font-bold text-lg mb-4">Resum d'Hores i Tasques</h3>
+                        <h3 className="font-bold text-lg mb-4">Resum de Tasques</h3>
                         <div className="space-y-6">
                             {sortedServices.map(service => (
                                 <div key={service.id} className="border border-gray-200 p-4 rounded-lg break-inside-avoid">
@@ -143,32 +148,6 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
                                             </div>
                                         )}
                                     </div>
-                                    
-                                     {showPricing && service.materials && service.materials.length > 0 && (
-                                        <div className="mt-4">
-                                            <h5 className="font-semibold text-sm mb-2">Materials i Mà d'Obra:</h5>
-                                            <table className="w-full text-xs">
-                                                <thead className="bg-gray-50">
-                                                    <tr className="border-b border-gray-200">
-                                                        <th className="text-left py-1 px-2 font-semibold text-gray-600">DESCRIPCIÓ</th>
-                                                        <th className="text-right py-1 px-2 font-semibold text-gray-600 w-20">QUANT.</th>
-                                                        <th className="text-right py-1 px-2 font-semibold text-gray-600 w-20">PREU/UNIT.</th>
-                                                        <th className="text-right py-1 px-2 font-semibold text-gray-600 w-20">TOTAL</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    {service.materials.map((material, index) => (
-                                                        <tr key={index} className="border-b border-gray-100">
-                                                            <td className="py-2 px-2">{material.description}</td>
-                                                            <td className="text-right py-2 px-2 tabular-nums">{material.quantity.toFixed(2)}</td>
-                                                            <td className="text-right py-2 px-2 tabular-nums">{material.unitPrice.toFixed(2)} €</td>
-                                                            <td className="text-right py-2 px-2 font-medium tabular-nums">{(material.quantity * material.unitPrice).toFixed(2)} €</td>
-                                                        </tr>
-                                                    ))}
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                    )}
 
                                     {service.media && service.media.filter(m => m.type === 'image').length > 0 && (
                                         <div className="mt-4">
@@ -197,11 +176,32 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
              {/* Total Pricing Section */}
             {showPricing && (
               <section className="mt-8 pt-6 border-t-2 border-gray-900">
-                  <div className="flex justify-between items-start">
+                    <h3 className="font-bold text-lg mb-4">Resum de Preços</h3>
+                    <table className="w-full text-sm">
+                        <thead className="bg-gray-50">
+                            <tr className="border-b border-gray-200">
+                                <th className="text-left py-2 px-3 font-semibold text-gray-600">DESCRIPCIÓ</th>
+                                <th className="text-right py-2 px-3 font-semibold text-gray-600 w-24">QUANT.</th>
+                                <th className="text-right py-2 px-3 font-semibold text-gray-600 w-24">PREU/UNIT.</th>
+                                <th className="text-right py-2 px-3 font-semibold text-gray-600 w-24">TOTAL</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {materialsWithLabor.map((material, index) => (
+                                <tr key={index} className="border-b border-gray-100">
+                                    <td className="py-2 px-3">{material.description}</td>
+                                    <td className="text-right py-2 px-3 tabular-nums">{material.quantity.toFixed(2)} {material.description === "Mano de Obra" ? "hr" : ""}</td>
+                                    <td className="text-right py-2 px-3 tabular-nums">{material.unitPrice.toFixed(2)} €</td>
+                                    <td className="text-right py-2 px-3 font-medium tabular-nums">{(material.quantity * material.unitPrice).toFixed(2)} €</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+
+                  <div className="flex justify-between items-start mt-6">
                     <div>
-                        <h3 className="font-bold text-lg">Resum Total</h3>
-                         <div className="text-right font-bold text-base mt-2">
-                            Hores Totals Treballades: {totalTime}
+                        <div className="text-right font-bold text-base mt-2">
+                            Hores Totals Treballades: {totalTimeFormatted}
                         </div>
                     </div>
                     <div className="w-full max-w-sm space-y-2 text-sm">
