@@ -70,9 +70,13 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
                             <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
                         </svg>
                     </div>
-                    <div>
+                    <div className="text-sm text-gray-600">
                         <h2 className="font-bold text-xl text-gray-900">TS Serveis</h2>
-                        <p className="text-sm text-gray-600">tino@seixas.com</p>
+                        <p>NRT: F352231c</p>
+                        <p>Avinguda Francois Mitterrand 64, local 6</p>
+                        <p>AD200 Encamp, Andorra</p>
+                        <p>Tel: 376 396 048</p>
+                        <p>Email: eg.ad.tecnica@gmail.com</p>
                     </div>
                 </div>
                 <div className="text-right">
