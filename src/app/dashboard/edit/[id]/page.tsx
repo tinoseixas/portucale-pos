@@ -2,12 +2,13 @@
 
 import { useEffect, useState, useMemo } from 'react'
 import { useRouter, useParams, useSearchParams } from 'next/navigation'
+import dynamic from 'next/dynamic'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Clock, FileText, Camera, ArrowLeft, Save, Trash2, Hash, Plus, X, Video, Calendar as CalendarIcon, Info, Briefcase, AlertTriangle, Users, Package, Euro } from 'lucide-react'
+import { Clock, FileText, Camera, ArrowLeft, Save, Trash2, Hash, Plus, X, Video, Calendar as CalendarIcon, Info, Briefcase, AlertTriangle, Users, Package, Euro, MapPin } from 'lucide-react'
 import { useToast } from "@/hooks/use-toast"
 import { useFirestore, useUser, useDoc, useMemoFirebase, useCollection } from '@/firebase'
 import { doc, deleteDoc, collection, query, getDocs, collectionGroup, orderBy } from 'firebase/firestore'
@@ -32,6 +33,12 @@ import { format, parseISO, isValid, differenceInMinutes } from 'date-fns'
 import { ca } from 'date-fns/locale'
 import { cn } from '@/lib/utils'
 import { CustomerSelectionDialog } from '@/components/CustomerSelectionDialog'
+
+const MapView = dynamic(() => import('@/components/MapView'), { 
+  ssr: false,
+  loading: () => <p>Carregant mapa...</p>
+});
+
 
 type MediaFile = {
   type: 'image' | 'video';
@@ -375,6 +382,18 @@ export default function EditServicePage() {
               </div>
             </div>
             
+             {service.location && (
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2"><MapPin className="h-4 w-4 text-muted-foreground" /> Localització d'Inici</Label>
+                <div className="h-64 w-full rounded-md overflow-hidden border">
+                   <MapView 
+                      latitude={service.location.latitude} 
+                      longitude={service.location.longitude} 
+                   />
+                </div>
+              </div>
+            )}
+
             <div className="space-y-2">
               <Label htmlFor="customerId" className="flex items-center gap-2"><Users className="h-4 w-4 text-muted-foreground" /> Client</Label>
                 <div className="flex items-center gap-2">

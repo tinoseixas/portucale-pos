@@ -9,7 +9,7 @@ import { LogIn, MapPin, Users, Loader2 } from 'lucide-react'
 import { useToast } from "@/hooks/use-toast"
 import { useFirestore, useUser, useDoc, useCollection, useMemoFirebase } from '@/firebase'
 import { addDoc, collection, doc, query, orderBy } from 'firebase/firestore'
-import type { Employee, Customer } from '@/lib/types'
+import type { Employee, Customer, ServiceRecord } from '@/lib/types'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Label } from '@/components/ui/label'
 
@@ -38,46 +38,74 @@ export default function NewServicePage() {
 
 
   const handleStartService = async () => {
-    // The !employee check is removed to prevent blocking, as the login page now ensures the profile exists.
     if (!user || !firestore) {
         toast({ variant: "destructive", title: "Error", description: "No s'han pogut carregar les dades de l'usuari." });
         return;
     }
     
     setIsStarting(true);
-    
-    const selectedCustomer = customers?.find(c => c.id === selectedCustomerId);
-    
-    const now = new Date();
-    const serviceRecord = {
-        employeeId: user.uid,
-        employeeName: (employee ? `${employee.firstName} ${employee.lastName}`: (user.email || "Desconegut")),
-        arrivalDateTime: now.toISOString(),
-        departureDateTime: now.toISOString(), 
-        description: "Servei en curs...",
-        projectName: '',
-        pendingTasks: '',
-        customerId: selectedCustomerId !== 'none' ? selectedCustomer?.id || '' : '',
-        customerName: selectedCustomerId !== 'none' ? selectedCustomer?.name || '' : '',
-        media: [],
-        albarans: [],
-        createdAt: now.toISOString(),
-    };
-    
-    const serviceRecordsCollection = collection(firestore, `employees/${user.uid}/serviceRecords`);
+
+    const getLocation = new Promise<{ latitude: number; longitude: number } | null>((resolve) => {
+        if ('geolocation' in navigator) {
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    resolve({
+                        latitude: position.coords.latitude,
+                        longitude: position.coords.longitude,
+                    });
+                },
+                (error) => {
+                    console.warn("Geolocation Error:", error.message);
+                    toast({
+                        variant: 'destructive',
+                        title: 'Error de Geolocalització',
+                        description: `No s'ha pogut obtenir la teva ubicació: ${error.message}`,
+                    });
+                    resolve(null); // Resolve with null if there's an error
+                },
+                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+            );
+        } else {
+            toast({
+                variant: 'destructive',
+                title: 'Geolocalització no suportada',
+                description: 'El teu navegador no suporta la geolocalització.',
+            });
+            resolve(null); // Resolve with null if not supported
+        }
+    });
 
     try {
+        const location = await getLocation;
+
+        const selectedCustomer = customers?.find(c => c.id === selectedCustomerId);
+        
+        const now = new Date();
+        const serviceRecord: Omit<ServiceRecord, 'id'> = {
+            employeeId: user.uid,
+            employeeName: (employee ? `${employee.firstName} ${employee.lastName}`: (user.email || "Desconegut")),
+            arrivalDateTime: now.toISOString(),
+            departureDateTime: now.toISOString(), 
+            description: "Servei en curs...",
+            projectName: '',
+            pendingTasks: '',
+            customerId: selectedCustomerId !== 'none' ? selectedCustomer?.id || '' : '',
+            customerName: selectedCustomerId !== 'none' ? selectedCustomer?.name || '' : '',
+            location: location || undefined,
+            media: [],
+            albarans: [],
+            createdAt: now.toISOString(),
+        };
+        
+        const serviceRecordsCollection = collection(firestore, `employees/${user.uid}/serviceRecords`);
         const docRef = await addDoc(serviceRecordsCollection, serviceRecord);
         
-        if (docRef.id) {
-            toast({ 
-                title: `Gràcies, ${employee?.firstName || user.email}!`,
-                description: "S'ha iniciat el registre del servei."
-            });
-            router.push(`/dashboard/edit/${docRef.id}`);
-        } else {
-           throw new Error("Failed to get document reference after creation.");
-        }
+        toast({ 
+            title: `Gràcies, ${employee?.firstName || user.email}!`,
+            description: "S'ha iniciat el registre del servei." + (location ? " Ubicació guardada." : " No s'ha pogut guardar la ubicació."),
+        });
+        router.push(`/dashboard/edit/${docRef.id}`);
+
     } catch (error) {
         console.error("Error creating service record:", error);
         setIsStarting(false);

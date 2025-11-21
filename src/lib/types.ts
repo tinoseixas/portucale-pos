@@ -9,6 +9,10 @@ export interface ServiceRecord {
   description: string;
   projectName: string;
   pendingTasks: string;
+  location?: {
+    latitude: number;
+    longitude: number;
+  };
   media: { type: 'image' | 'video'; dataUrl: string }[];
   albarans: string[];
   materials?: {
