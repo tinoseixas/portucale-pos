@@ -24,7 +24,7 @@ export default function ReportsPage() {
 
     useEffect(() => {
         if (!isUserLoading && !user) {
-            router.push('/dashboard')
+            router.push('/')
         }
     }, [isUserLoading, user, router])
 
@@ -35,9 +35,9 @@ export default function ReportsPage() {
 
     // Use collectionGroup to query across all 'serviceRecords' subcollections
     const allServicesQuery = useMemoFirebase(() => {
-        if (!firestore || !user) return null
+        if (!firestore) return null
         return query(collectionGroup(firestore, 'serviceRecords'), orderBy('arrivalDateTime', 'desc'))
-    }, [firestore, user])
+    }, [firestore])
 
     const { data: allServices, isLoading: isLoadingAllServices } = useCollection<ServiceRecord>(allServicesQuery)
 

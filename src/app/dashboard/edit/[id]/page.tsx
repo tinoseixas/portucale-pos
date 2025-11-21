@@ -73,9 +73,9 @@ export default function EditServicePage() {
   const { data: customers, isLoading: isLoadingCustomers } = useCollection<Customer>(customersQuery);
 
   const projectNamesQuery = useMemoFirebase(() => {
-      if (!firestore || !user) return null;
+      if (!firestore) return null;
       return query(collectionGroup(firestore, 'serviceRecords'));
-  }, [firestore, user]);
+  }, [firestore]);
 
   const { data: allServices, isLoading: isLoadingAllServices } = useCollection<ServiceRecord>(projectNamesQuery);
 
@@ -252,7 +252,7 @@ export default function EditServicePage() {
 
     const selectedCustomer = customers?.find(c => c.id === customerId);
 
-    const updatedData = {
+    const updatedData: Partial<ServiceRecord> = {
       arrivalDateTime,
       departureDateTime,
       description: description || "Servei finalitzat",
