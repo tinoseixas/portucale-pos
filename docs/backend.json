@@ -169,6 +169,62 @@
         "departureDateTime",
         "description"
       ]
+    },
+     "Albaran": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Albaran",
+      "type": "object",
+      "description": "Represents a generated albarà (delivery note/report).",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the albarà."
+        },
+        "albaranNumber": {
+          "type": "number",
+          "description": "Sequential number for the albarà."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp of when the albarà was generated."
+        },
+        "customerId": {
+          "type": "string",
+          "description": "ID of the associated customer."
+        },
+        "customerName": {
+          "type": "string",
+          "description": "Denormalized name of the customer."
+        },
+        "projectName": {
+          "type": "string",
+          "description": "Name of the project/obra."
+        },
+        "serviceRecordIds": {
+          "type": "array",
+          "description": "Array of ServiceRecord IDs included in this albarà.",
+          "items": { "type": "string" }
+        },
+        "totalAmount": {
+          "type": "number",
+          "description": "The total amount calculated for the albarà."
+        }
+      },
+      "required": ["id", "albaranNumber", "createdAt", "projectName", "serviceRecordIds", "totalAmount"]
+    },
+    "Counter": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Counter",
+      "type": "object",
+      "description": "A generic counter for sequential numbering.",
+      "properties": {
+        "lastNumber": {
+          "type": "number",
+          "description": "The last number that was used."
+        }
+      },
+      "required": ["lastNumber"]
     }
   },
   "auth": {
@@ -229,6 +285,24 @@
               "description": "Unique identifier for the customer."
             }
           ]
+        }
+      },
+      {
+        "path": "/albarans/{albaranId}",
+        "definition": {
+            "entityName": "Albaran",
+            "schema": { "$ref": "#/backend/entities/Albaran" },
+            "description": "Stores historical records of generated albaràs. All authenticated users can read.",
+            "params": [{ "name": "albaranId", "description": "Unique ID for the albarà." }]
+        }
+      },
+      {
+        "path": "/counters/albarans",
+        "definition": {
+            "entityName": "Counter",
+            "schema": { "$ref": "#/backend/entities/Counter" },
+            "description": "Manages the sequential counter for albarà numbers. Only admins should have write access.",
+            "params": []
         }
       }
     ],

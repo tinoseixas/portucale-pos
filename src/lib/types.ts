@@ -43,3 +43,15 @@ export interface Customer {
   email?: string;
   nrt?: string; // Tax ID number
 }
+
+
+export interface Albaran {
+  id: string;
+  albaranNumber: number;
+  createdAt: string;
+  customerId: string;
+  customerName: string;
+  projectName: string;
+  serviceRecordIds: string[];
+  totalAmount: number;
+}

@@ -13,6 +13,7 @@ interface ReportPreviewProps {
   projectName: string;
   services: ServiceRecord[];
   showPricing: boolean;
+  albaranNumber: number | undefined;
 }
 
 type MaterialLine = {
@@ -44,7 +45,7 @@ function calculateTotalTime(services: ServiceRecord[]): string {
 }
 
 
-export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ customer, projectName, services, showPricing }, ref) => {
+export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ customer, projectName, services, showPricing, albaranNumber }, ref) => {
 
     const sortedServices = services.sort((a,b) => parseISO(a.arrivalDateTime).getTime() - parseISO(b.arrivalDateTime).getTime());
     
@@ -76,6 +77,7 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
                 </div>
                 <div className="text-right">
                     <h1 className="text-3xl font-bold text-gray-900">Albarà</h1>
+                     {albaranNumber && albaranNumber > 0 && <p className="text-md text-gray-700 font-semibold">Nº: {String(albaranNumber).padStart(4, '0')}</p>}
                     <p className="text-sm text-gray-600">Data: {format(new Date(), 'dd MMMM yyyy', { locale: ca })}</p>
                 </div>
             </header>
@@ -138,8 +140,8 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
                                         )}
                                     </div>
                                     
-                                    {showPricing && service.materials && service.materials.length > 0 && (
-                                    <div className="mt-3">
+                                     {showPricing && service.materials && service.materials.length > 0 && (
+                                    <div className="mt-4">
                                         <h5 className="font-semibold text-sm mb-2">Materials i Mà d'Obra:</h5>
                                         <table className="w-full text-xs">
                                             <thead className="bg-gray-50">

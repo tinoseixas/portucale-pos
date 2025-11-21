@@ -3,7 +3,7 @@
 import { useState, useMemo, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useCollection, useUser, useFirestore, useMemoFirebase } from '@/firebase'
-import { collection, query, orderBy, collectionGroup } from 'firebase/firestore'
+import { collection, query, orderBy, collectionGroup, doc, runTransaction, serverTimestamp, setDoc } from 'firebase/firestore'
 import type { Customer, ServiceRecord } from '@/lib/types'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -12,11 +12,13 @@ import { Briefcase, FileDown, Loader2, Users } from 'lucide-react'
 import jsPDF from 'jspdf'
 import html2canvas from 'html2canvas'
 import { ReportPreview } from '@/components/ReportPreview'
+import { useToast } from '@/hooks/use-toast'
 
 export default function ReportsPage() {
     const firestore = useFirestore()
     const router = useRouter()
     const { user, isUserLoading } = useUser()
+    const { toast } = useToast();
     
     const [selectedCustomerId, setSelectedCustomerId] = useState<string>('all');
     const [selectedProject, setSelectedProject] = useState<string>('all')
@@ -41,20 +43,22 @@ export default function ReportsPage() {
 
     const { data: allServices, isLoading: isLoadingAllServices } = useCollection<ServiceRecord>(allServicesQuery)
 
-    // Effect to auto-select customer when a project is chosen
+     // Effect to auto-select customer when a project is chosen
     useEffect(() => {
         if (selectedProject !== 'all' && allServices) {
             const serviceForProject = allServices.find(s => s.projectName === selectedProject && s.customerId);
-            if (serviceForProject && serviceForProject.customerId !== selectedCustomerId) {
-                setSelectedCustomerId(serviceForProject.customerId!);
+            if (serviceForProject && serviceForProject.customerId && serviceForProject.customerId !== selectedCustomerId) {
+                setSelectedCustomerId(serviceForProject.customerId);
             }
         }
-    }, [selectedProject, allServices, selectedCustomerId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [selectedProject, allServices]);
 
     const projectNames = useMemo(() => {
         if (!allServices) return []
         
         let servicesToFilter = allServices;
+        // If a customer is selected, filter projects for that customer
         if (selectedCustomerId !== 'all') {
             servicesToFilter = allServices.filter(s => s.customerId === selectedCustomerId);
         }
@@ -88,7 +92,7 @@ export default function ReportsPage() {
         if (filteredServices.length === 0 || !customers) return undefined;
         // Find the first service with a customerId and get that customer
         const firstServiceWithCustomer = filteredServices.find(s => s.customerId);
-        if (!firstServiceWithCustomer) return undefined;
+        if (!firstServiceWithCustomer || !firstServiceWithCustomer.customerId) return undefined;
         return customers.find(c => c.id === firstServiceWithCustomer.customerId);
     }, [filteredServices, customers]);
     
@@ -98,41 +102,77 @@ export default function ReportsPage() {
         setSelectedProject('all'); // Reset project when customer changes
     };
 
-    const handleExportPDF = async () => {
-        const reportElement = reportRef.current
-        if (!reportElement) return
+    const handleExport = async (exportType: 'pdf' | 'save') => {
+        if (!firestore || !canGenerate) return;
 
         setIsGenerating(true)
-
         try {
-            const canvas = await html2canvas(reportElement, {
-                scale: 2,
-                useCORS: true, 
-                logging: false
+            const counterRef = doc(firestore, "counters", "albarans");
+            const newAlbaranNumber = await runTransaction(firestore, async (transaction) => {
+                const counterDoc = await transaction.get(counterRef);
+                if (!counterDoc.exists()) {
+                    transaction.set(counterRef, { lastNumber: 1 });
+                    return 1;
+                }
+                const newNumber = (counterDoc.data().lastNumber || 0) + 1;
+                transaction.update(counterRef, { lastNumber: newNumber });
+                return newNumber;
+            });
+            
+            const totalAmount = filteredServices.reduce((total, service) => {
+                const serviceTotal = (service.materials || []).reduce((subtotal, material) => {
+                    return subtotal + (material.quantity * material.unitPrice);
+                }, 0);
+                return total + serviceTotal;
+            }, 0);
+
+            const albaranRef = doc(collection(firestore, "albarans"));
+            await setDoc(albaranRef, {
+                id: albaranRef.id,
+                albaranNumber: newAlbaranNumber,
+                createdAt: new Date().toISOString(),
+                customerId: associatedCustomer?.id || '',
+                customerName: associatedCustomer?.name || 'N/A',
+                projectName: selectedProject !== 'all' ? selectedProject : 'Varis Projectes',
+                serviceRecordIds: filteredServices.map(s => s.id),
+                totalAmount: totalAmount,
             });
 
-            const imgData = canvas.toDataURL('image/png')
-            const pdf = new jsPDF({
-                orientation: 'portrait',
-                unit: 'px',
-                format: [canvas.width, canvas.height]
-            })
+            toast({
+                title: "Albarà Guardat",
+                description: `L'albarà #${newAlbaranNumber} ha estat guardat a l'historial.`,
+            });
+            
+            if (exportType === 'pdf') {
+                const reportElement = reportRef.current
+                if (!reportElement) throw new Error("Report element not found");
 
-            pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height)
-
-            const fileName = `Albara_${selectedProject || selectedCustomerId}.pdf`.replace(/ /g, '_');
-            pdf.save(fileName)
+                const canvas = await html2canvas(reportElement, { scale: 2, useCORS: true, logging: false });
+                const imgData = canvas.toDataURL('image/png')
+                const pdf = new jsPDF({ orientation: 'portrait', unit: 'px', format: [canvas.width, canvas.height] });
+                pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height)
+                const fileName = `Albara_${selectedProject || associatedCustomer?.name || 'report'}.pdf`.replace(/ /g, '_');
+                pdf.save(fileName)
+            }
+             router.push(`/dashboard/albarans/${albaranRef.id}`);
 
         } catch (error) {
             console.error("Error generating PDF:", error)
+            toast({
+                variant: 'destructive',
+                title: 'Error',
+                description: "No s'ha pogut generar l'albarà.",
+            });
         } finally {
             setIsGenerating(false)
         }
     }
 
-    const canGenerate = filteredServices.length > 0;
 
-    if (isUserLoading || isLoadingAllServices || isLoadingCustomers) {
+    const canGenerate = filteredServices.length > 0;
+    const isLoading = isUserLoading || isLoadingAllServices || isLoadingCustomers;
+
+    if (isLoading) {
         return <p>Carregant...</p>
     }
 
@@ -141,8 +181,8 @@ export default function ReportsPage() {
         <div className="space-y-8 max-w-5xl mx-auto">
             <Card>
                 <CardHeader>
-                    <CardTitle>Generador d'Albarans (PDF)</CardTitle>
-                    <CardDescription>Selecciona un client o una obra per generar un albarà detallat.</CardDescription>
+                    <CardTitle>Generador d'Albarans</CardTitle>
+                    <CardDescription>Selecciona un client i/o una obra per generar un albarà detallat.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                     <div className="flex flex-col sm:flex-row gap-4">
@@ -160,7 +200,7 @@ export default function ReportsPage() {
                         </div>
                         <div className="flex-1 space-y-2">
                              <label className="text-sm font-medium flex items-center gap-2"><Briefcase className="h-4 w-4" /> Obra</label>
-                            <Select value={selectedProject} onValueChange={setSelectedProject}>
+                            <Select value={selectedProject} onValueChange={setSelectedProject} disabled={projectNames.length === 0}>
                                 <SelectTrigger>
                                     <SelectValue placeholder="Selecciona una obra" />
                                 </SelectTrigger>
@@ -171,22 +211,20 @@ export default function ReportsPage() {
                             </Select>
                         </div>
                     </div>
-                     <div className="flex justify-end pt-4">
+                     <div className="flex justify-end pt-4 gap-2">
                         <Button
-                            onClick={handleExportPDF}
+                            onClick={() => handleExport('save')}
                             disabled={isGenerating || !canGenerate}
                         >
-                            {isGenerating ? (
-                                <>
-                                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                 Generant...
-                                </>
-                            ): (
-                                <>
-                                <FileDown className="mr-2 h-4 w-4" />
-                                Exportar PDF
-                                </>
-                            )}
+                            {isGenerating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileDown className="mr-2 h-4 w-4" />}
+                            Guardar Albarà
+                        </Button>
+                        <Button
+                            onClick={() => handleExport('pdf')}
+                            disabled={isGenerating || !canGenerate}
+                        >
+                            {isGenerating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileDown className="mr-2 h-4 w-4" />}
+                            Guardar i Exportar PDF
                         </Button>
                     </div>
                 </CardContent>
@@ -207,6 +245,7 @@ export default function ReportsPage() {
                                 projectName={selectedProject !== 'all' ? selectedProject : 'Varis Projectes'}
                                 services={filteredServices}
                                 showPricing={isAdmin}
+                                albaranNumber={-1} // Placeholder number for preview
                             />
                         )}
                     </CardContent>

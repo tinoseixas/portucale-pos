@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, PlusCircle, FileText, User as UserIcon, Users, Building } from 'lucide-react'
+import { LayoutDashboard, PlusCircle, FileText, User as UserIcon, Users, Building, FileArchive } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useUser } from '@/firebase'
 
@@ -13,7 +13,8 @@ export function BottomNav() {
   const navItems = [
     { href: '/dashboard', icon: LayoutDashboard, label: 'Serveis' },
     { href: '/dashboard/new', icon: PlusCircle, label: 'Nou' },
-    { href: '/dashboard/reports', icon: FileText, label: 'Informes' },
+    { href: '/dashboard/reports', icon: FileText, label: 'Albarans' },
+    { href: '/dashboard/albarans', icon: FileArchive, label: 'Historial' },
     { href: '/dashboard/customers', icon: Building, label: 'Clients' },
     { href: '/dashboard/users', icon: Users, label: 'Usuaris' },
     { href: '/dashboard/profile', icon: UserIcon, label: 'Perfil' },
