@@ -46,12 +46,13 @@ function calculateTotalTime(services: ServiceRecord[]): string {
 
 export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ customer, projectName, services, showPricing }, ref) => {
 
-    const totalTime = calculateTotalTime(services);
     const sortedServices = services.sort((a,b) => parseISO(a.arrivalDateTime).getTime() - parseISO(b.arrivalDateTime).getTime());
     
     const allMaterials = useMemo(() => {
         return services.flatMap(service => service.materials || []);
     }, [services]);
+    
+    const totalTime = useMemo(() => calculateTotalTime(services), [services]);
 
     const subtotal = allMaterials.reduce((acc, material) => acc + (material.quantity * material.unitPrice), 0);
     const ivaRate = 0.045; // 4.5% IGI for Andorra
@@ -103,7 +104,7 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
                 <div className="page-break-before-auto">
                     <Separator className="my-8" />
                     <section>
-                        <h3 className="font-bold text-lg mb-4">Detall d'Intervencions</h3>
+                        <h3 className="font-bold text-lg mb-4">Resum d'Hores i Tasques</h3>
                         <div className="space-y-6">
                             {sortedServices.map(service => (
                                 <div key={service.id} className="border border-gray-200 p-4 rounded-lg break-inside-avoid">
