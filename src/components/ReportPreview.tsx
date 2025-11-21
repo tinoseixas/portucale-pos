@@ -170,6 +170,23 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
                                         </div>
                                     )}
 
+                                    {service.media && service.media.filter(m => m.type === 'image').length > 0 && (
+                                        <div className="mt-4">
+                                            <h5 className="font-semibold text-sm mb-2">Fotografies:</h5>
+                                            <div className="grid grid-cols-4 gap-2">
+                                                {service.media.filter(m => m.type === 'image').map((media, index) => (
+                                                    <div key={index} className="relative aspect-square border rounded overflow-hidden">
+                                                        <Image
+                                                            src={media.dataUrl}
+                                                            alt={`Fotografia ${index + 1}`}
+                                                            layout="fill"
+                                                            objectFit="cover"
+                                                        />
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             ))}
                         </div>
