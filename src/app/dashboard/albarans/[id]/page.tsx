@@ -23,6 +23,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { useToast } from '@/hooks/use-toast'
+import { AdminGate } from '@/components/AdminGate'
 
 export default function AlbaranDetailPage() {
     const firestore = useFirestore()
@@ -133,60 +134,62 @@ export default function AlbaranDetailPage() {
     }
 
     return (
-        <div className="space-y-8 max-w-5xl mx-auto">
-            <div className="flex justify-between items-center flex-wrap gap-2">
-                 <Button variant="ghost" onClick={() => router.push('/dashboard/albarans')}>
-                    <ArrowLeft className="mr-2 h-4 w-4" />
-                    Tornar a l'historial
-                </Button>
-                <div className="flex items-center gap-2">
-                    <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                            <Button variant="destructive">
-                                <Trash2 className="mr-2 h-4 w-4" /> Eliminar Albarà
-                            </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                            <AlertDialogHeader>
-                            <AlertDialogTitle>Estàs segur que vols eliminar l'albarà?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                                Aquesta acció no es pot desfer. S'eliminarà l'albarà <strong>#{albaran.albaranNumber}</strong> del historial. 
-                                Els registres de servei originals no seran afectats.
-                            </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel·lar</AlertDialogCancel>
-                            <AlertDialogAction onClick={handleDeleteAlbaran} className="bg-destructive hover:bg-destructive/90">Eliminar</AlertDialogAction>
-                            </AlertDialogFooter>
-                        </AlertDialogContent>
-                    </AlertDialog>
-
-                    <Button
-                        onClick={handleExportPDF}
-                        disabled={isGenerating}
-                    >
-                        {isGenerating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileDown className="mr-2 h-4 w-4" />}
-                        Exportar PDF
+        <AdminGate pageTitle="Detall de l'Albarà" pageDescription="Aquesta secció està protegida.">
+            <div className="space-y-8 max-w-5xl mx-auto">
+                <div className="flex justify-between items-center flex-wrap gap-2">
+                    <Button variant="ghost" onClick={() => router.push('/dashboard/albarans')}>
+                        <ArrowLeft className="mr-2 h-4 w-4" />
+                        Tornar a l'historial
                     </Button>
+                    <div className="flex items-center gap-2">
+                        <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                                <Button variant="destructive">
+                                    <Trash2 className="mr-2 h-4 w-4" /> Eliminar Albarà
+                                </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                                <AlertDialogHeader>
+                                <AlertDialogTitle>Estàs segur que vols eliminar l'albarà?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                    Aquesta acció no es pot desfer. S'eliminarà l'albarà <strong>#{albaran.albaranNumber}</strong> del historial. 
+                                    Els registres de servei originals no seran afectats.
+                                </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel·lar</AlertDialogCancel>
+                                <AlertDialogAction onClick={handleDeleteAlbaran} className="bg-destructive hover:bg-destructive/90">Eliminar</AlertDialogAction>
+                                </AlertDialogFooter>
+                            </AlertDialogContent>
+                        </AlertDialog>
+
+                        <Button
+                            onClick={handleExportPDF}
+                            disabled={isGenerating}
+                        >
+                            {isGenerating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileDown className="mr-2 h-4 w-4" />}
+                            Exportar PDF
+                        </Button>
+                    </div>
                 </div>
+                
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Albarà #{String(albaran.albaranNumber).padStart(4, '0')}</CardTitle>
+                        <CardDescription>Generat per a l'obra "{albaran.projectName}" per al client "{albaran.customerName}".</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <ReportPreview
+                            ref={reportRef}
+                            customer={customer}
+                            projectName={albaran.projectName}
+                            services={services}
+                            showPricing={true}
+                            albaranNumber={albaran.albaranNumber}
+                        />
+                    </CardContent>
+                </Card>
             </div>
-            
-            <Card>
-                <CardHeader>
-                    <CardTitle>Albarà #{String(albaran.albaranNumber).padStart(4, '0')}</CardTitle>
-                    <CardDescription>Generat per a l'obra "{albaran.projectName}" per al client "{albaran.customerName}".</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <ReportPreview
-                        ref={reportRef}
-                        customer={customer}
-                        projectName={albaran.projectName}
-                        services={services}
-                        showPricing={true}
-                        albaranNumber={albaran.albaranNumber}
-                    />
-                </CardContent>
-            </Card>
-        </div>
+        </AdminGate>
     )
 }
