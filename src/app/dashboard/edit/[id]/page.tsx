@@ -228,22 +228,26 @@ export default function EditServicePage() {
     
     const arrivalDateTime = arrivalDate.toISOString();
     const departureDateTime = departureDate.toISOString();
+    const filteredAlbarans = albarans.filter(a => a.trim() !== '');
 
-    const filteredAlbarans = albarans.filter(a => a.trim() !== '')
-    
     // Correctly process materials
+    // 1. Start with the user-entered materials that have a description.
     let processedMaterials: Material[] = materials.filter(m => m.description.trim() !== '' && m.description.toLowerCase() !== 'traball');
 
+    // 2. Calculate labor if the user is logged in.
     if (user) {
         const durationInMinutes = differenceInMinutes(departureDate, arrivalDate);
-        const durationInHours = durationInMinutes / 60;
-        const pricePerHour = user.email === 'tino@seixas.com' ? 35 : 27;
+        if (durationInMinutes > 0) {
+            const durationInHours = durationInMinutes / 60;
+            const pricePerHour = user.email === 'tino@seixas.com' ? 35 : 27;
 
-        processedMaterials.push({
-            description: 'traball',
-            quantity: parseFloat(durationInHours.toFixed(2)),
-            unitPrice: pricePerHour
-        });
+            // 3. Add labor to the list of materials.
+            processedMaterials.push({
+                description: 'traball',
+                quantity: parseFloat(durationInHours.toFixed(2)),
+                unitPrice: pricePerHour
+            });
+        }
     }
 
     const selectedCustomer = customers?.find(c => c.id === customerId);
