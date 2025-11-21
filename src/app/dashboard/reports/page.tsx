@@ -43,17 +43,9 @@ export default function ReportsPage() {
 
     const projectNames = useMemo(() => {
         if (!allServices) return []
-        const customerServices = selectedCustomerId === 'all'
-            ? allServices
-            : allServices.filter(s => s.customerId === selectedCustomerId)
-        const names = customerServices.map(service => service.projectName).filter(Boolean)
-        return [...new Set(names)]
-    }, [allServices, selectedCustomerId])
-    
-    // Reset project when customer changes
-    useEffect(() => {
-        setSelectedProject('all');
-    }, [selectedCustomerId]);
+        const names = allServices.map(service => service.projectName).filter(Boolean)
+        return [...new Set(names)].sort((a,b) => a.localeCompare(b));
+    }, [allServices])
 
     const filteredServices = useMemo(() => {
         if (!allServices) return []
@@ -65,6 +57,14 @@ export default function ReportsPage() {
     }, [allServices, selectedCustomerId, selectedProject])
 
     const selectedCustomer = useMemo(() => customers?.find(c => c.id === selectedCustomerId), [customers, selectedCustomerId])
+    
+    // Determine the title for the report based on selections
+    const reportTitle = useMemo(() => {
+        if (selectedProject !== 'all') return selectedProject;
+        if (selectedCustomer) return selectedCustomer.name;
+        return 'Totes les Obres';
+    }, [selectedProject, selectedCustomer]);
+
 
     const handleExportPDF = async () => {
         const reportElement = reportRef.current
@@ -88,7 +88,7 @@ export default function ReportsPage() {
 
             pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height)
 
-            const fileName = `Albara_${selectedCustomer?.name || 'General'}_${selectedProject || 'Tots'}.pdf`;
+            const fileName = `Albara_${(selectedCustomer?.name || 'Clients')}_${(selectedProject !== 'all' ? selectedProject : 'Obres')}.pdf`.replace(/ /g, '_');
             pdf.save(fileName)
 
         } catch (error) {
@@ -97,6 +97,8 @@ export default function ReportsPage() {
             setIsGenerating(false)
         }
     }
+
+    const canGenerate = selectedCustomerId !== 'all' || selectedProject !== 'all';
 
     if (isUserLoading || isLoadingAllServices || isLoadingCustomers) {
         return <p>Carregant...</p>
@@ -108,7 +110,7 @@ export default function ReportsPage() {
             <Card>
                 <CardHeader>
                     <CardTitle>Generador d'Albarans (PDF)</CardTitle>
-                    <CardDescription>Selecciona un client i una obra per generar un albarà detallat.</CardDescription>
+                    <CardDescription>Selecciona un client i/o una obra per generar un albarà detallat.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                     <div className="flex flex-col sm:flex-row gap-4">
@@ -126,7 +128,7 @@ export default function ReportsPage() {
                         </div>
                         <div className="flex-1 space-y-2">
                              <label className="text-sm font-medium flex items-center gap-2"><Briefcase className="h-4 w-4" /> Obra</label>
-                            <Select value={selectedProject} onValueChange={setSelectedProject} disabled={selectedCustomerId === 'all' || projectNames.length === 0}>
+                            <Select value={selectedProject} onValueChange={setSelectedProject}>
                                 <SelectTrigger>
                                     <SelectValue placeholder="Selecciona una obra" />
                                 </SelectTrigger>
@@ -140,7 +142,7 @@ export default function ReportsPage() {
                      <div className="flex justify-end pt-4">
                         <Button
                             onClick={handleExportPDF}
-                            disabled={isGenerating || selectedCustomerId === 'all' || selectedProject === 'all'}
+                            disabled={isGenerating || !canGenerate}
                         >
                             {isGenerating ? (
                                 <>
@@ -158,7 +160,7 @@ export default function ReportsPage() {
                 </CardContent>
             </Card>
 
-            {(selectedCustomerId !== 'all' && selectedProject !== 'all') && (
+            {canGenerate && (
                 <Card>
                     <CardHeader>
                         <CardTitle>Previsualització de l'Albarà</CardTitle>
@@ -170,7 +172,7 @@ export default function ReportsPage() {
                            <ReportPreview
                                 ref={reportRef}
                                 customer={selectedCustomer}
-                                projectName={selectedProject}
+                                projectName={reportTitle}
                                 services={filteredServices}
                                 showPricing={isAdmin}
                             />
