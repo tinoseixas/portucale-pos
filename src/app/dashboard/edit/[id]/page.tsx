@@ -34,12 +34,6 @@ import { ca } from 'date-fns/locale'
 import { cn } from '@/lib/utils'
 import { CustomerSelectionDialog } from '@/components/CustomerSelectionDialog'
 
-const MapView = dynamic(() => import('@/components/MapView'), { 
-  ssr: false,
-  loading: () => <div className="h-64 w-full bg-muted animate-pulse rounded-md" />
-});
-
-
 type MediaFile = {
   type: 'image' | 'video';
   dataUrl: string;
@@ -385,9 +379,9 @@ export default function EditServicePage() {
              {service.location && (
               <div className="space-y-2">
                 <Label className="flex items-center gap-2"><MapPin className="h-4 w-4 text-muted-foreground" /> Localització d'Inici</Label>
-                <div className="h-64 w-full rounded-md overflow-hidden border">
-                   <MapView position={[service.location.latitude, service.location.longitude]} />
-                </div>
+                 <p className="text-sm text-muted-foreground p-2 border rounded-md bg-muted">
+                    {service.location.latitude.toFixed(6)}, {service.location.longitude.toFixed(6)}
+                 </p>
               </div>
             )}
 
