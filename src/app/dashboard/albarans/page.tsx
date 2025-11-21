@@ -2,20 +2,33 @@
 
 import { useMemo, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { useCollection, useUser, useFirestore, useMemoFirebase } from '@/firebase'
-import { collection, query, orderBy } from 'firebase/firestore'
+import { useCollection, useUser, useFirestore, useMemoFirebase, deleteDocumentNonBlocking } from '@/firebase'
+import { collection, query, orderBy, doc } from 'firebase/firestore'
 import type { Albaran } from '@/lib/types'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
-import { Eye, FileArchive } from 'lucide-react'
+import { Eye, FileArchive, Trash2 } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { ca } from 'date-fns/locale'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
+import { useToast } from '@/hooks/use-toast'
 
 export default function AlbaransHistoryPage() {
   const router = useRouter()
   const { user, isUserLoading } = useUser()
   const firestore = useFirestore()
+  const { toast } = useToast()
 
   useEffect(() => {
     if (!isUserLoading && !user) {
@@ -29,6 +42,18 @@ export default function AlbaransHistoryPage() {
   }, [firestore])
 
   const { data: albarans, isLoading: isLoadingAlbarans } = useCollection<Albaran>(albaransQuery)
+
+  const handleDeleteAlbaran = (albaranId: string, albaranNumber: number) => {
+    if (!firestore) return;
+    const albaranDocRef = doc(firestore, 'albarans', albaranId);
+    
+    deleteDocumentNonBlocking(albaranDocRef);
+    
+    toast({
+      title: 'Albarà Eliminat',
+      description: `L'albarà #${albaranNumber} ha estat eliminat del historial.`,
+    });
+  };
 
   if (isUserLoading || isLoadingAlbarans) {
     return <p>Carregant historial...</p>
@@ -70,11 +95,30 @@ export default function AlbaransHistoryPage() {
                   <TableCell>{albaran.customerName}</TableCell>
                   <TableCell>{albaran.projectName}</TableCell>
                   <TableCell>{albaran.totalAmount.toFixed(2)} €</TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className="text-right flex items-center justify-end gap-2">
                     <Button variant="outline" size="sm" onClick={() => router.push(`/dashboard/albarans/${albaran.id}`)}>
                       <Eye className="mr-2 h-4 w-4" />
                       Veure
                     </Button>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                          <Button variant="destructive" size="sm">
+                              <Trash2 className="h-4 w-4" />
+                          </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                          <AlertDialogHeader>
+                          <AlertDialogTitle>Estàs segur?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                              Aquesta acció no es pot desfer. Això eliminarà l'albarà <strong>#{albaran.albaranNumber}</strong> del historial, però no els registres de servei associats.
+                          </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel·lar</AlertDialogCancel>
+                          <AlertDialogAction onClick={() => handleDeleteAlbaran(albaran.id, albaran.albaranNumber)} className="bg-destructive hover:bg-destructive/90">Eliminar</AlertDialogAction>
+                          </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   </TableCell>
                 </TableRow>
               )) : (

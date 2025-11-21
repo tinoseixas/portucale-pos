@@ -2,20 +2,33 @@
 
 import { useState, useMemo, useRef, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
-import { useDoc, useUser, useFirestore, useMemoFirebase } from '@/firebase'
+import { useDoc, useUser, useFirestore, useMemoFirebase, deleteDocumentNonBlocking } from '@/firebase'
 import { collection, query, where, getDocs, doc, collectionGroup } from 'firebase/firestore'
 import type { Customer, ServiceRecord, Albaran } from '@/lib/types'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { FileDown, Loader2, ArrowLeft } from 'lucide-react'
+import { FileDown, Loader2, ArrowLeft, Trash2 } from 'lucide-react'
 import jsPDF from 'jspdf'
 import html2canvas from 'html2canvas'
 import { ReportPreview } from '@/components/ReportPreview'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
+import { useToast } from '@/hooks/use-toast'
 
 export default function AlbaranDetailPage() {
     const firestore = useFirestore()
     const router = useRouter()
     const params = useParams()
+    const { toast } = useToast()
     const albaranId = params.id as string
 
     const { user, isUserLoading } = useUser()
@@ -95,6 +108,19 @@ export default function AlbaranDetailPage() {
             setIsGenerating(false)
         }
     }
+
+    const handleDeleteAlbaran = () => {
+        if (!albaranDocRef) return;
+        
+        deleteDocumentNonBlocking(albaranDocRef);
+
+        toast({
+            title: 'Albarà Eliminat',
+            description: `L'albarà #${albaran?.albaranNumber} ha estat eliminat del historial.`,
+        });
+
+        router.push('/dashboard/albarans');
+    }
     
     const isLoading = isUserLoading || isLoadingAlbaran || isLoadingData;
 
@@ -108,18 +134,41 @@ export default function AlbaranDetailPage() {
 
     return (
         <div className="space-y-8 max-w-5xl mx-auto">
-            <div className="flex justify-between items-center">
+            <div className="flex justify-between items-center flex-wrap gap-2">
                  <Button variant="ghost" onClick={() => router.push('/dashboard/albarans')}>
                     <ArrowLeft className="mr-2 h-4 w-4" />
                     Tornar a l'historial
                 </Button>
-                <Button
-                    onClick={handleExportPDF}
-                    disabled={isGenerating}
-                >
-                    {isGenerating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileDown className="mr-2 h-4 w-4" />}
-                    Exportar PDF
-                </Button>
+                <div className="flex items-center gap-2">
+                    <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                            <Button variant="destructive">
+                                <Trash2 className="mr-2 h-4 w-4" /> Eliminar Albarà
+                            </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                            <AlertDialogHeader>
+                            <AlertDialogTitle>Estàs segur que vols eliminar l'albarà?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                                Aquesta acció no es pot desfer. S'eliminarà l'albarà <strong>#{albaran.albaranNumber}</strong> del historial. 
+                                Els registres de servei originals no seran afectats.
+                            </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel·lar</AlertDialogCancel>
+                            <AlertDialogAction onClick={handleDeleteAlbaran} className="bg-destructive hover:bg-destructive/90">Eliminar</AlertDialogAction>
+                            </AlertDialogFooter>
+                        </AlertDialogContent>
+                    </AlertDialog>
+
+                    <Button
+                        onClick={handleExportPDF}
+                        disabled={isGenerating}
+                    >
+                        {isGenerating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileDown className="mr-2 h-4 w-4" />}
+                        Exportar PDF
+                    </Button>
+                </div>
             </div>
             
             <Card>
