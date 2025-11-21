@@ -1,5 +1,5 @@
 'use client'
-import React, { forwardRef } from 'react';
+import React, { forwardRef, useMemo } from 'react';
 import Image from 'next/image';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
