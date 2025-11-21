@@ -15,6 +15,7 @@ import { doc, setDoc, addDoc, collection } from 'firebase/firestore';
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import type { Customer } from '@/lib/types';
 import { Save, ArrowLeft, Building, MapPin, Phone, Mail, Hash } from 'lucide-react';
+import { AdminGate } from '@/components/AdminGate';
 
 
 const customerSchema = z.object({
@@ -113,80 +114,82 @@ export default function EditCustomerPage() {
 
 
   return (
-    <div className="max-w-2xl mx-auto">
-       <Button variant="ghost" onClick={() => router.back()} className="mb-4 -ml-4">
-        <ArrowLeft className="mr-2 h-4 w-4" />
-        Tornar a clients
-      </Button>
-      <Card>
-        <CardHeader>
-          <CardTitle>{isNew ? 'Nou Client' : 'Editar Client'}</CardTitle>
-          <CardDescription>
-            {isNew ? "Afegeix un nou client a la teva base de dades." : `Modifica les dades de ${customer?.name}.`}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-            
-            <div className="space-y-2">
-              <Label htmlFor="name" className="flex items-center gap-2"><Building className="h-4 w-4 text-muted-foreground" /> Nom del Client</Label>
-              <Controller
-                name="name"
-                control={control}
-                render={({ field }) => <Input id="name" placeholder="Nom complet o de l'empresa" {...field} />}
-              />
-              {errors.name && <p className="text-sm text-destructive">{errors.name.message}</p>}
-            </div>
-            
-             <div className="space-y-2">
-              <Label htmlFor="nrt" className="flex items-center gap-2"><Hash className="h-4 w-4 text-muted-foreground" /> NIF / NRT</Label>
-              <Controller
-                name="nrt"
-                control={control}
-                render={({ field }) => <Input id="nrt" placeholder="Número d'identificació fiscal" {...field} />}
-              />
-              {errors.nrt && <p className="text-sm text-destructive">{errors.nrt.message}</p>}
-            </div>
+    <AdminGate pageTitle="Edició de Client" pageDescription="Aquesta secció està protegida.">
+        <div className="max-w-2xl mx-auto">
+        <Button variant="ghost" onClick={() => router.back()} className="mb-4 -ml-4">
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Tornar a clients
+        </Button>
+        <Card>
+            <CardHeader>
+            <CardTitle>{isNew ? 'Nou Client' : 'Editar Client'}</CardTitle>
+            <CardDescription>
+                {isNew ? "Afegeix un nou client a la teva base de dades." : `Modifica les dades de ${customer?.name}.`}
+            </CardDescription>
+            </CardHeader>
+            <CardContent>
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+                
+                <div className="space-y-2">
+                <Label htmlFor="name" className="flex items-center gap-2"><Building className="h-4 w-4 text-muted-foreground" /> Nom del Client</Label>
+                <Controller
+                    name="name"
+                    control={control}
+                    render={({ field }) => <Input id="name" placeholder="Nom complet o de l'empresa" {...field} />}
+                />
+                {errors.name && <p className="text-sm text-destructive">{errors.name.message}</p>}
+                </div>
+                
+                <div className="space-y-2">
+                <Label htmlFor="nrt" className="flex items-center gap-2"><Hash className="h-4 w-4 text-muted-foreground" /> NIF / NRT</Label>
+                <Controller
+                    name="nrt"
+                    control={control}
+                    render={({ field }) => <Input id="nrt" placeholder="Número d'identificació fiscal" {...field} />}
+                />
+                {errors.nrt && <p className="text-sm text-destructive">{errors.nrt.message}</p>}
+                </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="address" className="flex items-center gap-2"><MapPin className="h-4 w-4 text-muted-foreground" /> Adreça</Label>
-              <Controller
-                name="address"
-                control={control}
-                render={({ field }) => <Input id="address" placeholder="Adreça completa" {...field} />}
-              />
-              {errors.address && <p className="text-sm text-destructive">{errors.address.message}</p>}
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="contact" className="flex items-center gap-2"><Phone className="h-4 w-4 text-muted-foreground" /> Telèfon de Contacte</Label>
-              <Controller
-                name="contact"
-                control={control}
-                render={({ field }) => <Input id="contact" type="tel" placeholder="600123456" {...field} />}
-              />
-              {errors.contact && <p className="text-sm text-destructive">{errors.contact.message}</p>}
-            </div>
+                <div className="space-y-2">
+                <Label htmlFor="address" className="flex items-center gap-2"><MapPin className="h-4 w-4 text-muted-foreground" /> Adreça</Label>
+                <Controller
+                    name="address"
+                    control={control}
+                    render={({ field }) => <Input id="address" placeholder="Adreça completa" {...field} />}
+                />
+                {errors.address && <p className="text-sm text-destructive">{errors.address.message}</p>}
+                </div>
+                
+                <div className="space-y-2">
+                <Label htmlFor="contact" className="flex items-center gap-2"><Phone className="h-4 w-4 text-muted-foreground" /> Telèfon de Contacte</Label>
+                <Controller
+                    name="contact"
+                    control={control}
+                    render={({ field }) => <Input id="contact" type="tel" placeholder="600123456" {...field} />}
+                />
+                {errors.contact && <p className="text-sm text-destructive">{errors.contact.message}</p>}
+                </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="email" className="flex items-center gap-2"><Mail className="h-4 w-4 text-muted-foreground" /> Correu electrònic</Label>
-              <Controller
-                name="email"
-                control={control}
-                render={({ field }) => <Input id="email" type="email" placeholder="client@exemple.com" {...field} />}
-              />
-              {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
-            </div>
+                <div className="space-y-2">
+                <Label htmlFor="email" className="flex items-center gap-2"><Mail className="h-4 w-4 text-muted-foreground" /> Correu electrònic</Label>
+                <Controller
+                    name="email"
+                    control={control}
+                    render={({ field }) => <Input id="email" type="email" placeholder="client@exemple.com" {...field} />}
+                />
+                {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
+                </div>
 
-            <div className="flex justify-end pt-4">
-              <Button type="submit" disabled={!isDirty && !isNew} className="bg-accent hover:bg-accent/90 text-accent-foreground">
-                <Save className="mr-2 h-4 w-4"/>
-                {isNew ? 'Crear Client' : 'Desa els Canvis'}
-              </Button>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
-    </div>
+                <div className="flex justify-end pt-4">
+                <Button type="submit" disabled={!isDirty && !isNew} className="bg-accent hover:bg-accent/90 text-accent-foreground">
+                    <Save className="mr-2 h-4 w-4"/>
+                    {isNew ? 'Crear Client' : 'Desa els Canvis'}
+                </Button>
+                </div>
+            </form>
+            </CardContent>
+        </Card>
+        </div>
+    </AdminGate>
   );
 }

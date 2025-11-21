@@ -21,6 +21,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { useToast } from '@/hooks/use-toast'
+import { AdminGate } from '@/components/AdminGate'
 
 // Dades de client de mostra per importar, agora ordenadas alfabeticamente.
 const mockCustomers: Omit<Customer, 'id'>[] = [
@@ -184,7 +185,9 @@ export default function CustomersPage() {
     });
   };
   
-  if (isUserLoading || isLoadingCustomers) {
+  const isLoading = isUserLoading || isLoadingCustomers;
+
+  if (isLoading) {
     return <p>Carregant clients...</p>
   }
   
@@ -193,101 +196,103 @@ export default function CustomersPage() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto">
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <div>
-            <CardTitle>Gestió de Clients</CardTitle>
-            <CardDescription>Visualitza, afegeix i gestiona tots els clients registrats.</CardDescription>
-          </div>
-           <div className="flex gap-2">
-            <Button variant="outline" onClick={handleImportMockData} disabled={isImporting}>
-              <Upload className="mr-2 h-4 w-4" />
-              {isImporting ? 'Important...' : 'Importar Dades de Mostra'}
-            </Button>
-            <Button onClick={() => router.push('/dashboard/customers/edit/new')}>
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Nou Client
-            </Button>
-           </div>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Nom</TableHead>
-                <TableHead>NIF</TableHead>
-                <TableHead>Correu electrònic</TableHead>
-                <TableHead>Telèfon</TableHead>
-                <TableHead className="text-right">Accions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {customers && customers.length > 0 ? customers.map(customer => (
-                <TableRow key={customer.id}>
-                  <TableCell>
-                    <div className="font-medium flex items-center gap-2">
-                        <Building className="h-4 w-4 text-muted-foreground" />
-                        {customer.name}
-                    </div>
-                    <div className="text-sm text-muted-foreground">{customer.address}</div>
-                  </TableCell>
-                  <TableCell>
-                     <div className="flex items-center gap-2">
-                        <Hash className="h-4 w-4 text-muted-foreground" />
-                        {customer.nrt || 'N/A'}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                        <Mail className="h-4 w-4 text-muted-foreground" />
-                        {customer.email || 'N/A'}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                        <Phone className="h-4 w-4 text-muted-foreground" />
-                        {customer.contact || 'N/A'}
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-right flex justify-end items-center gap-2">
-                     <Button asChild variant="outline" size="sm" onClick={() => router.push(`/dashboard/customers/edit/${customer.id}`)}>
-                        <Edit className="h-4 w-4" />
-                    </Button>
-                   
-                    <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                        <Button variant="destructive" size="sm">
-                            <Trash2 className="h-4 w-4" />
-                        </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                        <AlertDialogHeader>
-                        <AlertDialogTitle>Estàs segur?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                            Aquesta acció no es pot desfer. Això eliminarà permanentment el client <strong>{customer.name}</strong>.
-                        </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel·lar</AlertDialogCancel>
-                        <AlertDialogAction onClick={() => handleDeleteCustomer(customer.id, customer.name)} className="bg-destructive hover:bg-destructive/90">Eliminar</AlertDialogAction>
-                        </AlertDialogFooter>
-                    </AlertDialogContent>
-                    </AlertDialog>
-                  
-                  </TableCell>
+    <AdminGate pageTitle="Gestió de Clients" pageDescription="Visualitza, afegeix i gestiona tots els clients registrats.">
+        <div className="max-w-6xl mx-auto">
+        <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+            <div>
+                <CardTitle>Gestió de Clients</CardTitle>
+                <CardDescription>Visualitza, afegeix i gestiona tots els clients registrats.</CardDescription>
+            </div>
+            <div className="flex gap-2">
+                <Button variant="outline" onClick={handleImportMockData} disabled={isImporting}>
+                <Upload className="mr-2 h-4 w-4" />
+                {isImporting ? 'Important...' : 'Importar Dades de Mostra'}
+                </Button>
+                <Button onClick={() => router.push('/dashboard/customers/edit/new')}>
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    Nou Client
+                </Button>
+            </div>
+            </CardHeader>
+            <CardContent>
+            <Table>
+                <TableHeader>
+                <TableRow>
+                    <TableHead>Nom</TableHead>
+                    <TableHead>NIF</TableHead>
+                    <TableHead>Correu electrònic</TableHead>
+                    <TableHead>Telèfon</TableHead>
+                    <TableHead className="text-right">Accions</TableHead>
                 </TableRow>
-              )) : (
-                 <TableRow>
-                    <TableCell colSpan={5} className="h-24 text-center">
-                        No s'han trobat clients. Comença afegint-ne un o important dades de mostra.
+                </TableHeader>
+                <TableBody>
+                {customers && customers.length > 0 ? customers.map(customer => (
+                    <TableRow key={customer.id}>
+                    <TableCell>
+                        <div className="font-medium flex items-center gap-2">
+                            <Building className="h-4 w-4 text-muted-foreground" />
+                            {customer.name}
+                        </div>
+                        <div className="text-sm text-muted-foreground">{customer.address}</div>
                     </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
-    </div>
+                    <TableCell>
+                        <div className="flex items-center gap-2">
+                            <Hash className="h-4 w-4 text-muted-foreground" />
+                            {customer.nrt || 'N/A'}
+                        </div>
+                    </TableCell>
+                    <TableCell>
+                        <div className="flex items-center gap-2">
+                            <Mail className="h-4 w-4 text-muted-foreground" />
+                            {customer.email || 'N/A'}
+                        </div>
+                    </TableCell>
+                    <TableCell>
+                        <div className="flex items-center gap-2">
+                            <Phone className="h-4 w-4 text-muted-foreground" />
+                            {customer.contact || 'N/A'}
+                        </div>
+                    </TableCell>
+                    <TableCell className="text-right flex justify-end items-center gap-2">
+                        <Button asChild variant="outline" size="sm" onClick={() => router.push(`/dashboard/customers/edit/${customer.id}`)}>
+                            <Edit className="h-4 w-4" />
+                        </Button>
+                    
+                        <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                            <Button variant="destructive" size="sm">
+                                <Trash2 className="h-4 w-4" />
+                            </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                            <AlertDialogHeader>
+                            <AlertDialogTitle>Estàs segur?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                                Aquesta acció no es pot desfer. Això eliminarà permanentment el client <strong>{customer.name}</strong>.
+                            </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel·lar</AlertDialogCancel>
+                            <AlertDialogAction onClick={() => handleDeleteCustomer(customer.id, customer.name)} className="bg-destructive hover:bg-destructive/90">Eliminar</AlertDialogAction>
+                            </AlertDialogFooter>
+                        </AlertDialogContent>
+                        </AlertDialog>
+                    
+                    </TableCell>
+                    </TableRow>
+                )) : (
+                    <TableRow>
+                        <TableCell colSpan={5} className="h-24 text-center">
+                            No s'han trobat clients. Comença afegint-ne un o important dades de mostra.
+                        </TableCell>
+                    </TableRow>
+                )}
+                </TableBody>
+            </Table>
+            </CardContent>
+        </Card>
+        </div>
+    </AdminGate>
   )
 }

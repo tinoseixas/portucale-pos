@@ -18,6 +18,7 @@ import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import type { Employee } from '@/lib/types';
 import { Camera, Save, ArrowLeft, Phone, User as UserIcon, Shield } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { AdminGate } from '@/components/AdminGate';
 
 
 const profileSchema = z.object({
@@ -147,107 +148,109 @@ export default function EditUserPage() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto">
-       <Button variant="ghost" onClick={() => router.back()} className="mb-4 -ml-4">
-        <ArrowLeft className="mr-2 h-4 w-4" />
-        Tornar a usuaris
-      </Button>
-      <Card>
-        <CardHeader>
-          <CardTitle>Editar Perfil d'Usuari</CardTitle>
-          <CardDescription>Modifica les dades de {employee.firstName} {employee.lastName}.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-            <div className="flex flex-col items-center space-y-4">
-              <div className="relative">
-                <Avatar className="h-24 w-24 cursor-pointer" onClick={handleAvatarClick}>
-                  <AvatarImage src={avatarUrl ?? undefined} alt="User avatar" key={avatarUrl} />
-                  <AvatarFallback>{getInitials(employee)}</AvatarFallback>
-                </Avatar>
-                <div className="absolute bottom-0 right-0 bg-primary text-primary-foreground rounded-full p-1.5 cursor-pointer" onClick={handleAvatarClick}>
-                    <Camera className="h-4 w-4" />
+    <AdminGate pageTitle="Edició d'Usuari" pageDescription="Aquesta secció està protegida.">
+        <div className="max-w-2xl mx-auto">
+        <Button variant="ghost" onClick={() => router.back()} className="mb-4 -ml-4">
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Tornar a usuaris
+        </Button>
+        <Card>
+            <CardHeader>
+            <CardTitle>Editar Perfil d'Usuari</CardTitle>
+            <CardDescription>Modifica les dades de {employee.firstName} {employee.lastName}.</CardDescription>
+            </CardHeader>
+            <CardContent>
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+                <div className="flex flex-col items-center space-y-4">
+                <div className="relative">
+                    <Avatar className="h-24 w-24 cursor-pointer" onClick={handleAvatarClick}>
+                    <AvatarImage src={avatarUrl ?? undefined} alt="User avatar" key={avatarUrl} />
+                    <AvatarFallback>{getInitials(employee)}</AvatarFallback>
+                    </Avatar>
+                    <div className="absolute bottom-0 right-0 bg-primary text-primary-foreground rounded-full p-1.5 cursor-pointer" onClick={handleAvatarClick}>
+                        <Camera className="h-4 w-4" />
+                    </div>
                 </div>
-              </div>
-              <input
-                type="file"
-                ref={fileInputRef}
-                onChange={handleFileChange}
-                accept="image/*"
-                className="hidden"
-              />
-              <p className='text-sm text-muted-foreground'>Clica a la imatge per canviar-la</p>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="firstName">Nom</Label>
-              <Controller
-                name="firstName"
-                control={control}
-                render={({ field }) => <Input id="firstName" {...field} />}
-              />
-              {errors.firstName && <p className="text-sm text-destructive">{errors.firstName.message}</p>}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="lastName">Cognom</Label>
-              <Controller
-                name="lastName"
-                control={control}
-                render={({ field }) => <Input id="lastName" {...field} />}
-              />
-              {errors.lastName && <p className="text-sm text-destructive">{errors.lastName.message}</p>}
-            </div>
-            
-             <div className="space-y-2">
-              <Label htmlFor="employeeId">ID d'Empleat</Label>
-              <Controller
-                name="employeeId"
-                control={control}
-                render={({ field }) => <Input id="employeeId" {...field} />}
-              />
-              {errors.employeeId && <p className="text-sm text-destructive">{errors.employeeId.message}</p>}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="phoneNumber" className="flex items-center gap-2"><Phone className="h-4 w-4 text-muted-foreground" /> Telemòbil</Label>
-              <Controller
-                name="phoneNumber"
-                control={control}
-                render={({ field }) => <Input id="phoneNumber" type="tel" placeholder="600123456" {...field} />}
-              />
-              {errors.phoneNumber && <p className="text-sm text-destructive">{errors.phoneNumber.message}</p>}
-            </div>
-
-             <div className="space-y-2">
-                <Label htmlFor="role" className="flex items-center gap-2"><Shield className="h-4 w-4 text-muted-foreground" /> Rol</Label>
-                <Controller
-                    name="role"
-                    control={control}
-                    render={({ field }) => (
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <SelectTrigger id="role">
-                        <SelectValue placeholder="Selecciona un rol" />
-                        </SelectTrigger>
-                        <SelectContent>
-                        <SelectItem value="user">Usuari</SelectItem>
-                        <SelectItem value="admin">Administrador</SelectItem>
-                        </SelectContent>
-                    </Select>
-                    )}
+                <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleFileChange}
+                    accept="image/*"
+                    className="hidden"
                 />
-                {errors.role && <p className="text-sm text-destructive">{errors.role.message}</p>}
-            </div>
+                <p className='text-sm text-muted-foreground'>Clica a la imatge per canviar-la</p>
+                </div>
 
-            <div className="flex justify-end pt-4">
-              <Button type="submit" disabled={!isDirty} className="bg-accent hover:bg-accent/90 text-accent-foreground">
-                <Save className="mr-2 h-4 w-4"/>
-                Desa els Canvis
-              </Button>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
-    </div>
+                <div className="space-y-2">
+                <Label htmlFor="firstName">Nom</Label>
+                <Controller
+                    name="firstName"
+                    control={control}
+                    render={({ field }) => <Input id="firstName" {...field} />}
+                />
+                {errors.firstName && <p className="text-sm text-destructive">{errors.firstName.message}</p>}
+                </div>
+
+                <div className="space-y-2">
+                <Label htmlFor="lastName">Cognom</Label>
+                <Controller
+                    name="lastName"
+                    control={control}
+                    render={({ field }) => <Input id="lastName" {...field} />}
+                />
+                {errors.lastName && <p className="text-sm text-destructive">{errors.lastName.message}</p>}
+                </div>
+                
+                <div className="space-y-2">
+                <Label htmlFor="employeeId">ID d'Empleat</Label>
+                <Controller
+                    name="employeeId"
+                    control={control}
+                    render={({ field }) => <Input id="employeeId" {...field} />}
+                />
+                {errors.employeeId && <p className="text-sm text-destructive">{errors.employeeId.message}</p>}
+                </div>
+
+                <div className="space-y-2">
+                <Label htmlFor="phoneNumber" className="flex items-center gap-2"><Phone className="h-4 w-4 text-muted-foreground" /> Telemòbil</Label>
+                <Controller
+                    name="phoneNumber"
+                    control={control}
+                    render={({ field }) => <Input id="phoneNumber" type="tel" placeholder="600123456" {...field} />}
+                />
+                {errors.phoneNumber && <p className="text-sm text-destructive">{errors.phoneNumber.message}</p>}
+                </div>
+
+                <div className="space-y-2">
+                    <Label htmlFor="role" className="flex items-center gap-2"><Shield className="h-4 w-4 text-muted-foreground" /> Rol</Label>
+                    <Controller
+                        name="role"
+                        control={control}
+                        render={({ field }) => (
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <SelectTrigger id="role">
+                            <SelectValue placeholder="Selecciona un rol" />
+                            </SelectTrigger>
+                            <SelectContent>
+                            <SelectItem value="user">Usuari</SelectItem>
+                            <SelectItem value="admin">Administrador</SelectItem>
+                            </SelectContent>
+                        </Select>
+                        )}
+                    />
+                    {errors.role && <p className="text-sm text-destructive">{errors.role.message}</p>}
+                </div>
+
+                <div className="flex justify-end pt-4">
+                <Button type="submit" disabled={!isDirty} className="bg-accent hover:bg-accent/90 text-accent-foreground">
+                    <Save className="mr-2 h-4 w-4"/>
+                    Desa els Canvis
+                </Button>
+                </div>
+            </form>
+            </CardContent>
+        </Card>
+        </div>
+    </AdminGate>
   );
 }

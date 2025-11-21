@@ -13,6 +13,7 @@ import jsPDF from 'jspdf'
 import html2canvas from 'html2canvas'
 import { ReportPreview } from '@/components/ReportPreview'
 import { useToast } from '@/hooks/use-toast'
+import { AdminGate } from '@/components/AdminGate'
 
 export default function ReportsPage() {
     const firestore = useFirestore()
@@ -183,79 +184,81 @@ export default function ReportsPage() {
 
 
     return (
-        <div className="space-y-8 max-w-5xl mx-auto">
-            <Card>
-                <CardHeader>
-                    <CardTitle>Generador d'Albarans</CardTitle>
-                    <CardDescription>Selecciona un client i/o una obra per generar un albarà detallat.</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                    <div className="flex flex-col sm:flex-row gap-4">
-                        <div className="flex-1 space-y-2">
-                             <label className="text-sm font-medium flex items-center gap-2"><Users className="h-4 w-4" /> Client</label>
-                            <Select value={selectedCustomerId} onValueChange={handleCustomerChange}>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Selecciona un client" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="all">Tots els clients</SelectItem>
-                                    {customers?.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-                                </SelectContent>
-                            </Select>
-                        </div>
-                        <div className="flex-1 space-y-2">
-                             <label className="text-sm font-medium flex items-center gap-2"><Briefcase className="h-4 w-4" /> Obra</label>
-                            <Select value={selectedProject} onValueChange={setSelectedProject}>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Selecciona una obra" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="all">Totes les obres</SelectItem>
-                                    {projectNames.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
-                                </SelectContent>
-                            </Select>
-                        </div>
-                    </div>
-                     <div className="flex justify-end pt-4 gap-2">
-                        <Button
-                            onClick={() => handleExport('save')}
-                            disabled={isGenerating || !canGenerate}
-                        >
-                            {isGenerating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileDown className="mr-2 h-4 w-4" />}
-                            Guardar Albarà
-                        </Button>
-                        <Button
-                            onClick={() => handleExport('pdf')}
-                            disabled={isGenerating || !canGenerate}
-                        >
-                            {isGenerating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileDown className="mr-2 h-4 w-4" />}
-                            Guardar i Exportar PDF
-                        </Button>
-                    </div>
-                </CardContent>
-            </Card>
-
-            {canGenerate && (
+        <AdminGate pageTitle="Generador d'Albarans" pageDescription="Aquesta secció està protegida.">
+            <div className="space-y-8 max-w-5xl mx-auto">
                 <Card>
                     <CardHeader>
-                        <CardTitle>Previsualització de l'Albarà</CardTitle>
+                        <CardTitle>Generador d'Albarans</CardTitle>
+                        <CardDescription>Selecciona un client i/o una obra per generar un albarà detallat.</CardDescription>
                     </CardHeader>
-                    <CardContent>
-                        {isLoadingAllServices ? (
-                             <p>Carregant dades de l'albarà...</p>
-                        ) : (
-                           <ReportPreview
-                                ref={reportRef}
-                                customer={associatedCustomer}
-                                projectName={selectedProject !== 'all' ? selectedProject : 'Varis Projectes'}
-                                services={filteredServices}
-                                showPricing={true}
-                                albaranNumber={-1} // Placeholder number for preview
-                            />
-                        )}
+                    <CardContent className="space-y-4">
+                        <div className="flex flex-col sm:flex-row gap-4">
+                            <div className="flex-1 space-y-2">
+                                <label className="text-sm font-medium flex items-center gap-2"><Users className="h-4 w-4" /> Client</label>
+                                <Select value={selectedCustomerId} onValueChange={handleCustomerChange}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Selecciona un client" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">Tots els clients</SelectItem>
+                                        {customers?.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div className="flex-1 space-y-2">
+                                <label className="text-sm font-medium flex items-center gap-2"><Briefcase className="h-4 w-4" /> Obra</label>
+                                <Select value={selectedProject} onValueChange={setSelectedProject} disabled={projectNames.length === 0}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Selecciona una obra" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">Totes les obres</SelectItem>
+                                        {projectNames.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        </div>
+                        <div className="flex justify-end pt-4 gap-2">
+                            <Button
+                                onClick={() => handleExport('save')}
+                                disabled={isGenerating || !canGenerate}
+                            >
+                                {isGenerating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileDown className="mr-2 h-4 w-4" />}
+                                Guardar Albarà
+                            </Button>
+                            <Button
+                                onClick={() => handleExport('pdf')}
+                                disabled={isGenerating || !canGenerate}
+                            >
+                                {isGenerating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileDown className="mr-2 h-4 w-4" />}
+                                Guardar i Exportar PDF
+                            </Button>
+                        </div>
                     </CardContent>
                 </Card>
-            )}
-        </div>
+
+                {canGenerate && (
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Previsualització de l'Albarà</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            {isLoadingAllServices ? (
+                                <p>Carregant dades de l'albarà...</p>
+                            ) : (
+                            <ReportPreview
+                                    ref={reportRef}
+                                    customer={associatedCustomer}
+                                    projectName={selectedProject !== 'all' ? selectedProject : 'Varis Projectes'}
+                                    services={filteredServices}
+                                    showPricing={true}
+                                    albaranNumber={-1} // Placeholder number for preview
+                                />
+                            )}
+                        </CardContent>
+                    </Card>
+                )}
+            </div>
+        </AdminGate>
     )
 }
