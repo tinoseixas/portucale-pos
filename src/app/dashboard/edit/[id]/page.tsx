@@ -33,8 +33,8 @@ import { format, parseISO, isValid, differenceInMinutes } from 'date-fns'
 import { ca } from 'date-fns/locale'
 import { cn } from '@/lib/utils'
 import { CustomerSelectionDialog } from '@/components/CustomerSelectionDialog'
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet'
-import 'leaflet-defaulticon-compatibility'
+
+const MapView = dynamic(() => import('@/components/MapView'), { ssr: false });
 
 
 type MediaFile = {
@@ -383,20 +383,7 @@ export default function EditServicePage() {
               <div className="space-y-2">
                 <Label className="flex items-center gap-2"><MapPin className="h-4 w-4 text-muted-foreground" /> Localització d'Inici</Label>
                 <div className="h-64 w-full rounded-md overflow-hidden border">
-                   <MapContainer
-                        center={[service.location.latitude, service.location.longitude]}
-                        zoom={16}
-                        scrollWheelZoom={false}
-                        style={{ height: '100%', width: '100%' }}
-                    >
-                        <TileLayer
-                            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                        />
-                        <Marker position={[service.location.latitude, service.location.longitude]}>
-                            <Popup>Ubicació on es va iniciar el servei.</Popup>
-                        </Marker>
-                    </MapContainer>
+                   <MapView position={[service.location.latitude, service.location.longitude]} />
                 </div>
               </div>
             )}
