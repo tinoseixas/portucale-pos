@@ -230,7 +230,7 @@ export default function EditServicePage() {
     const departureDateTime = departureDate.toISOString();
     const filteredAlbarans = albarans.filter(a => a.trim() !== '');
 
-    let processedMaterials: Material[] = materials.filter(m => m.description.trim() !== '');
+    let processedMaterials: Material[] = materials.filter(m => m.description.trim() !== '' && m.description.toLowerCase() !== 'traball');
 
     if (user) {
         const durationInMinutes = differenceInMinutes(departureDate, arrivalDate);
@@ -240,32 +240,20 @@ export default function EditServicePage() {
                 roundedMinutes = 30;
             }
             const durationInHours = roundedMinutes / 60;
-            const pricePerHour = 30;
+            const pricePerHour = 30; // Preu fixat a 30
 
-            const hasLabor = processedMaterials.some(m => m.description.toLowerCase() === 'traball');
-            if (!hasLabor) {
-                 processedMaterials.push({
-                    description: 'traball',
-                    quantity: parseFloat(durationInHours.toFixed(2)),
-                    unitPrice: pricePerHour
-                });
-            } else {
-                processedMaterials = processedMaterials.map(m => {
-                    if (m.description.toLowerCase() === 'traball') {
-                        return {
-                            ...m,
-                            quantity: parseFloat(durationInHours.toFixed(2)),
-                            unitPrice: pricePerHour
-                        };
-                    }
-                    return m;
-                });
-            }
+            processedMaterials.push({
+                description: 'traball',
+                quantity: parseFloat(durationInHours.toFixed(2)),
+                unitPrice: pricePerHour
+            });
         }
     }
 
 
     const selectedCustomer = customers?.find(c => c.id === customerId);
+    
+    const updatedMedia = media.map(({ type, dataUrl }) => ({ type, dataUrl }));
 
     const updatedData: Partial<ServiceRecord> = {
       arrivalDateTime,
@@ -275,7 +263,7 @@ export default function EditServicePage() {
       pendingTasks,
       customerId,
       customerName: selectedCustomer?.name || service?.customerName || '',
-      media: media.map(({type, dataUrl}) => ({type, dataUrl})), // Ensure media is saved correctly
+      media: updatedMedia,
       albarans: filteredAlbarans,
       materials: processedMaterials,
       updatedAt: new Date().toISOString(),
