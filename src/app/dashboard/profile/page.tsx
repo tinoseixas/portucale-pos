@@ -59,6 +59,12 @@ export default function ProfilePage() {
   });
 
   useEffect(() => {
+    if (!isUserLoading && !user) {
+      router.push('/');
+    }
+  }, [isUserLoading, user, router]);
+
+  useEffect(() => {
     if (employee) {
       reset({
         firstName: employee.firstName,
@@ -127,8 +133,7 @@ export default function ProfilePage() {
   }
 
   if (!user) {
-    router.push('/');
-    return null;
+    return null; // Redirect is handled by the useEffect hook
   }
   
   const getInitials = (employee?: Employee | null) => {

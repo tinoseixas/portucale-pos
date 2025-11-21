@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useCollection, useUser, useFirestore, useMemoFirebase, deleteDocumentNonBlocking } from '@/firebase'
 import { collection, query, addDoc, doc, writeBatch, orderBy } from 'firebase/firestore'
@@ -128,6 +128,12 @@ export default function CustomersPage() {
   const firestore = useFirestore()
   const [isImporting, setIsImporting] = useState(false)
 
+  useEffect(() => {
+    if (!isUserLoading && !user) {
+      router.push('/');
+    }
+  }, [isUserLoading, user, router]);
+
   const customersQuery = useMemoFirebase(() => {
     if (!firestore || !user) return null;
     return query(collection(firestore, 'customers'), orderBy('name', 'asc'));
@@ -183,7 +189,7 @@ export default function CustomersPage() {
   }
   
   if (!user) {
-     return <p>Accés no autoritzat.</p>;
+     return null; // Redirect is handled by the useEffect hook
   }
 
   return (

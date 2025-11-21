@@ -56,7 +56,7 @@ export default function UsersPage() {
   
   useEffect(() => {
     if (!isUserLoading && !user) {
-      router.push('/dashboard');
+      router.push('/');
     }
   }, [isUserLoading, user, router]);
 
@@ -89,7 +89,7 @@ export default function UsersPage() {
   }
   
   if (!user) {
-     return <p>Accés no autoritzat.</p>;
+     return null; // Redirect is handled by the useEffect hook
   }
 
   return (
