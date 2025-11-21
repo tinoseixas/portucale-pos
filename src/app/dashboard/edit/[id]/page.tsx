@@ -230,18 +230,22 @@ export default function EditServicePage() {
     const departureDateTime = departureDate.toISOString();
     const filteredAlbarans = albarans.filter(a => a.trim() !== '');
 
-    // Correctly process materials
-    // 1. Start with the user-entered materials that have a description.
     let processedMaterials: Material[] = materials.filter(m => m.description.trim() !== '' && m.description.toLowerCase() !== 'traball');
 
-    // 2. Calculate labor if the user is logged in.
     if (user) {
-        const durationInMinutes = differenceInMinutes(departureDate, arrivalDate);
+        let durationInMinutes = differenceInMinutes(departureDate, arrivalDate);
         if (durationInMinutes > 0) {
-            const durationInHours = durationInMinutes / 60;
-            const pricePerHour = user.email === 'tino@seixas.com' ? 35 : 27;
+            // Round up to the nearest half-hour (30 minutes)
+            let roundedMinutes = Math.ceil(durationInMinutes / 30) * 30;
 
-            // 3. Add labor to the list of materials.
+            // If it's less than an hour, count it as at least half an hour
+            if (durationInMinutes < 60) {
+                roundedMinutes = Math.max(roundedMinutes, 30);
+            }
+            
+            const durationInHours = roundedMinutes / 60;
+            const pricePerHour = 30;
+
             processedMaterials.push({
                 description: 'traball',
                 quantity: parseFloat(durationInHours.toFixed(2)),
@@ -249,6 +253,7 @@ export default function EditServicePage() {
             });
         }
     }
+
 
     const selectedCustomer = customers?.find(c => c.id === customerId);
 
