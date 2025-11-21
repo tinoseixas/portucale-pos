@@ -415,58 +415,56 @@ export default function EditServicePage() {
               <Textarea id="pendingTasks" placeholder="Descriu tasques o materials pendents..." value={pendingTasks} onChange={(e) => setPendingTasks(e.target.value)} rows={3} />
             </div>
             
-             {user?.email === 'tino@seixas.com' && (
-                <div className="space-y-4 rounded-lg border p-4">
-                    <Label className="flex items-center gap-2 text-base font-semibold"><Package className="h-5 w-5 text-muted-foreground" /> Materials i Mà d'Obra</Label>
-                    <div className="space-y-3">
-                        {materials.map((material, index) => (
-                            <div key={index} className="grid grid-cols-12 gap-2 items-center">
+            <div className="space-y-4 rounded-lg border p-4">
+                <Label className="flex items-center gap-2 text-base font-semibold"><Package className="h-5 w-5 text-muted-foreground" /> Materials i Mà d'Obra</Label>
+                <div className="space-y-3">
+                    {materials.map((material, index) => (
+                        <div key={index} className="grid grid-cols-12 gap-2 items-center">
+                            <Input
+                                type="text"
+                                placeholder="Descripció (ex: mà d'obra, tub PVC)"
+                                value={material.description}
+                                onChange={(e) => handleMaterialChange(index, 'description', e.target.value)}
+                                className="col-span-6"
+                                readOnly={material.description.toLowerCase() === 'traball'}
+                            />
+                            <div className="col-span-2 relative">
                                 <Input
-                                    type="text"
-                                    placeholder="Descripció (ex: mà d'obra, tub PVC)"
-                                    value={material.description}
-                                    onChange={(e) => handleMaterialChange(index, 'description', e.target.value)}
-                                    className="col-span-6"
+                                    type="number"
+                                    value={material.quantity}
+                                    onChange={(e) => handleMaterialChange(index, 'quantity', e.target.value)}
+                                    className="pl-2 pr-1"
+                                    min="0"
+                                    step="any"
                                     readOnly={material.description.toLowerCase() === 'traball'}
                                 />
-                                <div className="col-span-2 relative">
-                                    <Input
-                                        type="number"
-                                        value={material.quantity}
-                                        onChange={(e) => handleMaterialChange(index, 'quantity', e.target.value)}
-                                        className="pl-2 pr-1"
-                                        min="0"
-                                        step="any"
-                                        readOnly={material.description.toLowerCase() === 'traball'}
-                                    />
-                                </div>
-                                <div className="col-span-3 relative">
-                                    <Input
-                                        type="number"
-                                        value={material.unitPrice}
-                                        onChange={(e) => handleMaterialChange(index, 'unitPrice', e.target.value)}
-                                        className="pl-7 pr-1"
-                                        min="0"
-                                        step="any"
-                                        readOnly={material.description.toLowerCase() === 'traball'}
-                                    />
-                                    <Euro className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                </div>
-                                <div className="col-span-1 flex justify-end">
-                                    {material.description.toLowerCase() !== 'traball' && (
-                                    <Button type="button" variant="ghost" size="icon" onClick={() => removeMaterialInput(index)}>
-                                        <X className="h-4 w-4 text-destructive" />
-                                    </Button>
-                                    )}
-                                </div>
                             </div>
-                        ))}
-                    </div>
-                    <Button type="button" variant="outline" size="sm" onClick={addMaterialInput} className="mt-2">
-                        <Plus className="mr-2 h-4 w-4" /> Afegir Línia
-                    </Button>
+                            <div className="col-span-3 relative">
+                                <Input
+                                    type="number"
+                                    value={material.unitPrice}
+                                    onChange={(e) => handleMaterialChange(index, 'unitPrice', e.target.value)}
+                                    className="pl-7 pr-1"
+                                    min="0"
+                                    step="any"
+                                    readOnly={material.description.toLowerCase() === 'traball'}
+                                />
+                                <Euro className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                            </div>
+                            <div className="col-span-1 flex justify-end">
+                                {material.description.toLowerCase() !== 'traball' && (
+                                <Button type="button" variant="ghost" size="icon" onClick={() => removeMaterialInput(index)}>
+                                    <X className="h-4 w-4 text-destructive" />
+                                </Button>
+                                )}
+                            </div>
+                        </div>
+                    ))}
                 </div>
-             )}
+                <Button type="button" variant="outline" size="sm" onClick={addMaterialInput} className="mt-2">
+                    <Plus className="mr-2 h-4 w-4" /> Afegir Línia
+                </Button>
+            </div>
 
             <div className="space-y-2">
               <Label htmlFor="albarans" className="flex items-center gap-2"><Hash className="h-4 w-4 text-muted-foreground" /> Nº d'Albarà</Label>
