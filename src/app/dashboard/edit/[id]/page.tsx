@@ -140,14 +140,22 @@ export default function EditServicePage() {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const files = Array.from(e.target.files);
-      files.forEach(file => {
-        const reader = new FileReader();
-        reader.onload = (event) => {
-          const dataUrl = event.target?.result as string;
-          const type = file.type.startsWith('image/') ? 'image' : 'video';
-          setMedia(prev => [...prev, { type, dataUrl, file }]);
-        };
-        reader.readAsDataURL(file);
+      const newMedia: MediaFile[] = [];
+      
+      const filePromises = files.map(file => {
+          return new Promise<MediaFile>((resolve) => {
+              const reader = new FileReader();
+              reader.onload = (event) => {
+                  const dataUrl = event.target?.result as string;
+                  const type = file.type.startsWith('image/') ? 'image' : 'video';
+                  resolve({ type, dataUrl, file });
+              };
+              reader.readAsDataURL(file);
+          });
+      });
+
+      Promise.all(filePromises).then(newFiles => {
+          setMedia(prev => [...prev, ...newFiles]);
       });
     }
   }

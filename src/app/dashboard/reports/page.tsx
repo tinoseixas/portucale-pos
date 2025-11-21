@@ -14,6 +14,24 @@ import html2canvas from 'html2canvas'
 import { ReportPreview } from '@/components/ReportPreview'
 import { useToast } from '@/hooks/use-toast'
 import { AdminGate } from '@/components/AdminGate'
+import { differenceInMinutes, parseISO } from 'date-fns'
+
+function calculateTotalMinutes(services: ServiceRecord[]): number {
+    if (!services) return 0;
+
+    return services.reduce((total, service) => {
+        if (service.arrivalDateTime && service.departureDateTime) {
+            const startDate = parseISO(service.arrivalDateTime);
+            const endDate = parseISO(service.departureDateTime);
+
+            if (!isValid(startDate) || !isValid(endDate) || startDate.getTime() === endDate.getTime()) {
+              return total;
+            }
+            return total + differenceInMinutes(endDate, startDate);
+        }
+        return total;
+    }, 0);
+}
 
 export default function ReportsPage() {
     const firestore = useFirestore()
@@ -125,13 +143,23 @@ export default function ReportsPage() {
                 return newNumber;
             });
             
-            const totalAmount = filteredServices.reduce((total, service) => {
+            // Recalculate total amount logic to include labor and tax
+            const totalMinutes = calculateTotalMinutes(filteredServices);
+            const totalHours = totalMinutes / 60;
+            const laborCost = totalHours * 30; // Fixed price per hour
+
+            const materialsSubtotal = filteredServices.reduce((total, service) => {
                 const serviceTotal = (service.materials || []).reduce((subtotal, material) => {
                     return subtotal + (material.quantity * material.unitPrice);
                 }, 0);
                 return total + serviceTotal;
             }, 0);
 
+            const subtotal = materialsSubtotal + laborCost;
+            const ivaRate = 0.045; // 4.5% IGI for Andorra
+            const iva = subtotal * ivaRate;
+            const totalAmount = subtotal + iva;
+            
             const albaranRef = doc(collection(firestore, "albarans"));
             await setDoc(albaranRef, {
                 id: albaranRef.id,
