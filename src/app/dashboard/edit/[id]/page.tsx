@@ -230,22 +230,18 @@ export default function EditServicePage() {
     const departureDateTime = departureDate.toISOString();
     const filteredAlbarans = albarans.filter(a => a.trim() !== '');
 
-    let processedMaterials: Material[] = materials.filter(m => m.description.trim() !== '' && m.description.toLowerCase() !== 'traball');
+    let processedMaterials: Material[] = materials.filter(m => m.description.trim() !== '');
 
     if (user) {
         const durationInMinutes = differenceInMinutes(departureDate, arrivalDate);
         if (durationInMinutes > 0) {
-            // Round up to the nearest half-hour (30 minutes)
             let roundedMinutes = Math.ceil(durationInMinutes / 30) * 30;
-            // If it's less than an hour, count it as at least half an hour
-            if (durationInMinutes < 60 && roundedMinutes < 30) {
-                 roundedMinutes = 30;
+            if (durationInMinutes > 0 && durationInMinutes < 30) {
+                roundedMinutes = 30;
             }
-
             const durationInHours = roundedMinutes / 60;
             const pricePerHour = 30;
 
-            // Only add labor if it's not already there
             const hasLabor = processedMaterials.some(m => m.description.toLowerCase() === 'traball');
             if (!hasLabor) {
                  processedMaterials.push({
@@ -254,7 +250,6 @@ export default function EditServicePage() {
                     unitPrice: pricePerHour
                 });
             } else {
-                // Update existing labor entry
                 processedMaterials = processedMaterials.map(m => {
                     if (m.description.toLowerCase() === 'traball') {
                         return {
@@ -280,7 +275,7 @@ export default function EditServicePage() {
       pendingTasks,
       customerId,
       customerName: selectedCustomer?.name || service?.customerName || '',
-      media: media.map(({type, dataUrl}) => ({type, dataUrl})),
+      media: media.map(({type, dataUrl}) => ({type, dataUrl})), // Ensure media is saved correctly
       albarans: filteredAlbarans,
       materials: processedMaterials,
       updatedAt: new Date().toISOString(),
