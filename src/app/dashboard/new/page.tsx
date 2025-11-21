@@ -85,11 +85,10 @@ export default function NewServicePage() {
     }
   };
   
-  const isDataLoading = isUserLoading || isLoadingEmployee;
-  const buttonText = isStarting ? "Iniciant..." : "Iniciar Servei";
+  const isDataLoading = isUserLoading || isLoadingEmployee || isLoadingCustomers;
 
 
-  if (isUserLoading) {
+  if (isUserLoading && !user) {
     return (
       <div className="flex items-center justify-center h-full">
         <p>Carregant...</p>
@@ -144,10 +143,10 @@ export default function NewServicePage() {
                 size="lg" 
                 className="w-full h-16 text-lg bg-accent hover:bg-accent/90 text-accent-foreground"
                 onClick={handleStartService}
-                disabled={isStarting || isDataLoading}
+                disabled={isDataLoading || isStarting}
             >
                 {isDataLoading ? <Loader2 className="mr-3 h-6 w-6 animate-spin" /> : <MapPin className="mr-3 h-6 w-6" />}
-                {isDataLoading ? "Carregant dades..." : buttonText}
+                {isDataLoading ? "Carregant dades..." : (isStarting ? "Iniciant..." : "Iniciar Servei")}
             </Button>
         </CardContent>
       </Card>
