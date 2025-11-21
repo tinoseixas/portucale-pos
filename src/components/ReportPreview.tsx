@@ -15,6 +15,12 @@ interface ReportPreviewProps {
   showPricing: boolean;
 }
 
+type MaterialLine = {
+    description: string;
+    quantity: number;
+    unitPrice: number;
+}
+
 function calculateTotalTime(services: ServiceRecord[]): string {
     if (!services) return '0h 0m';
 
@@ -41,11 +47,44 @@ function calculateTotalTime(services: ServiceRecord[]): string {
 export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ customer, projectName, services, showPricing }, ref) => {
 
     const totalTime = calculateTotalTime(services);
-    const allMedia = services?.flatMap(s => s.media || []) || [];
-    const allMaterials = services?.flatMap(s => s.materials || []) || [];
     const sortedServices = services.sort((a,b) => parseISO(a.arrivalDateTime).getTime() - parseISO(b.arrivalDateTime).getTime());
     
-    const subtotal = allMaterials.reduce((acc, material) => acc + (material.quantity * material.unitPrice), 0);
+    // Aggregate all materials from all services, grouping by description and unit price
+    const aggregatedMaterials = useMemo(() => {
+        const materialMap = new Map<string, MaterialLine>();
+
+        services.forEach(service => {
+            service.materials?.forEach(material => {
+                const key = `${material.description.toLowerCase()}|${material.unitPrice}`;
+                const existing = materialMap.get(key);
+
+                if (existing) {
+                    existing.quantity += material.quantity;
+                } else {
+                    materialMap.set(key, { ...material });
+                }
+            });
+        });
+        
+        // Separate labor from other materials and ensure it comes first
+        const labor: MaterialLine[] = [];
+        const otherMaterials: MaterialLine[] = [];
+
+        materialMap.forEach(material => {
+            if (material.description.toLowerCase() === 'traball') {
+                labor.push(material);
+            } else {
+                otherMaterials.push(material);
+            }
+        });
+        
+        // Sort other materials alphabetically
+        otherMaterials.sort((a, b) => a.description.localeCompare(b.description));
+
+        return [...labor, ...otherMaterials];
+    }, [services]);
+
+    const subtotal = aggregatedMaterials.reduce((acc, material) => acc + (material.quantity * material.unitPrice), 0);
     const ivaRate = 0.045; // 4.5% IGI for Andorra
     const iva = subtotal * ivaRate;
     const totalGeneral = subtotal + iva;
@@ -105,7 +144,7 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
                           </tr>
                       </thead>
                       <tbody>
-                          {allMaterials.map((material, index) => (
+                          {aggregatedMaterials.map((material, index) => (
                               <tr key={index} className="border-b border-gray-200">
                                   <td className="py-3 px-3">{material.description}</td>
                                   <td className="text-right py-3 px-3 tabular-nums">{material.quantity.toFixed(2)}</td>
@@ -113,7 +152,7 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
                                   <td className="text-right py-3 px-3 font-medium tabular-nums">{(material.quantity * material.unitPrice).toFixed(2)} €</td>
                               </tr>
                           ))}
-                          {allMaterials.length === 0 && (
+                          {aggregatedMaterials.length === 0 && (
                               <tr>
                                   <td colSpan={4} className="text-center py-8 text-gray-500">No s'han registrat materials.</td>
                               </tr>

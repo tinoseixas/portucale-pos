@@ -31,7 +31,7 @@ export default function ReportsPage() {
     const isAdmin = useMemo(() => user?.email === 'tino@seixas.com', [user]);
 
     const customersQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'customers'), orderBy('name', 'asc')) : null, [firestore]);
-    const { data: customers } = useCollection<Customer>(customersQuery)
+    const { data: customers, isLoading: isLoadingCustomers } = useCollection<Customer>(customersQuery)
 
     // Use collectionGroup to query across all 'serviceRecords' subcollections
     const allServicesQuery = useMemoFirebase(() => {
@@ -49,6 +49,11 @@ export default function ReportsPage() {
         const names = customerServices.map(service => service.projectName).filter(Boolean)
         return [...new Set(names)]
     }, [allServices, selectedCustomerId])
+    
+    // Reset project when customer changes
+    useEffect(() => {
+        setSelectedProject('all');
+    }, [selectedCustomerId]);
 
     const filteredServices = useMemo(() => {
         if (!allServices) return []
@@ -93,7 +98,7 @@ export default function ReportsPage() {
         }
     }
 
-    if (isUserLoading) {
+    if (isUserLoading || isLoadingAllServices || isLoadingCustomers) {
         return <p>Carregant...</p>
     }
 
@@ -121,7 +126,7 @@ export default function ReportsPage() {
                         </div>
                         <div className="flex-1 space-y-2">
                              <label className="text-sm font-medium flex items-center gap-2"><Briefcase className="h-4 w-4" /> Obra</label>
-                            <Select value={selectedProject} onValueChange={setSelectedProject} disabled={selectedCustomerId === 'all'}>
+                            <Select value={selectedProject} onValueChange={setSelectedProject} disabled={selectedCustomerId === 'all' || projectNames.length === 0}>
                                 <SelectTrigger>
                                     <SelectValue placeholder="Selecciona una obra" />
                                 </SelectTrigger>
