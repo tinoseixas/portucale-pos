@@ -231,17 +231,14 @@ export default function EditServicePage() {
 
     const filteredAlbarans = albarans.filter(a => a.trim() !== '')
     
-    let processedMaterials: Material[] = [];
+    // Correctly process materials
+    let processedMaterials: Material[] = materials.filter(m => m.description.trim() !== '' && m.description.toLowerCase() !== 'traball');
 
-    // Always calculate labor cost if user is logged in
     if (user) {
         const durationInMinutes = differenceInMinutes(departureDate, arrivalDate);
         const durationInHours = durationInMinutes / 60;
-        
-        // Determine price based on logged-in user's email
         const pricePerHour = user.email === 'tino@seixas.com' ? 35 : 27;
 
-        // Add the new labor cost line
         processedMaterials.push({
             description: 'traball',
             quantity: parseFloat(durationInHours.toFixed(2)),
@@ -249,10 +246,6 @@ export default function EditServicePage() {
         });
     }
 
-    // Add user-entered materials, filtering out empty ones
-    const userEnteredMaterials = materials.filter(m => m.description.trim() !== '' && m.description.toLowerCase() !== 'traball');
-    processedMaterials = [...processedMaterials, ...userEnteredMaterials];
-    
     const selectedCustomer = customers?.find(c => c.id === customerId);
 
     const updatedData: Partial<ServiceRecord> = {
