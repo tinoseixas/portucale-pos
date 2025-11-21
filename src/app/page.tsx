@@ -11,7 +11,6 @@ import { useToast } from "@/hooks/use-toast"
 import { useAuth, useUser, useFirestore } from '@/firebase'
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth'
 import { doc, setDoc, getDoc } from 'firebase/firestore'
-import { ADMIN_EMAIL } from '@/lib/admin'
 
 export default function Home() {
   const router = useRouter()
@@ -47,7 +46,7 @@ export default function Home() {
             lastName: 'Usuari',
             email: loggedInUser.email,
             phoneNumber: '',
-            role: loggedInUser.email === ADMIN_EMAIL ? 'admin' : 'user',
+            role: loggedInUser.email === 'tino@seixas.com' ? 'admin' : 'user',
         }, { merge: true });
       }
 
@@ -80,7 +79,7 @@ export default function Home() {
         lastName: 'Usuari',
         email: newUser.email,
         phoneNumber: '',
-        role: newUser.email === ADMIN_EMAIL ? 'admin' : 'user',
+        role: newUser.email === 'tino@seixas.com' ? 'admin' : 'user',
       }, { merge: true });
 
       toast({
