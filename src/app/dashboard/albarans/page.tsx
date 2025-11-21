@@ -1,15 +1,15 @@
 'use client'
 
-import { useMemo, useEffect } from 'react'
+import { useMemo, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useCollection, useUser, useFirestore, useMemoFirebase, deleteDocumentNonBlocking } from '@/firebase'
-import { collection, query, orderBy, doc } from 'firebase/firestore'
-import type { Albaran } from '@/lib/types'
+import { collection, query, orderBy, doc, getDocs, collectionGroup, writeBatch, updateDoc } from 'firebase/firestore'
+import type { Albaran, ServiceRecord } from '@/lib/types'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
-import { Eye, FileArchive, Trash2 } from 'lucide-react'
-import { format, parseISO } from 'date-fns'
+import { Eye, FileArchive, Trash2, RefreshCw, Loader2 } from 'lucide-react'
+import { format, parseISO, differenceInMinutes, isValid } from 'date-fns'
 import { ca } from 'date-fns/locale'
 import {
   AlertDialog,
@@ -25,11 +25,31 @@ import {
 import { useToast } from '@/hooks/use-toast'
 import { AdminGate } from '@/components/AdminGate'
 
+
+function calculateTotalMinutes(services: ServiceRecord[]): number {
+    if (!services) return 0;
+
+    return services.reduce((total, service) => {
+        if (service.arrivalDateTime && service.departureDateTime) {
+            const startDate = parseISO(service.arrivalDateTime);
+            const endDate = parseISO(service.departureDateTime);
+
+            if (!isValid(startDate) || !isValid(endDate) || startDate.getTime() === endDate.getTime()) {
+              return total;
+            }
+            return total + differenceInMinutes(endDate, startDate);
+        }
+        return total;
+    }, 0);
+}
+
+
 export default function AlbaransHistoryPage() {
   const router = useRouter()
   const { user, isUserLoading } = useUser()
   const firestore = useFirestore()
   const { toast } = useToast()
+  const [isUpdating, setIsUpdating] = useState(false)
 
   useEffect(() => {
     if (!isUserLoading && !user) {
@@ -56,6 +76,68 @@ export default function AlbaransHistoryPage() {
     });
   };
 
+  const handleUpdateAllAlbarans = async () => {
+    if (!firestore || !albarans) {
+      toast({ variant: 'destructive', title: 'Error', description: 'No s\'han pogut carregar les dades.' });
+      return;
+    }
+
+    setIsUpdating(true);
+    toast({ title: 'Actualitzant totals...', description: 'Aquesta operació pot trigar uns moments.' });
+
+    try {
+      // 1. Fetch all service records once
+      const allServicesSnapshot = await getDocs(collectionGroup(firestore, 'serviceRecords'));
+      const allServicesData = allServicesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ServiceRecord));
+      
+      const batch = writeBatch(firestore);
+      let updatedCount = 0;
+
+      for (const albaran of albarans) {
+        // 2. Filter service records for the current albaran from the already fetched data
+        const associatedServices = allServicesData.filter(service => albaran.serviceRecordIds.includes(service.id));
+
+        // 3. Recalculate the total amount
+        const totalMinutes = calculateTotalMinutes(associatedServices);
+        const totalHours = totalMinutes / 60;
+        const laborCost = totalHours * 30;
+
+        const materialsSubtotal = associatedServices.reduce((total, service) => {
+            return total + (service.materials || []).reduce((subtotal, material) => {
+                return subtotal + (material.quantity * material.unitPrice);
+            }, 0);
+        }, 0);
+
+        const subtotal = materialsSubtotal + laborCost;
+        const ivaRate = 0.045; // 4.5% IGI for Andorra
+        const iva = subtotal * ivaRate;
+        const newTotalAmount = subtotal + iva;
+
+        // 4. Update the albaran document in the batch if the total is different
+        if (newTotalAmount.toFixed(2) !== albaran.totalAmount.toFixed(2)) {
+            const albaranRef = doc(firestore, 'albarans', albaran.id);
+            batch.update(albaranRef, { totalAmount: newTotalAmount });
+            updatedCount++;
+        }
+      }
+
+      // 5. Commit the batch
+      await batch.commit();
+
+      toast({
+        title: 'Actualització Completa',
+        description: `${updatedCount} albarà(ns) han estat actualitzats.`,
+      });
+
+    } catch (error) {
+      console.error("Error actualitzant albarans:", error);
+      toast({ variant: 'destructive', title: 'Error', description: 'No s\'ha pogut completar l\'actualització.' });
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+
   if (isUserLoading || isLoadingAlbarans) {
     return <p>Carregant historial...</p>
   }
@@ -68,7 +150,7 @@ export default function AlbaransHistoryPage() {
     <AdminGate pageTitle="Historial d'Albarans" pageDescription="Aquesta secció està protegida.">
         <div className="max-w-6xl mx-auto">
         <Card>
-            <CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between">
             <div className="flex items-center gap-4">
                 <FileArchive className="h-8 w-8" />
                 <div>
@@ -76,6 +158,10 @@ export default function AlbaransHistoryPage() {
                     <CardDescription>Consulta tots els albarans que s'han generat.</CardDescription>
                 </div>
             </div>
+            <Button onClick={handleUpdateAllAlbarans} disabled={isUpdating} variant="outline">
+              {isUpdating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
+              {isUpdating ? 'Actualitzant...' : 'Actualitzar Totals Anteriors'}
+            </Button>
             </CardHeader>
             <CardContent>
             <Table>
