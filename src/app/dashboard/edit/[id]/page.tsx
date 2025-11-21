@@ -34,7 +34,10 @@ import { ca } from 'date-fns/locale'
 import { cn } from '@/lib/utils'
 import { CustomerSelectionDialog } from '@/components/CustomerSelectionDialog'
 
-const MapView = dynamic(() => import('@/components/MapView'), { ssr: false });
+const MapView = dynamic(() => import('@/components/MapView'), { 
+  ssr: false,
+  loading: () => <div className="h-64 w-full bg-muted animate-pulse rounded-md" />
+});
 
 
 type MediaFile = {
