@@ -21,11 +21,11 @@ export function AdminGate({ children, pageTitle, pageDescription }: AdminGatePro
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [password, setPassword] = useState('');
   const { toast } = useToast();
+  const [isClient, setIsClient] = useState(false)
 
   useEffect(() => {
-    // Check session storage on component mount
-    const hasAccess = sessionStorage.getItem(SESSION_STORAGE_KEY) === 'true';
-    if (hasAccess) {
+    setIsClient(true)
+    if (sessionStorage.getItem(SESSION_STORAGE_KEY) === 'true') {
       setIsAuthenticated(true);
     }
   }, []);
@@ -49,6 +49,11 @@ export function AdminGate({ children, pageTitle, pageDescription }: AdminGatePro
     }
   };
 
+  if (!isClient) {
+    // Render nothing or a loading spinner on the server
+    return null;
+  }
+  
   if (isAuthenticated) {
     return <>{children}</>;
   }
@@ -60,7 +65,7 @@ export function AdminGate({ children, pageTitle, pageDescription }: AdminGatePro
             <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-primary/10">
                 <ShieldCheck className="h-6 w-6 text-primary" />
             </div>
-          <CardTitle>Accés Restringit</CardTitle>
+          <CardTitle>{pageTitle}</CardTitle>
           <CardDescription>
             Aquesta secció està protegida. Si us plau, introdueix la contrasenya d'administrador per continuar.
           </CardDescription>
