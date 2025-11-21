@@ -14,7 +14,7 @@ import html2canvas from 'html2canvas'
 import { ReportPreview } from '@/components/ReportPreview'
 import { useToast } from '@/hooks/use-toast'
 import { AdminGate } from '@/components/AdminGate'
-import { differenceInMinutes, parseISO } from 'date-fns'
+import { differenceInMinutes, parseISO, isValid } from 'date-fns'
 
 function calculateTotalMinutes(services: ServiceRecord[]): number {
     if (!services) return 0;
@@ -149,10 +149,9 @@ export default function ReportsPage() {
             const laborCost = totalHours * 30; // Fixed price per hour
 
             const materialsSubtotal = filteredServices.reduce((total, service) => {
-                const serviceTotal = (service.materials || []).reduce((subtotal, material) => {
+                return total + (service.materials || []).reduce((subtotal, material) => {
                     return subtotal + (material.quantity * material.unitPrice);
                 }, 0);
-                return total + serviceTotal;
             }, 0);
 
             const subtotal = materialsSubtotal + laborCost;

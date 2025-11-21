@@ -237,9 +237,7 @@ export default function EditServicePage() {
     const arrivalDateTime = arrivalDate.toISOString();
     const departureDateTime = departureDate.toISOString();
     const filteredAlbarans = albarans.filter(a => a.trim() !== '');
-
     const processedMaterials = materials.filter(m => m.description.trim() !== '');
-
     const selectedCustomer = customers?.find(c => c.id === customerId);
     
     const updatedMedia = media.map(({ type, dataUrl }) => ({ type, dataUrl }));
