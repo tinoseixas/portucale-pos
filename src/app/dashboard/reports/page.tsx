@@ -3,12 +3,12 @@
 import { useState, useMemo, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useCollection, useUser, useFirestore, useMemoFirebase } from '@/firebase'
-import { collection, query, where, orderBy, collectionGroup } from 'firebase/firestore'
+import { collection, query, orderBy, collectionGroup } from 'firebase/firestore'
 import type { Customer, ServiceRecord } from '@/lib/types'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Building, Briefcase, FileDown, Loader2 } from 'lucide-react'
+import { Briefcase, FileDown, Loader2 } from 'lucide-react'
 import jsPDF from 'jspdf'
 import html2canvas from 'html2canvas'
 import { ReportPreview } from '@/components/ReportPreview'
@@ -17,7 +17,6 @@ export default function ReportsPage() {
     const firestore = useFirestore()
     const router = useRouter()
     const { user, isUserLoading } = useUser()
-    const [selectedCustomerId, setSelectedCustomerId] = useState<string>('all')
     const [selectedProject, setSelectedProject] = useState<string>('all')
     const [isGenerating, setIsGenerating] = useState(false)
     const reportRef = useRef<HTMLDivElement>(null)
@@ -33,7 +32,6 @@ export default function ReportsPage() {
     const customersQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'customers'), orderBy('name', 'asc')) : null, [firestore]);
     const { data: customers, isLoading: isLoadingCustomers } = useCollection<Customer>(customersQuery)
 
-    // Use collectionGroup to query across all 'serviceRecords' subcollections
     const allServicesQuery = useMemoFirebase(() => {
         if (!firestore) return null
         return query(collectionGroup(firestore, 'serviceRecords'), orderBy('arrivalDateTime', 'desc'))
@@ -48,23 +46,18 @@ export default function ReportsPage() {
     }, [allServices])
 
     const filteredServices = useMemo(() => {
-        if (!allServices) return []
-        return allServices.filter(service => {
-            const customerMatch = selectedCustomerId === 'all' || service.customerId === selectedCustomerId
-            const projectMatch = selectedProject === 'all' || service.projectName === selectedProject
-            return customerMatch && projectMatch
-        })
-    }, [allServices, selectedCustomerId, selectedProject])
+        if (!allServices || selectedProject === 'all') return []
+        return allServices.filter(service => service.projectName === selectedProject)
+    }, [allServices, selectedProject])
 
-    const selectedCustomer = useMemo(() => customers?.find(c => c.id === selectedCustomerId), [customers, selectedCustomerId])
+    const associatedCustomer = useMemo(() => {
+        if (filteredServices.length === 0 || !customers) return undefined;
+        // Find the first service with a customerId and get that customer
+        const firstServiceWithCustomer = filteredServices.find(s => s.customerId);
+        if (!firstServiceWithCustomer) return undefined;
+        return customers.find(c => c.id === firstServiceWithCustomer.customerId);
+    }, [filteredServices, customers]);
     
-    // Determine the title for the report based on selections
-    const reportTitle = useMemo(() => {
-        if (selectedProject !== 'all') return selectedProject;
-        if (selectedCustomer) return selectedCustomer.name;
-        return 'Totes les Obres';
-    }, [selectedProject, selectedCustomer]);
-
 
     const handleExportPDF = async () => {
         const reportElement = reportRef.current
@@ -74,8 +67,8 @@ export default function ReportsPage() {
 
         try {
             const canvas = await html2canvas(reportElement, {
-                scale: 2, // Higher scale for better quality
-                useCORS: true, // Important for external images
+                scale: 2,
+                useCORS: true, 
                 logging: false
             });
 
@@ -88,7 +81,7 @@ export default function ReportsPage() {
 
             pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height)
 
-            const fileName = `Albara_${(selectedCustomer?.name || 'Clients')}_${(selectedProject !== 'all' ? selectedProject : 'Obres')}.pdf`.replace(/ /g, '_');
+            const fileName = `Albara_${selectedProject}.pdf`.replace(/ /g, '_');
             pdf.save(fileName)
 
         } catch (error) {
@@ -98,7 +91,7 @@ export default function ReportsPage() {
         }
     }
 
-    const canGenerate = selectedCustomerId !== 'all' || selectedProject !== 'all';
+    const canGenerate = selectedProject !== 'all';
 
     if (isUserLoading || isLoadingAllServices || isLoadingCustomers) {
         return <p>Carregant...</p>
@@ -110,22 +103,10 @@ export default function ReportsPage() {
             <Card>
                 <CardHeader>
                     <CardTitle>Generador d'Albarans (PDF)</CardTitle>
-                    <CardDescription>Selecciona un client i/o una obra per generar un albarà detallat.</CardDescription>
+                    <CardDescription>Selecciona una obra per generar un albarà detallat.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                     <div className="flex flex-col sm:flex-row gap-4">
-                        <div className="flex-1 space-y-2">
-                            <label className="text-sm font-medium flex items-center gap-2"><Building className="h-4 w-4" /> Client</label>
-                            <Select value={selectedCustomerId} onValueChange={setSelectedCustomerId}>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Selecciona un client" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="all">Tots els Clients</SelectItem>
-                                    {customers?.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-                                </SelectContent>
-                            </Select>
-                        </div>
                         <div className="flex-1 space-y-2">
                              <label className="text-sm font-medium flex items-center gap-2"><Briefcase className="h-4 w-4" /> Obra</label>
                             <Select value={selectedProject} onValueChange={setSelectedProject}>
@@ -133,7 +114,7 @@ export default function ReportsPage() {
                                     <SelectValue placeholder="Selecciona una obra" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="all">Totes les Obres</SelectItem>
+                                    <SelectItem value="all">Selecciona una obra per començar</SelectItem>
                                     {projectNames.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
                                 </SelectContent>
                             </Select>
@@ -171,8 +152,8 @@ export default function ReportsPage() {
                         ) : (
                            <ReportPreview
                                 ref={reportRef}
-                                customer={selectedCustomer}
-                                projectName={reportTitle}
+                                customer={associatedCustomer}
+                                projectName={selectedProject}
                                 services={filteredServices}
                                 showPricing={isAdmin}
                             />
