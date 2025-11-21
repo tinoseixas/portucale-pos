@@ -55,7 +55,10 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
     const laborCost = totalHours * 30; // 30 is the fixed price per hour
     
     const materialsSubtotal = allMaterials.reduce((acc, material) => acc + (material.quantity * material.unitPrice), 0);
+    
+    // Corrected subtotal calculation
     const subtotal = materialsSubtotal + laborCost;
+
     const ivaRate = 0.045; // 4.5% IGI for Andorra
     const iva = subtotal * ivaRate;
     const totalGeneral = subtotal + iva;
