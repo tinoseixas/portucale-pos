@@ -52,15 +52,10 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
     const totalHours = totalMinutes / 60;
     const totalTimeFormatted = `${Math.floor(totalHours)}h ${totalMinutes % 60}m`;
     
-    const laborLine: MaterialLine = {
-        description: "Mano de Obra",
-        quantity: parseFloat(totalHours.toFixed(2)),
-        unitPrice: 30, // Preu fixat
-    };
+    const laborCost = totalHours * 30; // 30 is the fixed price per hour
     
-    const materialsWithLabor = [...allMaterials, laborLine];
-    
-    const subtotal = materialsWithLabor.reduce((acc, material) => acc + (material.quantity * material.unitPrice), 0);
+    const materialsSubtotal = allMaterials.reduce((acc, material) => acc + (material.quantity * material.unitPrice), 0);
+    const subtotal = materialsSubtotal + laborCost;
     const ivaRate = 0.045; // 4.5% IGI for Andorra
     const iva = subtotal * ivaRate;
     const totalGeneral = subtotal + iva;
@@ -177,26 +172,31 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
             {showPricing && (
               <section className="mt-8 pt-6 border-t-2 border-gray-900">
                     <h3 className="font-bold text-lg mb-4">Resum de Preços</h3>
-                    <table className="w-full text-sm">
-                        <thead className="bg-gray-50">
-                            <tr className="border-b border-gray-200">
-                                <th className="text-left py-2 px-3 font-semibold text-gray-600">DESCRIPCIÓ</th>
-                                <th className="text-right py-2 px-3 font-semibold text-gray-600 w-24">QUANT.</th>
-                                <th className="text-right py-2 px-3 font-semibold text-gray-600 w-24">PREU/UNIT.</th>
-                                <th className="text-right py-2 px-3 font-semibold text-gray-600 w-24">TOTAL</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {materialsWithLabor.map((material, index) => (
-                                <tr key={index} className="border-b border-gray-100">
-                                    <td className="py-2 px-3">{material.description}</td>
-                                    <td className="text-right py-2 px-3 tabular-nums">{material.quantity.toFixed(2)} {material.description === "Mano de Obra" ? "hr" : ""}</td>
-                                    <td className="text-right py-2 px-3 tabular-nums">{material.unitPrice.toFixed(2)} €</td>
-                                    <td className="text-right py-2 px-3 font-medium tabular-nums">{(material.quantity * material.unitPrice).toFixed(2)} €</td>
+                    {allMaterials.length > 0 ? (
+                        <table className="w-full text-sm">
+                            <thead className="bg-gray-50">
+                                <tr className="border-b border-gray-200">
+                                    <th className="text-left py-2 px-3 font-semibold text-gray-600">DESCRIPCIÓ</th>
+                                    <th className="text-right py-2 px-3 font-semibold text-gray-600 w-24">QUANT.</th>
+                                    <th className="text-right py-2 px-3 font-semibold text-gray-600 w-24">PREU/UNIT.</th>
+                                    <th className="text-right py-2 px-3 font-semibold text-gray-600 w-24">TOTAL</th>
                                 </tr>
-                            ))}
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody>
+                                {allMaterials.map((material, index) => (
+                                    <tr key={index} className="border-b border-gray-100">
+                                        <td className="py-2 px-3">{material.description}</td>
+                                        <td className="text-right py-2 px-3 tabular-nums">{material.quantity.toFixed(2)}</td>
+                                        <td className="text-right py-2 px-3 tabular-nums">{material.unitPrice.toFixed(2)} €</td>
+                                        <td className="text-right py-2 px-3 font-medium tabular-nums">{(material.quantity * material.unitPrice).toFixed(2)} €</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    ) : (
+                        <p className="text-sm text-gray-500">No s'han registrat materials per a aquest servei.</p>
+                    )}
+
 
                   <div className="flex justify-between items-start mt-6">
                     <div>
