@@ -240,6 +240,7 @@ export default function EditServicePage() {
     const processedMaterials = materials.filter(m => m.description.trim() !== '');
     const selectedCustomer = customers?.find(c => c.id === customerId);
     
+    // DEFINITIVE FIX: Ensure media data is correctly structured for Firestore.
     const updatedMedia = media.map(({ type, dataUrl }) => ({ type, dataUrl }));
 
     const updatedData: Partial<ServiceRecord> = {
