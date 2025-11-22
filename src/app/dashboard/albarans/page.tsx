@@ -86,7 +86,6 @@ export default function AlbaransHistoryPage() {
     toast({ title: 'Actualitzant totals...', description: 'Aquesta operació pot trigar uns moments.' });
 
     try {
-      // 1. Fetch all service records once
       const allServicesSnapshot = await getDocs(collectionGroup(firestore, 'serviceRecords'));
       const allServicesData = allServicesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ServiceRecord));
       
@@ -94,10 +93,8 @@ export default function AlbaransHistoryPage() {
       let updatedCount = 0;
 
       for (const albaran of albarans) {
-        // 2. Filter service records for the current albaran from the already fetched data
         const associatedServices = allServicesData.filter(service => albaran.serviceRecordIds.includes(service.id));
 
-        // 3. Recalculate the total amount
         const totalMinutes = calculateTotalMinutes(associatedServices);
         const totalHours = totalMinutes / 60;
         const laborCost = totalHours * 30;
@@ -107,13 +104,12 @@ export default function AlbaransHistoryPage() {
                 return subtotal + (material.quantity * material.unitPrice);
             }, 0);
         }, 0);
-
+        
         const subtotal = materialsSubtotal + laborCost;
-        const ivaRate = 0.045; // 4.5% IGI for Andorra
+        const ivaRate = 0.045;
         const iva = subtotal * ivaRate;
         const newTotalAmount = subtotal + iva;
 
-        // 4. Update the albaran document in the batch if the total is different
         if (newTotalAmount.toFixed(2) !== albaran.totalAmount.toFixed(2)) {
             const albaranRef = doc(firestore, 'albarans', albaran.id);
             batch.update(albaranRef, { totalAmount: newTotalAmount });
@@ -121,7 +117,6 @@ export default function AlbaransHistoryPage() {
         }
       }
 
-      // 5. Commit the batch
       await batch.commit();
 
       toast({

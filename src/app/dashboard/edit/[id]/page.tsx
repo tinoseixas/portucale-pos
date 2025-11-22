@@ -120,7 +120,6 @@ export default function EditServicePage() {
       setCustomerId(service.customerId || '');
       setMedia(service.media || [])
       setAlbarans(service.albarans?.length > 0 ? service.albarans : [''])
-      // Set materials only if they exist, otherwise keep the default empty line
       if (service.materials && service.materials.length > 0) {
         setMaterials(service.materials)
       } else {
@@ -130,9 +129,7 @@ export default function EditServicePage() {
   }, [service])
 
   useEffect(() => {
-    // This effect runs only once on the client, after hydration.
-    // It sets the initial date for a *new* record, preventing the hydration mismatch error.
-    if (!date && service === undefined) { // Only set if date is not yet set and we are not editing an existing service
+    if (!date && service === undefined) { 
       setDate(new Date());
     }
   }, [date, service]); 
@@ -240,9 +237,6 @@ export default function EditServicePage() {
     const processedMaterials = materials.filter(m => m.description.trim() !== '');
     const selectedCustomer = customers?.find(c => c.id === customerId);
     
-    // DEFINITIVE FIX: Ensure media data is correctly structured for Firestore.
-    const updatedMedia = media.map(({ type, dataUrl }) => ({ type, dataUrl }));
-
     const updatedData: Partial<ServiceRecord> = {
       arrivalDateTime,
       departureDateTime,
@@ -251,7 +245,7 @@ export default function EditServicePage() {
       pendingTasks,
       customerId,
       customerName: selectedCustomer?.name || service?.customerName || '',
-      media: updatedMedia,
+      media: media, 
       albarans: filteredAlbarans,
       materials: processedMaterials,
       updatedAt: new Date().toISOString(),
