@@ -37,7 +37,6 @@ import { CustomerSelectionDialog } from '@/components/CustomerSelectionDialog'
 type MediaFile = {
   type: 'image' | 'video';
   dataUrl: string;
-  file?: File;
 };
 
 type Material = {
@@ -137,7 +136,6 @@ export default function EditServicePage() {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const files = Array.from(e.target.files);
-      const newMedia: MediaFile[] = [];
       
       const filePromises = files.map(file => {
           return new Promise<MediaFile>((resolve) => {
@@ -145,7 +143,7 @@ export default function EditServicePage() {
               reader.onload = (event) => {
                   const dataUrl = event.target?.result as string;
                   const type = file.type.startsWith('image/') ? 'image' : 'video';
-                  resolve({ type, dataUrl, file });
+                  resolve({ type, dataUrl });
               };
               reader.readAsDataURL(file);
           });
@@ -237,6 +235,9 @@ export default function EditServicePage() {
     const processedMaterials = materials.filter(m => m.description.trim() !== '');
     const selectedCustomer = customers?.find(c => c.id === customerId);
     
+    // Ensure media array does not contain any file objects
+    const updatedMedia = media.map(({ type, dataUrl }) => ({ type, dataUrl }));
+
     const updatedData: Partial<ServiceRecord> = {
       arrivalDateTime,
       departureDateTime,
@@ -245,7 +246,7 @@ export default function EditServicePage() {
       pendingTasks,
       customerId,
       customerName: selectedCustomer?.name || service?.customerName || '',
-      media: media, 
+      media: updatedMedia, 
       albarans: filteredAlbarans,
       materials: processedMaterials,
       updatedAt: new Date().toISOString(),
