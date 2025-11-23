@@ -44,20 +44,39 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
 
     const sortedServices = services.sort((a,b) => parseISO(a.arrivalDateTime).getTime() - parseISO(b.arrivalDateTime).getTime());
     
-    // Correctly get materials ONLY from the services passed to this component
-    const allMaterials = useMemo(() => {
-        return services.flatMap(service => service.materials || []).filter(material => 
-            !material.description.toLowerCase().includes('traball')
-        );
-    }, [services]);
-
     const totalMinutes = useMemo(() => calculateTotalMinutes(services), [services]);
     const totalHours = totalMinutes / 60;
     const totalTimeFormatted = `${Math.floor(totalHours)}h ${totalMinutes % 60}m`;
-    
-    const laborCost = totalHours * 30; // 30 is the fixed price per hour
-    
-    const materialsSubtotal = allMaterials.reduce((acc, material) => acc + (material.quantity * material.unitPrice), 0);
+    const laborCost = totalHours * 30;
+
+    const allMaterials = useMemo(() => {
+        // Get all materials, but filter out any manually added "traball" to avoid duplication
+        const realMaterials = services.flatMap(service => service.materials || []).filter(material => 
+            !material.description.toLowerCase().includes('traball')
+        );
+
+        // Create the definitive list of line items for the table
+        const lineItems: MaterialLine[] = [...realMaterials];
+
+        // Add the calculated labor cost as a separate line item if it's greater than 0
+        if (laborCost > 0) {
+            lineItems.push({
+                description: "Mà d'obra (Hores totals)",
+                quantity: parseFloat(totalHours.toFixed(2)),
+                unitPrice: 30,
+            });
+        }
+        
+        return lineItems;
+
+    }, [services, totalHours, laborCost]);
+
+    const materialsSubtotal = useMemo(() => {
+        // Calculate subtotal from the final list of line items, excluding labor which is handled separately
+         return services.flatMap(service => service.materials || []).filter(material => 
+            !material.description.toLowerCase().includes('traball')
+        ).reduce((acc, material) => acc + (material.quantity * material.unitPrice), 0);
+    }, [services]);
     
     const subtotal = materialsSubtotal + laborCost;
 
@@ -243,3 +262,4 @@ ReportPreview.displayName = "ReportPreview";
     
 
     
+
