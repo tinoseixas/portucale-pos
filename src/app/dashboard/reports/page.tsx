@@ -143,10 +143,9 @@ export default function ReportsPage() {
                 return newNumber;
             });
             
-            // Recalculate total amount logic to include labor and tax
             const totalMinutes = calculateTotalMinutes(filteredServices);
             const totalHours = totalMinutes / 60;
-            const laborCost = totalHours * 30; // Fixed price per hour
+            const laborCost = totalHours * 30;
 
             const materialsSubtotal = filteredServices.reduce((total, service) => {
                 return total + (service.materials || []).reduce((subtotal, material) => {

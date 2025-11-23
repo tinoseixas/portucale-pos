@@ -110,6 +110,7 @@ export default function AlbaransHistoryPage() {
         const iva = subtotal * ivaRate;
         const newTotalAmount = subtotal + iva;
 
+
         if (newTotalAmount.toFixed(2) !== albaran.totalAmount.toFixed(2)) {
             const albaranRef = doc(firestore, 'albarans', albaran.id);
             batch.update(albaranRef, { totalAmount: newTotalAmount });
