@@ -225,26 +225,27 @@ export default function EditUserPage() {
                 {errors.phoneNumber && <p className="text-sm text-destructive">{errors.phoneNumber.message}</p>}
                 </div>
 
-                <div className="space-y-2">
-                    <Label htmlFor="role" className="flex items-center gap-2"><Shield className="h-4 w-4 text-muted-foreground" /> Rol</Label>
-                    <Controller
-                        name="role"
-                        control={control}
-                        render={({ field }) => (
-                        <Select onValueChange={field.onChange} defaultValue={field.value} disabled={!canEditRole}>
-                            <SelectTrigger id="role">
-                            <SelectValue placeholder="Selecciona un rol" />
-                            </SelectTrigger>
-                            <SelectContent>
-                            <SelectItem value="user">Usuari</SelectItem>
-                            <SelectItem value="admin">Administrador</SelectItem>
-                            </SelectContent>
-                        </Select>
-                        )}
-                    />
-                     {!canEditRole && <p className="text-xs text-muted-foreground mt-1">Només l'administrador principal pot canviar els rols.</p>}
-                    {errors.role && <p className="text-sm text-destructive">{errors.role.message}</p>}
-                </div>
+                {canEditRole && (
+                  <div className="space-y-2">
+                      <Label htmlFor="role" className="flex items-center gap-2"><Shield className="h-4 w-4 text-muted-foreground" /> Rol</Label>
+                      <Controller
+                          name="role"
+                          control={control}
+                          render={({ field }) => (
+                          <Select onValueChange={field.onChange} value={field.value} disabled={!canEditRole}>
+                              <SelectTrigger id="role">
+                              <SelectValue placeholder="Selecciona un rol" />
+                              </SelectTrigger>
+                              <SelectContent>
+                              <SelectItem value="user">Usuari</SelectItem>
+                              <SelectItem value="admin">Administrador</SelectItem>
+                              </SelectContent>
+                          </Select>
+                          )}
+                      />
+                      {errors.role && <p className="text-sm text-destructive">{errors.role.message}</p>}
+                  </div>
+                )}
 
                 <div className="flex justify-end pt-4">
                 <Button type="submit" disabled={!isDirty} className="bg-accent hover:bg-accent/90 text-accent-foreground">
