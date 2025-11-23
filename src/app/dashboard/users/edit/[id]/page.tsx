@@ -232,7 +232,7 @@ export default function EditUserPage() {
                           name="role"
                           control={control}
                           render={({ field }) => (
-                          <Select onValueChange={field.onChange} value={field.value} disabled={!canEditRole}>
+                          <Select onValueChange={field.onChange} value={field.value}>
                               <SelectTrigger id="role">
                               <SelectValue placeholder="Selecciona un rol" />
                               </SelectTrigger>

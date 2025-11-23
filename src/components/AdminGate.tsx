@@ -61,7 +61,7 @@ export function AdminGate({ children, pageTitle, pageDescription }: AdminGatePro
             </div>
           <CardTitle>Accés Denegat</CardTitle>
           <CardDescription>
-            No tens permisos per accedir a la secció d'administració. Si us plau, inicia sessió amb un compte d'administrador.
+            No tens permisos per accedir a aquesta secció. Si us plau, inicia sessió amb un compte d'administrador.
           </CardDescription>
         </CardHeader>
         {!user && (
