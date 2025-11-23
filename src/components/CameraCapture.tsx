@@ -2,15 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
-import { SwitchCamera, X, AlertTriangle } from 'lucide-react'
-import {
-  AlertDialog,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
+import { SwitchCamera, X, Video, Camera as CameraIcon } from 'lucide-react'
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert'
 
 
@@ -37,7 +29,7 @@ export function CameraCapture({ onCapture, onClose }: CameraCaptureProps) {
       try {
         stream = await navigator.mediaDevices.getUserMedia({
           video: { facingMode },
-          audio: false, // Don't request audio to prevent issues on some devices
+          audio: false,
         })
         setHasPermission(true)
         if (videoRef.current) {
@@ -78,6 +70,7 @@ export function CameraCapture({ onCapture, onClose }: CameraCaptureProps) {
   }, [isRecording]);
 
   const handleTakePhoto = () => {
+    if (isRecording) return; // Don't take photo while recording
     if (videoRef.current) {
       const canvas = document.createElement('canvas')
       canvas.width = videoRef.current.videoWidth
@@ -102,6 +95,7 @@ export function CameraCapture({ onCapture, onClose }: CameraCaptureProps) {
           mimeType = 'video/mp4';
           if(!MediaRecorder.isTypeSupported(mimeType)) {
               console.error("Neither webm nor mp4 is supported");
+              setIsRecording(false);
               return;
           }
       }
@@ -121,7 +115,6 @@ export function CameraCapture({ onCapture, onClose }: CameraCaptureProps) {
           onCapture(reader.result as string, 'video')
         }
         reader.readAsDataURL(blob)
-        setIsRecording(false)
       }
       mediaRecorderRef.current.start()
     }
@@ -134,16 +127,8 @@ export function CameraCapture({ onCapture, onClose }: CameraCaptureProps) {
     setIsRecording(false);
   }
 
-  const handleCaptureClick = () => {
-    if (isRecording) {
-      handleStopRecording();
-    } else {
-      handleTakePhoto();
-    }
-  };
-
-
   const toggleCamera = () => {
+    if (isRecording) return;
     setFacingMode(prev => (prev === 'user' ? 'environment' : 'user'))
   }
 
@@ -162,7 +147,6 @@ export function CameraCapture({ onCapture, onClose }: CameraCaptureProps) {
         {hasPermission === false && (
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-11/12">
             <Alert variant="destructive">
-              <AlertTriangle className="h-4 w-4" />
               <AlertTitle>Permís de càmera necessari</AlertTitle>
               <AlertDescription>
                 Si us plau, habilita el permís de càmera a la configuració del navegador per continuar.
@@ -178,12 +162,11 @@ export function CameraCapture({ onCapture, onClose }: CameraCaptureProps) {
         </div>
 
         {hasPermission && (
-          <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex items-center justify-center gap-4 w-full">
-            <div className="absolute left-10">
-                <Button variant="ghost" size="icon" onClick={toggleCamera} className="text-white bg-black/50 hover:bg-black/75 rounded-full">
-                    <SwitchCamera />
-                </Button>
-            </div>
+          <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex items-center justify-center gap-8 w-full">
+            
+            <Button variant="ghost" size="icon" onClick={toggleCamera} disabled={isRecording} className="text-white bg-black/50 hover:bg-black/75 rounded-full h-12 w-12">
+                <SwitchCamera />
+            </Button>
 
             <div className="relative flex items-center justify-center">
                  <svg className="w-24 h-24 transform -rotate-90">
@@ -210,15 +193,24 @@ export function CameraCapture({ onCapture, onClose }: CameraCaptureProps) {
                  </svg>
 
                 <button
-                    onClick={handleCaptureClick}
-                    onContextMenu={(e) => { e.preventDefault(); handleStartRecording(); }}
-                    className="absolute w-16 h-16 rounded-full bg-white transition-transform duration-200 active:scale-90 focus:outline-none"
-                    aria-label="Capture"
-                    disabled={!hasPermission}
+                    onClick={handleTakePhoto}
+                    className="absolute w-16 h-16 rounded-full bg-white transition-transform duration-200 active:scale-90 focus:outline-none disabled:opacity-50"
+                    aria-label="Take Photo"
+                    disabled={!hasPermission || isRecording}
                 >
-                    <div className={`w-full h-full rounded-full transition-all duration-200 ${isRecording ? 'bg-red-500 scale-75' : 'bg-white'}`}></div>
+                    <CameraIcon className="h-8 w-8 text-black absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
                 </button>
             </div>
+            
+             <Button
+                variant="ghost"
+                size="icon"
+                onClick={isRecording ? handleStopRecording : handleStartRecording}
+                disabled={!hasPermission}
+                className="text-white bg-black/50 hover:bg-black/75 rounded-full h-12 w-12"
+            >
+                <Video className={isRecording ? "text-red-500" : "text-white"} />
+            </Button>
 
           </div>
         )}
