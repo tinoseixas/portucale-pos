@@ -24,8 +24,7 @@ const MAX_VIDEO_DURATION_MS = 15000; // 15 seconds
 export function CameraCapture({ onCapture, onClose }: CameraCaptureProps) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
-  const pressTimerRef = useRef<NodeJS.Timeout | null>(null);
-
+  
   const [hasPermission, setHasPermission] = useState<boolean | null>(null)
   const [isRecording, setIsRecording] = useState(false)
   const [facingMode, setFacingMode] = useState<'user' | 'environment'>('environment')
@@ -38,7 +37,7 @@ export function CameraCapture({ onCapture, onClose }: CameraCaptureProps) {
       try {
         stream = await navigator.mediaDevices.getUserMedia({
           video: { facingMode },
-          audio: true, // Request audio for video recording
+          audio: false, // Don't request audio to prevent issues on some devices
         })
         setHasPermission(true)
         if (videoRef.current) {
@@ -132,34 +131,17 @@ export function CameraCapture({ onCapture, onClose }: CameraCaptureProps) {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
       mediaRecorderRef.current.stop()
     }
-    if (pressTimerRef.current) {
-        clearTimeout(pressTimerRef.current);
-        pressTimerRef.current = null;
-    }
     setIsRecording(false);
   }
 
-  const handleMouseDown = () => {
-    if (!hasPermission) return;
-    pressTimerRef.current = setTimeout(() => {
-      handleStartRecording();
-    }, 250); // Start recording after 250ms press
-  };
-
-  const handleMouseUp = () => {
-    if (!hasPermission) return;
-    if (pressTimerRef.current) {
-      clearTimeout(pressTimerRef.current);
-      pressTimerRef.current = null;
-      if (!isRecording) {
-        handleTakePhoto();
-      } else {
-        handleStopRecording();
-      }
-    } else if (isRecording) {
+  const handleCaptureClick = () => {
+    if (isRecording) {
       handleStopRecording();
+    } else {
+      handleTakePhoto();
     }
   };
+
 
   const toggleCamera = () => {
     setFacingMode(prev => (prev === 'user' ? 'environment' : 'user'))
@@ -228,11 +210,8 @@ export function CameraCapture({ onCapture, onClose }: CameraCaptureProps) {
                  </svg>
 
                 <button
-                    onMouseDown={handleMouseDown}
-                    onTouchStart={handleMouseDown}
-                    onMouseUp={handleMouseUp}
-                    onTouchEnd={handleMouseUp}
-                    onMouseLeave={handleStopRecording} // Stop if mouse leaves button
+                    onClick={handleCaptureClick}
+                    onContextMenu={(e) => { e.preventDefault(); handleStartRecording(); }}
                     className="absolute w-16 h-16 rounded-full bg-white transition-transform duration-200 active:scale-90 focus:outline-none"
                     aria-label="Capture"
                     disabled={!hasPermission}
