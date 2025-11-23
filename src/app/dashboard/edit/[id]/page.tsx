@@ -125,7 +125,8 @@ export default function EditServicePage() {
       setProjectName(service.projectName || '');
       setPendingTasks(service.pendingTasks || '');
       setCustomerId(service.customerId || '');
-      setEmployeeId(service.employeeId || '');
+      // Set the default employee to the currently logged-in user
+      setEmployeeId(user?.uid || service.employeeId || '');
       setMedia(service.media || [])
       setAlbarans(service.albarans?.length > 0 ? service.albarans : [''])
       if (service.materials && service.materials.length > 0) {
@@ -134,7 +135,7 @@ export default function EditServicePage() {
         setMaterials([{ description: '', quantity: 1, unitPrice: 0 }]);
       }
     }
-  }, [service])
+  }, [service, user])
 
   useEffect(() => {
     if (!date && service === undefined) { 
