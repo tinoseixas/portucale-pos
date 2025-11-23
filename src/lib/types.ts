@@ -21,7 +21,7 @@ export interface ServiceRecord {
     unitPrice: number;
   }[];
   updatedAt?: string;
-  createdAt?: string; // Add createdAt for sorting and tracking
+  createdAt?: string; 
 }
 
 export interface Employee {

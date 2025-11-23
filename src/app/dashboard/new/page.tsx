@@ -1,11 +1,11 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { LogIn, MapPin, Users, Loader2 } from 'lucide-react'
+import { LogIn, MapPin, Users, Loader2, User as UserIcon } from 'lucide-react'
 import { useToast } from "@/hooks/use-toast"
 import { useFirestore, useUser, useDoc, useCollection, useMemoFirebase } from '@/firebase'
 import { addDoc, collection, doc, query, orderBy } from 'firebase/firestore'
@@ -21,29 +21,51 @@ export default function NewServicePage() {
   const { user, isUserLoading } = useUser()
   const firestore = useFirestore()
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>('none');
+  const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>('');
   
   const employeeDocRef = useMemoFirebase(() => {
     if (!user) return null;
     return doc(firestore, 'employees', user.uid);
   }, [firestore, user]);
 
-  const { data: employee, isLoading: isLoadingEmployee } = useDoc<Employee>(employeeDocRef);
+  const { data: currentEmployee, isLoading: isLoadingEmployee } = useDoc<Employee>(employeeDocRef);
   
   const customersQuery = useMemoFirebase(() => {
       if (!firestore || !user) return null
       return query(collection(firestore, 'customers'), orderBy('name', 'asc'))
   }, [firestore, user]);
 
-  const { data: customers, isLoading: isLoadingCustomers } = useCollection<Customer>(customersQuery)
+  const { data: customers, isLoading: isLoadingCustomers } = useCollection<Customer>(customersQuery);
+
+  const employeesQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return query(collection(firestore, 'employees'), orderBy('firstName', 'asc'));
+  }, [firestore]);
+
+  const { data: employees, isLoading: isLoadingEmployees } = useCollection<Employee>(employeesQuery);
+
+  // Set the default selected employee to the current user when data is available
+  useEffect(() => {
+    if (user && !selectedEmployeeId) {
+      setSelectedEmployeeId(user.uid);
+    }
+  }, [user, selectedEmployeeId]);
 
 
   const handleStartService = async () => {
-    if (!user || !firestore) {
+    if (!user || !firestore || !selectedEmployeeId || !employees) {
         toast({ variant: "destructive", title: "Error", description: "No s'han pogut carregar les dades de l'usuari." });
         return;
     }
     
     setIsStarting(true);
+    
+    const selectedEmployee = employees.find(e => e.id === selectedEmployeeId);
+    if (!selectedEmployee) {
+        toast({ variant: "destructive", title: "Error", description: "L'empleat seleccionat no és vàlid." });
+        setIsStarting(false);
+        return;
+    }
 
     const getLocation = new Promise<{ latitude: number; longitude: number } | null>((resolve) => {
         if ('geolocation' in navigator) {
@@ -82,8 +104,8 @@ export default function NewServicePage() {
         
         const now = new Date();
         const serviceRecord: Omit<ServiceRecord, 'id'> = {
-            employeeId: user.uid,
-            employeeName: (employee ? `${employee.firstName} ${employee.lastName}`: (user.email || "Desconegut")),
+            employeeId: selectedEmployee.id,
+            employeeName: `${selectedEmployee.firstName} ${selectedEmployee.lastName}`,
             arrivalDateTime: now.toISOString(),
             departureDateTime: now.toISOString(), 
             description: "Servei en curs...",
@@ -98,14 +120,17 @@ export default function NewServicePage() {
             createdAt: now.toISOString(),
         };
         
-        const serviceRecordsCollection = collection(firestore, `employees/${user.uid}/serviceRecords`);
+        // Service records are always created under the employee they belong to
+        const serviceRecordsCollection = collection(firestore, `employees/${selectedEmployee.id}/serviceRecords`);
         const docRef = await addDoc(serviceRecordsCollection, serviceRecord);
         
         toast({ 
-            title: `Gràcies, ${employee?.firstName || user.email}!`,
+            title: `Servei iniciat per a ${selectedEmployee.firstName}!`,
             description: "S'ha iniciat el registre del servei." + (location ? " Ubicació guardada." : " No s'ha pogut guardar la ubicació."),
         });
-        router.push(`/dashboard/edit/${docRef.id}`);
+        
+        // Redirect to the edit page with the ownerId of the record's actual owner
+        router.push(`/dashboard/edit/${docRef.id}?ownerId=${selectedEmployee.id}`);
 
     } catch (error) {
         console.error("Error creating service record:", error);
@@ -114,7 +139,7 @@ export default function NewServicePage() {
     }
   };
   
-  const isDataLoading = isUserLoading || isLoadingEmployee || isLoadingCustomers;
+  const isDataLoading = isUserLoading || isLoadingEmployee || isLoadingCustomers || isLoadingEmployees;
 
 
   if (isUserLoading && !user) {
@@ -147,13 +172,26 @@ export default function NewServicePage() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto flex items-center justify-center" style={{ height: '60vh' }}>
+    <div className="max-w-2xl mx-auto flex items-center justify-center" style={{ height: '70vh' }}>
       <Card className="w-full text-center">
         <CardHeader>
           <CardTitle>Preparat per començar?</CardTitle>
-          <CardDescription>Selecciona un client (opcional) i clica el botó per iniciar un nou servei.</CardDescription>
+          <CardDescription>Selecciona un tècnic i un client (opcional) i clica el botó per iniciar un nou servei.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
+            <div className="space-y-2 text-left">
+                <Label htmlFor="employeeId" className="flex items-center gap-2"><UserIcon className="h-4 w-4 text-muted-foreground" /> Tècnic</Label>
+                <Select value={selectedEmployeeId} onValueChange={setSelectedEmployeeId} disabled={isLoadingEmployees}>
+                    <SelectTrigger id="employeeId">
+                        <SelectValue placeholder={isLoadingEmployees ? "A carregar tècnics..." : "Selecciona un tècnic..."} />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {employees?.map(e => (
+                        <SelectItem key={e.id} value={e.id}>{e.firstName} {e.lastName}</SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
+            </div>
             <div className="space-y-2 text-left">
               <Label htmlFor="customerId" className="flex items-center gap-2"><Users className="h-4 w-4 text-muted-foreground" /> Client</Label>
               <Select value={selectedCustomerId} onValueChange={setSelectedCustomerId} disabled={isLoadingCustomers}>
