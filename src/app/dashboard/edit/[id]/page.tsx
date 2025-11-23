@@ -8,11 +8,11 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Clock, FileText, Camera, ArrowLeft, Save, Trash2, Hash, Plus, X, Video, Calendar as CalendarIcon, Info, Briefcase, AlertTriangle, Users, Package, Euro, MapPin } from 'lucide-react'
+import { Clock, FileText, Camera, ArrowLeft, Save, Trash2, Hash, Plus, X, Video, Calendar as CalendarIcon, Info, Briefcase, AlertTriangle, Users, Package, Euro, MapPin, User as UserIcon } from 'lucide-react'
 import { useToast } from "@/hooks/use-toast"
 import { useFirestore, useUser, useDoc, useMemoFirebase, useCollection } from '@/firebase'
 import { doc, deleteDoc, collection, query, getDocs, collectionGroup, orderBy } from 'firebase/firestore'
-import type { ServiceRecord, Customer } from '@/lib/types'
+import type { ServiceRecord, Customer, Employee } from '@/lib/types'
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates'
 import Image from 'next/image'
 import {
@@ -33,6 +33,7 @@ import { format, parseISO, isValid, differenceInMinutes } from 'date-fns'
 import { ca } from 'date-fns/locale'
 import { cn } from '@/lib/utils'
 import { CustomerSelectionDialog } from '@/components/CustomerSelectionDialog'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 
 type MediaFile = {
   type: 'image' | 'video';
@@ -71,6 +72,12 @@ export default function EditServicePage() {
   
   const { data: customers, isLoading: isLoadingCustomers } = useCollection<Customer>(customersQuery);
 
+  const employeesQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return query(collection(firestore, 'employees'), orderBy('firstName', 'asc'));
+  }, [firestore]);
+  const { data: employees, isLoading: isLoadingEmployees } = useCollection<Employee>(employeesQuery);
+
   const projectNamesQuery = useMemoFirebase(() => {
       if (!firestore) return null;
       return query(collectionGroup(firestore, 'serviceRecords'));
@@ -95,6 +102,7 @@ export default function EditServicePage() {
   const [materials, setMaterials] = useState<Material[]>([{ description: '', quantity: 1, unitPrice: 0 }]);
   const [showCamera, setShowCamera] = useState(false);
   const [customerId, setCustomerId] = useState<string>('');
+  const [employeeId, setEmployeeId] = useState<string>('');
   const [isCustomerDialogOpen, setIsCustomerDialogOpen] = useState(false)
 
   useEffect(() => {
@@ -117,6 +125,7 @@ export default function EditServicePage() {
       setProjectName(service.projectName || '');
       setPendingTasks(service.pendingTasks || '');
       setCustomerId(service.customerId || '');
+      setEmployeeId(service.employeeId || '');
       setMedia(service.media || [])
       setAlbarans(service.albarans?.length > 0 ? service.albarans : [''])
       if (service.materials && service.materials.length > 0) {
@@ -234,6 +243,7 @@ export default function EditServicePage() {
     const filteredAlbarans = albarans.filter(a => a.trim() !== '');
     const processedMaterials = materials.filter(m => m.description.trim() !== '');
     const selectedCustomer = customers?.find(c => c.id === customerId);
+    const selectedEmployee = employees?.find(e => e.id === employeeId);
     
     const updatedData: Partial<ServiceRecord> = {
       arrivalDateTime,
@@ -243,6 +253,8 @@ export default function EditServicePage() {
       pendingTasks,
       customerId,
       customerName: selectedCustomer?.name || service?.customerName || '',
+      employeeId: selectedEmployee?.id || service?.employeeId,
+      employeeName: selectedEmployee ? `${selectedEmployee.firstName} ${selectedEmployee.lastName}` : service?.employeeName,
       media: media, 
       albarans: filteredAlbarans,
       materials: processedMaterials,
@@ -281,7 +293,7 @@ export default function EditServicePage() {
       return customers.find(c => c.id === customerId)?.name || service?.customerName || 'Cap client assignat';
   }, [customerId, customers, isLoadingCustomers, service]);
 
-  if (isUserLoading || isLoading || isLoadingCustomers || isLoadingAllServices) {
+  if (isUserLoading || isLoading || isLoadingCustomers || isLoadingAllServices || isLoadingEmployees) {
     return <p>Carregant servei...</p>
   }
 
@@ -367,6 +379,20 @@ export default function EditServicePage() {
                  </p>
               </div>
             )}
+
+            <div className="space-y-2">
+                <Label htmlFor="employeeId" className="flex items-center gap-2"><UserIcon className="h-4 w-4 text-muted-foreground" /> Tècnic</Label>
+                <Select value={employeeId} onValueChange={setEmployeeId} disabled={isLoadingEmployees}>
+                    <SelectTrigger id="employeeId">
+                        <SelectValue placeholder={isLoadingEmployees ? "A carregar tècnics..." : "Selecciona un tècnic..."} />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {employees?.map(e => (
+                        <SelectItem key={e.id} value={e.id}>{e.firstName} {e.lastName}</SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
+            </div>
 
             <div className="space-y-2">
               <Label htmlFor="customerId" className="flex items-center gap-2"><Users className="h-4 w-4 text-muted-foreground" /> Client</Label>
