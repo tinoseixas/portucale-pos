@@ -1,76 +1,11 @@
-/**
- * @fileoverview Firestore Security Rules for the 'Registre Diari de Treball' application.
- *
- * Core Philosophy:
- * This ruleset has been simplified to allow any authenticated user full access.
- * All signed-in users can read, write, update, and delete any data.
- * This removes the complexity of owner-based and admin-based roles.
- *
- * Data Structure:
- * /employees/{employeeId} - Employee profile data
- * /employees/{employeeId}/serviceRecords/{serviceRecordId} - Service records for an employee
- * /customers/{customerId} - Customer profiles
- * /albarans/{albaranId} - Generated albarà records
- * /counters/albarans - Sequential counter for albaràs
- */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // --- Helper Functions ---
-
-    // Checks if the request has valid authentication credentials.
-    function isSignedIn() {
-      return request.auth != null;
-    }
-    
-    // --- Collection Rules ---
-
-    /**
-     * @description Protects access to the /employees/{employeeId} collection.
-     * Any signed-in user can manage all profiles.
-     */
-    match /employees/{employeeId} {
-      allow read, write: if isSignedIn();
-
-      /**
-       * @description Protects access to the serviceRecords subcollection.
-       * Any signed-in user can manage all service records. This is intentionally
-       * broad to allow admins or other users to edit records on behalf of others.
-       */
-      match /serviceRecords/{serviceRecordId} {
-        allow read, write: if isSignedIn();
-      }
-    }
-
-    /**
-     * @description Protects access to the /customers/{customerId} collection.
-     * Any signed-in user can manage all customers.
-     */
-    match /customers/{customerId} {
-      allow read, write: if isSignedIn();
-    }
-    
-    /**
-     * @description Protects access to albarans and counters.
-     * Any signed-in user can read and write.
-     */
-    match /albarans/{albaranId} {
-       allow read, write: if isSignedIn();
-    }
-    match /counters/{counterId} {
-       allow read, write: if isSignedIn();
-    }
-    
-    // --- Collection Group Rules ---
-    
-    /**
-     * @description Enables cross-user queries and writes on serviceRecords.
-     * Essential for the main dashboard to view all records and for any user
-     * to edit any record, which is the intended flexible behavior.
-     */
-    match /{path=**}/serviceRecords/{serviceRecordId} {
-       allow read, write: if isSignedIn();
+    // Regra global: Permite leitura e escrita em todos os documentos 
+    // para qualquer utilizador autenticado.
+    // Isto resolve os problemas de permissão ao editar registos de outros utilizadores.
+    match /{document=**} {
+      allow read, write: if request.auth != null;
     }
   }
 }
