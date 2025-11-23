@@ -44,8 +44,8 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
 
     const sortedServices = services.sort((a,b) => parseISO(a.arrivalDateTime).getTime() - parseISO(b.arrivalDateTime).getTime());
     
+    // Correctly get materials ONLY from the services passed to this component
     const allMaterials = useMemo(() => {
-        // CORRECTION: Only get materials from the services passed into this component
         return services.flatMap(service => service.materials || []);
     }, [services]);
 
