@@ -59,11 +59,11 @@ export default function UsersPage() {
     if (!isUserLoading && !user) {
       router.push('/');
     }
-  }, [isUserLoading, user, router]);
+  }, [isUserLoading, user]);
 
   const handleWhatsAppClick = (phoneNumber: string) => {
-    const internationalNumber = phoneNumber.startsWith('+') ? phoneNumber : `376${phoneNumber}`;
-    window.open(`https://wa.me/${internationalNumber.replace(/\s+/g, '')}`, '_blank');
+    const internationalNumber = phoneNumber.startsWith('+') ? phoneNumber : `376${phoneNumber.replace(/\s+/g, '')}`;
+    window.open(`https://wa.me/${internationalNumber}`, '_blank');
   };
 
   const handleDeleteUser = (employeeId: string, employeeName: string) => {
