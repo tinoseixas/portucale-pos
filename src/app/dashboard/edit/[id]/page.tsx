@@ -55,14 +55,15 @@ export default function EditServicePage() {
   const firestore = useFirestore()
   const serviceId = params.id as string
 
-  const ownerId = user?.uid
-  
-  const serviceDocRef = useMemoFirebase(() => {
-    if (!ownerId || !serviceId || !firestore) return null
-    const recordOwnerId = searchParams.get('ownerId') || ownerId;
-    return doc(firestore, `employees/${recordOwnerId}/serviceRecords`, serviceId)
-  }, [firestore, ownerId, serviceId, searchParams])
+  // Get the ownerId from the query parameter to build the direct path
+  const recordOwnerId = searchParams.get('ownerId');
 
+  const serviceDocRef = useMemoFirebase(() => {
+    // Wait until all required IDs are available
+    if (!recordOwnerId || !serviceId || !firestore) return null;
+    return doc(firestore, `employees/${recordOwnerId}/serviceRecords`, serviceId);
+  }, [firestore, recordOwnerId, serviceId]);
+  
   const { data: service, isLoading } = useDoc<ServiceRecord>(serviceDocRef)
   
   const customersQuery = useMemoFirebase(() => {
@@ -80,6 +81,8 @@ export default function EditServicePage() {
 
   const projectNamesQuery = useMemoFirebase(() => {
       if (!firestore) return null;
+      // This query can be slow, but it's for an auxiliary feature (autocomplete)
+      // It won't block the main functionality.
       return query(collectionGroup(firestore, 'serviceRecords'));
   }, [firestore]);
 
@@ -210,7 +213,7 @@ export default function EditServicePage() {
   };
   
   const removeMedia = (index: number) => {
-    setMedia(prev => prev.filter((_, i) => i !== index));
+    setMedia(prev => prev.filter((_, i) => !== index));
   }
   
   const handleCustomerSelect = (customer: Customer) => {
@@ -299,7 +302,7 @@ export default function EditServicePage() {
   }
 
   if (!service) {
-    return <p>No s'ha trobat el servei.</p>
+    return <p>No s'ha trobat el servei o no tens permisos per veure'l.</p>
   }
 
   if (showCamera) {
