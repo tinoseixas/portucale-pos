@@ -31,6 +31,8 @@ const profileSchema = z.object({
 
 type ProfileFormValues = z.infer<typeof profileSchema>;
 
+const ADMIN_EMAIL = 'tinoseixas@gmail.com';
+
 export default function EditUserPage() {
   const router = useRouter();
   const params = useParams();
@@ -146,6 +148,8 @@ export default function EditUserPage() {
     if (employee?.email) return employee.email[0].toUpperCase();
     return 'U';
   }
+  
+  const canEditRole = currentUser?.email === ADMIN_EMAIL;
 
   return (
     <AdminGate pageTitle="Edició d'Usuari" pageDescription="Aquesta secció està protegida.">
@@ -227,7 +231,7 @@ export default function EditUserPage() {
                         name="role"
                         control={control}
                         render={({ field }) => (
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <Select onValueChange={field.onChange} defaultValue={field.value} disabled={!canEditRole}>
                             <SelectTrigger id="role">
                             <SelectValue placeholder="Selecciona un rol" />
                             </SelectTrigger>
@@ -238,6 +242,7 @@ export default function EditUserPage() {
                         </Select>
                         )}
                     />
+                     {!canEditRole && <p className="text-xs text-muted-foreground mt-1">Només l'administrador principal pot canviar els rols.</p>}
                     {errors.role && <p className="text-sm text-destructive">{errors.role.message}</p>}
                 </div>
 
