@@ -29,7 +29,7 @@ export function CameraCapture({ onCapture, onClose }: CameraCaptureProps) {
       try {
         stream = await navigator.mediaDevices.getUserMedia({
           video: { facingMode },
-          audio: false,
+          audio: false, // Corrected: Audio is not needed for photos and can cause permission issues on mobile
         })
         setHasPermission(true)
         if (videoRef.current) {
@@ -207,7 +207,7 @@ export function CameraCapture({ onCapture, onClose }: CameraCaptureProps) {
                 size="icon"
                 onClick={isRecording ? handleStopRecording : handleStartRecording}
                 disabled={!hasPermission}
-                className="text-white bg-black/50 hover:bg-black/75 rounded-full h-12 w-12"
+                className="text-white bg-black/50 hover:bg-black/75 rounded-full h-12 w-12 hidden" // Temporarily hide video button
             >
                 <Video className={isRecording ? "text-red-500" : "text-white"} />
             </Button>
