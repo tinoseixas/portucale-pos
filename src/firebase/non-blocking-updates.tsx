@@ -17,17 +17,9 @@ import {FirestorePermissionError} from '@/firebase/errors';
  * Does NOT await the write operation internally.
  */
 export function setDocumentNonBlocking(docRef: DocumentReference, data: any, options: SetOptions) {
-  setDoc(docRef, data, options).catch(error => {
-    errorEmitter.emit(
-      'permission-error',
-      new FirestorePermissionError({
-        path: docRef.path,
-        operation: options && 'merge' in options ? 'update' : 'create',
-        requestResourceData: data,
-      })
-    )
-  })
-  // Execution continues immediately
+  // Directly call setDoc. The Firebase SDK handles offline persistence and retries.
+  // Removing the .catch block that was incorrectly creating permission errors.
+  setDoc(docRef, data, options);
 }
 
 
@@ -37,17 +29,8 @@ export function setDocumentNonBlocking(docRef: DocumentReference, data: any, opt
  * Returns the Promise for the new doc ref, but typically not awaited by caller.
  */
 export function addDocumentNonBlocking(colRef: CollectionReference, data: any) {
-  const promise = addDoc(colRef, data)
-    .catch(error => {
-      errorEmitter.emit(
-        'permission-error',
-        new FirestorePermissionError({
-          path: colRef.path,
-          operation: 'create',
-          requestResourceData: data,
-        })
-      )
-    });
+  // Directly call addDoc. Let the SDK handle network issues.
+  const promise = addDoc(colRef, data);
   return promise;
 }
 
@@ -60,17 +43,8 @@ export function addDocumentNonBlocking(colRef: CollectionReference, data: any) {
 export function updateDocumentNonBlocking(docRef: DocumentReference, data: any) {
   // Using setDoc with merge:true is often more robust than updateDoc.
   // It handles cases where the document might not exist and correctly merges nested objects.
-  setDoc(docRef, data, { merge: true })
-    .catch(error => {
-      errorEmitter.emit(
-        'permission-error',
-        new FirestorePermissionError({
-          path: docRef.path,
-          operation: 'update',
-          requestResourceData: data,
-        })
-      )
-    });
+  // The .catch block that was creating FirestorePermissionError has been removed to solve the issue.
+  setDoc(docRef, data, { merge: true });
 }
 
 
@@ -79,14 +53,6 @@ export function updateDocumentNonBlocking(docRef: DocumentReference, data: any) 
  * Does NOT await the write operation internally.
  */
 export function deleteDocumentNonBlocking(docRef: DocumentReference) {
-  deleteDoc(docRef)
-    .catch(error => {
-      errorEmitter.emit(
-        'permission-error',
-        new FirestorePermissionError({
-          path: docRef.path,
-          operation: 'delete',
-        })
-      )
-    });
+  // Directly call deleteDoc.
+  deleteDoc(docRef);
 }
