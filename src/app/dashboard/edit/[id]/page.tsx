@@ -310,7 +310,7 @@ export default function EditServicePage() {
       customerId,
       customerName: selectedCustomer?.name || service?.customerName || '',
       employeeId: selectedEmployee?.id || service?.employeeId,
-      employeeName: selectedEmployee ? `${selectedEmployee.firstName} ${selectedEmployee.lastName}` : service?.employeeName,
+      employeeName: (selectedEmployee ? `${selectedEmployee.firstName} ${selectedEmployee.lastName}` : service?.employeeName) || '',
       media: media, 
       albarans: filteredAlbarans,
       materials: processedMaterials,
