@@ -56,7 +56,6 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
     
     const materialsSubtotal = allMaterials.reduce((acc, material) => acc + (material.quantity * material.unitPrice), 0);
     
-    // Corrected subtotal calculation
     const subtotal = materialsSubtotal + laborCost;
 
     const ivaRate = 0.045; // 4.5% IGI for Andorra
@@ -237,3 +236,5 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
 })
 
 ReportPreview.displayName = "ReportPreview";
+
+    
