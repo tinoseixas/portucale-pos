@@ -46,7 +46,7 @@ export default function Home() {
             lastName: 'Usuari',
             email: loggedInUser.email,
             phoneNumber: '',
-            role: loggedInUser.email === 'tino@seixas.com' ? 'admin' : 'user',
+            role: loggedInUser.email === 'tinoseixas@gmail.com' ? 'admin' : 'user',
         }, { merge: true });
       }
 
@@ -79,7 +79,7 @@ export default function Home() {
         lastName: 'Usuari',
         email: newUser.email,
         phoneNumber: '',
-        role: newUser.email === 'tino@seixas.com' ? 'admin' : 'user',
+        role: newUser.email === 'tinoseixas@gmail.com' ? 'admin' : 'user',
       }, { merge: true });
 
       toast({
