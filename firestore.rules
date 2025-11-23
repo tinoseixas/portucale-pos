@@ -35,7 +35,8 @@ service cloud.firestore {
 
       /**
        * @description Protects access to the serviceRecords subcollection.
-       * Any signed-in user can manage all service records.
+       * Any signed-in user can manage all service records. This is intentionally
+       * broad to allow admins or other users to edit records on behalf of others.
        */
       match /serviceRecords/{serviceRecordId} {
         allow read, write: if isSignedIn();
