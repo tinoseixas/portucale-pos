@@ -235,9 +235,6 @@ export default function EditServicePage() {
     const processedMaterials = materials.filter(m => m.description.trim() !== '');
     const selectedCustomer = customers?.find(c => c.id === customerId);
     
-    // Ensure media array does not contain any file objects
-    const updatedMedia = media.map(({ type, dataUrl }) => ({ type, dataUrl }));
-
     const updatedData: Partial<ServiceRecord> = {
       arrivalDateTime,
       departureDateTime,
@@ -246,7 +243,7 @@ export default function EditServicePage() {
       pendingTasks,
       customerId,
       customerName: selectedCustomer?.name || service?.customerName || '',
-      media: updatedMedia, 
+      media: media, 
       albarans: filteredAlbarans,
       materials: processedMaterials,
       updatedAt: new Date().toISOString(),
