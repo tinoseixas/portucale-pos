@@ -65,11 +65,12 @@ service cloud.firestore {
     // --- Collection Group Rules ---
     
     /**
-     * @description Enables cross-user queries on serviceRecords.
-     * Essential for the main dashboard to view all records.
+     * @description Enables cross-user queries and writes on serviceRecords.
+     * Essential for the main dashboard to view all records and for any user
+     * to edit any record, which is the intended flexible behavior.
      */
     match /{path=**}/serviceRecords/{serviceRecordId} {
-       allow get, list: if isSignedIn();
+       allow read, write: if isSignedIn();
     }
   }
 }
