@@ -12,6 +12,9 @@ interface CameraCaptureProps {
 }
 
 const MAX_VIDEO_DURATION_MS = 15000; // 15 seconds
+const MAX_IMAGE_WIDTH = 1024;
+const MAX_IMAGE_HEIGHT = 1024;
+const IMAGE_QUALITY = 0.85;
 
 export function CameraCapture({ onCapture, onClose }: CameraCaptureProps) {
   const videoRef = useRef<HTMLVideoElement>(null)
@@ -29,7 +32,7 @@ export function CameraCapture({ onCapture, onClose }: CameraCaptureProps) {
       try {
         stream = await navigator.mediaDevices.getUserMedia({
           video: { facingMode },
-          audio: false, // Corrected: Audio is not needed for photos and can cause permission issues on mobile
+          audio: false, 
         })
         setHasPermission(true)
         if (videoRef.current) {
@@ -70,17 +73,31 @@ export function CameraCapture({ onCapture, onClose }: CameraCaptureProps) {
   }, [isRecording]);
 
   const handleTakePhoto = () => {
-    if (isRecording) return; // Don't take photo while recording
-    if (videoRef.current) {
-      const canvas = document.createElement('canvas')
-      canvas.width = videoRef.current.videoWidth
-      canvas.height = videoRef.current.videoHeight
-      const context = canvas.getContext('2d')
-      if (context) {
-        context.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height)
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.9)
-        onCapture(dataUrl, 'image')
-      }
+    if (isRecording || !videoRef.current) return;
+    
+    const canvas = document.createElement('canvas');
+    let { videoWidth: width, videoHeight: height } = videoRef.current;
+
+    // Resize logic
+    if (width > height) {
+        if (width > MAX_IMAGE_WIDTH) {
+            height = Math.round((height * MAX_IMAGE_WIDTH) / width);
+            width = MAX_IMAGE_WIDTH;
+        }
+    } else {
+        if (height > MAX_IMAGE_HEIGHT) {
+            width = Math.round((width * MAX_IMAGE_HEIGHT) / height);
+            height = MAX_IMAGE_HEIGHT;
+        }
+    }
+
+    canvas.width = width;
+    canvas.height = height;
+    const context = canvas.getContext('2d');
+    if (context) {
+        context.drawImage(videoRef.current, 0, 0, width, height);
+        const dataUrl = canvas.toDataURL('image/jpeg', IMAGE_QUALITY);
+        onCapture(dataUrl, 'image');
     }
   }
 

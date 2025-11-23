@@ -46,6 +46,50 @@ type Material = {
     unitPrice: number;
 }
 
+const MAX_IMAGE_WIDTH = 1024;
+const MAX_IMAGE_HEIGHT = 1024;
+const IMAGE_QUALITY = 0.85; // 85% JPEG quality
+
+function resizeAndCompressImage(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            const img = document.createElement('img');
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                let { width, height } = img;
+
+                if (width > height) {
+                    if (width > MAX_IMAGE_WIDTH) {
+                        height = Math.round((height * MAX_IMAGE_WIDTH) / width);
+                        width = MAX_IMAGE_WIDTH;
+                    }
+                } else {
+                    if (height > MAX_IMAGE_HEIGHT) {
+                        width = Math.round((width * MAX_IMAGE_HEIGHT) / height);
+                        height = MAX_IMAGE_HEIGHT;
+                    }
+                }
+
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                if (!ctx) {
+                    return reject(new Error('Could not get canvas context'));
+                }
+                ctx.drawImage(img, 0, 0, width, height);
+
+                resolve(canvas.toDataURL('image/jpeg', IMAGE_QUALITY));
+            };
+            img.onerror = reject;
+            img.src = event.target?.result as string;
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+    });
+}
+
+
 export default function EditServicePage() {
   const router = useRouter()
   const params = useParams()
@@ -146,27 +190,35 @@ export default function EditServicePage() {
     }
   }, [date, service]); 
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
-      const files = Array.from(e.target.files);
-      
-      const filePromises = files.map(file => {
-          return new Promise<MediaFile>((resolve) => {
-              const reader = new FileReader();
-              reader.onload = (event) => {
-                  const dataUrl = event.target?.result as string;
-                  const type = file.type.startsWith('image/') ? 'image' : 'video';
-                  resolve({ type, dataUrl });
-              };
-              reader.readAsDataURL(file);
-          });
-      });
+        const files = Array.from(e.target.files);
+        toast({ title: 'Processant imatges...', description: 'Si us plau, espera un moment.' });
+        try {
+            const filePromises = files.map(async (file) => {
+                if (file.type.startsWith('image/')) {
+                    const compressedDataUrl = await resizeAndCompressImage(file);
+                    return { type: 'image' as const, dataUrl: compressedDataUrl };
+                } else if (file.type.startsWith('video/')) {
+                    // Temporarily disabling video upload to avoid size issues
+                    toast({ variant: 'destructive', title: 'Càrrega de vídeo desactivada', description: 'La càrrega de vídeos està temporalment desactivada.' });
+                    return null;
+                }
+                return null;
+            });
 
-      Promise.all(filePromises).then(newFiles => {
-          setMedia(prev => [...prev, ...newFiles]);
-      });
+            const newFiles = (await Promise.all(filePromises)).filter((file): file is MediaFile => file !== null);
+            setMedia(prev => [...prev, ...newFiles]);
+            toast({ title: 'Imatges afegides!', description: 'Les imatges han estat comprimides i afegides.' });
+        } catch (error) {
+            console.error('Error processing files:', error);
+            toast({ variant: 'destructive', title: 'Error', description: 'No s\'ha pogut processar un dels fitxers.' });
+        } finally {
+            // Reset the input value to allow selecting the same file again
+            e.target.value = '';
+        }
     }
-  }
+};
 
   const handleAlbaranChange = (index: number, value: string) => {
     const newAlbarans = [...albarans]
@@ -529,7 +581,7 @@ export default function EditServicePage() {
                 <Label htmlFor="media-upload" className="flex-1 cursor-pointer inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2">
                     <Plus className="mr-2 h-4 w-4" /> Pujar Fitxer
                 </Label>
-                 <Input id="media-upload" type="file" multiple onChange={handleFileChange} accept="image/*,video/*" className="hidden" />
+                 <Input id="media-upload" type="file" multiple onChange={handleFileChange} accept="image/*" className="hidden" />
               </div>
               <p className="text-sm text-muted-foreground mt-2">{media.length} fitxer(s) seleccionat(s).</p>
             </div>
