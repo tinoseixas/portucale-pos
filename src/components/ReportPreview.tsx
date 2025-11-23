@@ -46,7 +46,9 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
     
     // Correctly get materials ONLY from the services passed to this component
     const allMaterials = useMemo(() => {
-        return services.flatMap(service => service.materials || []);
+        return services.flatMap(service => service.materials || []).filter(material => 
+            !material.description.toLowerCase().includes('traball')
+        );
     }, [services]);
 
     const totalMinutes = useMemo(() => calculateTotalMinutes(services), [services]);
