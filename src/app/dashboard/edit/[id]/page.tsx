@@ -213,7 +213,7 @@ export default function EditServicePage() {
   };
   
   const removeMedia = (index: number) => {
-    setMedia(prev => prev.filter((_, i) => !== index));
+    setMedia(prev => prev.filter((_, i) => i !== index));
   }
   
   const handleCustomerSelect = (customer: Customer) => {
