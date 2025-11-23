@@ -68,6 +68,8 @@ export default function ReportsPage() {
                 setSelectedCustomerId(serviceForProject.customerId);
             }
         }
+    // The dependency array is intentionally kept this way to avoid infinite loops
+    // when the customer is auto-selected.
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [selectedProject, allServices]);
 
