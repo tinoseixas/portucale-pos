@@ -90,29 +90,25 @@ export default function ReportsPage() {
     const filteredServices = useMemo(() => {
         if (!allServices) return [];
 
+        // If no filters are applied, return an empty array to avoid showing all services by default
+        if (selectedCustomerId === 'all' && selectedProject === 'all') {
+            return [];
+        }
+
         let services = allServices;
-        
+
+        // Filter by customer if one is selected
         if (selectedCustomerId !== 'all') {
             services = services.filter(s => s.customerId === selectedCustomerId);
         }
-
+        
+        // Then, filter by project if one is selected
         if (selectedProject !== 'all') {
             services = services.filter(s => s.projectName === selectedProject);
         }
 
-        if (selectedCustomerId === 'all' && selectedProject === 'all') {
-            return [];
-        }
-        
-        if (selectedProject !== 'all' && selectedCustomerId === 'all') {
-             const customerIdForProject = services.find(s => s.projectName === selectedProject)?.customerId;
-             if(customerIdForProject) {
-                return services.filter(s => s.projectName === selectedProject && s.customerId === customerIdForProject);
-             }
-        }
-
         return services;
-    }, [allServices, selectedCustomerId, selectedProject])
+    }, [allServices, selectedCustomerId, selectedProject]);
 
     const associatedCustomer = useMemo(() => {
         if (filteredServices.length === 0 || !customers) return undefined;
