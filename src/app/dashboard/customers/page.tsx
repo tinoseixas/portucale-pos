@@ -118,7 +118,7 @@ const mockCustomers: Omit<Customer, 'id'>[] = [
   { name: 'Tom Pidcock', nrt: '', address: 'canillo', email: '', contact: '' },
   { name: 'Undergroud Bar', nrt: '', address: 'Pas de la casa', email: '', contact: '' },
   { name: 'VILADOMAT, SAU', nrt: 'A-700966-G', address: 'Carrer Roureda de Sansa, 10', email: 'immasopena@viladomat.com', contact: '' },
-  { name: 'WW REAL ESTATE SL', nrt: 'L716982b', address: 'c. de l\'aigüeta 22, 1', email: '', contact: '' }
+  { name: 'WW REAL ESTATE SL', nrt: 'L-716982-B', address: 'c. Pau Casals, 6, 2n 2a, ALV, Andorra', email: '', contact: '' }
 ].sort((a, b) => a.name.localeCompare(b.name, 'ca', { sensitivity: 'base' }));
 
 
