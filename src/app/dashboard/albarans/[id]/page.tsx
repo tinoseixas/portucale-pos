@@ -2,9 +2,9 @@
 
 import { useState, useMemo, useRef, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
-import { useDoc, useUser, useFirestore, useMemoFirebase, deleteDocumentNonBlocking } from '@/firebase'
+import { useDoc, useUser, useFirestore, useMemoFirebase, deleteDocumentNonBlocking, useCollection } from '@/firebase'
 import { collection, query, where, getDocs, doc, collectionGroup } from 'firebase/firestore'
-import type { Customer, ServiceRecord, Albaran } from '@/lib/types'
+import type { Customer, ServiceRecord, Albaran, Employee } from '@/lib/types'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { FileDown, Loader2, ArrowLeft, Trash2 } from 'lucide-react'
@@ -28,7 +28,7 @@ import { AdminGate } from '@/components/AdminGate'
 export default function AlbaranDetailPage() {
     const firestore = useFirestore()
     const router = useRouter()
-    const params = useParams()
+    params = useParams()
     const { toast } = useToast()
     const albaranId = params.id as string
 
@@ -41,6 +41,9 @@ export default function AlbaranDetailPage() {
 
     const albaranDocRef = useMemoFirebase(() => firestore && albaranId ? doc(firestore, 'albarans', albaranId) : null, [firestore, albaranId])
     const { data: albaran, isLoading: isLoadingAlbaran } = useDoc<Albaran>(albaranDocRef)
+
+    const employeesQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'employees')) : null, [firestore]);
+    const { data: employees, isLoading: isLoadingEmployees } = useCollection<Employee>(employeesQuery);
     
 
     useEffect(() => {
@@ -51,13 +54,12 @@ export default function AlbaranDetailPage() {
 
     useEffect(() => {
         const fetchData = async () => {
-            if (!firestore || !albaran) return
+            if (!firestore || !albaran || !employees) return
 
             setIsLoadingData(true)
             
             // Fetch Customer
             if (albaran.customerId) {
-                const customerRef = doc(firestore, 'customers', albaran.customerId)
                 const customerSnap = await getDocs(query(collection(firestore, 'customers'), where('__name__', '==', albaran.customerId)))
                 if (!customerSnap.empty) {
                     setCustomer({ id: customerSnap.docs[0].id, ...customerSnap.docs[0].data() } as Customer)
@@ -66,28 +68,34 @@ export default function AlbaranDetailPage() {
             
             // Fetch Service Records
             if (albaran.serviceRecordIds && albaran.serviceRecordIds.length > 0) {
-                 const serviceRecordsPromises = albaran.serviceRecordIds.map(async (serviceId) => {
-                    const q = query(collection(firestore, "employees"), where("serviceRecords", "array-contains", serviceId))
-                    
-                    const querySnapshot = await getDocs(query(collectionGroup(firestore, 'serviceRecords'), where('__name__', '==', `employees/placeholder/serviceRecords/${serviceId}`)));
-
-                    // This is inefficient, but Firestore collectionGroup queries need a composite index
-                    // to query by document ID across collections. A better way would be to store the full path.
-                    // For now, we fetch all and find.
-                    const allServicesSnapshot = await getDocs(collectionGroup(firestore, 'serviceRecords'));
-                    const serviceDoc = allServicesSnapshot.docs.find(doc => doc.id === serviceId);
-
-                    return serviceDoc ? { id: serviceDoc.id, ...serviceDoc.data() } as ServiceRecord : null;
-                });
+                 // This is inefficient, but Firestore collectionGroup queries need a composite index
+                 // to query by document ID across collections. A better way would be to store the full path.
+                 // For now, we fetch all and find.
+                const allServicesSnapshot = await getDocs(collectionGroup(firestore, 'serviceRecords'));
                 
-                const fetchedServices = (await Promise.all(serviceRecordsPromises)).filter(Boolean) as ServiceRecord[];
+                const fetchedServices = albaran.serviceRecordIds.map(serviceId => {
+                    const serviceDoc = allServicesSnapshot.docs.find(doc => doc.id === serviceId);
+                    if (!serviceDoc) return null;
+                    
+                    const serviceData = { id: serviceDoc.id, ...serviceDoc.data() } as ServiceRecord;
+                    
+                    // If employeeName is missing, find it from the employees list
+                    if (!serviceData.employeeName) {
+                        const employee = employees.find(e => e.id === serviceData.employeeId);
+                        if (employee) {
+                            serviceData.employeeName = `${employee.firstName} ${employee.lastName}`;
+                        }
+                    }
+                    return serviceData;
+                }).filter(Boolean) as ServiceRecord[];
+                
                 setServices(fetchedServices);
             }
             setIsLoadingData(false)
         }
 
         fetchData()
-    }, [albaran, firestore])
+    }, [albaran, firestore, employees])
 
 
     const handleExportPDF = async () => {
@@ -123,7 +131,7 @@ export default function AlbaranDetailPage() {
         router.push('/dashboard/albarans');
     }
     
-    const isLoading = isUserLoading || isLoadingAlbaran || isLoadingData;
+    const isLoading = isUserLoading || isLoadingAlbaran || isLoadingData || isLoadingEmployees;
 
     if (isLoading) {
         return <p>Carregant dades de l'albarà...</p>
@@ -186,6 +194,7 @@ export default function AlbaranDetailPage() {
                             services={services}
                             showPricing={true}
                             albaranNumber={albaran.albaranNumber}
+                            employees={employees || []}
                         />
                     </CardContent>
                 </Card>

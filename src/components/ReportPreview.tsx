@@ -14,6 +14,7 @@ interface ReportPreviewProps {
   services: ServiceRecord[];
   showPricing: boolean;
   albaranNumber: number | undefined;
+  employees: Employee[];
 }
 
 type MaterialLine = {
@@ -21,6 +22,8 @@ type MaterialLine = {
     quantity: number;
     unitPrice: number;
 }
+
+const ADMIN_EMAIL = 'tinoseixas@gmail.com';
 
 function calculateTotalMinutes(services: ServiceRecord[]): number {
     if (!services) return 0;
@@ -40,49 +43,56 @@ function calculateTotalMinutes(services: ServiceRecord[]): number {
 }
 
 
-export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ customer, projectName, services, showPricing, albaranNumber }, ref) => {
+export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ customer, projectName, services, showPricing, albaranNumber, employees }, ref) => {
 
     const sortedServices = services.sort((a,b) => parseISO(a.arrivalDateTime).getTime() - parseISO(b.arrivalDateTime).getTime());
+    
+    const laborCost = useMemo(() => {
+        if (!services || !employees) return 0;
+        return services.reduce((total, service) => {
+            const employee = employees.find(e => e.id === service.employeeId);
+            const hourlyRate = employee?.email === ADMIN_EMAIL ? 30 : 27;
+            
+            if (service.arrivalDateTime && service.departureDateTime) {
+                const startDate = parseISO(service.arrivalDateTime);
+                const endDate = parseISO(service.departureDateTime);
+
+                if (isValid(startDate) && isValid(endDate) && endDate > startDate) {
+                    const minutes = differenceInMinutes(endDate, startDate);
+                    return total + (minutes / 60) * hourlyRate;
+                }
+            }
+            return total;
+        }, 0);
+    }, [services, employees]);
     
     const totalMinutes = useMemo(() => calculateTotalMinutes(services), [services]);
     const totalHours = totalMinutes / 60;
     const totalTimeFormatted = `${Math.floor(totalHours)}h ${totalMinutes % 60}m`;
-    const laborCost = totalHours * 30;
 
     const allMaterials = useMemo(() => {
-        // Get all materials, but filter out any manually added "traball" to avoid duplication
         const realMaterials = services.flatMap(service => service.materials || []).filter(material => 
             !material.description.toLowerCase().includes('traball')
         );
-
-        // Create the definitive list of line items for the table
         const lineItems: MaterialLine[] = [...realMaterials];
-
-        // Add the calculated labor cost as a separate line item if it's greater than 0
-        if (laborCost > 0) {
-            lineItems.push({
-                description: "Mà d'obra (Hores totals)",
-                quantity: parseFloat(totalHours.toFixed(2)),
-                unitPrice: 30,
-            });
-        }
-        
         return lineItems;
-
-    }, [services, totalHours, laborCost]);
+    }, [services]);
 
     const materialsSubtotal = useMemo(() => {
-        // Calculate subtotal from the final list of line items, excluding labor which is handled separately
-         return services.flatMap(service => service.materials || []).filter(material => 
-            !material.description.toLowerCase().includes('traball')
-        ).reduce((acc, material) => acc + (material.quantity * material.unitPrice), 0);
-    }, [services]);
+         return allMaterials.reduce((acc, material) => acc + (material.quantity * material.unitPrice), 0);
+    }, [allMaterials]);
     
     const subtotal = materialsSubtotal + laborCost;
 
     const ivaRate = 0.045; // 4.5% IGI for Andorra
     const iva = subtotal * ivaRate;
     const totalGeneral = subtotal + iva;
+    
+    const getEmployeeName = (employeeId?: string) => {
+        if (!employeeId || !employees) return 'Tècnic no assignat';
+        const employee = employees.find(e => e.id === employeeId);
+        return employee ? `${employee.firstName} ${employee.lastName}` : 'Tècnic desconegut';
+    };
 
     return (
         <div ref={ref} className="bg-white p-8 font-sans text-gray-900 printable-area">
@@ -149,12 +159,10 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
                                         </span>
                                     </div>
                                     <div className="pl-1 space-y-3">
-                                        {service.employeeName && (
-                                            <p className="text-sm text-gray-600 flex items-center gap-2">
-                                                <User className="h-4 w-4" />
-                                                <span>Tècnic: {service.employeeName}</span>
-                                            </p>
-                                        )}
+                                         <p className="text-sm text-gray-600 flex items-center gap-2">
+                                            <User className="h-4 w-4" />
+                                            <span>Tècnic: {service.employeeName || getEmployeeName(service.employeeId)}</span>
+                                        </p>
                                         <div>
                                             <h5 className="font-semibold text-sm mb-1">Descripció de Tasques:</h5>
                                             <p className="text-gray-700 text-sm">{service.description}</p>
@@ -196,30 +204,34 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
             {showPricing && (
               <section className="mt-8 pt-6 border-t-2 border-gray-900">
                     <h3 className="font-bold text-lg mb-4">Resum de Preços</h3>
-                    {allMaterials.length > 0 ? (
-                        <table className="w-full text-sm">
-                            <thead className="bg-gray-50">
-                                <tr className="border-b border-gray-200">
-                                    <th className="text-left py-2 px-3 font-semibold text-gray-600">DESCRIPCIÓ</th>
-                                    <th className="text-right py-2 px-3 font-semibold text-gray-600 w-24">QUANT.</th>
-                                    <th className="text-right py-2 px-3 font-semibold text-gray-600 w-24">PREU/UNIT.</th>
-                                    <th className="text-right py-2 px-3 font-semibold text-gray-600 w-24">TOTAL</th>
+                    <table className="w-full text-sm">
+                        <thead className="bg-gray-50">
+                            <tr className="border-b border-gray-200">
+                                <th className="text-left py-2 px-3 font-semibold text-gray-600">DESCRIPCIÓ</th>
+                                <th className="text-right py-2 px-3 font-semibold text-gray-600 w-24">QUANT.</th>
+                                <th className="text-right py-2 px-3 font-semibold text-gray-600 w-24">PREU/UNIT.</th>
+                                <th className="text-right py-2 px-3 font-semibold text-gray-600 w-24">TOTAL</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {allMaterials.map((material, index) => (
+                                <tr key={`mat-${index}`} className="border-b border-gray-100">
+                                    <td className="py-2 px-3">{material.description}</td>
+                                    <td className="text-right py-2 px-3 tabular-nums">{material.quantity.toFixed(2)}</td>
+                                    <td className="text-right py-2 px-3 tabular-nums">{material.unitPrice.toFixed(2)} €</td>
+                                    <td className="text-right py-2 px-3 font-medium tabular-nums">{(material.quantity * material.unitPrice).toFixed(2)} €</td>
                                 </tr>
-                            </thead>
-                            <tbody>
-                                {allMaterials.map((material, index) => (
-                                    <tr key={index} className="border-b border-gray-100">
-                                        <td className="py-2 px-3">{material.description}</td>
-                                        <td className="text-right py-2 px-3 tabular-nums">{material.quantity.toFixed(2)}</td>
-                                        <td className="text-right py-2 px-3 tabular-nums">{material.unitPrice.toFixed(2)} €</td>
-                                        <td className="text-right py-2 px-3 font-medium tabular-nums">{(material.quantity * material.unitPrice).toFixed(2)} €</td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    ) : (
-                        <p className="text-sm text-gray-500">No s'han registrat materials per a aquest servei.</p>
-                    )}
+                            ))}
+                             {laborCost > 0 && (
+                                <tr className="border-b border-gray-100">
+                                    <td className="py-2 px-3">Mà d'obra (Hores totals)</td>
+                                    <td className="text-right py-2 px-3 tabular-nums">{totalHours.toFixed(2)}</td>
+                                    <td className="text-right py-2 px-3 tabular-nums">{laborCost > 0 ? (laborCost / totalHours).toFixed(2) : '0.00'} €</td>
+                                    <td className="text-right py-2 px-3 font-medium tabular-nums">{laborCost.toFixed(2)} €</td>
+                                </tr>
+                            )}
+                        </tbody>
+                    </table>
 
 
                   <div className="flex justify-between items-start mt-6">
@@ -258,7 +270,3 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
 })
 
 ReportPreview.displayName = "ReportPreview";
-
-    
-
-    

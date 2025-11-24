@@ -1,10 +1,10 @@
 'use client'
 
-import { useMemo, useRef, useState } from 'react'
+import { useMemo, useRef, useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useCollection, useUser, useFirestore, useMemoFirebase } from '@/firebase'
 import { collection, query, orderBy, collectionGroup, doc, runTransaction, setDoc } from 'firebase/firestore'
-import type { Customer, ServiceRecord } from '@/lib/types'
+import type { Customer, ServiceRecord, Employee } from '@/lib/types'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -16,21 +16,37 @@ import { useToast } from '@/hooks/use-toast'
 import { AdminGate } from '@/components/AdminGate'
 import { differenceInMinutes, parseISO, isValid } from 'date-fns'
 
-function calculateTotalMinutes(services: ServiceRecord[]): number {
-    if (!services) return 0;
+const ADMIN_EMAIL = 'tinoseixas@gmail.com';
 
-    return services.reduce((total, service) => {
+function calculateTotalAmount(services: ServiceRecord[], employees: Employee[]): number {
+    if (!services || !employees) return 0;
+    
+    let totalLaborCost = 0;
+
+    services.forEach(service => {
+        const employee = employees.find(e => e.id === service.employeeId);
+        const hourlyRate = employee?.email === ADMIN_EMAIL ? 30 : 27;
+        
         if (service.arrivalDateTime && service.departureDateTime) {
             const startDate = parseISO(service.arrivalDateTime);
             const endDate = parseISO(service.departureDateTime);
-
-            if (!isValid(startDate) || !isValid(endDate) || startDate.getTime() === endDate.getTime()) {
-              return total;
+            if (isValid(startDate) && isValid(endDate) && endDate > startDate) {
+                const minutes = differenceInMinutes(endDate, startDate);
+                totalLaborCost += (minutes / 60) * hourlyRate;
             }
-            return total + differenceInMinutes(endDate, startDate);
         }
-        return total;
+    });
+
+    const materialsSubtotal = services.reduce((total, service) => {
+        return total + (service.materials || []).reduce((subtotal, material) => {
+            return subtotal + (material.quantity * material.unitPrice);
+        }, 0);
     }, 0);
+
+    const subtotal = materialsSubtotal + totalLaborCost;
+    const ivaRate = 0.045;
+    const iva = subtotal * ivaRate;
+    return subtotal + iva;
 }
 
 export default function ReportsPage() {
@@ -54,6 +70,10 @@ export default function ReportsPage() {
     }, [firestore])
 
     const { data: allServices, isLoading: isLoadingAllServices } = useCollection<ServiceRecord>(allServicesQuery)
+
+    const employeesQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'employees')) : null, [firestore]);
+    const { data: employees, isLoading: isLoadingEmployees } = useCollection<Employee>(employeesQuery);
+
 
     const projectNames = useMemo(() => {
         if (!allServices) return []
@@ -102,13 +122,11 @@ export default function ReportsPage() {
     
     const handleProjectChange = (projectName: string) => {
         setSelectedProject(projectName);
-        // When a project is selected, we want to IGNORE the customer filter.
-        // So we don't need to do anything with selectedCustomerId here.
     }
 
 
     const handleExport = async (exportType: 'pdf' | 'save') => {
-        if (!firestore || !canGenerate) return;
+        if (!firestore || !canGenerate || !employees) return;
 
         setIsGenerating(true)
         try {
@@ -124,20 +142,7 @@ export default function ReportsPage() {
                 return newNumber;
             });
             
-            const totalMinutes = calculateTotalMinutes(filteredServices);
-            const totalHours = totalMinutes / 60;
-            const laborCost = totalHours * 30;
-
-            const materialsSubtotal = filteredServices.reduce((total, service) => {
-                return total + (service.materials || []).reduce((subtotal, material) => {
-                    return subtotal + (material.quantity * material.unitPrice);
-                }, 0);
-            }, 0);
-
-            const subtotal = materialsSubtotal + laborCost;
-            const ivaRate = 0.045; // 4.5% IGI for Andorra
-            const iva = subtotal * ivaRate;
-            const totalAmount = subtotal + iva;
+            const totalAmount = calculateTotalAmount(filteredServices, employees);
             
             const albaranRef = doc(collection(firestore, "albarans"));
             await setDoc(albaranRef, {
@@ -183,7 +188,7 @@ export default function ReportsPage() {
 
 
     const canGenerate = filteredServices.length > 0;
-    const isLoading = isUserLoading || isLoadingAllServices || isLoadingCustomers;
+    const isLoading = isUserLoading || isLoadingAllServices || isLoadingCustomers || isLoadingEmployees;
 
     if (isLoading) {
         return <p>Carregant...</p>
@@ -260,6 +265,7 @@ export default function ReportsPage() {
                                     services={filteredServices}
                                     showPricing={true}
                                     albaranNumber={-1} // Placeholder number for preview
+                                    employees={employees || []}
                                 />
                             )}
                         </CardContent>

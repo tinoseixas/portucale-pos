@@ -4,7 +4,7 @@ import { useMemo, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useCollection, useUser, useFirestore, useMemoFirebase, deleteDocumentNonBlocking } from '@/firebase'
 import { collection, query, orderBy, doc, getDocs, collectionGroup, writeBatch, updateDoc } from 'firebase/firestore'
-import type { Albaran, ServiceRecord } from '@/lib/types'
+import type { Albaran, ServiceRecord, Employee } from '@/lib/types'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
@@ -25,22 +25,37 @@ import {
 import { useToast } from '@/hooks/use-toast'
 import { AdminGate } from '@/components/AdminGate'
 
+const ADMIN_EMAIL = 'tinoseixas@gmail.com';
 
-function calculateTotalMinutes(services: ServiceRecord[]): number {
-    if (!services) return 0;
+function calculateTotalMinutes(services: ServiceRecord[], employees: Employee[]): number {
+    if (!services || !employees) return 0;
+    
+    let totalLaborCost = 0;
 
-    return services.reduce((total, service) => {
+    services.forEach(service => {
+        const employee = employees.find(e => e.id === service.employeeId);
+        const hourlyRate = employee?.email === ADMIN_EMAIL ? 30 : 27;
+        
         if (service.arrivalDateTime && service.departureDateTime) {
             const startDate = parseISO(service.arrivalDateTime);
             const endDate = parseISO(service.departureDateTime);
-
-            if (!isValid(startDate) || !isValid(endDate) || startDate.getTime() === endDate.getTime()) {
-              return total;
+            if (isValid(startDate) && isValid(endDate) && endDate > startDate) {
+                const minutes = differenceInMinutes(endDate, startDate);
+                totalLaborCost += (minutes / 60) * hourlyRate;
             }
-            return total + differenceInMinutes(endDate, startDate);
         }
-        return total;
+    });
+
+    const materialsSubtotal = services.reduce((total, service) => {
+        return total + (service.materials || []).reduce((subtotal, material) => {
+            return subtotal + (material.quantity * material.unitPrice);
+        }, 0);
     }, 0);
+
+    const subtotal = materialsSubtotal + totalLaborCost;
+    const ivaRate = 0.045;
+    const iva = subtotal * ivaRate;
+    return subtotal + iva;
 }
 
 
@@ -63,6 +78,9 @@ export default function AlbaransHistoryPage() {
   }, [firestore])
 
   const { data: albarans, isLoading: isLoadingAlbarans } = useCollection<Albaran>(albaransQuery)
+  
+  const employeesQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'employees')) : null, [firestore]);
+  const { data: employees, isLoading: isLoadingEmployees } = useCollection<Employee>(employeesQuery);
 
   const handleDeleteAlbaran = (albaranId: string, albaranNumber: number) => {
     if (!firestore) return;
@@ -77,7 +95,7 @@ export default function AlbaransHistoryPage() {
   };
 
   const handleUpdateAllAlbarans = async () => {
-    if (!firestore || !albarans) {
+    if (!firestore || !albarans || !employees) {
       toast({ variant: 'destructive', title: 'Error', description: 'No s\'han pogut carregar les dades.' });
       return;
     }
@@ -94,22 +112,7 @@ export default function AlbaransHistoryPage() {
 
       for (const albaran of albarans) {
         const associatedServices = allServicesData.filter(service => albaran.serviceRecordIds.includes(service.id));
-
-        const totalMinutes = calculateTotalMinutes(associatedServices);
-        const totalHours = totalMinutes / 60;
-        const laborCost = totalHours * 30;
-
-        const materialsSubtotal = associatedServices.reduce((total, service) => {
-            return total + (service.materials || []).reduce((subtotal, material) => {
-                return subtotal + (material.quantity * material.unitPrice);
-            }, 0);
-        }, 0);
-        
-        const subtotal = materialsSubtotal + laborCost;
-        const ivaRate = 0.045;
-        const iva = subtotal * ivaRate;
-        const newTotalAmount = subtotal + iva;
-
+        const newTotalAmount = calculateTotalMinutes(associatedServices, employees);
 
         if (newTotalAmount.toFixed(2) !== albaran.totalAmount.toFixed(2)) {
             const albaranRef = doc(firestore, 'albarans', albaran.id);
@@ -134,7 +137,7 @@ export default function AlbaransHistoryPage() {
   };
 
 
-  if (isUserLoading || isLoadingAlbarans) {
+  if (isUserLoading || isLoadingAlbarans || isLoadingEmployees) {
     return <p>Carregant historial...</p>
   }
 
