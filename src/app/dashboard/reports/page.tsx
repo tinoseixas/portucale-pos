@@ -1,9 +1,9 @@
 'use client'
 
-import { useState, useMemo, useRef, useEffect } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useCollection, useUser, useFirestore, useMemoFirebase } from '@/firebase'
-import { collection, query, orderBy, collectionGroup, doc, runTransaction, serverTimestamp, setDoc } from 'firebase/firestore'
+import { collection, query, orderBy, collectionGroup, doc, runTransaction, setDoc } from 'firebase/firestore'
 import type { Customer, ServiceRecord } from '@/lib/types'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -44,11 +44,6 @@ export default function ReportsPage() {
     const [isGenerating, setIsGenerating] = useState(false)
     const reportRef = useRef<HTMLDivElement>(null)
 
-    useEffect(() => {
-        if (!isUserLoading && !user) {
-            router.push('/')
-        }
-    }, [isUserLoading, user, router])
 
     const customersQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'customers'), orderBy('name', 'asc')) : null, [firestore]);
     const { data: customers, isLoading: isLoadingCustomers } = useCollection<Customer>(customersQuery)
@@ -59,19 +54,6 @@ export default function ReportsPage() {
     }, [firestore])
 
     const { data: allServices, isLoading: isLoadingAllServices } = useCollection<ServiceRecord>(allServicesQuery)
-
-     // Effect to auto-select customer when a project is chosen
-    useEffect(() => {
-        if (selectedProject !== 'all' && allServices) {
-            const serviceForProject = allServices.find(s => s.projectName === selectedProject && s.customerId);
-            if (serviceForProject && serviceForProject.customerId && serviceForProject.customerId !== selectedCustomerId) {
-                setSelectedCustomerId(serviceForProject.customerId);
-            }
-        }
-    // The dependency array is intentionally kept this way to avoid infinite loops
-    // when the customer is auto-selected.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [selectedProject, allServices]);
 
     const projectNames = useMemo(() => {
         if (!allServices) return []
@@ -90,24 +72,18 @@ export default function ReportsPage() {
     const filteredServices = useMemo(() => {
         if (!allServices) return [];
 
-        // If no filters are applied, return an empty array to avoid showing all services by default
-        if (selectedCustomerId === 'all' && selectedProject === 'all') {
-            return [];
-        }
-
-        let services = allServices;
-
-        // Filter by customer if one is selected
-        if (selectedCustomerId !== 'all') {
-            services = services.filter(s => s.customerId === selectedCustomerId);
+        // If a project is selected, it takes priority and we ignore the customer filter.
+        if (selectedProject !== 'all') {
+            return allServices.filter(s => s.projectName === selectedProject);
         }
         
-        // Then, filter by project if one is selected
-        if (selectedProject !== 'all') {
-            services = services.filter(s => s.projectName === selectedProject);
+        // If no project is selected, filter by customer (if one is selected).
+        if (selectedCustomerId !== 'all') {
+            return allServices.filter(s => s.customerId === selectedCustomerId);
         }
 
-        return services;
+        // If no filters are applied, return an empty array.
+        return [];
     }, [allServices, selectedCustomerId, selectedProject]);
 
     const associatedCustomer = useMemo(() => {
@@ -123,6 +99,13 @@ export default function ReportsPage() {
         setSelectedCustomerId(customerId);
         setSelectedProject('all'); // Reset project when customer changes
     };
+    
+    const handleProjectChange = (projectName: string) => {
+        setSelectedProject(projectName);
+        // When a project is selected, we want to IGNORE the customer filter.
+        // So we don't need to do anything with selectedCustomerId here.
+    }
+
 
     const handleExport = async (exportType: 'pdf' | 'save') => {
         if (!firestore || !canGenerate) return;
@@ -231,7 +214,7 @@ export default function ReportsPage() {
                             </div>
                             <div className="flex-1 space-y-2">
                                 <label className="text-sm font-medium flex items-center gap-2"><Briefcase className="h-4 w-4" /> Obra</label>
-                                <Select value={selectedProject} onValueChange={setSelectedProject} disabled={projectNames.length === 0}>
+                                <Select value={selectedProject} onValueChange={handleProjectChange} disabled={projectNames.length === 0}>
                                     <SelectTrigger>
                                         <SelectValue placeholder="Selecciona una obra" />
                                     </SelectTrigger>
