@@ -39,7 +39,7 @@ export default function NewServicePage() {
 
   const handleStartService = async () => {
     if (!user || !firestore || !currentEmployee) {
-        toast({ variant: "destructive", title: "Error", description: "No s'han pogut carregar les dades de l'usuari." });
+        toast({ variant: "destructive", title: "Error", description: "No s'han pogut carregar les dades de l'usuari. Si us plau, torna a intentar." });
         return;
     }
     
