@@ -152,7 +152,7 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
                                         {service.employeeName && (
                                             <p className="text-sm text-gray-600 flex items-center gap-2">
                                                 <User className="h-4 w-4" />
-                                                <span>{service.employeeName}</span>
+                                                <span>Tècnic: {service.employeeName}</span>
                                             </p>
                                         )}
                                         <div>
@@ -262,4 +262,3 @@ ReportPreview.displayName = "ReportPreview";
     
 
     
-
