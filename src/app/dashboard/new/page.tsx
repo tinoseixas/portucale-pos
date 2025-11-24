@@ -45,39 +45,7 @@ export default function NewServicePage() {
     
     setIsStarting(true);
 
-    const getLocation = new Promise<{ latitude: number; longitude: number } | null>((resolve) => {
-        if ('geolocation' in navigator) {
-            navigator.geolocation.getCurrentPosition(
-                (position) => {
-                    resolve({
-                        latitude: position.coords.latitude,
-                        longitude: position.coords.longitude,
-                    });
-                },
-                (error) => {
-                    console.warn("Geolocation Error:", error.message);
-                    toast({
-                        variant: 'destructive',
-                        title: 'Error de Geolocalització',
-                        description: `No s'ha pogut obtenir la teva ubicació: ${error.message}`,
-                    });
-                    resolve(null); // Resolve with null if there's an error
-                },
-                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-            );
-        } else {
-            toast({
-                variant: 'destructive',
-                title: 'Geolocalització no suportada',
-                description: 'El teu navegador no suporta la geolocalització.',
-            });
-            resolve(null); // Resolve with null if not supported
-        }
-    });
-
     try {
-        const location = await getLocation;
-
         const selectedCustomer = customers?.find(c => c.id === selectedCustomerId);
         
         const now = new Date();
@@ -91,7 +59,6 @@ export default function NewServicePage() {
             pendingTasks: '',
             customerId: selectedCustomerId !== 'none' ? selectedCustomer?.id || '' : '',
             customerName: selectedCustomerId !== 'none' ? selectedCustomer?.name || '' : '',
-            location: location || undefined,
             media: [],
             albarans: [],
             materials: [],
@@ -104,7 +71,7 @@ export default function NewServicePage() {
         
         toast({ 
             title: `Servei iniciat per a ${currentEmployee.firstName}!`,
-            description: "S'ha iniciat el registre del servei." + (location ? " Ubicació guardada." : " No s'ha pogut guardar la ubicació."),
+            description: "S'ha iniciat el registre del servei.",
         });
         
         router.push(`/dashboard/edit/${docRef.id}?ownerId=${currentEmployee.id}`);

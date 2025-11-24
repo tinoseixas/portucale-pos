@@ -426,15 +426,6 @@ export default function EditServicePage() {
                 <Input id="end-time" type="time" required value={endTime} onChange={(e) => setEndTime(e.target.value)} />
               </div>
             </div>
-            
-             {service.location && (
-              <div className="space-y-2">
-                <Label className="flex items-center gap-2"><MapPin className="h-4 w-4 text-muted-foreground" /> Localització d'Inici</Label>
-                 <p className="text-sm text-muted-foreground p-2 border rounded-md bg-muted">
-                    {service.location.latitude.toFixed(6)}, {service.location.longitude.toFixed(6)}
-                 </p>
-              </div>
-            )}
 
             <div className="space-y-2">
                 <Label htmlFor="employeeId" className="flex items-center gap-2"><UserIcon className="h-4 w-4 text-muted-foreground" /> Tècnic</Label>
