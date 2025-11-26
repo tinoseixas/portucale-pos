@@ -27,7 +27,7 @@ import { AdminGate } from '@/components/AdminGate'
 
 const ADMIN_EMAIL = 'tinoseixas@gmail.com';
 
-function calculateTotalMinutes(services: ServiceRecord[], employees: Employee[]): number {
+function calculateTotalAmount(services: ServiceRecord[], employees: Employee[]): number {
     if (!services || !employees) return 0;
     
     let totalLaborCost = 0;
@@ -112,7 +112,7 @@ export default function AlbaransHistoryPage() {
 
       for (const albaran of albarans) {
         const associatedServices = allServicesData.filter(service => albaran.serviceRecordIds.includes(service.id));
-        const newTotalAmount = calculateTotalMinutes(associatedServices, employees);
+        const newTotalAmount = calculateTotalAmount(associatedServices, employees);
 
         if (newTotalAmount.toFixed(2) !== albaran.totalAmount.toFixed(2)) {
             const albaranRef = doc(firestore, 'albarans', albaran.id);
