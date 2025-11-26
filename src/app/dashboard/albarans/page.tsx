@@ -3,13 +3,13 @@
 import { useMemo, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useCollection, useUser, useFirestore, useMemoFirebase, deleteDocumentNonBlocking } from '@/firebase'
-import { collection, query, orderBy, doc, getDocs, collectionGroup, writeBatch, updateDoc } from 'firebase/firestore'
+import { collection, query, orderBy, doc, getDocs, collectionGroup, writeBatch } from 'firebase/firestore'
 import type { Albaran, ServiceRecord, Employee } from '@/lib/types'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
 import { Eye, FileArchive, Trash2, RefreshCw, Loader2 } from 'lucide-react'
-import { format, parseISO, differenceInMinutes, isValid } from 'date-fns'
+import { format, parseISO } from 'date-fns'
 import { ca } from 'date-fns/locale'
 import {
   AlertDialog,
@@ -24,39 +24,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { useToast } from '@/hooks/use-toast'
 import { AdminGate } from '@/components/AdminGate'
-
-const ADMIN_EMAIL = 'tinoseixas@gmail.com';
-
-function calculateTotalAmount(services: ServiceRecord[], employees: Employee[]): number {
-    if (!services || !employees) return 0;
-    
-    let totalLaborCost = 0;
-
-    services.forEach(service => {
-        const employee = employees.find(e => e.id === service.employeeId);
-        const hourlyRate = employee?.email === ADMIN_EMAIL ? 30 : 27;
-        
-        if (service.arrivalDateTime && service.departureDateTime) {
-            const startDate = parseISO(service.arrivalDateTime);
-            const endDate = parseISO(service.departureDateTime);
-            if (isValid(startDate) && isValid(endDate) && endDate > startDate) {
-                const minutes = differenceInMinutes(endDate, startDate);
-                totalLaborCost += (minutes / 60) * hourlyRate;
-            }
-        }
-    });
-
-    const materialsSubtotal = services.reduce((total, service) => {
-        return total + (service.materials || []).reduce((subtotal, material) => {
-            return subtotal + (material.quantity * material.unitPrice);
-        }, 0);
-    }, 0);
-
-    const subtotal = materialsSubtotal + totalLaborCost;
-    const ivaRate = 0.045;
-    const iva = subtotal * ivaRate;
-    return subtotal + iva;
-}
+import { calculateTotalAmount } from '../reports/page'
 
 
 export default function AlbaransHistoryPage() {

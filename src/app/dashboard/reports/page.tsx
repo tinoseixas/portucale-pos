@@ -18,7 +18,7 @@ import { differenceInMinutes, parseISO, isValid } from 'date-fns'
 
 const ADMIN_EMAIL = 'tinoseixas@gmail.com';
 
-function calculateTotalAmount(services: ServiceRecord[], employees: Employee[]): number {
+export function calculateTotalAmount(services: ServiceRecord[], employees: Employee[]): number {
     if (!services || !employees) return 0;
     
     let totalLaborCost = 0;
