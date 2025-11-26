@@ -28,7 +28,7 @@ import { AdminGate } from '@/components/AdminGate'
 export default function AlbaranDetailPage() {
     const firestore = useFirestore()
     const router = useRouter()
-    params = useParams()
+    const params = useParams()
     const { toast } = useToast()
     const albaranId = params.id as string
 
