@@ -1,12 +1,17 @@
 'use client'
 import React, { forwardRef, useMemo } from 'react';
 import Image from 'next/image';
-import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { Clock, Briefcase, Camera, Video, Calendar as CalendarIcon, FileText, Building, Mail, Phone, Hash, User } from 'lucide-react';
+import { Calendar as CalendarIcon, Clock, User } from 'lucide-react';
 import type { ServiceRecord, Customer, Employee } from '@/lib/types';
-import { format, differenceInMinutes, parseISO, isValid, startOfDay } from 'date-fns';
+import { format, differenceInMinutes, parseISO, isValid } from 'date-fns';
 import { ca } from 'date-fns/locale';
+
+// Constants
+const ADMIN_EMAIL = 'tinoseixas@gmail.com';
+const ADMIN_HOURLY_RATE = 30;
+const USER_HOURLY_RATE = 27;
+const IVA_RATE = 0.045; // 4.5% IGI for Andorra
 
 interface ReportPreviewProps {
   customer: Customer | undefined;
@@ -23,69 +28,68 @@ type MaterialLine = {
     unitPrice: number;
 }
 
-const ADMIN_EMAIL = 'tinoseixas@gmail.com';
 
-function calculateTotalMinutes(services: ServiceRecord[]): number {
-    if (!services) return 0;
+// --- Centralized Calculation Logic ---
 
+function calculateLaborCost(services: ServiceRecord[], employees: Employee[]): number {
+    if (!services || !employees) return 0;
     return services.reduce((total, service) => {
+        const employee = employees.find(e => e.id === service.employeeId);
+        const hourlyRate = employee?.email === ADMIN_EMAIL ? ADMIN_HOURLY_RATE : USER_HOURLY_RATE;
+        
         if (service.arrivalDateTime && service.departureDateTime) {
             const startDate = parseISO(service.arrivalDateTime);
             const endDate = parseISO(service.departureDateTime);
-
-            if (!isValid(startDate) || !isValid(endDate) || startDate.getTime() === endDate.getTime()) {
-              return total;
+            if (isValid(startDate) && isValid(endDate) && endDate > startDate) {
+                const minutes = differenceInMinutes(endDate, startDate);
+                return total + (minutes / 60) * hourlyRate;
             }
-            return total + differenceInMinutes(endDate, startDate);
         }
         return total;
     }, 0);
 }
 
+function calculateTotalMinutes(services: ServiceRecord[]): number {
+    if (!services) return 0;
+    return services.reduce((total, service) => {
+        if (service.arrivalDateTime && service.departureDateTime) {
+            const startDate = parseISO(service.arrivalDateTime);
+            const endDate = parseISO(service.departureDateTime);
+            if (isValid(startDate) && isValid(endDate) && startDate.getTime() !== endDate.getTime()) {
+              return total + differenceInMinutes(endDate, startDate);
+            }
+        }
+        return total;
+    }, 0);
+}
+
+// --- Component ---
 
 export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ customer, projectName, services, showPricing, albaranNumber, employees }, ref) => {
 
-    const sortedServices = services.sort((a,b) => parseISO(a.arrivalDateTime).getTime() - parseISO(b.arrivalDateTime).getTime());
+    const sortedServices = useMemo(() => {
+        if (!services) return [];
+        return [...services].sort((a,b) => parseISO(a.arrivalDateTime).getTime() - parseISO(b.arrivalDateTime).getTime());
+    }, [services]);
     
-    const laborCost = useMemo(() => {
-        if (!services || !employees) return 0;
-        return services.reduce((total, service) => {
-            const employee = employees.find(e => e.id === service.employeeId);
-            const hourlyRate = employee?.email === ADMIN_EMAIL ? 30 : 27;
-            
-            if (service.arrivalDateTime && service.departureDateTime) {
-                const startDate = parseISO(service.arrivalDateTime);
-                const endDate = parseISO(service.departureDateTime);
-
-                if (isValid(startDate) && isValid(endDate) && endDate > startDate) {
-                    const minutes = differenceInMinutes(endDate, startDate);
-                    return total + (minutes / 60) * hourlyRate;
-                }
-            }
-            return total;
-        }, 0);
-    }, [services, employees]);
-    
-    const totalMinutes = useMemo(() => calculateTotalMinutes(services), [services]);
+    // Use the centralized calculation functions
+    const laborCost = useMemo(() => calculateLaborCost(sortedServices, employees), [sortedServices, employees]);
+    const totalMinutes = useMemo(() => calculateTotalMinutes(sortedServices), [sortedServices]);
     const totalHours = totalMinutes / 60;
     const totalTimeFormatted = `${Math.floor(totalHours)}h ${totalMinutes % 60}m`;
 
     const allMaterials = useMemo(() => {
-        const realMaterials = services.flatMap(service => service.materials || []).filter(material => 
-            !material.description.toLowerCase().includes('traball')
+        return sortedServices.flatMap(service => service.materials || []).filter(material => 
+            !material.description.toLowerCase().includes('traball') && material.description.trim() !== ''
         );
-        const lineItems: MaterialLine[] = [...realMaterials];
-        return lineItems;
-    }, [services]);
+    }, [sortedServices]);
 
     const materialsSubtotal = useMemo(() => {
          return allMaterials.reduce((acc, material) => acc + (material.quantity * material.unitPrice), 0);
     }, [allMaterials]);
     
     const subtotal = materialsSubtotal + laborCost;
-
-    const ivaRate = 0.045; // 4.5% IGI for Andorra
-    const iva = subtotal * ivaRate;
+    const iva = subtotal * IVA_RATE;
     const totalGeneral = subtotal + iva;
     
     const getEmployeeName = (employeeId?: string) => {
@@ -142,60 +146,42 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
             
             {sortedServices.length > 0 && (
                 <div className="page-break-before-auto">
-                    <Separator className="my-8" />
                     <section>
                         <h3 className="font-bold text-lg mb-4">Resum de Tasques</h3>
-                        <div className="space-y-6">
-                            {sortedServices.map(service => (
-                                <div key={service.id} className="border border-gray-200 p-4 rounded-lg break-inside-avoid">
-                                    <div className="flex justify-between items-baseline mb-3 flex-wrap border-b pb-3">
-                                        <h4 className="font-bold text-base flex items-center gap-2">
-                                            <CalendarIcon className="h-4 w-4 text-gray-500" /> 
-                                            {format(parseISO(service.arrivalDateTime), 'EEEE, dd MMMM yyyy', {locale: ca})}
-                                        </h4>
-                                        <span className="text-sm font-medium text-gray-600 flex items-center gap-2">
-                                            <Clock className="h-4 w-4" /> 
-                                            {format(parseISO(service.arrivalDateTime), 'HH:mm')} - {format(parseISO(service.departureDateTime), 'HH:mm')}
-                                        </span>
-                                    </div>
-                                    <div className="pl-1 space-y-3">
-                                         <p className="text-sm text-gray-600 flex items-center gap-2">
-                                            <User className="h-4 w-4" />
-                                            <span>Tècnic: {service.employeeName || getEmployeeName(service.employeeId)}</span>
-                                        </p>
-                                        <div>
-                                            <h5 className="font-semibold text-sm mb-1">Descripció de Tasques:</h5>
-                                            <p className="text-gray-700 text-sm">{service.description}</p>
-                                        </div>
-                                        
-                                        {service.pendingTasks && (
-                                            <div className="mt-2 text-sm text-amber-800 bg-amber-50 border border-amber-200 p-2 rounded-md">
-                                                <h5 className="font-bold">Tasques Pendents:</h5>
-                                                <p className="text-amber-700">{service.pendingTasks}</p>
-                                            </div>
-                                        )}
-                                    </div>
+                        <table className="w-full text-sm border-collapse">
+                             <thead>
+                                <tr className="border-b-2 border-gray-300 bg-gray-50">
+                                    <th className="text-left py-2 px-3 font-semibold text-gray-600">DATA</th>
+                                    <th className="text-left py-2 px-3 font-semibold text-gray-600">TÈCNIC</th>
+                                    <th className="text-left py-2 px-3 font-semibold text-gray-600">DESCRIPCIÓ</th>
+                                    <th className="text-right py-2 px-3 font-semibold text-gray-600">HORES</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {sortedServices.map(service => {
+                                    const arrival = parseISO(service.arrivalDateTime);
+                                    const departure = parseISO(service.departureDateTime);
+                                    const minutes = (isValid(arrival) && isValid(departure) && departure > arrival) ? differenceInMinutes(departure, arrival) : 0;
+                                    const hours = minutes > 0 ? (minutes / 60).toFixed(2) : '0.00';
 
-                                    {service.media && service.media.filter(m => m.type === 'image').length > 0 && (
-                                        <div className="mt-4">
-                                            <h5 className="font-semibold text-sm mb-2">Fotografies:</h5>
-                                            <div className="grid grid-cols-4 gap-2">
-                                                {service.media.filter(m => m.type === 'image').map((media, index) => (
-                                                    <div key={index} className="relative aspect-square border rounded overflow-hidden">
-                                                        <Image
-                                                            src={media.dataUrl}
-                                                            alt={`Fotografia ${index + 1}`}
-                                                            layout="fill"
-                                                            objectFit="cover"
-                                                        />
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-                            ))}
-                        </div>
+                                    return (
+                                        <tr key={service.id} className="border-b border-gray-200">
+                                            <td className="py-3 px-3 align-top whitespace-nowrap">{format(arrival, 'dd/MM/yy')}</td>
+                                            <td className="py-3 px-3 align-top">{service.employeeName || getEmployeeName(service.employeeId)}</td>
+                                            <td className="py-3 px-3 align-top">
+                                                <p>{service.description}</p>
+                                                {service.pendingTasks && (
+                                                     <div className="mt-2 text-xs text-amber-800 bg-amber-50 border-l-4 border-amber-300 p-2">
+                                                        <span className="font-bold">Pendents:</span> {service.pendingTasks}
+                                                     </div>
+                                                )}
+                                            </td>
+                                            <td className="py-3 px-3 align-top text-right tabular-nums">{hours}</td>
+                                        </tr>
+                                    )
+                                })}
+                            </tbody>
+                        </table>
                     </section>
                 </div>
             )}
@@ -246,7 +232,7 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
                             <span className="font-medium tabular-nums">{subtotal.toFixed(2)} €</span>
                         </div>
                         <div className="flex justify-between">
-                            <span className="font-semibold text-gray-700">IGI ({(ivaRate * 100).toFixed(1)}%):</span>
+                            <span className="font-semibold text-gray-700">IGI ({(IVA_RATE * 100).toFixed(1)}%):</span>
                             <span className="font-medium tabular-nums">{iva.toFixed(2)} €</span>
                         </div>
                         <Separator />

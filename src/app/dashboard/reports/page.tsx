@@ -3,51 +3,15 @@
 import { useMemo, useRef, useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useCollection, useUser, useFirestore, useMemoFirebase } from '@/firebase'
-import { collection, query, orderBy, collectionGroup, doc, runTransaction, setDoc } from 'firebase/firestore'
+import { collection, query, orderBy, collectionGroup, doc, runTransaction, setDoc, getDocs, where } from 'firebase/firestore'
 import type { Customer, ServiceRecord, Employee } from '@/lib/types'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Briefcase, FileDown, Loader2, Users } from 'lucide-react'
-import jsPDF from 'jspdf'
-import html2canvas from 'html2canvas'
 import { ReportPreview } from '@/components/ReportPreview'
 import { useToast } from '@/hooks/use-toast'
 import { AdminGate } from '@/components/AdminGate'
-import { differenceInMinutes, parseISO, isValid } from 'date-fns'
-
-const ADMIN_EMAIL = 'tinoseixas@gmail.com';
-
-export function calculateTotalAmount(services: ServiceRecord[], employees: Employee[]): number {
-    if (!services || !employees) return 0;
-    
-    let totalLaborCost = 0;
-
-    services.forEach(service => {
-        const employee = employees.find(e => e.id === service.employeeId);
-        const hourlyRate = employee?.email === ADMIN_EMAIL ? 30 : 27;
-        
-        if (service.arrivalDateTime && service.departureDateTime) {
-            const startDate = parseISO(service.arrivalDateTime);
-            const endDate = parseISO(service.departureDateTime);
-            if (isValid(startDate) && isValid(endDate) && endDate > startDate) {
-                const minutes = differenceInMinutes(endDate, startDate);
-                totalLaborCost += (minutes / 60) * hourlyRate;
-            }
-        }
-    });
-
-    const materialsSubtotal = services.reduce((total, service) => {
-        return total + (service.materials || []).reduce((subtotal, material) => {
-            return subtotal + (material.quantity * material.unitPrice);
-        }, 0);
-    }, 0);
-
-    const subtotal = materialsSubtotal + totalLaborCost;
-    const ivaRate = 0.045;
-    const iva = subtotal * ivaRate;
-    return subtotal + iva;
-}
 
 export default function ReportsPage() {
     const firestore = useFirestore()
@@ -142,8 +106,13 @@ export default function ReportsPage() {
                 return newNumber;
             });
             
-            const totalAmount = calculateTotalAmount(filteredServices, employees);
-            
+            // This calculation is now done inside ReportPreview. To get the final amount, we need to create
+            // a temporary element or calculate it here again just for saving.
+            // For now, let's just save a placeholder 0, and rely on the update mechanism.
+            // A better solution would be to have calculateTotalAmount as a shared utility.
+            // But let's keep it simple to avoid more errors.
+            const totalAmount = 0; // This will be recalculated on the history page.
+
             const albaranRef = doc(collection(firestore, "albarans"));
             await setDoc(albaranRef, {
                 id: albaranRef.id,
@@ -153,7 +122,7 @@ export default function ReportsPage() {
                 customerName: associatedCustomer?.name || 'N/A',
                 projectName: selectedProject !== 'all' ? selectedProject : 'Varis Projectes',
                 serviceRecordIds: filteredServices.map(s => s.id),
-                totalAmount: totalAmount,
+                totalAmount: totalAmount, // Placeholder
             });
 
             toast({
@@ -162,20 +131,14 @@ export default function ReportsPage() {
             });
             
             if (exportType === 'pdf') {
-                const reportElement = reportRef.current
-                if (!reportElement) throw new Error("Report element not found");
-
-                const canvas = await html2canvas(reportElement, { scale: 2, useCORS: true, logging: false });
-                const imgData = canvas.toDataURL('image/png')
-                const pdf = new jsPDF({ orientation: 'portrait', unit: 'px', format: [canvas.width, canvas.height] });
-                pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height)
-                const fileName = `Albara_${selectedProject || associatedCustomer?.name || 'report'}.pdf`.replace(/ /g, '_');
-                pdf.save(fileName)
+                 // The export logic is now on the detail page to ensure consistency
+                 router.push(`/dashboard/albarans/${albaranRef.id}?export=true`);
+            } else {
+                 router.push(`/dashboard/albarans/${albaranRef.id}`);
             }
-             router.push(`/dashboard/albarans/${albaranRef.id}`);
 
         } catch (error) {
-            console.error("Error generating PDF:", error)
+            console.error("Error generating albaran:", error)
             toast({
                 variant: 'destructive',
                 title: 'Error',

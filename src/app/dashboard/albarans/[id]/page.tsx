@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useMemo, useRef, useEffect } from 'react'
-import { useRouter, useParams } from 'next/navigation'
+import { useRouter, useParams, useSearchParams } from 'next/navigation'
 import { useDoc, useUser, useFirestore, useMemoFirebase, deleteDocumentNonBlocking, useCollection } from '@/firebase'
 import { collection, query, where, getDocs, doc, collectionGroup } from 'firebase/firestore'
 import type { Customer, ServiceRecord, Albaran, Employee } from '@/lib/types'
@@ -25,10 +25,14 @@ import {
 import { useToast } from '@/hooks/use-toast'
 import { AdminGate } from '@/components/AdminGate'
 
+const A4_WIDTH_PX = 595.28;
+const A4_HEIGHT_PX = 841.89;
+
 export default function AlbaranDetailPage() {
     const firestore = useFirestore()
     const router = useRouter()
     const params = useParams()
+    const searchParams = useSearchParams()
     const { toast } = useToast()
     const albaranId = params.id as string
 
@@ -45,6 +49,8 @@ export default function AlbaranDetailPage() {
     const employeesQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'employees')) : null, [firestore]);
     const { data: employees, isLoading: isLoadingEmployees } = useCollection<Employee>(employeesQuery);
     
+    // Auto-export if query param is set
+    const shouldExport = searchParams.get('export') === 'true';
 
     useEffect(() => {
         if (!isUserLoading && !user) {
@@ -68,9 +74,6 @@ export default function AlbaranDetailPage() {
             
             // Fetch Service Records
             if (albaran.serviceRecordIds && albaran.serviceRecordIds.length > 0) {
-                 // This is inefficient, but Firestore collectionGroup queries need a composite index
-                 // to query by document ID across collections. A better way would be to store the full path.
-                 // For now, we fetch all and find.
                 const allServicesSnapshot = await getDocs(collectionGroup(firestore, 'serviceRecords'));
                 
                 const fetchedServices = albaran.serviceRecordIds.map(serviceId => {
@@ -79,7 +82,6 @@ export default function AlbaranDetailPage() {
                     
                     const serviceData = { id: serviceDoc.id, ...serviceDoc.data() } as ServiceRecord;
                     
-                    // If employeeName is missing, find it from the employees list
                     if (!serviceData.employeeName) {
                         const employee = employees.find(e => e.id === serviceData.employeeId);
                         if (employee) {
@@ -105,18 +107,61 @@ export default function AlbaranDetailPage() {
         setIsGenerating(true)
 
         try {
-            const canvas = await html2canvas(reportElement, { scale: 2, useCORS: true, logging: false });
-            const imgData = canvas.toDataURL('image/png')
-            const pdf = new jsPDF({ orientation: 'portrait', unit: 'px', format: [canvas.width, canvas.height] })
-            pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height)
+             // Use jsPDF in 'p' (pixels) mode for direct mapping
+            const pdf = new jsPDF({
+                orientation: 'portrait',
+                unit: 'px',
+                format: [A4_WIDTH_PX, A4_HEIGHT_PX]
+            });
+
+            // Get the HTML content's dimensions
+            const contentWidth = reportElement.scrollWidth;
+            const contentHeight = reportElement.scrollHeight;
+
+            // Calculate the scaling factor to fit content onto an A4 page
+            const widthScale = A4_WIDTH_PX / contentWidth;
+            const heightScale = A4_HEIGHT_PX / contentHeight;
+            const scale = Math.min(widthScale, 1); // Use width scale, but don't upscale
+
+            const canvas = await html2canvas(reportElement, {
+                scale: 2, // Render at high resolution
+                useCORS: true,
+                logging: false,
+                width: contentWidth,
+                height: contentHeight,
+                windowWidth: contentWidth,
+                windowHeight: contentHeight
+            });
+            
+            const imgData = canvas.toDataURL('image/png');
+            
+            // Calculate image dimensions in the PDF
+            const imgWidth = canvas.width * scale;
+            const imgHeight = canvas.height * scale;
+
+            // Add image to PDF, it will be scaled down to fit
+            pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+
             const fileName = `Albara_${albaran?.albaranNumber || albaranId}.pdf`.replace(/ /g, '_');
             pdf.save(fileName)
         } catch (error) {
             console.error("Error generating PDF:", error)
+            toast({ variant: 'destructive', title: 'Error', description: 'No s\'ha pogut generar el PDF.' });
         } finally {
             setIsGenerating(false)
         }
     }
+    
+    // Automatically trigger export if the conditions are met
+    useEffect(() => {
+        if (shouldExport && !isLoading && !isGenerating && services.length > 0) {
+            handleExportPDF();
+            // Optional: remove query param from URL after export
+            router.replace(`/dashboard/albarans/${albaranId}`, { scroll: false });
+        }
+         // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [shouldExport, isLoading, isGenerating, services, albaranId, router]);
+
 
     const handleDeleteAlbaran = () => {
         if (!albaranDocRef) return;
@@ -134,7 +179,7 @@ export default function AlbaranDetailPage() {
     const isLoading = isUserLoading || isLoadingAlbaran || isLoadingData || isLoadingEmployees;
 
     if (isLoading) {
-        return <p>Carregant dades de l'albarà...</p>
+        return <div className="text-center p-8"><Loader2 className="h-8 w-8 animate-spin mx-auto" /> Carregant dades de l'albarà...</div>
     }
     
     if (!albaran) {
