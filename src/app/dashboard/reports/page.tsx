@@ -12,6 +12,7 @@ import { Briefcase, FileDown, Loader2, Users } from 'lucide-react'
 import { ReportPreview } from '@/components/ReportPreview'
 import { useToast } from '@/hooks/use-toast'
 import { AdminGate } from '@/components/AdminGate'
+import { calculateTotalAmount } from '@/lib/calculations'
 
 export default function ReportsPage() {
     const firestore = useFirestore()
@@ -106,12 +107,7 @@ export default function ReportsPage() {
                 return newNumber;
             });
             
-            // This calculation is now done inside ReportPreview. To get the final amount, we need to create
-            // a temporary element or calculate it here again just for saving.
-            // For now, let's just save a placeholder 0, and rely on the update mechanism.
-            // A better solution would be to have calculateTotalAmount as a shared utility.
-            // But let's keep it simple to avoid more errors.
-            const totalAmount = 0; // This will be recalculated on the history page.
+            const totalAmount = calculateTotalAmount(filteredServices, employees);
 
             const albaranRef = doc(collection(firestore, "albarans"));
             await setDoc(albaranRef, {
@@ -122,7 +118,7 @@ export default function ReportsPage() {
                 customerName: associatedCustomer?.name || 'N/A',
                 projectName: selectedProject !== 'all' ? selectedProject : 'Varis Projectes',
                 serviceRecordIds: filteredServices.map(s => s.id),
-                totalAmount: totalAmount, // Placeholder
+                totalAmount: totalAmount,
             });
 
             toast({

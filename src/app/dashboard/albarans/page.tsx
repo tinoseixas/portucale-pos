@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { useToast } from '@/hooks/use-toast'
 import { AdminGate } from '@/components/AdminGate'
-import { calculateTotalAmount } from '../reports/page'
+import { calculateTotalAmount } from '@/lib/calculations'
 
 
 export default function AlbaransHistoryPage() {
