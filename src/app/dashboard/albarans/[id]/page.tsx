@@ -74,30 +74,36 @@ export default function AlbaranDetailPage() {
             
             // Fetch Service Records
             if (albaran.serviceRecordIds && albaran.serviceRecordIds.length > 0) {
-                const allServicesSnapshot = await getDocs(collectionGroup(firestore, 'serviceRecords'));
-                
-                const fetchedServices = albaran.serviceRecordIds.map(serviceId => {
-                    const serviceDoc = allServicesSnapshot.docs.find(doc => doc.id === serviceId);
-                    if (!serviceDoc) return null;
+                try {
+                    const allServicesSnapshot = await getDocs(collectionGroup(firestore, 'serviceRecords'));
                     
-                    const serviceData = { id: serviceDoc.id, ...serviceDoc.data() } as ServiceRecord;
-                    
-                    if (!serviceData.employeeName) {
-                        const employee = employees.find(e => e.id === serviceData.employeeId);
-                        if (employee) {
-                            serviceData.employeeName = `${employee.firstName} ${employee.lastName}`;
+                    const fetchedServices = albaran.serviceRecordIds.map(serviceId => {
+                        const serviceDoc = allServicesSnapshot.docs.find(doc => doc.id === serviceId);
+                        if (!serviceDoc) return null;
+                        
+                        const serviceData = { id: serviceDoc.id, ...serviceDoc.data() } as ServiceRecord;
+                        
+                        // Ensure employeeName is populated
+                        if (!serviceData.employeeName) {
+                            const employee = employees.find(e => e.id === serviceData.employeeId);
+                            if (employee) {
+                                serviceData.employeeName = `${employee.firstName} ${employee.lastName}`;
+                            }
                         }
-                    }
-                    return serviceData;
-                }).filter(Boolean) as ServiceRecord[];
-                
-                setServices(fetchedServices);
+                        return serviceData;
+                    }).filter(Boolean) as ServiceRecord[];
+                    
+                    setServices(fetchedServices);
+                } catch (e) {
+                    console.error("Error fetching service records:", e);
+                    toast({ variant: 'destructive', title: 'Error', description: 'No s\'han pogut carregar els detalls del servei.' });
+                }
             }
             setIsLoadingData(false)
         }
 
         fetchData()
-    }, [albaran, firestore, employees])
+    }, [albaran, firestore, employees, toast])
 
 
     const handleExportPDF = async () => {
@@ -107,40 +113,24 @@ export default function AlbaranDetailPage() {
         setIsGenerating(true)
 
         try {
-             // Use jsPDF in 'p' (pixels) mode for direct mapping
+            const canvas = await html2canvas(reportElement, {
+                scale: 2, 
+                useCORS: true,
+                logging: false,
+                width: reportElement.scrollWidth,
+                height: reportElement.scrollHeight,
+                windowWidth: reportElement.scrollWidth,
+                windowHeight: reportElement.scrollHeight,
+            });
+
+            // A4 page dimensions in pixels at 72 DPI are 595 x 842
             const pdf = new jsPDF({
                 orientation: 'portrait',
                 unit: 'px',
-                format: [A4_WIDTH_PX, A4_HEIGHT_PX]
-            });
-
-            // Get the HTML content's dimensions
-            const contentWidth = reportElement.scrollWidth;
-            const contentHeight = reportElement.scrollHeight;
-
-            // Calculate the scaling factor to fit content onto an A4 page
-            const widthScale = A4_WIDTH_PX / contentWidth;
-            const heightScale = A4_HEIGHT_PX / contentHeight;
-            const scale = Math.min(widthScale, 1); // Use width scale, but don't upscale
-
-            const canvas = await html2canvas(reportElement, {
-                scale: 2, // Render at high resolution
-                useCORS: true,
-                logging: false,
-                width: contentWidth,
-                height: contentHeight,
-                windowWidth: contentWidth,
-                windowHeight: contentHeight
+                format: [canvas.width, canvas.height] 
             });
             
-            const imgData = canvas.toDataURL('image/png');
-            
-            // Calculate image dimensions in the PDF
-            const imgWidth = canvas.width * scale;
-            const imgHeight = canvas.height * scale;
-
-            // Add image to PDF, it will be scaled down to fit
-            pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+            pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, canvas.width, canvas.height);
 
             const fileName = `Albara_${albaran?.albaranNumber || albaranId}.pdf`.replace(/ /g, '_');
             pdf.save(fileName)
@@ -151,6 +141,8 @@ export default function AlbaranDetailPage() {
             setIsGenerating(false)
         }
     }
+    
+    const isLoading = isUserLoading || isLoadingAlbaran || isLoadingData || isLoadingEmployees;
     
     // Automatically trigger export if the conditions are met
     useEffect(() => {
@@ -176,7 +168,6 @@ export default function AlbaranDetailPage() {
         router.push('/dashboard/albarans');
     }
     
-    const isLoading = isUserLoading || isLoadingAlbaran || isLoadingData || isLoadingEmployees;
 
     if (isLoading) {
         return <div className="text-center p-8"><Loader2 className="h-8 w-8 animate-spin mx-auto" /> Carregant dades de l'albarà...</div>
@@ -189,12 +180,12 @@ export default function AlbaranDetailPage() {
     return (
         <AdminGate pageTitle="Detall de l'Albarà" pageDescription="Aquesta secció està protegida.">
             <div className="space-y-8 max-w-5xl mx-auto">
-                <div className="flex justify-between items-center flex-wrap gap-2">
+                <div className="flex justify-between items-center flex-wrap gap-4">
                     <Button variant="ghost" onClick={() => router.push('/dashboard/albarans')}>
                         <ArrowLeft className="mr-2 h-4 w-4" />
                         Tornar a l'historial
                     </Button>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap justify-end">
                         <AlertDialog>
                             <AlertDialogTrigger asChild>
                                 <Button variant="destructive">

@@ -3,7 +3,7 @@
 import { useMemo, useRef, useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useCollection, useUser, useFirestore, useMemoFirebase } from '@/firebase'
-import { collection, query, orderBy, collectionGroup, doc, runTransaction, setDoc, getDocs, where } from 'firebase/firestore'
+import { collection, query, orderBy, collectionGroup, doc, runTransaction, setDoc } from 'firebase/firestore'
 import type { Customer, ServiceRecord, Employee } from '@/lib/types'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -54,7 +54,7 @@ export default function ReportsPage() {
     }, [allServices, selectedCustomerId])
 
 
-    const filteredServices = useMemo(() => {
+     const filteredServices = useMemo(() => {
         if (!allServices) return [];
 
         // If a project is selected, it takes priority and we ignore the customer filter.
@@ -71,6 +71,7 @@ export default function ReportsPage() {
         return [];
     }, [allServices, selectedCustomerId, selectedProject]);
 
+
     const associatedCustomer = useMemo(() => {
         if (filteredServices.length === 0 || !customers) return undefined;
         // Find the first service with a customerId and get that customer
@@ -86,6 +87,13 @@ export default function ReportsPage() {
     };
     
     const handleProjectChange = (projectName: string) => {
+        if (projectName !== 'all' && selectedCustomerId === 'all') {
+            // Find the customer associated with the first service of that project
+            const service = allServices?.find(s => s.projectName === projectName);
+            if (service?.customerId) {
+                setSelectedCustomerId(service.customerId);
+            }
+        }
         setSelectedProject(projectName);
     }
 
@@ -171,25 +179,25 @@ export default function ReportsPage() {
                                         <SelectValue placeholder="Selecciona un client" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="all">Tots els clients</SelectItem>
+                                        <SelectItem value="all">Cap client seleccionat</SelectItem>
                                         {customers?.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
                                     </SelectContent>
                                 </Select>
                             </div>
                             <div className="flex-1 space-y-2">
                                 <label className="text-sm font-medium flex items-center gap-2"><Briefcase className="h-4 w-4" /> Obra</label>
-                                <Select value={selectedProject} onValueChange={handleProjectChange} disabled={projectNames.length === 0}>
+                                <Select value={selectedProject} onValueChange={handleProjectChange} disabled={projectNames.length === 0 && selectedCustomerId === 'all'}>
                                     <SelectTrigger>
                                         <SelectValue placeholder="Selecciona una obra" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="all">Totes les obres</SelectItem>
+                                        <SelectItem value="all">Totes les obres del client</SelectItem>
                                         {projectNames.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
                                     </SelectContent>
                                 </Select>
                             </div>
                         </div>
-                        <div className="flex justify-end pt-4 gap-2">
+                        <div className="flex justify-end pt-4 gap-2 flex-wrap">
                             <Button
                                 onClick={() => handleExport('save')}
                                 disabled={isGenerating || !canGenerate}

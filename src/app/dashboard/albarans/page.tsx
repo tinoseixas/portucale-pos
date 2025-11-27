@@ -117,7 +117,7 @@ export default function AlbaransHistoryPage() {
     <AdminGate pageTitle="Historial d'Albarans" pageDescription="Aquesta secció està protegida.">
         <div className="max-w-6xl mx-auto">
         <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
+            <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center sm:justify-between gap-4">
             <div className="flex items-center gap-4">
                 <FileArchive className="h-8 w-8" />
                 <div>
@@ -125,66 +125,70 @@ export default function AlbaransHistoryPage() {
                     <CardDescription>Consulta tots els albarans que s'han generat.</CardDescription>
                 </div>
             </div>
-            <Button onClick={handleUpdateAllAlbarans} disabled={isUpdating} variant="outline">
+            <Button onClick={handleUpdateAllAlbarans} disabled={isUpdating} variant="outline" className="w-full sm:w-auto">
               {isUpdating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
               {isUpdating ? 'Actualitzant...' : 'Actualitzar Totals Anteriors'}
             </Button>
             </CardHeader>
             <CardContent>
-            <Table>
-                <TableHeader>
-                <TableRow>
-                    <TableHead>Nº Albarà</TableHead>
-                    <TableHead>Data Creació</TableHead>
-                    <TableHead>Client</TableHead>
-                    <TableHead>Obra</TableHead>
-                    <TableHead>Total</TableHead>
-                    <TableHead className="text-right">Accions</TableHead>
-                </TableRow>
-                </TableHeader>
-                <TableBody>
-                {albarans && albarans.length > 0 ? albarans.map(albaran => (
-                    <TableRow key={albaran.id}>
-                    <TableCell className="font-bold">#{String(albaran.albaranNumber).padStart(4, '0')}</TableCell>
-                    <TableCell>{format(parseISO(albaran.createdAt), 'dd/MM/yyyy HH:mm', { locale: ca })}</TableCell>
-                    <TableCell>{albaran.customerName}</TableCell>
-                    <TableCell>{albaran.projectName}</TableCell>
-                    <TableCell>{albaran.totalAmount.toFixed(2)} €</TableCell>
-                    <TableCell className="text-right flex items-center justify-end gap-2">
-                        <Button variant="outline" size="sm" onClick={() => router.push(`/dashboard/albarans/${albaran.id}`)}>
-                        <Eye className="mr-2 h-4 w-4" />
-                        Veure
-                        </Button>
-                        <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                            <Button variant="destructive" size="sm">
-                                <Trash2 className="h-4 w-4" />
-                            </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                            <AlertDialogHeader>
-                            <AlertDialogTitle>Estàs segur?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                                Aquesta acció no es pot desfer. Això eliminarà l'albarà <strong>#{albaran.albaranNumber}</strong> del historial, però no els registres de servei associats.
-                            </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel·lar</AlertDialogCancel>
-                            <AlertDialogAction onClick={() => handleDeleteAlbaran(albaran.id, albaran.albaranNumber)} className="bg-destructive hover:bg-destructive/90">Eliminar</AlertDialogAction>
-                            </AlertDialogFooter>
-                        </AlertDialogContent>
-                        </AlertDialog>
-                    </TableCell>
-                    </TableRow>
-                )) : (
+            <div className="overflow-x-auto">
+                <Table>
+                    <TableHeader>
                     <TableRow>
-                    <TableCell colSpan={6} className="h-24 text-center">
-                        No s'ha generat cap albarà encara.
-                    </TableCell>
+                        <TableHead>Nº Albarà</TableHead>
+                        <TableHead>Data Creació</TableHead>
+                        <TableHead>Client</TableHead>
+                        <TableHead>Obra</TableHead>
+                        <TableHead>Total</TableHead>
+                        <TableHead className="text-right">Accions</TableHead>
                     </TableRow>
-                )}
-                </TableBody>
-            </Table>
+                    </TableHeader>
+                    <TableBody>
+                    {albarans && albarans.length > 0 ? albarans.map(albaran => (
+                        <TableRow key={albaran.id}>
+                        <TableCell className="font-bold">#{String(albaran.albaranNumber).padStart(4, '0')}</TableCell>
+                        <TableCell>{format(parseISO(albaran.createdAt), 'dd/MM/yyyy HH:mm', { locale: ca })}</TableCell>
+                        <TableCell>{albaran.customerName}</TableCell>
+                        <TableCell className="max-w-[200px] truncate">{albaran.projectName}</TableCell>
+                        <TableCell>{albaran.totalAmount.toFixed(2)} €</TableCell>
+                        <TableCell className="text-right">
+                            <div className="flex items-center justify-end gap-2">
+                                <Button variant="outline" size="sm" onClick={() => router.push(`/dashboard/albarans/${albaran.id}`)}>
+                                <Eye className="mr-2 h-4 w-4" />
+                                Veure
+                                </Button>
+                                <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                    <Button variant="destructive" size="icon">
+                                        <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                    <AlertDialogTitle>Estàs segur?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                        Aquesta acció no es pot desfer. Això eliminarà l'albarà <strong>#{albaran.albaranNumber}</strong> del historial, però no els registres de servei associats.
+                                    </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel·lar</AlertDialogCancel>
+                                    <AlertDialogAction onClick={() => handleDeleteAlbaran(albaran.id, albaran.albaranNumber)} className="bg-destructive hover:bg-destructive/90">Eliminar</AlertDialogAction>
+                                    </AlertDialogFooter>
+                                </AlertDialogContent>
+                                </AlertDialog>
+                            </div>
+                        </TableCell>
+                        </TableRow>
+                    )) : (
+                        <TableRow>
+                        <TableCell colSpan={6} className="h-24 text-center">
+                            No s'ha generat cap albarà encara.
+                        </TableCell>
+                        </TableRow>
+                    )}
+                    </TableBody>
+                </Table>
+            </div>
             </CardContent>
         </Card>
         </div>

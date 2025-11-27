@@ -59,7 +59,7 @@ export default function UsersPage() {
     if (!isUserLoading && !user) {
       router.push('/');
     }
-  }, [isUserLoading, user]);
+  }, [isUserLoading, user, router]);
 
   const handleWhatsAppClick = (phoneNumber: string) => {
     const internationalNumber = phoneNumber.startsWith('+') ? phoneNumber : `376${phoneNumber.replace(/\s+/g, '')}`;
@@ -104,80 +104,83 @@ export default function UsersPage() {
             <CardDescription>Visualitza i gestiona tots els empleats registrats.</CardDescription>
             </CardHeader>
             <CardContent>
-            <Table>
-                <TableHeader>
-                <TableRow>
-                    <TableHead>Empleat</TableHead>
-                    <TableHead>ID d'Empleat</TableHead>
-                    <TableHead>Correu electrònic</TableHead>
-                    <TableHead>Rol</TableHead>
-                    <TableHead className="text-right">Accions</TableHead>
-                </TableRow>
-                </TableHeader>
-                <TableBody>
-                {employees?.map(employee => (
-                    <TableRow key={employee.id}>
-                    <TableCell>
-                        <div className="flex items-center gap-3">
-                        <Avatar>
-                            <AvatarImage src={employee.avatar} />
-                            <AvatarFallback>{getInitials(employee)}</AvatarFallback>
-                        </Avatar>
-                        <div>
-                            <p className="font-medium">{employee.firstName} {employee.lastName}</p>
-                        </div>
-                        </div>
-                    </TableCell>
-                    <TableCell>{employee.employeeId}</TableCell>
-                    <TableCell>{employee.email || 'N/A'}</TableCell>
-                    <TableCell>
-                        <Badge variant={employee.role === 'admin' ? 'default' : 'secondary'}>
-                        {employee.role || 'user'}
-                        </Badge>
-                    </TableCell>
-                    <TableCell className="text-right flex justify-end items-center gap-2">
-                        <Button asChild variant="outline" size="sm">
-                            <Link href={`/dashboard/users/edit/${employee.id}`}>
-                                <Edit className="h-4 w-4" />
-                            </Link>
-                        </Button>
-                        {employee.phoneNumber && (
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleWhatsAppClick(employee.phoneNumber!)}
-                            aria-label={`Enviar WhatsApp a ${employee.firstName}`}
-                            className="h-9 w-9"
-                        >
-                            <WhatsAppIcon className="h-5 w-5 text-green-500" />
-                        </Button>
-                        )}
-                    
-                        <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                            <Button variant="destructive" size="sm">
-                                <Trash2 className="h-4 w-4" />
-                            </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                            <AlertDialogHeader>
-                            <AlertDialogTitle>Estàs segur?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                                Aquesta acció no es pot desfer. Això eliminarà permanentment el registre de l'empleat <strong>{employee.firstName} {employee.lastName}</strong>.
-                            </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel·lar</AlertDialogCancel>
-                            <AlertDialogAction onClick={() => handleDeleteUser(employee.id, `${employee.firstName} ${employee.lastName}`)} className="bg-destructive hover:bg-destructive/90">Eliminar</AlertDialogAction>
-                            </AlertDialogFooter>
-                        </AlertDialogContent>
-                        </AlertDialog>
-                    
-                    </TableCell>
+            <div className="overflow-x-auto">
+                <Table>
+                    <TableHeader>
+                    <TableRow>
+                        <TableHead>Empleat</TableHead>
+                        <TableHead>ID d'Empleat</TableHead>
+                        <TableHead>Correu electrònic</TableHead>
+                        <TableHead>Rol</TableHead>
+                        <TableHead className="text-right">Accions</TableHead>
                     </TableRow>
-                ))}
-                </TableBody>
-            </Table>
+                    </TableHeader>
+                    <TableBody>
+                    {employees?.map(employee => (
+                        <TableRow key={employee.id}>
+                        <TableCell>
+                            <div className="flex items-center gap-3">
+                            <Avatar>
+                                <AvatarImage src={employee.avatar} />
+                                <AvatarFallback>{getInitials(employee)}</AvatarFallback>
+                            </Avatar>
+                            <div>
+                                <p className="font-medium">{employee.firstName} {employee.lastName}</p>
+                            </div>
+                            </div>
+                        </TableCell>
+                        <TableCell>{employee.employeeId}</TableCell>
+                        <TableCell>{employee.email || 'N/A'}</TableCell>
+                        <TableCell>
+                            <Badge variant={employee.role === 'admin' ? 'default' : 'secondary'}>
+                            {employee.role || 'user'}
+                            </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end items-center gap-2">
+                              <Button asChild variant="outline" size="icon">
+                                  <Link href={`/dashboard/users/edit/${employee.id}`}>
+                                      <Edit className="h-4 w-4" />
+                                  </Link>
+                              </Button>
+                              {employee.phoneNumber && (
+                              <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleWhatsAppClick(employee.phoneNumber!)}
+                                  aria-label={`Enviar WhatsApp a ${employee.firstName}`}
+                                  className="h-9 w-9"
+                              >
+                                  <WhatsAppIcon className="h-5 w-5 text-green-500" />
+                              </Button>
+                              )}
+                          
+                              <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                  <Button variant="destructive" size="icon">
+                                      <Trash2 className="h-4 w-4" />
+                                  </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                  <AlertDialogTitle>Estàs segur?</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                      Aquesta acció no es pot desfer. Això eliminarà permanentment el registre de l'empleat <strong>{employee.firstName} {employee.lastName}</strong>.
+                                  </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancel·lar</AlertDialogCancel>
+                                  <AlertDialogAction onClick={() => handleDeleteUser(employee.id, `${employee.firstName} ${employee.lastName}`)} className="bg-destructive hover:bg-destructive/90">Eliminar</AlertDialogAction>
+                                  </AlertDialogFooter>
+                              </AlertDialogContent>
+                              </AlertDialog>
+                            </div>
+                        </TableCell>
+                        </TableRow>
+                    ))}
+                    </TableBody>
+                </Table>
+            </div>
             </CardContent>
         </Card>
         </div>

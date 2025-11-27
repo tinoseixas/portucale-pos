@@ -222,7 +222,7 @@ export default function DashboardPage() {
         ) : (
             <Card>
             <CardHeader>
-                <div className="flex justify-between items-start">
+                <div className="flex justify-between items-start flex-wrap gap-4">
                     <div>
                         <CardTitle>Tots els Serveis</CardTitle>
                         <CardDescription>Visualitza, filtra i gestiona tots els registres de servei.</CardDescription>
@@ -309,73 +309,75 @@ export default function DashboardPage() {
                 </div>
             </CardHeader>
             <CardContent>
-                <Table>
-                <TableHeader>
-                    <TableRow>
-                    <TableHead className="w-[40px] px-2">
-                        <Checkbox
-                            checked={selectedRows.length > 0 && services.length > 0 && selectedRows.length === services.length}
-                            onCheckedChange={(checked) => {
-                            setSelectedRows(checked ? services.map(s => s.id) : []);
-                            }}
-                            aria-label="Seleccionar totes les files"
-                        />
-                    </TableHead>
-                    <TableHead className="w-[10px]"></TableHead>
-                    <TableHead>Funcionari</TableHead>
-                    <TableHead>Data</TableHead>
-                    <TableHead>Obra</TableHead>
-                    <TableHead>Descripció</TableHead>
-                    <TableHead>Última Modificació</TableHead>
-                    <TableHead className="text-right">Accions</TableHead>
-                    </TableRow>
-                </TableHeader>
-                <TableBody>
-                    {services && services.length > 0 ? (services as ServiceWithRowColor[]).map(service => (
-                    <TableRow key={service.id} className={service.rowColor} data-state={selectedRows.includes(service.id) && "selected"}>
-                        <TableCell className="px-2">
+                <div className="overflow-x-auto">
+                    <Table>
+                    <TableHeader>
+                        <TableRow>
+                        <TableHead className="w-[40px] px-2">
                             <Checkbox
-                                checked={selectedRows.includes(service.id)}
+                                checked={selectedRows.length > 0 && services.length > 0 && selectedRows.length === services.length}
                                 onCheckedChange={(checked) => {
-                                setSelectedRows(
-                                    checked
-                                    ? [...selectedRows, service.id]
-                                    : selectedRows.filter((id) => id !== service.id)
-                                );
+                                setSelectedRows(checked ? services.map(s => s.id) : []);
                                 }}
-                                aria-label={`Seleccionar fila ${service.id}`}
+                                aria-label="Seleccionar totes les files"
                             />
-                        </TableCell>
-                        <TableCell>
-                        <div 
-                            className="h-full w-1 rounded-full" 
-                            style={{ backgroundColor: getUserColor(service.employeeId) }}
-                        />
-                        </TableCell>
-                        <TableCell className="font-medium">{getEmployeeName(service.employeeId)}</TableCell>
-                        <TableCell>{format(parseISO(service.arrivalDateTime), 'dd/MM/yyyy HH:mm')}</TableCell>
-                        <TableCell className="max-w-[200px] truncate">{service.projectName}</TableCell>
-                        <TableCell className="max-w-[300px] truncate">{service.description}</TableCell>
-                        <TableCell>
-                        {service.updatedAt ? format(parseISO(service.updatedAt), 'dd/MM/yy HH:mm') : '-'}
-                        </TableCell>
-                        <TableCell className="text-right">
-                        <Button variant="outline" size="sm" asChild>
-                            <Link href={`/dashboard/edit/${service.id}?ownerId=${service.employeeId}`}>
-                                <Edit className="mr-2 h-4 w-4" /> Detalls
-                            </Link>
-                        </Button>
-                        </TableCell>
-                    </TableRow>
-                    )) : (
-                    <TableRow>
-                        <TableCell colSpan={8} className="h-24 text-center">
-                        No s'han trobat serveis per als filtres seleccionats.
-                        </TableCell>
-                    </TableRow>
-                    )}
-                </TableBody>
-                </Table>
+                        </TableHead>
+                        <TableHead className="w-[10px]"></TableHead>
+                        <TableHead>Funcionari</TableHead>
+                        <TableHead>Data</TableHead>
+                        <TableHead>Obra</TableHead>
+                        <TableHead>Descripció</TableHead>
+                        <TableHead>Última Modificació</TableHead>
+                        <TableHead className="text-right">Accions</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {services && services.length > 0 ? (services as ServiceWithRowColor[]).map(service => (
+                        <TableRow key={service.id} className={service.rowColor} data-state={selectedRows.includes(service.id) && "selected"}>
+                            <TableCell className="px-2">
+                                <Checkbox
+                                    checked={selectedRows.includes(service.id)}
+                                    onCheckedChange={(checked) => {
+                                    setSelectedRows(
+                                        checked
+                                        ? [...selectedRows, service.id]
+                                        : selectedRows.filter((id) => id !== service.id)
+                                    );
+                                    }}
+                                    aria-label={`Seleccionar fila ${service.id}`}
+                                />
+                            </TableCell>
+                            <TableCell>
+                            <div 
+                                className="h-full w-1 rounded-full" 
+                                style={{ backgroundColor: getUserColor(service.employeeId) }}
+                            />
+                            </TableCell>
+                            <TableCell className="font-medium">{getEmployeeName(service.employeeId)}</TableCell>
+                            <TableCell>{format(parseISO(service.arrivalDateTime), 'dd/MM/yyyy HH:mm')}</TableCell>
+                            <TableCell className="max-w-[200px] truncate">{service.projectName}</TableCell>
+                            <TableCell className="max-w-[300px] truncate">{service.description}</TableCell>
+                            <TableCell>
+                            {service.updatedAt ? format(parseISO(service.updatedAt), 'dd/MM/yy HH:mm') : '-'}
+                            </TableCell>
+                            <TableCell className="text-right">
+                            <Button variant="outline" size="sm" asChild>
+                                <Link href={`/dashboard/edit/${service.id}?ownerId=${service.employeeId}`}>
+                                    <Edit className="mr-2 h-4 w-4" /> Detalls
+                                </Link>
+                            </Button>
+                            </TableCell>
+                        </TableRow>
+                        )) : (
+                        <TableRow>
+                            <TableCell colSpan={8} className="h-24 text-center">
+                            No s'han trobat serveis per als filtres seleccionats.
+                            </TableCell>
+                        </TableRow>
+                        )}
+                    </TableBody>
+                    </Table>
+                </div>
             </CardContent>
             </Card>
         )

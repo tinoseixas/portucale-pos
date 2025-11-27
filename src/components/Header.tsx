@@ -61,7 +61,7 @@ export function Header() {
             </div>
         ) : user && (
           <div className="flex items-center gap-4">
-             <div className="hidden sm:flex items-center gap-4">
+             <div className="hidden sm:flex items-center gap-2 flex-wrap justify-end">
                 {employee?.firstName && (
                     <span className="text-sm font-medium">
                     Bona feina, {employee.firstName}!

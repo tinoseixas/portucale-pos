@@ -473,19 +473,20 @@ export default function EditServicePage() {
             
             <div className="space-y-4 rounded-lg border p-4">
                 <Label className="flex items-center gap-2 text-base font-semibold"><Package className="h-5 w-5 text-muted-foreground" /> Materials i Mà d'Obra</Label>
-                <div className="space-y-3">
+                 <div className="space-y-3">
                     {materials.map((material, index) => (
-                        <div key={index} className="grid grid-cols-12 gap-2 items-center">
+                        <div key={index} className="grid grid-cols-1 md:grid-cols-12 gap-2 items-center">
                             <Input
                                 type="text"
-                                placeholder="Descripció (ex: tub PVC, cable)"
+                                placeholder="Descripció"
                                 value={material.description}
                                 onChange={(e) => handleMaterialChange(index, 'description', e.target.value)}
-                                className="col-span-6"
+                                className="col-span-12 md:col-span-6"
                             />
-                            <div className="col-span-2 relative">
+                            <div className="col-span-4 md:col-span-2 relative">
                                 <Input
                                     type="number"
+                                    placeholder="Quant."
                                     value={material.quantity}
                                     onChange={(e) => handleMaterialChange(index, 'quantity', e.target.value)}
                                     className="pl-2 pr-1"
@@ -493,9 +494,10 @@ export default function EditServicePage() {
                                     step="any"
                                 />
                             </div>
-                            <div className="col-span-3 relative">
+                            <div className="col-span-6 md:col-span-3 relative">
                                 <Input
                                     type="number"
+                                    placeholder="Preu/u."
                                     value={material.unitPrice}
                                     onChange={(e) => handleMaterialChange(index, 'unitPrice', e.target.value)}
                                     className="pl-7 pr-1"
@@ -504,7 +506,7 @@ export default function EditServicePage() {
                                 />
                                 <Euro className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                             </div>
-                            <div className="col-span-1 flex justify-end">
+                            <div className="col-span-2 md:col-span-1 flex justify-end">
                                 <Button type="button" variant="ghost" size="icon" onClick={() => removeMaterialInput(index)}>
                                     <X className="h-4 w-4 text-destructive" />
                                 </Button>
@@ -565,7 +567,7 @@ export default function EditServicePage() {
                   </div>
                 ))}
               </div>
-              <div className="flex gap-2">
+              <div className="flex gap-2 flex-col sm:flex-row">
                  <Button type="button" variant="outline" onClick={() => setShowCamera(true)} className="flex-1">
                     <Camera className="mr-2 h-4 w-4" /> Usar Càmera
                  </Button>
@@ -578,10 +580,10 @@ export default function EditServicePage() {
             </div>
 
 
-            <div className="flex justify-between items-center pt-4">
+            <div className="flex flex-col sm:flex-row justify-between items-center pt-4 gap-4">
                <AlertDialog>
                 <AlertDialogTrigger asChild>
-                  <Button type="button" variant="destructive">
+                  <Button type="button" variant="destructive" className="w-full sm:w-auto">
                     <Trash2 className="mr-2 h-4 w-4"/>
                     Eliminar
                   </Button>
@@ -600,7 +602,7 @@ export default function EditServicePage() {
                 </AlertDialogContent>
               </AlertDialog>
 
-              <Button type="submit" className="bg-accent hover:bg-accent/90 text-accent-foreground">
+              <Button type="submit" className="bg-accent hover:bg-accent/90 text-accent-foreground w-full sm:w-auto">
                 <Save className="mr-2 h-4 w-4"/>
                 Desa els Canvis
               </Button>
