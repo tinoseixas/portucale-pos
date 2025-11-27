@@ -151,6 +151,8 @@ export default function EditServicePage() {
   const [customerId, setCustomerId] = useState<string>('');
   const [employeeId, setEmployeeId] = useState<string>('');
   const [isCustomerDialogOpen, setIsCustomerDialogOpen] = useState(false)
+  const [serviceHourlyRate, setServiceHourlyRate] = useState<number | ''>('');
+
 
   useEffect(() => {
     if (service) {
@@ -172,8 +174,7 @@ export default function EditServicePage() {
       setProjectName(service.projectName || '');
       setPendingTasks(service.pendingTasks || '');
       setCustomerId(service.customerId || '');
-      // Set the default employee to the currently logged-in user
-      setEmployeeId(user?.uid || service.employeeId || '');
+      setEmployeeId(service.employeeId || '');
       setMedia(service.media || [])
       setAlbarans(service.albarans?.length > 0 ? service.albarans : [''])
       if (service.materials && service.materials.length > 0) {
@@ -181,8 +182,17 @@ export default function EditServicePage() {
       } else {
         setMaterials([{ description: '', quantity: 1, unitPrice: 0 }]);
       }
+      // Set service hourly rate
+      const employee = employees?.find(e => e.id === service.employeeId);
+      setServiceHourlyRate(service.serviceHourlyRate ?? employee?.hourlyRate ?? '');
+
+    } else if (employees && !service) {
+      // Pre-fill for new service in-progress
+      const currentEmployee = employees.find(e => e.id === user?.uid);
+      setEmployeeId(user?.uid || '');
+      setServiceHourlyRate(currentEmployee?.hourlyRate ?? '');
     }
-  }, [service, user])
+  }, [service, employees, user])
 
   useEffect(() => {
     if (!date && service === undefined) { 
@@ -311,6 +321,7 @@ export default function EditServicePage() {
       customerName: selectedCustomer?.name || service?.customerName || '',
       employeeId: selectedEmployee?.id || service?.employeeId,
       employeeName: (selectedEmployee ? `${selectedEmployee.firstName} ${selectedEmployee.lastName}` : service?.employeeName) || '',
+      serviceHourlyRate: typeof serviceHourlyRate === 'number' ? serviceHourlyRate : undefined,
       media: media, 
       albarans: filteredAlbarans,
       materials: processedMaterials,
@@ -427,18 +438,30 @@ export default function EditServicePage() {
               </div>
             </div>
 
-            <div className="space-y-2">
-                <Label htmlFor="employeeId" className="flex items-center gap-2"><UserIcon className="h-4 w-4 text-muted-foreground" /> Tècnic</Label>
-                <Select value={employeeId} onValueChange={setEmployeeId} disabled={isLoadingEmployees}>
-                    <SelectTrigger id="employeeId">
-                        <SelectValue placeholder={isLoadingEmployees ? "A carregar tècnics..." : "Selecciona un tècnic..."} />
-                    </SelectTrigger>
-                    <SelectContent>
-                        {employees?.map(e => (
-                        <SelectItem key={e.id} value={e.id}>{e.firstName} {e.lastName}</SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                    <Label htmlFor="employeeId" className="flex items-center gap-2"><UserIcon className="h-4 w-4 text-muted-foreground" /> Tècnic</Label>
+                    <Select value={employeeId} onValueChange={setEmployeeId} disabled={isLoadingEmployees}>
+                        <SelectTrigger id="employeeId">
+                            <SelectValue placeholder={isLoadingEmployees ? "A carregar tècnics..." : "Selecciona un tècnic..."} />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {employees?.map(e => (
+                            <SelectItem key={e.id} value={e.id}>{e.firstName} {e.lastName}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="serviceHourlyRate" className="flex items-center gap-2"><Euro className="h-4 w-4 text-muted-foreground" /> Preu/Hora Mà d'Obra</Label>
+                    <Input 
+                        id="serviceHourlyRate" 
+                        type="number" 
+                        value={serviceHourlyRate}
+                        onChange={(e) => setServiceHourlyRate(e.target.value === '' ? '' : Number(e.target.value))}
+                        placeholder="Preu per defecte"
+                    />
+                </div>
             </div>
 
             <div className="space-y-2">
@@ -613,3 +636,5 @@ export default function EditServicePage() {
     </div>
   );
 }
+
+    

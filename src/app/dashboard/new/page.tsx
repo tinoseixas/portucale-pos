@@ -59,6 +59,7 @@ export default function NewServicePage() {
             pendingTasks: '',
             customerId: selectedCustomerId !== 'none' ? selectedCustomer?.id || '' : '',
             customerName: selectedCustomerId !== 'none' ? selectedCustomer?.name || '' : '',
+            serviceHourlyRate: currentEmployee.hourlyRate,
             media: [],
             albarans: [],
             materials: [],
@@ -151,3 +152,5 @@ export default function NewServicePage() {
     </div>
   )
 }
+
+    

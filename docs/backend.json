@@ -41,6 +41,10 @@
             "type": "string",
             "enum": ["admin", "user"],
             "description": "The role of the user in the system."
+        },
+        "hourlyRate": {
+          "type": "number",
+          "description": "The default hourly rate for the employee."
         }
       },
       "required": [
@@ -130,6 +134,10 @@
         "pendingTasks": {
           "type": "string",
           "description": "Description of pending tasks for the service. If this field has text, the record is considered to have pending items."
+        },
+        "serviceHourlyRate": {
+          "type": "number",
+          "description": "The specific hourly rate for this service, overriding the employee's default rate."
         },
         "media": {
           "type": "array",
@@ -309,3 +317,5 @@
     "reasoning": "The Firestore data structure is designed to support the 'Registre Diari de Treball' application, focusing on simplicity, security, and scalability. It leverages path-based ownership for employee data and nested service records. The 'photos' collection has been replaced by a 'media' array within the ServiceRecord document to store base64 data URLs of images and videos directly. This simplifies data retrieval for each service record, as it avoids extra subcollection reads, but may increase document size. This design ensures that security rules can be written clearly and efficiently.\n\n**Authorization Independence and QAPs:**\n\n*   **Employees Collection:** The `/employees/{employeeId}` collection stores employee profiles. Security rules will ensure only the authenticated employee (or an admin) can access their own profile.\n*   **Service Records:** Each employee has a subcollection `/employees/{employeeId}/serviceRecords/{serviceRecordId}`. This structure provides path-based authorization. Only the employee who 'owns' the service record can access it.\n*   **Customers Collection:** The `/customers/{customerId}` collection is readable by all authenticated users to allow assignment, but write access is restricted to admins to maintain data integrity."
   }
 }
+
+    

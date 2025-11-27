@@ -16,7 +16,7 @@ import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import type { Employee } from '@/lib/types';
-import { Camera, Save, ArrowLeft, Phone, User as UserIcon, Shield } from 'lucide-react';
+import { Camera, Save, ArrowLeft, Phone, User as UserIcon, Shield, Euro } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AdminGate } from '@/components/AdminGate';
 
@@ -27,6 +27,7 @@ const profileSchema = z.object({
   employeeId: z.string().min(1, "L'ID d'empleat és obligatori"),
   phoneNumber: z.string().optional(),
   role: z.enum(['admin', 'user']).optional(),
+  hourlyRate: z.number().min(0, 'El preu ha de ser un número positiu').optional(),
 });
 
 type ProfileFormValues = z.infer<typeof profileSchema>;
@@ -63,6 +64,7 @@ export default function EditUserPage() {
       employeeId: '',
       phoneNumber: '',
       role: 'user',
+      hourlyRate: 0,
     },
   });
 
@@ -81,6 +83,7 @@ export default function EditUserPage() {
         employeeId: employee.employeeId,
         phoneNumber: employee.phoneNumber || '',
         role: employee.role || 'user',
+        hourlyRate: employee.hourlyRate || 0,
       });
       if (employee.avatar) {
         setAvatarUrl(employee.avatar);
@@ -225,6 +228,23 @@ export default function EditUserPage() {
                 {errors.phoneNumber && <p className="text-sm text-destructive">{errors.phoneNumber.message}</p>}
                 </div>
 
+                <div className="space-y-2">
+                    <Label htmlFor="hourlyRate" className="flex items-center gap-2"><Euro className="h-4 w-4 text-muted-foreground" /> Preu per Hora</Label>
+                    <Controller
+                        name="hourlyRate"
+                        control={control}
+                        render={({ field }) => <Input 
+                            id="hourlyRate" 
+                            type="number" 
+                            placeholder="Ex: 25.50" 
+                            {...field} 
+                            onChange={e => field.onChange(parseFloat(e.target.value) || 0)}
+                            value={field.value || ''}
+                        />}
+                    />
+                    {errors.hourlyRate && <p className="text-sm text-destructive">{errors.hourlyRate.message}</p>}
+                </div>
+
                 {canEditRole && (
                   <div className="space-y-2">
                       <Label htmlFor="role" className="flex items-center gap-2"><Shield className="h-4 w-4 text-muted-foreground" /> Rol</Label>
@@ -260,3 +280,5 @@ export default function EditUserPage() {
     </AdminGate>
   );
 }
+
+    

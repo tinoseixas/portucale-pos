@@ -9,6 +9,7 @@ export interface ServiceRecord {
   description: string;
   projectName: string;
   pendingTasks: string;
+  serviceHourlyRate?: number; // Specific rate for this service
   media: { type: 'image' | 'video'; dataUrl: string }[];
   albarans: string[];
   materials?: {
@@ -29,6 +30,7 @@ export interface Employee {
   email?: string;
   phoneNumber?: string;
   role?: 'admin' | 'user';
+  hourlyRate?: number; // Default hourly rate
 }
 
 export interface Customer {
@@ -51,3 +53,5 @@ export interface Albaran {
   serviceRecordIds: string[];
   totalAmount: number;
 }
+
+    
