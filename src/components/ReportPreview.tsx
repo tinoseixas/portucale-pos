@@ -51,9 +51,9 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
 
     return (
         <div ref={ref} className="bg-white p-8 font-sans text-gray-900 printable-area">
-            {/* Header */}
-            <header className="flex sm:grid sm:grid-cols-2 justify-between items-start pb-6 border-b-2 border-gray-900 print-grid-2">
-                <div className="flex items-center gap-4">
+            {/* Header - Forced Flex Layout */}
+            <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }} className="pb-6 border-b-2 border-gray-900">
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                      <div className="flex items-center justify-center w-12 h-12 rounded-lg bg-primary text-primary-foreground">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7">
                             <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
@@ -68,16 +68,16 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
                         <p>Email: eg.ad.tecnica@gmail.com</p>
                     </div>
                 </div>
-                <div className="text-right flex-shrink-0 print-text-right">
+                <div style={{ textAlign: 'right', flexShrink: 0 }}>
                     <h1 className="text-3xl font-bold text-gray-900">Albarà</h1>
                      {albaranNumber && albaranNumber > 0 && <p className="text-md text-gray-700 font-semibold">Nº: {String(albaranNumber).padStart(4, '0')}</p>}
                     <p className="text-sm text-gray-600">Data: {format(new Date(), 'dd MMMM yyyy', { locale: ca })}</p>
                 </div>
             </header>
 
-            {/* Client and Project Info */}
-            <section className="grid grid-cols-1 sm:grid-cols-2 gap-8 mt-8 mb-8 print-grid-2">
-                <div>
+            {/* Client and Project Info - Forced Flex Layout */}
+            <section style={{ display: 'flex', justifyContent: 'space-between', gap: '2rem' }} className="mt-8 mb-8">
+                <div style={{ flex: 1 }}>
                     <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">CLIENT</h3>
                     {customer ? (
                         <div className="space-y-1 text-base">
@@ -89,7 +89,7 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
                         </div>
                     ) : <p className="text-gray-600">No especificat</p>}
                 </div>
-                 <div className="text-right print-text-right">
+                 <div style={{ flex: 1, textAlign: 'right' }}>
                     <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">OBRA</h3>
                     <p className="font-bold text-base">{projectName}</p>
                  </div>
@@ -137,7 +137,7 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
                 </div>
             )}
             
-             {/* Total Pricing Section */}
+             {/* Total Pricing Section - Forced Layout */}
             {showPricing && (
               <section className="mt-8 pt-6 border-t-2 border-gray-900">
                     <h3 className="font-bold text-lg mb-4">Resum de Preços</h3>
@@ -170,24 +170,23 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
                         </tbody>
                     </table>
 
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 items-start mt-6 print-grid-2">
-                    <div>
-                        <div className="text-left font-bold text-base mt-2">
+                  <div style={{ display: 'flex', alignItems: 'flex-start' }} className="mt-6">
+                    <div style={{ flex: 1 }}>
+                        <div className="font-bold text-base mt-2">
                             Hores Totals Treballades: {totalTimeFormatted}
                         </div>
                     </div>
-                    <div className="w-full max-w-sm space-y-2 text-sm justify-self-end print-justify-self-end">
-                        <div className="flex justify-between">
+                    <div style={{ flex: 'none', width: '250px' }} className="space-y-2 text-sm">
+                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                             <span className="font-semibold text-gray-700">Subtotal:</span>
                             <span className="font-medium tabular-nums">{subtotal.toFixed(2)} €</span>
                         </div>
-                        <div className="flex justify-between">
+                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                             <span className="font-semibold text-gray-700">IGI ({(IVA_RATE * 100).toFixed(1)}%):</span>
                             <span className="font-medium tabular-nums">{iva.toFixed(2)} €</span>
                         </div>
                         <Separator />
-                        <div className="flex justify-between font-bold text-base items-center">
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }} className="font-bold text-base">
                             <span>Total General:</span>
                             <span className="text-xl">{totalGeneral.toFixed(2)} €</span>
                         </div>
@@ -207,5 +206,3 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
 })
 
 ReportPreview.displayName = "ReportPreview";
-
-    
