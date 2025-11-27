@@ -4,7 +4,7 @@ import { parseISO, isValid, differenceInMinutes } from 'date-fns';
 const ADMIN_EMAIL = 'tinoseixas@gmail.com';
 const ADMIN_HOURLY_RATE = 30;
 const USER_HOURLY_RATE = 27;
-const IVA_RATE = 0.045; // 4.5% IGI for Andorra
+export const IVA_RATE = 0.045; // 4.5% IGI for Andorra
 
 export function calculateLaborCost(services: ServiceRecord[], employees: Employee[]): number {
     if (!services || !employees) return 0;
