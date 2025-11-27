@@ -6,7 +6,7 @@ import { Calendar as CalendarIcon, Clock, User } from 'lucide-react';
 import type { ServiceRecord, Customer, Employee } from '@/lib/types';
 import { format, differenceInMinutes, parseISO, isValid } from 'date-fns';
 import { ca } from 'date-fns/locale';
-import { calculateTotalAmount, calculateLaborCost, calculateTotalMinutes } from '@/lib/calculations';
+import { calculateTotalAmount, IVA_RATE } from '@/lib/calculations';
 
 
 interface ReportPreviewProps {
