@@ -171,13 +171,13 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
                     </table>
 
 
-                  <div className="flex justify-between items-start mt-6">
+                  <div className="grid grid-cols-2 items-start mt-6">
                     <div>
-                        <div className="text-right font-bold text-base mt-2">
+                        <div className="text-left font-bold text-base mt-2">
                             Hores Totals Treballades: {totalTimeFormatted}
                         </div>
                     </div>
-                    <div className="w-full max-w-sm space-y-2 text-sm">
+                    <div className="w-full max-w-sm space-y-2 text-sm justify-self-end">
                         <div className="flex justify-between">
                             <span className="font-semibold text-gray-700">Subtotal:</span>
                             <span className="font-medium tabular-nums">{subtotal.toFixed(2)} €</span>
