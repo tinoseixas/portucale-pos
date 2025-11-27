@@ -6,12 +6,8 @@ import { Calendar as CalendarIcon, Clock, User } from 'lucide-react';
 import type { ServiceRecord, Customer, Employee } from '@/lib/types';
 import { format, differenceInMinutes, parseISO, isValid } from 'date-fns';
 import { ca } from 'date-fns/locale';
+import { calculateTotalAmount, calculateLaborCost, calculateTotalMinutes } from '@/lib/calculations';
 
-// Constants
-const ADMIN_EMAIL = 'tinoseixas@gmail.com';
-const ADMIN_HOURLY_RATE = 30;
-const USER_HOURLY_RATE = 27;
-const IVA_RATE = 0.045; // 4.5% IGI for Andorra
 
 interface ReportPreviewProps {
   customer: Customer | undefined;
@@ -28,41 +24,6 @@ type MaterialLine = {
     unitPrice: number;
 }
 
-
-// --- Centralized Calculation Logic ---
-
-function calculateLaborCost(services: ServiceRecord[], employees: Employee[]): number {
-    if (!services || !employees) return 0;
-    return services.reduce((total, service) => {
-        const employee = employees.find(e => e.id === service.employeeId);
-        const hourlyRate = employee?.email === ADMIN_EMAIL ? ADMIN_HOURLY_RATE : USER_HOURLY_RATE;
-        
-        if (service.arrivalDateTime && service.departureDateTime) {
-            const startDate = parseISO(service.arrivalDateTime);
-            const endDate = parseISO(service.departureDateTime);
-            if (isValid(startDate) && isValid(endDate) && endDate > startDate) {
-                const minutes = differenceInMinutes(endDate, startDate);
-                return total + (minutes / 60) * hourlyRate;
-            }
-        }
-        return total;
-    }, 0);
-}
-
-function calculateTotalMinutes(services: ServiceRecord[]): number {
-    if (!services) return 0;
-    return services.reduce((total, service) => {
-        if (service.arrivalDateTime && service.departureDateTime) {
-            const startDate = parseISO(service.arrivalDateTime);
-            const endDate = parseISO(service.departureDateTime);
-            if (isValid(startDate) && isValid(endDate) && startDate.getTime() !== endDate.getTime()) {
-              return total + differenceInMinutes(endDate, startDate);
-            }
-        }
-        return total;
-    }, 0);
-}
-
 // --- Component ---
 
 export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ customer, projectName, services, showPricing, albaranNumber, employees }, ref) => {
@@ -72,11 +33,9 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
         return [...services].sort((a,b) => parseISO(a.arrivalDateTime).getTime() - parseISO(b.arrivalDateTime).getTime());
     }, [services]);
     
-    // Use the centralized calculation functions
-    const laborCost = useMemo(() => calculateLaborCost(sortedServices, employees), [sortedServices, employees]);
-    const totalMinutes = useMemo(() => calculateTotalMinutes(sortedServices), [sortedServices]);
-    const totalHours = totalMinutes / 60;
-    const totalTimeFormatted = `${Math.floor(totalHours)}h ${totalMinutes % 60}m`;
+    // Use the centralized calculation functions from lib
+    const { subtotal, iva, totalGeneral, totalHours, materialsSubtotal, laborCost } = calculateTotalAmount(sortedServices, employees);
+    const totalTimeFormatted = `${Math.floor(totalHours)}h ${Math.round((totalHours % 1) * 60)}m`;
 
     const allMaterials = useMemo(() => {
         return sortedServices.flatMap(service => service.materials || []).filter(material => 
@@ -84,14 +43,6 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
         );
     }, [sortedServices]);
 
-    const materialsSubtotal = useMemo(() => {
-         return allMaterials.reduce((acc, material) => acc + (material.quantity * material.unitPrice), 0);
-    }, [allMaterials]);
-    
-    const subtotal = materialsSubtotal + laborCost;
-    const iva = subtotal * IVA_RATE;
-    const totalGeneral = subtotal + iva;
-    
     const getEmployeeName = (employeeId?: string) => {
         if (!employeeId || !employees) return 'Tècnic no assignat';
         const employee = employees.find(e => e.id === employeeId);
@@ -232,7 +183,7 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
                             <span className="font-medium tabular-nums">{subtotal.toFixed(2)} €</span>
                         </div>
                         <div className="flex justify-between">
-                            <span className="font-semibold text-gray-700">IGI ({(IVA_RATE * 100).toFixed(1)}%):</span>
+                            <span className="font-semibold text-gray-700">IGI ({(0.045 * 100).toFixed(1)}%):</span>
                             <span className="font-medium tabular-nums">{iva.toFixed(2)} €</span>
                         </div>
                         <Separator />

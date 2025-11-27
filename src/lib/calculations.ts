@@ -6,7 +6,7 @@ const ADMIN_HOURLY_RATE = 30;
 const USER_HOURLY_RATE = 27;
 const IVA_RATE = 0.045; // 4.5% IGI for Andorra
 
-function calculateLaborCost(services: ServiceRecord[], employees: Employee[]): number {
+export function calculateLaborCost(services: ServiceRecord[], employees: Employee[]): number {
     if (!services || !employees) return 0;
     return services.reduce((total, service) => {
         const employee = employees.find(e => e.id === service.employeeId);
@@ -24,10 +24,33 @@ function calculateLaborCost(services: ServiceRecord[], employees: Employee[]): n
     }, 0);
 }
 
-export function calculateTotalAmount(services: ServiceRecord[], employees: Employee[]): number {
-    if (!services || !employees) return 0;
+export function calculateTotalMinutes(services: ServiceRecord[]): number {
+    if (!services) return 0;
+    return services.reduce((total, service) => {
+        if (service.arrivalDateTime && service.departureDateTime) {
+            const startDate = parseISO(service.arrivalDateTime);
+            const endDate = parseISO(service.departureDateTime);
+            if (isValid(startDate) && isValid(endDate) && endDate > startDate) {
+              return total + differenceInMinutes(endDate, startDate);
+            }
+        }
+        return total;
+    }, 0);
+}
+
+export function calculateTotalAmount(services: ServiceRecord[], employees: Employee[]): {
+    subtotal: number,
+    iva: number,
+    totalGeneral: number,
+    totalHours: number,
+    materialsSubtotal: number,
+    laborCost: number,
+} {
+    if (!services || !employees) return { subtotal: 0, iva: 0, totalGeneral: 0, totalHours: 0, materialsSubtotal: 0, laborCost: 0 };
 
     const laborCost = calculateLaborCost(services, employees);
+    const totalMinutes = calculateTotalMinutes(services);
+    const totalHours = totalMinutes / 60;
 
     const allMaterials = services.flatMap(service => service.materials || []).filter(material => 
         !material.description.toLowerCase().includes('traball') && material.description.trim() !== ''
@@ -39,5 +62,12 @@ export function calculateTotalAmount(services: ServiceRecord[], employees: Emplo
     const iva = subtotal * IVA_RATE;
     const totalGeneral = subtotal + iva;
     
-    return totalGeneral;
+    return {
+        subtotal,
+        iva,
+        totalGeneral,
+        totalHours,
+        materialsSubtotal,
+        laborCost,
+    };
 }

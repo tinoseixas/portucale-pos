@@ -80,7 +80,7 @@ export default function AlbaransHistoryPage() {
 
       for (const albaran of albarans) {
         const associatedServices = allServicesData.filter(service => albaran.serviceRecordIds.includes(service.id));
-        const newTotalAmount = calculateTotalAmount(associatedServices, employees);
+        const { totalGeneral: newTotalAmount } = calculateTotalAmount(associatedServices, employees);
 
         if (newTotalAmount.toFixed(2) !== albaran.totalAmount.toFixed(2)) {
             const albaranRef = doc(firestore, 'albarans', albaran.id);
@@ -89,7 +89,9 @@ export default function AlbaransHistoryPage() {
         }
       }
 
-      await batch.commit();
+      if (updatedCount > 0) {
+        await batch.commit();
+      }
 
       toast({
         title: 'Actualització Completa',

@@ -54,7 +54,7 @@ export default function ReportsPage() {
     }, [allServices, selectedCustomerId])
 
 
-     const filteredServices = useMemo(() => {
+    const filteredServices = useMemo(() => {
         if (!allServices) return [];
 
         // If a project is selected, it takes priority and we ignore the customer filter.
@@ -87,14 +87,13 @@ export default function ReportsPage() {
     };
     
     const handleProjectChange = (projectName: string) => {
-        if (projectName !== 'all' && selectedCustomerId === 'all') {
-            // Find the customer associated with the first service of that project
+        setSelectedProject(projectName);
+         if (projectName !== 'all' && selectedCustomerId === 'all') {
             const service = allServices?.find(s => s.projectName === projectName);
             if (service?.customerId) {
                 setSelectedCustomerId(service.customerId);
             }
         }
-        setSelectedProject(projectName);
     }
 
 
@@ -115,7 +114,7 @@ export default function ReportsPage() {
                 return newNumber;
             });
             
-            const totalAmount = calculateTotalAmount(filteredServices, employees);
+            const { totalGeneral } = calculateTotalAmount(filteredServices, employees);
 
             const albaranRef = doc(collection(firestore, "albarans"));
             await setDoc(albaranRef, {
@@ -126,7 +125,7 @@ export default function ReportsPage() {
                 customerName: associatedCustomer?.name || 'N/A',
                 projectName: selectedProject !== 'all' ? selectedProject : 'Varis Projectes',
                 serviceRecordIds: filteredServices.map(s => s.id),
-                totalAmount: totalAmount,
+                totalAmount: totalGeneral,
             });
 
             toast({

@@ -25,9 +25,6 @@ import {
 import { useToast } from '@/hooks/use-toast'
 import { AdminGate } from '@/components/AdminGate'
 
-const A4_WIDTH_PX = 595.28;
-const A4_HEIGHT_PX = 841.89;
-
 export default function AlbaranDetailPage() {
     const firestore = useFirestore()
     const router = useRouter()
@@ -107,40 +104,56 @@ export default function AlbaranDetailPage() {
 
 
     const handleExportPDF = async () => {
-        const reportElement = reportRef.current
-        if (!reportElement) return
+        const reportElement = reportRef.current;
+        if (!reportElement) return;
 
-        setIsGenerating(true)
+        setIsGenerating(true);
 
         try {
             const canvas = await html2canvas(reportElement, {
-                scale: 2, 
+                scale: 2, // Higher scale for better quality
                 useCORS: true,
                 logging: false,
-                width: reportElement.scrollWidth,
-                height: reportElement.scrollHeight,
-                windowWidth: reportElement.scrollWidth,
-                windowHeight: reportElement.scrollHeight,
             });
 
-            // A4 page dimensions in pixels at 72 DPI are 595 x 842
+            const imgData = canvas.toDataURL('image/png');
             const pdf = new jsPDF({
                 orientation: 'portrait',
-                unit: 'px',
-                format: [canvas.width, canvas.height] 
+                unit: 'mm',
+                format: 'a4',
             });
-            
-            pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, canvas.width, canvas.height);
 
+            const pdfWidth = pdf.internal.pageSize.getWidth();
+            const pdfHeight = pdf.internal.pageSize.getHeight();
+            const canvasWidth = canvas.width;
+            const canvasHeight = canvas.height;
+            const canvasAspectRatio = canvasWidth / canvasHeight;
+            
+            let imgWidth = pdfWidth;
+            let imgHeight = imgWidth / canvasAspectRatio;
+
+            // If the image is too tall for the page, scale it down.
+            if (imgHeight > pdfHeight) {
+                imgHeight = pdfHeight;
+                imgWidth = imgHeight * canvasAspectRatio;
+            }
+            
+            // Center the image if needed (optional)
+            const xOffset = (pdfWidth - imgWidth) / 2;
+            const yOffset = 0; // Start from top
+
+            pdf.addImage(imgData, 'PNG', xOffset, yOffset, imgWidth, imgHeight);
+            
             const fileName = `Albara_${albaran?.albaranNumber || albaranId}.pdf`.replace(/ /g, '_');
-            pdf.save(fileName)
+            pdf.save(fileName);
+
         } catch (error) {
-            console.error("Error generating PDF:", error)
+            console.error("Error generating PDF:", error);
             toast({ variant: 'destructive', title: 'Error', description: 'No s\'ha pogut generar el PDF.' });
         } finally {
-            setIsGenerating(false)
+            setIsGenerating(false);
         }
-    }
+    };
     
     const isLoading = isUserLoading || isLoadingAlbaran || isLoadingData || isLoadingEmployees;
     
