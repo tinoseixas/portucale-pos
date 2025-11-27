@@ -111,7 +111,7 @@ export default function AlbaranDetailPage() {
 
         try {
             const canvas = await html2canvas(reportElement, {
-                scale: 2, // Higher scale for better quality
+                scale: 3, // Higher scale for better quality
                 useCORS: true,
                 logging: false,
             });
@@ -125,24 +125,23 @@ export default function AlbaranDetailPage() {
 
             const pdfWidth = pdf.internal.pageSize.getWidth();
             const pdfHeight = pdf.internal.pageSize.getHeight();
+            
             const canvasWidth = canvas.width;
             const canvasHeight = canvas.height;
-            const canvasAspectRatio = canvasWidth / canvasHeight;
-            
-            let imgWidth = pdfWidth;
-            let imgHeight = imgWidth / canvasAspectRatio;
+            const canvasRatio = canvasWidth / canvasHeight;
 
-            // If the image is too tall for the page, scale it down.
-            if (imgHeight > pdfHeight) {
-                imgHeight = pdfHeight;
-                imgWidth = imgHeight * canvasAspectRatio;
+            let finalWidth = pdfWidth;
+            let finalHeight = pdfWidth / canvasRatio;
+
+            if (finalHeight > pdfHeight) {
+                finalHeight = pdfHeight;
+                finalWidth = pdfHeight * canvasRatio;
             }
             
-            // Center the image if needed (optional)
-            const xOffset = (pdfWidth - imgWidth) / 2;
-            const yOffset = 0; // Start from top
+            const xOffset = (pdfWidth - finalWidth) / 2;
+            const yOffset = 0;
 
-            pdf.addImage(imgData, 'PNG', xOffset, yOffset, imgWidth, imgHeight);
+            pdf.addImage(imgData, 'PNG', xOffset, yOffset, finalWidth, finalHeight);
             
             const fileName = `Albara_${albaran?.albaranNumber || albaranId}.pdf`.replace(/ /g, '_');
             pdf.save(fileName);
@@ -251,3 +250,5 @@ export default function AlbaranDetailPage() {
         </AdminGate>
     )
 }
+
+    

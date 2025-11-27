@@ -68,7 +68,7 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
                         <p>Email: eg.ad.tecnica@gmail.com</p>
                     </div>
                 </div>
-                <div className="text-right">
+                <div className="text-right flex-shrink-0">
                     <h1 className="text-3xl font-bold text-gray-900">Albarà</h1>
                      {albaranNumber && albaranNumber > 0 && <p className="text-md text-gray-700 font-semibold">Nº: {String(albaranNumber).padStart(4, '0')}</p>}
                     <p className="text-sm text-gray-600">Data: {format(new Date(), 'dd MMMM yyyy', { locale: ca })}</p>
@@ -183,7 +183,7 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
                             <span className="font-medium tabular-nums">{subtotal.toFixed(2)} €</span>
                         </div>
                         <div className="flex justify-between">
-                            <span className="font-semibold text-gray-700">IGI ({(0.045 * 100).toFixed(1)}%):</span>
+                            <span className="font-semibold text-gray-700">IGI ({(IVA_RATE * 100).toFixed(1)}%):</span>
                             <span className="font-medium tabular-nums">{iva.toFixed(2)} €</span>
                         </div>
                         <Separator />
@@ -207,3 +207,5 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
 })
 
 ReportPreview.displayName = "ReportPreview";
+
+    
