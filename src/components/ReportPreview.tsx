@@ -2,7 +2,7 @@
 import React, { forwardRef, useMemo } from 'react';
 import Image from 'next/image';
 import { Separator } from '@/components/ui/separator';
-import { Calendar as CalendarIcon, Clock, User } from 'lucide-react';
+import { Calendar as CalendarIcon, Clock, User, Video } from 'lucide-react';
 import type { ServiceRecord, Customer, Employee } from '@/lib/types';
 import { format, differenceInMinutes, parseISO, isValid } from 'date-fns';
 import { ca } from 'date-fns/locale';
@@ -43,6 +43,11 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
         );
     }, [sortedServices]);
 
+    const allMedia = useMemo(() => {
+        return sortedServices.flatMap(service => service.media || []).filter(m => m.type === 'image');
+    }, [sortedServices]);
+
+
     const getEmployeeName = (employeeId?: string) => {
         if (!employeeId || !employees) return 'Tècnic no assignat';
         const employee = employees.find(e => e.id === employeeId);
@@ -51,8 +56,8 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
 
     return (
         <div ref={ref} className="bg-white p-8 font-sans text-gray-900 printable-area">
-            {/* Header - Forced Flex Layout */}
-            <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }} className="pb-6 border-b-2 border-gray-900">
+            {/* Header */}
+            <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '2px solid #111827', paddingBottom: '1.5rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                      <div className="flex items-center justify-center w-12 h-12 rounded-lg bg-primary text-primary-foreground">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7">
@@ -75,8 +80,8 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
                 </div>
             </header>
 
-            {/* Client and Project Info - Forced Flex Layout */}
-            <section style={{ display: 'flex', justifyContent: 'space-between', gap: '2rem' }} className="mt-8 mb-8">
+            {/* Client and Project Info */}
+            <section style={{ display: 'flex', justifyContent: 'space-between', gap: '2rem', marginTop: '2rem', marginBottom: '2rem' }}>
                 <div style={{ flex: 1 }}>
                     <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">CLIENT</h3>
                     {customer ? (
@@ -137,9 +142,8 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
                 </div>
             )}
             
-             {/* Total Pricing Section - Forced Layout */}
             {showPricing && (
-              <section className="mt-8 pt-6 border-t-2 border-gray-900">
+              <section style={{ marginTop: '2rem', paddingTop: '1.5rem', borderTop: '2px solid #111827' }}>
                     <h3 className="font-bold text-lg mb-4">Resum de Preços</h3>
                     <table className="w-full text-sm">
                         <thead className="bg-gray-50">
@@ -170,7 +174,7 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
                         </tbody>
                     </table>
 
-                  <div style={{ display: 'flex', alignItems: 'flex-start' }} className="mt-6">
+                  <div style={{ display: 'flex', alignItems: 'flex-start', marginTop: '1.5rem' }}>
                     <div style={{ flex: 1 }}>
                         <div className="font-bold text-base mt-2">
                             Hores Totals Treballades: {totalTimeFormatted}
@@ -195,6 +199,24 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
               </section>
             )}
 
+            {allMedia.length > 0 && (
+                <section style={{ marginTop: '2rem', paddingTop: '1.5rem', borderTop: '1px solid #e5e7eb' }} className="page-break-before-always">
+                    <h3 className="font-bold text-lg mb-4">Galeria de Multimèdia</h3>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem' }}>
+                        {allMedia.map((media, index) => (
+                            <div key={index} style={{ aspectRatio: '1 / 1', position: 'relative', borderRadius: '0.25rem', overflow: 'hidden' }}>
+                                <Image
+                                    src={media.dataUrl}
+                                    alt={`Media ${index + 1}`}
+                                    layout="fill"
+                                    objectFit="cover"
+                                />
+                            </div>
+                        ))}
+                    </div>
+                </section>
+            )}
+
 
             <footer className="mt-16 pt-6 border-t text-center text-xs text-gray-500">
                 <p>Gràcies per la seva confiança.</p>
@@ -206,3 +228,5 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
 })
 
 ReportPreview.displayName = "ReportPreview";
+
+    
