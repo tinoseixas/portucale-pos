@@ -141,3 +141,20 @@
 .rbc-today {
     background-color: hsl(var(--secondary));
 }
+
+@media print {
+    .printable-area {
+        font-size: 10px; /* Adjust font size for print */
+    }
+    .print-grid-2 {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 2rem; /* 32px */
+    }
+    .print-text-right {
+        text-align: right;
+    }
+    .print-justify-self-end {
+        justify-self: end;
+    }
+}

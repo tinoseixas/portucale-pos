@@ -52,7 +52,7 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
     return (
         <div ref={ref} className="bg-white p-8 font-sans text-gray-900 printable-area">
             {/* Header */}
-            <header className="flex justify-between items-start pb-6 border-b-2 border-gray-900">
+            <header className="flex sm:grid sm:grid-cols-2 justify-between items-start pb-6 border-b-2 border-gray-900 print-grid-2">
                 <div className="flex items-center gap-4">
                      <div className="flex items-center justify-center w-12 h-12 rounded-lg bg-primary text-primary-foreground">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7">
@@ -68,7 +68,7 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
                         <p>Email: eg.ad.tecnica@gmail.com</p>
                     </div>
                 </div>
-                <div className="text-right flex-shrink-0">
+                <div className="text-right flex-shrink-0 print-text-right">
                     <h1 className="text-3xl font-bold text-gray-900">Albarà</h1>
                      {albaranNumber && albaranNumber > 0 && <p className="text-md text-gray-700 font-semibold">Nº: {String(albaranNumber).padStart(4, '0')}</p>}
                     <p className="text-sm text-gray-600">Data: {format(new Date(), 'dd MMMM yyyy', { locale: ca })}</p>
@@ -76,7 +76,7 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
             </header>
 
             {/* Client and Project Info */}
-            <section className="grid grid-cols-2 gap-8 mt-8 mb-8">
+            <section className="grid grid-cols-1 sm:grid-cols-2 gap-8 mt-8 mb-8 print-grid-2">
                 <div>
                     <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">CLIENT</h3>
                     {customer ? (
@@ -89,7 +89,7 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
                         </div>
                     ) : <p className="text-gray-600">No especificat</p>}
                 </div>
-                 <div className="text-right">
+                 <div className="text-right print-text-right">
                     <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">OBRA</h3>
                     <p className="font-bold text-base">{projectName}</p>
                  </div>
@@ -171,13 +171,13 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
                     </table>
 
 
-                  <div className="grid grid-cols-2 items-start mt-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 items-start mt-6 print-grid-2">
                     <div>
                         <div className="text-left font-bold text-base mt-2">
                             Hores Totals Treballades: {totalTimeFormatted}
                         </div>
                     </div>
-                    <div className="w-full max-w-sm space-y-2 text-sm justify-self-end">
+                    <div className="w-full max-w-sm space-y-2 text-sm justify-self-end print-justify-self-end">
                         <div className="flex justify-between">
                             <span className="font-semibold text-gray-700">Subtotal:</span>
                             <span className="font-medium tabular-nums">{subtotal.toFixed(2)} €</span>
