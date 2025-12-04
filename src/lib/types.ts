@@ -16,6 +16,7 @@ export interface ServiceRecord {
     description: string;
     quantity: number;
     unitPrice: number;
+    imageDataUrl?: string; // New field for material image
   }[];
   updatedAt?: string;
   createdAt?: string; 
@@ -53,5 +54,3 @@ export interface Albaran {
   serviceRecordIds: string[];
   totalAmount: number;
 }
-
-    

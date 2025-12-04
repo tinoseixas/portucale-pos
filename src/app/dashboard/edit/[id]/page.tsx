@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState, useMemo, useRef } from 'react'
 import { useRouter, useParams, useSearchParams } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import { Button } from '@/components/ui/button'
@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Clock, FileText, Camera, ArrowLeft, Save, Trash2, Hash, Plus, X, Video, Calendar as CalendarIcon, Info, Briefcase, AlertTriangle, Users, Package, Euro, MapPin, User as UserIcon } from 'lucide-react'
+import { Clock, FileText, Camera, ArrowLeft, Save, Trash2, Hash, Plus, X, Video, Calendar as CalendarIcon, Info, Briefcase, AlertTriangle, Users, Package, Euro, MapPin, User as UserIcon, ImagePlus } from 'lucide-react'
 import { useToast } from "@/hooks/use-toast"
 import { useFirestore, useUser, useDoc, useMemoFirebase, useCollection } from '@/firebase'
 import { doc, deleteDoc, collection, query, getDocs, collectionGroup, orderBy } from 'firebase/firestore'
@@ -44,6 +44,7 @@ type Material = {
     description: string;
     quantity: number;
     unitPrice: number;
+    imageDataUrl?: string;
 }
 
 const MAX_IMAGE_WIDTH = 1024;
@@ -98,6 +99,8 @@ export default function EditServicePage() {
   const { user, isUserLoading } = useUser()
   const firestore = useFirestore()
   const serviceId = params.id as string
+  const materialImageInputRef = useRef<HTMLInputElement>(null);
+  const [selectedMaterialIndex, setSelectedMaterialIndex] = useState<number | null>(null);
 
   // Get the ownerId from the query parameter to build the direct path
   const recordOwnerId = searchParams.get('ownerId');
@@ -268,7 +271,39 @@ export default function EditServicePage() {
     const newMaterials = materials.filter((_, i) => i !== index);
     setMaterials(newMaterials);
   };
-  
+    
+  const handleMaterialImageUploadClick = (index: number) => {
+    setSelectedMaterialIndex(index);
+    materialImageInputRef.current?.click();
+  };
+
+  const handleMaterialImageFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0] && selectedMaterialIndex !== null) {
+      const file = e.target.files[0];
+      try {
+        toast({ title: 'Processant imatge del material...' });
+        const compressedDataUrl = await resizeAndCompressImage(file);
+        const newMaterials = [...materials];
+        newMaterials[selectedMaterialIndex].imageDataUrl = compressedDataUrl;
+        setMaterials(newMaterials);
+        toast({ title: 'Imatge del material afegida!' });
+      } catch (error) {
+        console.error('Error processing material image:', error);
+        toast({ variant: 'destructive', title: 'Error', description: "No s'ha pogut processar la imatge." });
+      } finally {
+        // Reset the input and index
+        e.target.value = '';
+        setSelectedMaterialIndex(null);
+      }
+    }
+  };
+
+  const removeMaterialImage = (index: number) => {
+    const newMaterials = [...materials];
+    newMaterials[index].imageDataUrl = undefined;
+    setMaterials(newMaterials);
+  };
+
   const handleCapture = (dataUrl: string, type: 'image' | 'video') => {
     setMedia(prev => [...prev, { type, dataUrl }]);
     setShowCamera(false);
@@ -384,6 +419,14 @@ export default function EditServicePage() {
         onOpenChange={setIsCustomerDialogOpen}
         customers={customers || []}
         onCustomerSelect={handleCustomerSelect}
+      />
+      
+      <input
+        type="file"
+        ref={materialImageInputRef}
+        onChange={handleMaterialImageFileChange}
+        accept="image/*"
+        className="hidden"
       />
 
       <Card>
@@ -504,7 +547,7 @@ export default function EditServicePage() {
                                 placeholder="Descripció"
                                 value={material.description}
                                 onChange={(e) => handleMaterialChange(index, 'description', e.target.value)}
-                                className="col-span-12 md:col-span-6"
+                                className="col-span-12 md:col-span-5"
                             />
                             <div className="col-span-4 md:col-span-2 relative">
                                 <Input
@@ -517,7 +560,7 @@ export default function EditServicePage() {
                                     step="any"
                                 />
                             </div>
-                            <div className="col-span-6 md:col-span-3 relative">
+                            <div className="col-span-5 md:col-span-2 relative">
                                 <Input
                                     type="number"
                                     placeholder="Preu/u."
@@ -529,11 +572,21 @@ export default function EditServicePage() {
                                 />
                                 <Euro className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                             </div>
-                            <div className="col-span-2 md:col-span-1 flex justify-end">
-                                <Button type="button" variant="ghost" size="icon" onClick={() => removeMaterialInput(index)}>
-                                    <X className="h-4 w-4 text-destructive" />
+                            <div className="col-span-3 md:col-span-3 flex justify-end items-center gap-1">
+                                <Button type="button" variant="outline" size="icon" onClick={() => handleMaterialImageUploadClick(index)}>
+                                    <ImagePlus className="h-4 w-4" />
                                 </Button>
+                                {material.imageDataUrl && (
+                                    <Button type="button" variant="ghost" size="icon" onClick={() => removeMaterialImage(index)}>
+                                        <X className="h-4 w-4 text-destructive" />
+                                    </Button>
+                                )}
                             </div>
+                            {material.imageDataUrl && (
+                                <div className="col-span-12 md:col-start-6">
+                                    <Image src={material.imageDataUrl} alt="Preview" width={64} height={64} className="rounded-md object-cover" />
+                                </div>
+                            )}
                         </div>
                     ))}
                 </div>

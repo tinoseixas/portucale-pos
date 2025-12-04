@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, PlusCircle, FileText, User as UserIcon, Users, Building, FileArchive } from 'lucide-react'
+import { LayoutDashboard, PlusCircle, FileText, User as UserIcon, Users, Building, FileArchive, FileSignature } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useUser } from '@/firebase'
 
@@ -13,6 +13,7 @@ export function BottomNav() {
   const navItems = [
     { href: '/dashboard', icon: LayoutDashboard, label: 'Serveis' },
     { href: '/dashboard/new', icon: PlusCircle, label: 'Nou' },
+    { href: '/dashboard/quotes', icon: FileSignature, label: 'Orçaments' },
     { href: '/dashboard/reports', icon: FileText, label: 'Albarans' },
     { href: '/dashboard/albarans', icon: FileArchive, label: 'Historial' },
     { href: '/dashboard/customers', icon: Building, label: 'Clients' },
@@ -39,7 +40,7 @@ export function BottomNav() {
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-40 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 md:hidden">
-      <div className="container grid h-16 w-full grid-flow-col auto-cols-fr items-center">
+      <div className="container grid h-16 w-full grid-flow-col auto-cols-fr items-center overflow-x-auto">
         {navItems.map((item) => {
           const isActive = pathname === item.href;
           return (
@@ -47,12 +48,12 @@ export function BottomNav() {
               key={item.href}
               href={item.href}
               className={cn(
-                'flex flex-col items-center justify-center gap-1 transition-colors p-1 rounded-lg',
+                'flex flex-col items-center justify-center gap-1 transition-colors p-1 rounded-lg flex-shrink-0',
                 isActive ? 'text-primary bg-primary/10' : 'text-muted-foreground hover:text-foreground'
               )}
             >
               <item.icon className="h-6 w-6" />
-              <span className="text-xs font-medium">{item.label}</span>
+              <span className="text-[10px] font-medium text-center break-words">{item.label}</span>
             </Link>
           )
         })}

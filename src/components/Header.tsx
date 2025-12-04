@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Button } from '@/components/ui/button'
-import { LogOut, User as UserIcon, Users, Building, FileText, FileArchive } from 'lucide-react'
+import { LogOut, User as UserIcon, Users, Building, FileText, FileArchive, FileSignature } from 'lucide-react'
 import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase'
 import { signOut } from 'firebase/auth'
 import { useRouter } from 'next/navigation'
@@ -68,6 +68,10 @@ export function Header() {
                     </span>
                 )}
                 <>
+                    <Button variant="outline" size="sm" onClick={() => router.push('/dashboard/quotes')}>
+                        <FileSignature className="mr-2 h-4 w-4" />
+                        Orçaments
+                    </Button>
                     <Button variant="outline" size="sm" onClick={() => router.push('/dashboard/reports')}>
                         <FileText className="mr-2 h-4 w-4" />
                         Albarans
