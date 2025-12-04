@@ -21,6 +21,7 @@ type QuoteItem = {
     quantity: number;
     unitPrice: number;
     imageDataUrl?: string;
+    discount?: number;
 }
 
 export default function EditQuotePage() {
@@ -35,7 +36,7 @@ export default function EditQuotePage() {
     const [selectedCustomerId, setSelectedCustomerId] = useState<string>('');
     const [projectName, setProjectName] = useState<string>('')
     const [isSaving, setIsSaving] = useState(false)
-    const [items, setItems] = useState<QuoteItem[]>([{ description: '', quantity: 1, unitPrice: 0, imageDataUrl: undefined }]);
+    const [items, setItems] = useState<QuoteItem[]>([{ description: '', quantity: 1, unitPrice: 0, imageDataUrl: undefined, discount: 0 }]);
     const [labor, setLabor] = useState({ description: "Mà d'obra", cost: 0 });
     const [selectedItemIndex, setSelectedItemIndex] = useState<number | null>(null);
 
@@ -49,7 +50,7 @@ export default function EditQuotePage() {
         if (quote) {
             setSelectedCustomerId(quote.customerId || 'all');
             setProjectName(quote.projectName || '');
-            setItems(quote.items || [{ description: '', quantity: 1, unitPrice: 0, imageDataUrl: undefined }]);
+            setItems(quote.items.map(item => ({...item, discount: item.discount || 0})) || [{ description: '', quantity: 1, unitPrice: 0, imageDataUrl: undefined, discount: 0 }]);
             setLabor(quote.labor || { description: "Mà d'obra", cost: 0 });
         }
     }, [quote]);
@@ -66,16 +67,17 @@ export default function EditQuotePage() {
             item.description = value as string;
         } else {
             const numValue = Number(value);
-            if (!isNaN(numValue) && numValue >= 0) {
-                if (field === 'quantity') item.quantity = numValue;
-                if (field === 'unitPrice') item.unitPrice = numValue;
+            if (!isNaN(numValue)) {
+                if (field === 'quantity') item.quantity = numValue >= 0 ? numValue : 0;
+                if (field === 'unitPrice') item.unitPrice = numValue >= 0 ? numValue : 0;
+                if (field === 'discount') item.discount = numValue >= 0 && numValue <= 100 ? numValue : 0;
             }
         }
         setItems(newItems);
     };
 
     const addItem = () => {
-        setItems([...items, { description: '', quantity: 1, unitPrice: 0, imageDataUrl: undefined }]);
+        setItems([...items, { description: '', quantity: 1, unitPrice: 0, imageDataUrl: undefined, discount: 0 }]);
     };
 
     const removeItem = (index: number) => {
@@ -116,7 +118,11 @@ export default function EditQuotePage() {
         
         try {
             const filteredItems = items.filter(item => item.description.trim() !== '');
-            const materialsSubtotal = filteredItems.reduce((acc, item) => acc + (item.quantity * item.unitPrice), 0);
+            const materialsSubtotal = filteredItems.reduce((acc, item) => {
+                const itemTotal = item.quantity * item.unitPrice;
+                const discountAmount = itemTotal * ((item.discount || 0) / 100);
+                return acc + (itemTotal - discountAmount);
+            }, 0);
             const subtotal = materialsSubtotal + labor.cost;
             const totalAmount = subtotal * (1 + IVA_RATE);
 
@@ -214,7 +220,7 @@ export default function EditQuotePage() {
                                        value={item.description}
                                        onChange={(e) => handleItemChange(index, 'description', e.target.value)}
                                    />
-                                   <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                                   <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
                                        <Input 
                                            type="number"
                                            placeholder="Quant."
@@ -230,6 +236,16 @@ export default function EditQuotePage() {
                                                 className="pl-7"
                                             />
                                             <Euro className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                        </div>
+                                       <div className="relative">
+                                            <Input
+                                                type="number"
+                                                placeholder="Desc. %"
+                                                value={item.discount || ''}
+                                                onChange={(e) => handleItemChange(index, 'discount', e.target.value)}
+                                                className="pl-2 pr-7"
+                                            />
+                                            <span className="absolute right-2 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">%</span>
                                         </div>
                                        <Button type="button" variant="outline" onClick={() => handleImageUploadClick(index)}>
                                            <ImagePlus className="mr-2 h-4 w-4" /> Imatge

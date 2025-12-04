@@ -13,6 +13,7 @@ interface QuoteItem {
     quantity: number;
     unitPrice: number;
     imageDataUrl?: string;
+    discount?: number;
 }
 
 interface QuotePreviewProps {
@@ -27,7 +28,11 @@ interface QuotePreviewProps {
 export const QuotePreview = forwardRef<HTMLDivElement, QuotePreviewProps>(({ customer, projectName, items, labor, quoteNumber }, ref) => {
 
     const materialsSubtotal = useMemo(() => {
-        return items.reduce((acc, item) => acc + (item.quantity * item.unitPrice), 0);
+        return items.reduce((acc, item) => {
+            const itemTotal = item.quantity * item.unitPrice;
+            const discountAmount = itemTotal * ((item.discount || 0) / 100);
+            return acc + (itemTotal - discountAmount);
+        }, 0);
     }, [items]);
 
     const subtotal = materialsSubtotal + labor.cost;
@@ -92,13 +97,22 @@ export const QuotePreview = forwardRef<HTMLDivElement, QuotePreviewProps>(({ cus
                         </tr>
                     </thead>
                     <tbody>
-                        {items.filter(item => item.description).map((item, index) => (
+                        {items.filter(item => item.description).map((item, index) => {
+                            const itemTotal = item.quantity * item.unitPrice;
+                            const discountAmount = itemTotal * ((item.discount || 0) / 100);
+                            const finalTotal = itemTotal - discountAmount;
+                            return (
                             <React.Fragment key={`item-frag-${index}`}>
                                 <tr className="border-b border-gray-200">
-                                    <td className="py-2 px-3">{item.description}</td>
+                                    <td className="py-2 px-3">
+                                        {item.description}
+                                        {(item.discount || 0) > 0 && (
+                                            <span className="text-xs text-red-600 ml-2">(-{item.discount}%)</span>
+                                        )}
+                                    </td>
                                     <td className="text-right py-2 px-3 tabular-nums">{item.quantity.toFixed(2)}</td>
                                     <td className="text-right py-2 px-3 tabular-nums">{item.unitPrice.toFixed(2)} €</td>
-                                    <td className="text-right py-2 px-3 font-medium tabular-nums">{(item.quantity * item.unitPrice).toFixed(2)} €</td>
+                                    <td className="text-right py-2 px-3 font-medium tabular-nums">{finalTotal.toFixed(2)} €</td>
                                 </tr>
                                 {item.imageDataUrl && (
                                     <tr className="border-b border-gray-200 bg-gray-50">
@@ -108,7 +122,7 @@ export const QuotePreview = forwardRef<HTMLDivElement, QuotePreviewProps>(({ cus
                                     </tr>
                                 )}
                             </React.Fragment>
-                        ))}
+                        )})}
                          {labor.cost > 0 && (
                             <tr className="border-b border-gray-200 font-medium">
                                 <td className="py-2 px-3">{labor.description}</td>

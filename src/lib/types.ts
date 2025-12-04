@@ -67,6 +67,7 @@ export interface Quote {
         quantity: number;
         unitPrice: number;
         imageDataUrl?: string;
+        discount?: number; // Discount in percentage
     }[];
     labor: {
         description: string;

@@ -265,7 +265,8 @@
               "description": { "type": "string" },
               "quantity": { "type": "number" },
               "unitPrice": { "type": "number" },
-              "imageDataUrl": { "type": "string", "format": "uri", "description": "Data URL of an image for the item." }
+              "imageDataUrl": { "type": "string", "format": "uri", "description": "Data URL of an image for the item." },
+              "discount": { "type": "number", "description": "Percentage discount for the item." }
             },
             "required": ["description", "quantity", "unitPrice"]
           }
