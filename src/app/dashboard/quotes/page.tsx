@@ -3,7 +3,7 @@
 import { useMemo, useRef, useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useCollection, useUser, useFirestore, useMemoFirebase } from '@/firebase'
-import { collection, query, orderBy, doc, runTransaction, setDoc } from 'firebase/firestore'
+import { collection, query, orderBy, doc, runTransaction, setDoc, updateDoc } from 'firebase/firestore'
 import type { Customer, Quote as QuoteType } from '@/lib/types'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -130,7 +130,9 @@ export default function QuotesPage() {
             };
 
             const quoteRef = doc(collection(firestore, "quotes"));
-            await setDoc(quoteRef, { id: quoteRef.id, ...quoteData });
+            await setDoc(quoteRef, quoteData);
+            await updateDoc(quoteRef, { id: quoteRef.id });
+
 
             toast({
                 title: "Pressupost Guardat",
