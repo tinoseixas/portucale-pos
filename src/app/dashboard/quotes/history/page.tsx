@@ -8,7 +8,7 @@ import type { Quote } from '@/lib/types'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
-import { Eye, FileSignature, Trash2, PlusCircle } from 'lucide-react'
+import { Eye, FileSignature, Trash2, PlusCircle, Edit } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { ca } from 'date-fns/locale'
 import {
@@ -105,8 +105,12 @@ export default function QuotesHistoryPage() {
                         <TableCell className="text-right">
                             <div className="flex items-center justify-end gap-2">
                                 <Button variant="outline" size="sm" onClick={() => router.push(`/dashboard/quotes/${quote.id}`)}>
-                                <Eye className="mr-2 h-4 w-4" />
-                                Veure
+                                    <Eye className="mr-2 h-4 w-4" />
+                                    Veure
+                                </Button>
+                                <Button variant="outline" size="sm" onClick={() => router.push(`/dashboard/quotes/edit/${quote.id}`)}>
+                                    <Edit className="mr-2 h-4 w-4" />
+                                    Editar
                                 </Button>
                                 <AlertDialog>
                                 <AlertDialogTrigger asChild>

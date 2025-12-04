@@ -43,7 +43,7 @@ export function BottomNav() {
       <div className="container grid h-16 w-full grid-flow-col auto-cols-fr items-center overflow-x-auto">
         {navItems.map((item) => {
           const isActive = pathname.startsWith(item.href) && (item.href !== '/dashboard' || pathname === '/dashboard');
-           if (item.href === '/dashboard/quotes' && (pathname === '/dashboard/quotes/history' || /^\/dashboard\/quotes\/\[id\]/.test(pathname))) {
+           if (item.href === '/dashboard/quotes' && (pathname.startsWith('/dashboard/quotes/history') || pathname.startsWith('/dashboard/quotes/edit') || /^\/dashboard\/quotes\/[^/]+$/.test(pathname))) {
              return null;
            }
           return (
