@@ -20,10 +20,11 @@ interface QuotePreviewProps {
   projectName: string;
   items: QuoteItem[];
   labor: { description: string; cost: number };
+  quoteNumber?: number;
 }
 
 // --- Component ---
-export const QuotePreview = forwardRef<HTMLDivElement, QuotePreviewProps>(({ customer, projectName, items, labor }, ref) => {
+export const QuotePreview = forwardRef<HTMLDivElement, QuotePreviewProps>(({ customer, projectName, items, labor, quoteNumber }, ref) => {
 
     const materialsSubtotal = useMemo(() => {
         return items.reduce((acc, item) => acc + (item.quantity * item.unitPrice), 0);
@@ -53,7 +54,8 @@ export const QuotePreview = forwardRef<HTMLDivElement, QuotePreviewProps>(({ cus
                     </div>
                 </div>
                 <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                    <h1 className="text-3xl font-bold text-gray-900">Orçamento</h1>
+                    <h1 className="text-3xl font-bold text-gray-900">Pressupost</h1>
+                     {quoteNumber && quoteNumber > 0 && <p className="text-md text-gray-700 font-semibold">Nº: {String(quoteNumber).padStart(4, '0')}</p>}
                     <p className="text-sm text-gray-600">Data: {format(new Date(), 'dd MMMM yyyy', { locale: ca })}</p>
                 </div>
             </header>
@@ -61,31 +63,31 @@ export const QuotePreview = forwardRef<HTMLDivElement, QuotePreviewProps>(({ cus
             {/* Client and Project Info */}
             <section style={{ display: 'flex', justifyContent: 'space-between', gap: '2rem', marginTop: '2rem', marginBottom: '2rem' }}>
                 <div style={{ flex: 1 }}>
-                    <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">CLIENTE</h3>
+                    <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">CLIENT</h3>
                     {customer ? (
                         <div className="space-y-1 text-base">
                              <p className="font-bold">{customer.name}</p>
                              <p className="text-gray-600">{customer.address || ''}</p>
-                             <p className="text-gray-600">{customer.nrt || 'NRT não especificado'}</p>
+                             <p className="text-gray-600">{customer.nrt || 'NRT no especificat'}</p>
                              <p className="text-gray-600">{customer.email || ''}</p>
                              <p className="text-gray-600">{customer.contact || ''}</p>
                         </div>
-                    ) : <p className="text-gray-600">Não especificado</p>}
+                    ) : <p className="text-gray-600">No especificat</p>}
                 </div>
                  <div style={{ flex: 1, textAlign: 'right' }}>
                     <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">OBRA</h3>
-                    <p className="font-bold text-base">{projectName || 'Não especificada'}</p>
+                    <p className="font-bold text-base">{projectName || 'No especificada'}</p>
                  </div>
             </section>
             
             <section className="page-break-before-auto">
-                <h3 className="font-bold text-lg mb-4">Detalhe do Orçamento</h3>
+                <h3 className="font-bold text-lg mb-4">Detall del Pressupost</h3>
                 <table className="w-full text-sm">
                     <thead className="bg-gray-50">
                         <tr className="border-b-2 border-gray-300">
-                            <th className="text-left py-2 px-3 font-semibold text-gray-600">DESCRIÇÃO</th>
+                            <th className="text-left py-2 px-3 font-semibold text-gray-600">DESCRIPCIÓ</th>
                             <th className="text-right py-2 px-3 font-semibold text-gray-600 w-24">QUANT.</th>
-                            <th className="text-right py-2 px-3 font-semibold text-gray-600 w-24">PREÇO/UNIT.</th>
+                            <th className="text-right py-2 px-3 font-semibold text-gray-600 w-24">PREU/UNIT.</th>
                             <th className="text-right py-2 px-3 font-semibold text-gray-600 w-24">TOTAL</th>
                         </tr>
                     </thead>
@@ -101,7 +103,7 @@ export const QuotePreview = forwardRef<HTMLDivElement, QuotePreviewProps>(({ cus
                                 {item.imageDataUrl && (
                                     <tr className="border-b border-gray-200 bg-gray-50">
                                         <td colSpan={4} className="py-3 px-3 text-center">
-                                            <Image src={item.imageDataUrl} alt={`Imagem para ${item.description}`} width={200} height={200} className="rounded-md object-contain mx-auto" />
+                                            <Image src={item.imageDataUrl} alt={`Imatge per ${item.description}`} width={200} height={200} className="rounded-md object-contain mx-auto" />
                                         </td>
                                     </tr>
                                 )}
@@ -133,7 +135,7 @@ export const QuotePreview = forwardRef<HTMLDivElement, QuotePreviewProps>(({ cus
                         </div>
                         <Separator />
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }} className="font-bold text-base">
-                            <span>Total Geral:</span>
+                            <span>Total General:</span>
                             <span className="text-xl">{totalGeneral.toFixed(2)} €</span>
                         </div>
                     </div>
@@ -141,8 +143,8 @@ export const QuotePreview = forwardRef<HTMLDivElement, QuotePreviewProps>(({ cus
             </section>
 
             <footer className="mt-16 pt-6 border-t text-center text-xs text-gray-500">
-                <p>Obrigado pela oportunidade de apresentar este orçamento.</p>
-                <p>Este documento é um orçamento e tem uma validade de 30 dias. Os preços não incluem imprevistos.</p>
+                <p>Gràcies per l'oportunitat de presentar aquest pressupost.</p>
+                <p>Aquest document és un pressupost i té una validesa de 30 dies. Els preus no inclouen imprevistos.</p>
             </footer>
 
         </div>

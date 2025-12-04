@@ -244,6 +244,45 @@
       },
       "required": ["id", "albaranNumber", "createdAt", "projectName", "serviceRecordIds", "totalAmount"]
     },
+    "Quote": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Quote",
+      "type": "object",
+      "description": "Represents a generated quote (pressupost).",
+      "properties": {
+        "id": { "type": "string", "description": "Unique identifier for the quote." },
+        "quoteNumber": { "type": "number", "description": "Sequential number for the quote." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Timestamp of when the quote was generated." },
+        "customerId": { "type": "string", "description": "ID of the associated customer." },
+        "customerName": { "type": "string", "description": "Denormalized name of the customer." },
+        "projectName": { "type": "string", "description": "Name of the project/obra." },
+        "items": {
+          "type": "array",
+          "description": "List of items included in the quote.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "description": { "type": "string" },
+              "quantity": { "type": "number" },
+              "unitPrice": { "type": "number" },
+              "imageDataUrl": { "type": "string", "format": "uri", "description": "Data URL of an image for the item." }
+            },
+            "required": ["description", "quantity", "unitPrice"]
+          }
+        },
+        "labor": {
+          "type": "object",
+          "description": "Labor costs for the quote.",
+          "properties": {
+            "description": { "type": "string" },
+            "cost": { "type": "number" }
+          },
+          "required": ["description", "cost"]
+        },
+        "totalAmount": { "type": "number", "description": "The total amount calculated for the quote." }
+      },
+      "required": ["id", "quoteNumber", "createdAt", "projectName", "items", "labor", "totalAmount"]
+    },
     "Counter": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Counter",
@@ -327,12 +366,30 @@
             "params": [{ "name": "albaranId", "description": "Unique ID for the albarà." }]
         }
       },
+       {
+        "path": "/quotes/{quoteId}",
+        "definition": {
+            "entityName": "Quote",
+            "schema": { "$ref": "#/backend/entities/Quote" },
+            "description": "Stores historical records of generated quotes (pressupostos). All authenticated users can read.",
+            "params": [{ "name": "quoteId", "description": "Unique ID for the quote." }]
+        }
+      },
       {
         "path": "/counters/albarans",
         "definition": {
             "entityName": "Counter",
             "schema": { "$ref": "#/backend/entities/Counter" },
             "description": "Manages the sequential counter for albarà numbers. Only admins should have write access.",
+            "params": []
+        }
+      },
+      {
+        "path": "/counters/quotes",
+        "definition": {
+            "entityName": "Counter",
+            "schema": { "$ref": "#/backend/entities/Counter" },
+            "description": "Manages the sequential counter for quote numbers. Only admins should have write access.",
             "params": []
         }
       }

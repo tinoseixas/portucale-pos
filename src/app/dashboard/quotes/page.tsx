@@ -1,20 +1,20 @@
 'use client'
 
 import { useMemo, useRef, useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { useCollection, useUser, useFirestore, useMemoFirebase } from '@/firebase'
-import { collection, query, orderBy } from 'firebase/firestore'
-import type { Customer, Employee } from '@/lib/types'
+import { collection, query, orderBy, doc, runTransaction, setDoc } from 'firebase/firestore'
+import type { Customer, Quote as QuoteType } from '@/lib/types'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Briefcase, FileDown, Loader2, Users, Plus, Trash2, ImagePlus, Euro } from 'lucide-react'
+import { Briefcase, FileDown, Loader2, Users, Plus, Trash2, ImagePlus, Euro, FileArchive, Save } from 'lucide-react'
 import { QuotePreview } from '@/components/QuotePreview'
 import { useToast } from '@/hooks/use-toast'
 import { AdminGate } from '@/components/AdminGate'
-import jsPDF from 'jspdf'
-import html2canvas from 'html2canvas'
+import { IVA_RATE } from '@/lib/calculations'
 
 type QuoteItem = {
     description: string;
@@ -26,29 +26,25 @@ type QuoteItem = {
 export default function QuotesPage() {
     const firestore = useFirestore()
     const { user, isUserLoading } = useUser()
-    const { toast } = useToast();
-    const quoteRef = useRef<HTMLDivElement>(null)
+    const { toast } = useToast()
+    const router = useRouter()
     const imageInputRef = useRef<HTMLInputElement>(null);
 
     const [selectedCustomerId, setSelectedCustomerId] = useState<string>('all');
     const [projectName, setProjectName] = useState<string>('')
     const [isGenerating, setIsGenerating] = useState(false)
     const [items, setItems] = useState<QuoteItem[]>([{ description: '', quantity: 1, unitPrice: 0, imageDataUrl: undefined }]);
-    const [labor, setLabor] = useState({ description: "Mão de obra", cost: 0 });
+    const [labor, setLabor] = useState({ description: "Mà d'obra", cost: 0 });
     const [selectedItemIndex, setSelectedItemIndex] = useState<number | null>(null);
 
     const customersQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'customers'), orderBy('name', 'asc')) : null, [firestore]);
     const { data: customers, isLoading: isLoadingCustomers } = useCollection<Customer>(customersQuery)
 
-    const employeesQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'employees')) : null, [firestore]);
-    const { data: employees, isLoading: isLoadingEmployees } = useCollection<Employee>(employeesQuery);
-    
     const associatedCustomer = useMemo(() => {
         if (selectedCustomerId === 'all' || !customers) return undefined;
         return customers.find(c => c.id === selectedCustomerId);
     }, [selectedCustomerId, customers]);
 
-    // Handlers for quote items
     const handleItemChange = (index: number, field: keyof QuoteItem, value: string | number) => {
         const newItems = [...items];
         const item = newItems[index];
@@ -81,100 +77,93 @@ export default function QuotesPage() {
         if (e.target.files && e.target.files[0] && selectedItemIndex !== null) {
           const file = e.target.files[0];
           try {
-            toast({ title: 'A processar imagem...' });
+            toast({ title: 'Processant imatge...' });
             const reader = new FileReader();
             reader.onload = () => {
                 const newItems = [...items];
                 newItems[selectedItemIndex].imageDataUrl = reader.result as string;
                 setItems(newItems);
-                toast({ title: 'Imagem adicionada!' });
+                toast({ title: 'Imatge afegida!' });
             };
             reader.readAsDataURL(file);
           } catch (error) {
             console.error('Error processing image:', error);
-            toast({ variant: 'destructive', title: 'Error', description: "Não foi possível processar a imagem." });
+            toast({ variant: 'destructive', title: 'Error', description: "No s'ha pogut processar la imatge." });
           } finally {
             e.target.value = '';
             setSelectedItemIndex(null);
           }
         }
     };
-
-    const handleExportPDF = async () => {
-        const quoteElement = quoteRef.current;
-        if (!quoteElement) return;
-
+    
+    const handleSaveQuote = async (exportAfter: boolean) => {
+        if (!firestore) return;
         setIsGenerating(true);
         
         try {
-            // Temporarily widen the element to ensure desktop layout is captured
-            quoteElement.style.width = '1024px';
-            quoteElement.style.maxWidth = 'none';
-
-            const canvas = await html2canvas(quoteElement, {
-                scale: 2,
-                useCORS: true,
-                logging: false,
-                windowWidth: 1440
+            const counterRef = doc(firestore, "counters", "quotes");
+            const newQuoteNumber = await runTransaction(firestore, async (transaction) => {
+                const counterDoc = await transaction.get(counterRef);
+                if (!counterDoc.exists()) {
+                    transaction.set(counterRef, { lastNumber: 1 });
+                    return 1;
+                }
+                const newNumber = (counterDoc.data().lastNumber || 0) + 1;
+                transaction.update(counterRef, { lastNumber: newNumber });
+                return newNumber;
             });
             
-            // Restore original styles
-            quoteElement.style.width = '';
-            quoteElement.style.maxWidth = '';
+            const filteredItems = items.filter(item => item.description.trim() !== '');
+            const materialsSubtotal = filteredItems.reduce((acc, item) => acc + (item.quantity * item.unitPrice), 0);
+            const subtotal = materialsSubtotal + labor.cost;
+            const totalAmount = subtotal * (1 + IVA_RATE);
 
-            const imgData = canvas.toDataURL('image/png');
-            const pdf = new jsPDF({
-                orientation: 'portrait',
-                unit: 'mm',
-                format: 'a4',
+            const quoteData: Omit<QuoteType, 'id'> = {
+                quoteNumber: newQuoteNumber,
+                createdAt: new Date().toISOString(),
+                customerId: associatedCustomer?.id || '',
+                customerName: associatedCustomer?.name || 'N/A',
+                projectName: projectName || 'Sense nom',
+                items: filteredItems,
+                labor: labor,
+                totalAmount: totalAmount,
+            };
+
+            const quoteRef = doc(collection(firestore, "quotes"));
+            await setDoc(quoteRef, { id: quoteRef.id, ...quoteData });
+
+            toast({
+                title: "Pressupost Guardat",
+                description: `El pressupost #${newQuoteNumber} ha estat guardat a l'historial.`,
             });
-
-            const pdfWidth = pdf.internal.pageSize.getWidth();
-            const pdfHeight = pdf.internal.pageSize.getHeight();
             
-            const imgProps = pdf.getImageProperties(imgData);
-            const imgWidth = imgProps.width;
-            const imgHeight = imgProps.height;
-
-            const ratio = imgWidth / imgHeight;
-            let finalWidth = pdfWidth - 20; 
-            let finalHeight = finalWidth / ratio;
-
-            if (finalHeight > pdfHeight - 20) {
-                finalHeight = pdfHeight - 20;
-                finalWidth = finalHeight * ratio;
+            if (exportAfter) {
+                router.push(`/dashboard/quotes/${quoteRef.id}?export=true`);
+            } else {
+                router.push(`/dashboard/quotes/${quoteRef.id}`);
             }
 
-            const x = (pdfWidth - finalWidth) / 2;
-            const y = 10;
-
-            pdf.addImage(imgData, 'PNG', x, y, finalWidth, finalHeight);
-            
-            const projectNameStr = projectName || 'Orcamento';
-            const customerNameStr = associatedCustomer?.name || 'Cliente';
-            const fileName = `Orcamento_${projectNameStr}_${customerNameStr}.pdf`.replace(/ /g, '_');
-            pdf.save(fileName);
-
         } catch (error) {
-            console.error("Error generating PDF:", error);
-            toast({ variant: 'destructive', title: 'Erro', description: 'Não foi possível gerar o PDF.' });
+            console.error("Error generating quote:", error)
+            toast({
+                variant: 'destructive',
+                title: 'Error',
+                description: "No s'ha pogut generar el pressupost.",
+            });
         } finally {
-            // Ensure styles are restored even on error
-            quoteElement.style.width = '';
-            quoteElement.style.maxWidth = '';
             setIsGenerating(false);
         }
     };
 
 
-    const isLoading = isUserLoading || isLoadingCustomers || isLoadingEmployees;
+    const isLoading = isUserLoading || isLoadingCustomers;
 
     if (isLoading) {
-        return <p>A carregar...</p>
+        return <p>Carregant...</p>
     }
 
     return (
-        <AdminGate pageTitle="Gerador de Orçamentos" pageDescription="Esta seção está protegida.">
+        <AdminGate pageTitle="Generador de Pressupostos" pageDescription="Aquesta secció està protegida.">
             <div className="space-y-8 max-w-5xl mx-auto">
                 <input
                     type="file"
@@ -183,21 +172,26 @@ export default function QuotesPage() {
                     accept="image/*"
                     className="hidden"
                 />
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Gerador de Orçamentos</CardTitle>
-                        <CardDescription>Crie um novo orçamento a partir do zero adicionando artigos manualmente.</CardDescription>
+                 <Card>
+                    <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center sm:justify-between gap-4">
+                        <div>
+                            <CardTitle>Generador de Pressupostos</CardTitle>
+                            <CardDescription>Crea un nou pressupost des de zero afegint articles manualment.</CardDescription>
+                        </div>
+                         <Button onClick={() => router.push('/dashboard/quotes/history')}>
+                            <FileArchive className="mr-2 h-4 w-4" /> Historial de Pressupostos
+                        </Button>
                     </CardHeader>
                     <CardContent className="space-y-6">
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div className="space-y-2">
-                                <Label className="flex items-center gap-2"><Users className="h-4 w-4" /> Cliente</Label>
+                                <Label className="flex items-center gap-2"><Users className="h-4 w-4" /> Client</Label>
                                 <Select value={selectedCustomerId} onValueChange={setSelectedCustomerId}>
                                     <SelectTrigger>
-                                        <SelectValue placeholder="Selecione um cliente" />
+                                        <SelectValue placeholder="Selecciona un client" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="all">Nenhum cliente selecionado</SelectItem>
+                                        <SelectItem value="all">Cap client seleccionat</SelectItem>
                                         {customers?.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
                                     </SelectContent>
                                 </Select>
@@ -205,7 +199,7 @@ export default function QuotesPage() {
                             <div className="space-y-2">
                                 <Label className="flex items-center gap-2"><Briefcase className="h-4 w-4" /> Obra</Label>
                                 <Input 
-                                    placeholder="Nome do projeto ou obra"
+                                    placeholder="Nom del projecte o obra"
                                     value={projectName}
                                     onChange={(e) => setProjectName(e.target.value)}
                                 />
@@ -213,11 +207,11 @@ export default function QuotesPage() {
                         </div>
 
                         <div className="space-y-4 rounded-lg border p-4">
-                           <Label className="text-base font-semibold">Artigos do Orçamento</Label>
+                           <Label className="text-base font-semibold">Articles del Pressupost</Label>
                            {items.map((item, index) => (
                                <div key={index} className="space-y-2 p-2 border-b">
                                    <Input 
-                                       placeholder="Descrição do artigo"
+                                       placeholder="Descripció de l'article"
                                        value={item.description}
                                        onChange={(e) => handleItemChange(index, 'description', e.target.value)}
                                    />
@@ -231,7 +225,7 @@ export default function QuotesPage() {
                                        <div className="relative">
                                             <Input
                                                 type="number"
-                                                placeholder="Preço/Unit."
+                                                placeholder="Preu/Unit."
                                                 value={item.unitPrice}
                                                 onChange={(e) => handleItemChange(index, 'unitPrice', e.target.value)}
                                                 className="pl-7"
@@ -239,7 +233,7 @@ export default function QuotesPage() {
                                             <Euro className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                                         </div>
                                        <Button type="button" variant="outline" onClick={() => handleImageUploadClick(index)}>
-                                           <ImagePlus className="mr-2 h-4 w-4" /> Imagem
+                                           <ImagePlus className="mr-2 h-4 w-4" /> Imatge
                                        </Button>
                                        <Button type="button" variant="ghost" size="icon" onClick={() => removeItem(index)}>
                                            <Trash2 className="h-4 w-4 text-destructive" />
@@ -249,22 +243,22 @@ export default function QuotesPage() {
                                </div>
                            ))}
                            <Button type="button" variant="outline" onClick={addItem}>
-                               <Plus className="mr-2 h-4 w-4" /> Adicionar Artigo
+                               <Plus className="mr-2 h-4 w-4" /> Afegir Article
                            </Button>
                         </div>
                         
                          <div className="space-y-2">
-                            <Label>Custo da Mão de Obra</Label>
+                            <Label>Cost de la Mà d'Obra</Label>
                              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                                  <Input 
-                                    placeholder="Descrição (ex: Mão de obra)"
+                                    placeholder="Descripció (ex: Mà d'obra)"
                                     value={labor.description}
                                     onChange={(e) => setLabor({...labor, description: e.target.value})}
                                  />
                                 <div className="relative">
                                      <Input
                                         type="number"
-                                        placeholder="Custo Total"
+                                        placeholder="Cost Total"
                                         value={labor.cost}
                                         onChange={(e) => setLabor({...labor, cost: Number(e.target.value) || 0})}
                                         className="pl-7"
@@ -274,31 +268,19 @@ export default function QuotesPage() {
                             </div>
                          </div>
 
-
-                        <div className="flex justify-end pt-4">
+                        <div className="flex justify-end pt-4 gap-2 flex-wrap">
+                             <Button onClick={() => handleSaveQuote(false)} disabled={isGenerating}>
+                                {isGenerating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                                Guardar Pressupost
+                            </Button>
                             <Button
-                                onClick={handleExportPDF}
+                                onClick={() => handleSaveQuote(true)}
                                 disabled={isGenerating}
                             >
                                 {isGenerating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileDown className="mr-2 h-4 w-4" />}
-                                Exportar Orçamento em PDF
+                                Guardar i Exportar PDF
                             </Button>
                         </div>
-                    </CardContent>
-                </Card>
-
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Pré-visualização do Orçamento</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <QuotePreview
-                            ref={quoteRef}
-                            customer={associatedCustomer}
-                            projectName={projectName}
-                            items={items}
-                            labor={labor}
-                        />
                     </CardContent>
                 </Card>
             </div>

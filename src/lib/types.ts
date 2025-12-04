@@ -54,3 +54,23 @@ export interface Albaran {
   serviceRecordIds: string[];
   totalAmount: number;
 }
+
+export interface Quote {
+    id: string;
+    quoteNumber: number;
+    createdAt: string;
+    customerId: string;
+    customerName: string;
+    projectName: string;
+    items: {
+        description: string;
+        quantity: number;
+        unitPrice: number;
+        imageDataUrl?: string;
+    }[];
+    labor: {
+        description: string;
+        cost: number;
+    };
+    totalAmount: number;
+}
