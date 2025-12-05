@@ -26,7 +26,7 @@ export default function InvoicesPage() {
     const imageInputRef = useRef<HTMLInputElement>(null);
 
     const [selectedProjectName, setSelectedProjectName] = useState<string>('none');
-    const [selectedCustomerId, setSelectedCustomerId] = useState<string>('');
+    const [selectedCustomerId, setSelectedCustomerId] = useState<string>('none');
     const [projectName, setProjectName] = useState<string>('');
     const [isSaving, setIsSaving] = useState(false);
     const [items, setItems] = useState<InvoiceItem[]>([{ description: '', quantity: 1, unitPrice: 0, imageDataUrl: undefined, discount: 0 }]);
@@ -111,7 +111,7 @@ export default function InvoicesPage() {
 
 
     const associatedCustomer = useMemo(() => {
-        if (!selectedCustomerId || !customers) return undefined;
+        if (!selectedCustomerId || !customers || selectedCustomerId === 'none') return undefined;
         return customers.find(c => c.id === selectedCustomerId);
     }, [selectedCustomerId, customers]);
 
@@ -284,7 +284,7 @@ export default function InvoicesPage() {
                                         <SelectValue placeholder="Selecciona un client" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="">Cap client seleccionat</SelectItem>
+                                        <SelectItem value="none">Cap client seleccionat</SelectItem>
                                         {customers?.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
                                     </SelectContent>
                                 </Select>
