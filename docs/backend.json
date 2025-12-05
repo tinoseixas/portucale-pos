@@ -284,6 +284,48 @@
       },
       "required": ["id", "quoteNumber", "createdAt", "projectName", "items", "labor", "totalAmount"]
     },
+    "Invoice": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Invoice",
+      "type": "object",
+      "description": "Represents a generated invoice (factura).",
+      "properties": {
+        "id": { "type": "string", "description": "Unique identifier for the invoice." },
+        "invoiceNumber": { "type": "number", "description": "Sequential number for the invoice." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Timestamp of when the invoice was generated." },
+        "customerId": { "type": "string", "description": "ID of the associated customer." },
+        "customerName": { "type": "string", "description": "Denormalized name of the customer." },
+        "projectName": { "type": "string", "description": "Name of the project/obra." },
+        "items": {
+          "type": "array",
+          "description": "List of items included in the invoice.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "description": { "type": "string" },
+              "quantity": { "type": "number" },
+              "unitPrice": { "type": "number" },
+              "imageDataUrl": { "type": "string", "format": "uri", "description": "Data URL of an image for the item." },
+              "discount": { "type": "number", "description": "Percentage discount for the item." }
+            },
+            "required": ["description", "quantity", "unitPrice"]
+          }
+        },
+        "labor": {
+          "type": "object",
+          "description": "Labor costs for the invoice.",
+          "properties": {
+            "description": { "type": "string" },
+            "cost": { "type": "number" }
+          },
+          "required": ["description", "cost"]
+        },
+        "totalAmount": { "type": "number", "description": "The total amount calculated for the invoice." },
+        "sourceId": { "type": "string", "description": "ID of the albaran or quote it was created from" },
+        "sourceType": { "type": "string", "enum": ["albaran", "quote"], "description": "The type of document this invoice was created from." }
+      },
+      "required": ["id", "invoiceNumber", "createdAt", "projectName", "items", "labor", "totalAmount"]
+    },
     "Counter": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Counter",
@@ -376,6 +418,15 @@
             "params": [{ "name": "quoteId", "description": "Unique ID for the quote." }]
         }
       },
+       {
+        "path": "/invoices/{invoiceId}",
+        "definition": {
+            "entityName": "Invoice",
+            "schema": { "$ref": "#/backend/entities/Invoice" },
+            "description": "Stores historical records of generated invoices (factures). All authenticated users can read.",
+            "params": [{ "name": "invoiceId", "description": "Unique ID for the invoice." }]
+        }
+      },
       {
         "path": "/counters/albarans",
         "definition": {
@@ -391,6 +442,15 @@
             "entityName": "Counter",
             "schema": { "$ref": "#/backend/entities/Counter" },
             "description": "Manages the sequential counter for quote numbers. Only admins should have write access.",
+            "params": []
+        }
+      },
+       {
+        "path": "/counters/invoices",
+        "definition": {
+            "entityName": "Counter",
+            "schema": { "$ref": "#/backend/entities/Counter" },
+            "description": "Manages the sequential counter for invoice numbers. Only admins should have write access.",
             "params": []
         }
       }

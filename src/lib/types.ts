@@ -75,3 +75,28 @@ export interface Quote {
     };
     totalAmount: number;
 }
+
+export interface InvoiceItem {
+    description: string;
+    quantity: number;
+    unitPrice: number;
+    imageDataUrl?: string;
+    discount?: number;
+}
+
+export interface Invoice {
+    id: string;
+    invoiceNumber: number;
+    createdAt: string;
+    customerId: string;
+    customerName: string;
+    projectName: string;
+    items: InvoiceItem[];
+    labor: {
+        description: string;
+        cost: number;
+    };
+    totalAmount: number;
+    sourceId?: string; // ID of the albaran or quote it was created from
+    sourceType?: 'albaran' | 'quote';
+}
