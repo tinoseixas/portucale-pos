@@ -23,7 +23,6 @@ export default function ReportsPage() {
     const [selectedCustomerId, setSelectedCustomerId] = useState<string>('all');
     const [selectedProject, setSelectedProject] = useState<string>('all')
     const [isGenerating, setIsGenerating] = useState(false)
-    const reportRef = useRef<HTMLDivElement>(null)
 
 
     const customersQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'customers'), orderBy('name', 'asc')) : null, [firestore]);
@@ -55,21 +54,9 @@ export default function ReportsPage() {
 
 
     const filteredServices = useMemo(() => {
-        if (!allServices) return [];
-
-        // If a project is selected, it takes priority and we ignore the customer filter.
-        if (selectedProject !== 'all') {
-            return allServices.filter(s => s.projectName === selectedProject);
-        }
-        
-        // If no project is selected, filter by customer (if one is selected).
-        if (selectedCustomerId !== 'all') {
-            return allServices.filter(s => s.customerId === selectedCustomerId);
-        }
-
-        // If no filters are applied, return an empty array.
-        return [];
-    }, [allServices, selectedCustomerId, selectedProject]);
+        if (!allServices || selectedProject === 'all') return [];
+        return allServices.filter(s => s.projectName === selectedProject);
+    }, [allServices, selectedProject]);
 
 
     const associatedCustomer = useMemo(() => {
@@ -134,7 +121,6 @@ export default function ReportsPage() {
             });
             
             if (exportType === 'pdf') {
-                 // The export logic is now on the detail page to ensure consistency
                  router.push(`/dashboard/albarans/${albaranRef.id}?export=true`);
             } else {
                  router.push(`/dashboard/albarans/${albaranRef.id}`);
@@ -167,7 +153,7 @@ export default function ReportsPage() {
                 <Card>
                     <CardHeader>
                         <CardTitle>Generador d'Albarans</CardTitle>
-                        <CardDescription>Selecciona un client i/o una obra per generar un albarà detallat.</CardDescription>
+                        <CardDescription>Selecciona un client i una obra per generar un albarà que consolidi tots els seus serveis.</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
                         <div className="flex flex-col sm:flex-row gap-4">
@@ -190,7 +176,7 @@ export default function ReportsPage() {
                                         <SelectValue placeholder="Selecciona una obra" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="all">Totes les obres del client</SelectItem>
+                                        <SelectItem value="all">Selecciona una obra per començar</SelectItem>
                                         {projectNames.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
                                     </SelectContent>
                                 </Select>
@@ -218,16 +204,15 @@ export default function ReportsPage() {
                 {canGenerate && (
                     <Card>
                         <CardHeader>
-                            <CardTitle>Previsualització de l'Albarà</CardTitle>
+                            <CardTitle>Previsualització de l'Albarà per a l'Obra: {selectedProject}</CardTitle>
                         </CardHeader>
                         <CardContent>
                             {isLoadingAllServices ? (
                                 <p>Carregant dades de l'albarà...</p>
                             ) : (
                             <ReportPreview
-                                    ref={reportRef}
                                     customer={associatedCustomer}
-                                    projectName={selectedProject !== 'all' ? selectedProject : 'Varis Projectes'}
+                                    projectName={selectedProject}
                                     services={filteredServices}
                                     showPricing={true}
                                     albaranNumber={-1} // Placeholder number for preview

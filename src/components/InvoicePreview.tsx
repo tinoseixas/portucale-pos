@@ -10,14 +10,13 @@ import { calculateTotalAmount } from '@/lib/calculations';
 interface InvoicePreviewProps {
   customer: Customer | undefined;
   projectName: string;
-  items?: InvoiceItem[];
   invoiceNumber?: number;
   services: ServiceRecord[];
   employees: Employee[];
 }
 
 // --- Component ---
-export const InvoicePreview = forwardRef<HTMLDivElement, InvoicePreviewProps>(({ customer, projectName, items, invoiceNumber, services, employees }, ref) => {
+export const InvoicePreview = forwardRef<HTMLDivElement, InvoicePreviewProps>(({ customer, projectName, invoiceNumber, services, employees }, ref) => {
     
     const { subtotal, iva, totalGeneral } = useMemo(() => calculateTotalAmount(services, employees), [services, employees]);
     
@@ -27,8 +26,8 @@ export const InvoicePreview = forwardRef<HTMLDivElement, InvoicePreviewProps>(({
         return employee ? `${employee.firstName} ${employee.lastName}` : 'Tècnic desconegut';
     };
 
-     const groupedByAlbaran = useMemo(() => {
-        const grouped: { [key: number]: { services: ServiceRecord[], items: InvoiceItem[] } } = {};
+    const groupedByAlbaran = useMemo(() => {
+        const grouped: { [key: number]: { services: ServiceRecord[], items: NonNullable<ServiceRecord['materials']> } } = {};
         
         (services || []).forEach(service => {
             const albaranNum = service.albaranNumber || 0;
@@ -36,20 +35,15 @@ export const InvoicePreview = forwardRef<HTMLDivElement, InvoicePreviewProps>(({
                 grouped[albaranNum] = { services: [], items: [] };
             }
             grouped[albaranNum].services.push(service);
-        });
-
-        (items || []).forEach(item => { 
-             const albaranNum = item.albaranNumber || 0;
-             if (!grouped[albaranNum]) {
-                grouped[albaranNum] = { services: [], items: [] };
+            if (service.materials) {
+                grouped[albaranNum].items.push(...service.materials);
             }
-            grouped[albaranNum].items.push(item);
         });
 
         return Object.entries(grouped)
             .sort(([numA], [numB]) => Number(numA) - Number(numB));
 
-    }, [services, items]);
+    }, [services]);
 
     return (
         <div ref={ref} className="bg-white p-8 font-sans text-gray-900 printable-area">
@@ -148,20 +142,15 @@ export const InvoicePreview = forwardRef<HTMLDivElement, InvoicePreviewProps>(({
                             <tbody>
                                 {albaranItems.map((item, index) => {
                                     const itemTotal = item.quantity * item.unitPrice;
-                                    const discountAmount = itemTotal * ((item.discount || 0) / 100);
-                                    const finalTotal = itemTotal - discountAmount;
                                     return (
                                     <React.Fragment key={`item-frag-${index}`}>
                                         <tr className="border-b border-gray-200">
                                             <td className="py-2 px-3">
                                                 {item.description}
-                                                {(item.discount || 0) > 0 && (
-                                                    <span className="text-xs text-red-600 ml-2">(-{item.discount}%)</span>
-                                                )}
                                             </td>
                                             <td className="text-right py-2 px-3 tabular-nums">{item.quantity.toFixed(2)}</td>
                                             <td className="text-right py-2 px-3 tabular-nums">{item.unitPrice.toFixed(2)} €</td>
-                                            <td className="text-right py-2 px-3 font-medium tabular-nums">{finalTotal.toFixed(2)} €</td>
+                                            <td className="text-right py-2 px-3 font-medium tabular-nums">{itemTotal.toFixed(2)} €</td>
                                         </tr>
                                         {item.imageDataUrl && (
                                             <tr className="border-b border-gray-200 bg-gray-50">
