@@ -23,15 +23,15 @@ export default function InvoicesPage() {
     const { user, isUserLoading } = useUser()
     const { toast } = useToast()
     const router = useRouter()
-    const imageInputRef = useRef<HTMLInputElement>(null);
-
+    
     const [selectedProjectName, setSelectedProjectName] = useState<string>('none');
     const [selectedCustomerId, setSelectedCustomerId] = useState<string>('none');
     const [projectName, setProjectName] = useState<string>('');
     const [isSaving, setIsSaving] = useState(false);
-    const [items, setItems] = useState<InvoiceItem[]>([{ description: '', quantity: 1, unitPrice: 0, imageDataUrl: undefined, discount: 0 }]);
+    
+    // This state will hold all services to be invoiced, with an added albaranNumber for grouping
     const [servicesForInvoice, setServicesForInvoice] = useState<ServiceRecord[]>([]);
-    const [selectedItemIndex, setSelectedItemIndex] = useState<number | null>(null);
+    
     const [sourceInfo, setSourceInfo] = useState<{ id: string, type: 'albaran' | 'quote' }[]>([]);
 
     // Data fetching
@@ -61,7 +61,6 @@ export default function InvoicesPage() {
     useEffect(() => {
         const importFromProject = async () => {
             if (selectedProjectName === 'none' || !albarans || !firestore || !employees) {
-                setItems([{ description: '', quantity: 1, unitPrice: 0, imageDataUrl: undefined, discount: 0 }]);
                 setServicesForInvoice([]);
                 setSourceInfo([]);
                 return;
@@ -70,11 +69,13 @@ export default function InvoicesPage() {
             toast({ title: `Important dades de l'obra: ${selectedProjectName}...` });
 
             const projectAlbarans = albarans.filter(a => a.projectName === selectedProjectName);
-            if (projectAlbarans.length === 0) return;
+            if (projectAlbarans.length === 0) {
+                 toast({ variant: 'destructive', title: 'Error', description: "No s'han trobat albarans per a aquesta obra." });
+                 return;
+            }
             
-            const mainCustomerId = projectAlbarans[0].customerId;
-            if(mainCustomerId) setSelectedCustomerId(mainCustomerId);
-
+            const mainCustomer = customers?.find(c => c.id === projectAlbarans[0].customerId);
+            if(mainCustomer) setSelectedCustomerId(mainCustomer.id);
             setProjectName(projectAlbarans[0].projectName);
             
             const allSourceIds = projectAlbarans.map(a => ({ id: a.id, type: 'albaran' as const }));
@@ -84,26 +85,17 @@ export default function InvoicesPage() {
                 const allServicesSnapshot = await getDocs(collectionGroup(firestore, 'serviceRecords'));
                 const allServices = allServicesSnapshot.docs.map(d => ({ id: d.id, ...d.data() } as ServiceRecord));
                 
-                const allServiceRecordIds = projectAlbarans.flatMap(a => a.serviceRecordIds);
-                const allProjectServices = allServices.filter(s => allServiceRecordIds.includes(s.id));
-                setServicesForInvoice(allProjectServices);
-                
-                let allProjectItems: InvoiceItem[] = [];
-
+                let aggregatedServices: ServiceRecord[] = [];
                 projectAlbarans.forEach(albaran => {
-                    const albaranItems = (albaran.serviceRecordIds || [])
-                        .flatMap(id => allServices.find(s => s.id === id)?.materials || [])
-                        .filter(m => m.description.trim() !== '' && !m.description.toLowerCase().includes('traball'))
-                        .map(m => ({ 
-                            ...m,
-                            albaranId: albaran.id,
-                            albaranNumber: albaran.albaranNumber,
-                            discount: 0
+                    const servicesOfThisAlbaran = allServices.filter(service => albaran.serviceRecordIds.includes(service.id))
+                        .map(service => ({
+                            ...service,
+                            albaranNumber: albaran.albaranNumber // Add albaran number for grouping in preview
                         }));
-                    allProjectItems.push(...albaranItems);
+                    aggregatedServices.push(...servicesOfThisAlbaran);
                 });
-
-                setItems(allProjectItems.length > 0 ? allProjectItems : [{ description: '', quantity: 1, unitPrice: 0, imageDataUrl: undefined, discount: 0 }]);
+                
+                setServicesForInvoice(aggregatedServices);
 
             } catch (e) {
                 console.error("Error fetching services for project:", e);
@@ -111,7 +103,7 @@ export default function InvoicesPage() {
             }
         };
         importFromProject();
-    }, [selectedProjectName, albarans, firestore, employees, toast]);
+    }, [selectedProjectName, albarans, firestore, employees, customers, toast]);
 
 
     const associatedCustomer = useMemo(() => {
@@ -119,62 +111,14 @@ export default function InvoicesPage() {
         return customers.find(c => c.id === selectedCustomerId);
     }, [selectedCustomerId, customers]);
 
-    // --- Item Handlers ---
-    const handleItemChange = (index: number, field: keyof InvoiceItem, value: string | number) => {
-        const newItems = [...items];
-        const item = newItems[index];
-        if (field === 'description') {
-            item.description = value as string;
-        } else {
-            const numValue = Number(value);
-            if (!isNaN(numValue)) {
-                 if (field === 'quantity') item.quantity = numValue >= 0 ? numValue : 0;
-                 if (field === 'unitPrice') item.unitPrice = numValue >= 0 ? numValue : 0;
-                 if (field === 'discount') item.discount = numValue >= 0 && numValue <= 100 ? numValue : 0;
-            }
-        }
-        setItems(newItems);
-    };
-
-    const addItem = () => {
-        setItems([...items, { description: '', quantity: 1, unitPrice: 0, imageDataUrl: undefined, discount: 0 }]);
-    };
-
-    const removeItem = (index: number) => {
-        setItems(items.filter((_, i) => i !== index));
-    };
-
-     const handleImageUploadClick = (index: number) => {
-        setSelectedItemIndex(index);
-        imageInputRef.current?.click();
-    };
-
-     const handleImageFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files && e.target.files[0] && selectedItemIndex !== null) {
-          const file = e.target.files[0];
-          try {
-            toast({ title: 'Processant imatge...' });
-            const reader = new FileReader();
-            reader.onload = () => {
-                const newItems = [...items];
-                newItems[selectedItemIndex].imageDataUrl = reader.result as string;
-                setItems(newItems);
-                toast({ title: 'Imatge afegida!' });
-            };
-            reader.readAsDataURL(file);
-          } catch (error) {
-            console.error('Error processing image:', error);
-            toast({ variant: 'destructive', title: 'Error', description: "No s'ha pogut processar la imatge." });
-          } finally {
-            e.target.value = '';
-            setSelectedItemIndex(null);
-          }
-        }
-    };
     
     // --- Save and Export Logic ---
     const handleSaveInvoice = async (exportAfter: boolean) => {
         if (!firestore || !employees) return;
+        if(servicesForInvoice.length === 0) {
+            toast({ variant: 'destructive', title: 'Error', description: 'No hi ha serveis per facturar.' });
+            return;
+        }
         setIsSaving(true);
         
         try {
@@ -190,7 +134,14 @@ export default function InvoicesPage() {
                 return newNumber;
             });
             
-            const filteredItems = items.filter(item => item.description.trim() !== '');
+            // The items for the invoice are derived directly from the services' materials
+            const invoiceItems = servicesForInvoice.flatMap(service => 
+                (service.materials || []).map(material => ({
+                    ...material,
+                    discount: 0, // Assuming no discount for now, can be added later
+                    albaranNumber: service.albaranNumber
+                }))
+            );
             
             const { laborCost, totalGeneral } = calculateTotalAmount(servicesForInvoice, employees);
 
@@ -201,10 +152,10 @@ export default function InvoicesPage() {
                 customerId: associatedCustomer?.id || '',
                 customerName: associatedCustomer?.name || 'N/A',
                 projectName: projectName || 'Sense nom',
-                items: filteredItems,
-                labor: { description: "Mà d'obra", cost: laborCost }, // Store calculated labor cost
+                items: invoiceItems,
+                labor: { description: "Mà d'obra", cost: laborCost },
                 totalAmount: totalGeneral,
-                sourceId: sourceInfo.map(s => s.id).join(','), // Store multiple source IDs
+                sourceId: sourceInfo.map(s => s.id).join(','),
                 sourceType: sourceInfo.length > 0 ? sourceInfo[0].type : undefined,
                 status: 'pendent',
             };
@@ -240,16 +191,19 @@ export default function InvoicesPage() {
         return <p>Carregant...</p>
     }
 
+    // Convert services to items for the preview, as it might still expect items format
+    const previewItems = servicesForInvoice.flatMap(service =>
+      (service.materials || []).map(material => ({
+        ...material,
+        discount: 0,
+        albaranNumber: service.albaranNumber,
+      }))
+    );
+
+
     return (
         <AdminGate pageTitle="Generador de Factures" pageDescription="Aquesta secció està protegida.">
             <div className="space-y-8 max-w-5xl mx-auto">
-                 <input
-                    type="file"
-                    ref={imageInputRef}
-                    onChange={handleImageFileChange}
-                    accept="image/*"
-                    className="hidden"
-                />
                  <Card>
                     <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center sm:justify-between gap-4">
                         <div>
@@ -298,60 +252,6 @@ export default function InvoicesPage() {
                             </div>
                         </div>
 
-                        {/* --- Items Editor --- */}
-                        <div className="space-y-4 rounded-lg border p-4">
-                           <Label className="text-base font-semibold">Articles de la Factura</Label>
-                           {items.map((item, index) => (
-                               <div key={index} className="space-y-2 p-2 border-b">
-                                   {item.albaranNumber && <p className="text-xs font-bold text-muted-foreground">De l'albarà #{item.albaranNumber}</p>}
-                                   <Input 
-                                       placeholder="Descripció de l'article"
-                                       value={item.description}
-                                       onChange={(e) => handleItemChange(index, 'description', e.target.value)}
-                                   />
-                                   <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
-                                       <Input 
-                                           type="number"
-                                           placeholder="Quant."
-                                           value={item.quantity}
-                                           onChange={(e) => handleItemChange(index, 'quantity', e.target.value)}
-                                       />
-                                       <div className="relative">
-                                            <Input
-                                                type="number"
-                                                placeholder="Preu/Unit."
-                                                value={item.unitPrice}
-                                                onChange={(e) => handleItemChange(index, 'unitPrice', e.target.value)}
-                                                className="pl-7"
-                                            />
-                                            <Euro className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                        </div>
-                                       <div className="relative">
-                                            <Input
-                                                type="number"
-                                                placeholder="Desc. %"
-                                                value={item.discount || ''}
-                                                onChange={(e) => handleItemChange(index, 'discount', e.target.value)}
-                                                className="pl-2 pr-7"
-                                            />
-                                            <span className="absolute right-2 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">%</span>
-                                        </div>
-                                       <Button type="button" variant="outline" onClick={() => handleImageUploadClick(index)}>
-                                           <ImagePlus className="mr-2 h-4 w-4" /> Imatge
-                                       </Button>
-                                       <Button type="button" variant="ghost" size="icon" onClick={() => removeItem(index)}>
-                                           <Trash2 className="h-4 w-4 text-destructive" />
-                                       </Button>
-                                   </div>
-                                   {item.imageDataUrl && <img src={item.imageDataUrl} alt="Preview" className="h-20 w-20 rounded-md object-cover mt-2" />}
-                               </div>
-                           ))}
-                           <Button type="button" variant="outline" onClick={addItem}>
-                               <Plus className="mr-2 h-4 w-4" /> Afegir Article
-                           </Button>
-                        </div>
-                        
-
                         <div className="flex justify-end pt-4 gap-2 flex-wrap">
                              <Button onClick={() => handleSaveInvoice(false)} disabled={isSaving}>
                                 {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
@@ -374,7 +274,7 @@ export default function InvoicesPage() {
                        <InvoicePreview
                          customer={associatedCustomer}
                          projectName={projectName}
-                         items={items}
+                         items={previewItems}
                          services={servicesForInvoice}
                          employees={employees || []}
                        />

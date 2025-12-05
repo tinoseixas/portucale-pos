@@ -20,6 +20,7 @@ export interface ServiceRecord {
   }[];
   updatedAt?: string;
   createdAt?: string; 
+  albaranNumber?: number; // For grouping in invoices
 }
 
 export interface Employee {

@@ -27,17 +27,29 @@ export const InvoicePreview = forwardRef<HTMLDivElement, InvoicePreviewProps>(({
         return employee ? `${employee.firstName} ${employee.lastName}` : 'Tècnic desconegut';
     };
 
-    const groupedItemsByAlbaran = useMemo(() => {
-        const grouped: { [key: number]: InvoiceItem[] } = {};
-        items.forEach(item => {
-            const albaranNum = item.albaranNumber || 0; // Group items without albaran under '0'
+     const groupedByAlbaran = useMemo(() => {
+        const grouped: { [key: number]: { services: ServiceRecord[], items: InvoiceItem[] } } = {};
+        
+        services.forEach(service => {
+            const albaranNum = service.albaranNumber || 0;
             if (!grouped[albaranNum]) {
-                grouped[albaranNum] = [];
+                grouped[albaranNum] = { services: [], items: [] };
             }
-            grouped[albaranNum].push(item);
+            grouped[albaranNum].services.push(service);
         });
-        return grouped;
-    }, [items]);
+
+        items.forEach(item => {
+             const albaranNum = item.albaranNumber || 0;
+             if (!grouped[albaranNum]) {
+                grouped[albaranNum] = { services: [], items: [] };
+            }
+            grouped[albaranNum].items.push(item);
+        });
+
+        return Object.entries(grouped)
+            .sort(([numA], [numB]) => Number(numA) - Number(numB));
+
+    }, [services, items]);
 
     return (
         <div ref={ref} className="bg-white p-8 font-sans text-gray-900 printable-area">
@@ -88,14 +100,13 @@ export const InvoicePreview = forwardRef<HTMLDivElement, InvoicePreviewProps>(({
             <section className="page-break-before-auto">
                 <h3 className="font-bold text-lg mb-4">Detall de la Factura</h3>
                 
-                {Object.entries(groupedItemsByAlbaran).map(([albaranNum, albaranItems]) => (
-                    <div key={albaranNum} className="mb-6">
+                {groupedByAlbaran.map(([albaranNum, { services: albaranServices, items: albaranItems }]) => (
+                    <div key={albaranNum} className="mb-6 page-break-inside-avoid">
                         {Number(albaranNum) > 0 && (
                             <h4 className="font-bold text-md mb-2 bg-gray-100 p-2 rounded-md">Detalls de l'Albarà #{String(albaranNum).padStart(4, '0')}</h4>
                         )}
                         
-                        {/* Task Summary for this Albaran */}
-                        {Number(albaranNum) > 0 && services.length > 0 && (
+                        {albaranServices.length > 0 && (
                              <table className="w-full text-sm mb-4">
                                 <thead className="bg-gray-50">
                                     <tr className="border-b-2 border-gray-300">
@@ -106,7 +117,7 @@ export const InvoicePreview = forwardRef<HTMLDivElement, InvoicePreviewProps>(({
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {services.filter(s => s.albarans?.includes(String(albaranNum))).map(service => {
+                                    {albaranServices.map(service => {
                                         const arrival = parseISO(service.arrivalDateTime);
                                         const departure = parseISO(service.departureDateTime);
                                         const minutes = (isValid(arrival) && isValid(departure) && departure > arrival) ? differenceInMinutes(departure, arrival) : 0;
@@ -114,7 +125,7 @@ export const InvoicePreview = forwardRef<HTMLDivElement, InvoicePreviewProps>(({
                                         return (
                                             <tr key={service.id} className="border-b border-gray-200">
                                                 <td className="py-2 px-3 align-top whitespace-nowrap">{format(arrival, 'dd/MM/yy')}</td>
-                                                <td className="py-2 px-3 align-top">{getEmployeeName(service.employeeId)}</td>
+                                                <td className="py-2 px-3 align-top">{service.employeeName || getEmployeeName(service.employeeId)}</td>
                                                 <td className="py-2 px-3 align-top">{service.description}</td>
                                                 <td className="py-2 px-3 align-top text-right tabular-nums">{hours}</td>
                                             </tr>
@@ -124,7 +135,7 @@ export const InvoicePreview = forwardRef<HTMLDivElement, InvoicePreviewProps>(({
                             </table>
                         )}
                         
-                        {/* Materials for this Albaran */}
+                        {albaranItems.length > 0 && (
                         <table className="w-full text-sm">
                             <thead className="bg-gray-50">
                                 <tr className="border-b-2 border-gray-300">
@@ -135,7 +146,7 @@ export const InvoicePreview = forwardRef<HTMLDivElement, InvoicePreviewProps>(({
                                 </tr>
                             </thead>
                             <tbody>
-                                {albaranItems.filter(item => item.description).map((item, index) => {
+                                {albaranItems.map((item, index) => {
                                     const itemTotal = item.quantity * item.unitPrice;
                                     const discountAmount = itemTotal * ((item.discount || 0) / 100);
                                     const finalTotal = itemTotal - discountAmount;
@@ -163,10 +174,10 @@ export const InvoicePreview = forwardRef<HTMLDivElement, InvoicePreviewProps>(({
                                 )})}
                             </tbody>
                         </table>
+                        )}
                     </div>
                 ))}
                 
-
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', alignItems: 'flex-start', marginTop: '1.5rem' }}>
                     <div style={{ flex: 1 }}>
                         {/* Placeholder for notes if needed */}
