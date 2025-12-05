@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useEffect, useState } from 'react'
+import { useMemo, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useCollection, useUser, useFirestore, useMemoFirebase, deleteDocumentNonBlocking } from '@/firebase'
 import { collection, query, orderBy, doc } from 'firebase/firestore'
