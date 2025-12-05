@@ -3,8 +3,8 @@
 import { useMemo, useRef, useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useCollection, useUser, useFirestore, useMemoFirebase } from '@/firebase'
-import { collection, query, orderBy, doc, runTransaction, setDoc, getDocs, collectionGroup } from 'firebase/firestore'
-import type { Customer, Quote, Albaran, InvoiceItem, Employee, ServiceRecord } from '@/lib/types'
+import { collection, query, orderBy, doc, runTransaction, setDoc, getDocs, collectionGroup, where } from 'firebase/firestore'
+import type { Customer, Quote, Albaran, InvoiceItem, Employee, ServiceRecord, Invoice } from '@/lib/types'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -25,15 +25,14 @@ export default function InvoicesPage() {
     const router = useRouter()
     const imageInputRef = useRef<HTMLInputElement>(null);
 
-    const [selectedAlbaranId, setSelectedAlbaranId] = useState<string>('none');
-    const [selectedQuoteId, setSelectedQuoteId] = useState<string>('none');
+    const [selectedProjectName, setSelectedProjectName] = useState<string>('none');
     const [selectedCustomerId, setSelectedCustomerId] = useState<string>('');
     const [projectName, setProjectName] = useState<string>('');
     const [isSaving, setIsSaving] = useState(false);
     const [items, setItems] = useState<InvoiceItem[]>([{ description: '', quantity: 1, unitPrice: 0, imageDataUrl: undefined, discount: 0 }]);
     const [labor, setLabor] = useState({ description: "Mà d'obra", cost: 0 });
     const [selectedItemIndex, setSelectedItemIndex] = useState<number | null>(null);
-    const [sourceInfo, setSourceInfo] = useState<{ id: string, type: 'albaran' | 'quote' } | null>(null);
+    const [sourceInfo, setSourceInfo] = useState<{ id: string, type: 'albaran' | 'quote' }[]>([]);
 
     // Data fetching
     const customersQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'customers'), orderBy('name', 'asc')) : null, [firestore]);
@@ -41,68 +40,75 @@ export default function InvoicesPage() {
 
     const albaransQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'albarans'), orderBy('albaranNumber', 'desc')) : null, [firestore]);
     const { data: albarans, isLoading: isLoadingAlbarans } = useCollection<Albaran>(albaransQuery);
-
-    const quotesQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'quotes'), orderBy('quoteNumber', 'desc')) : null, [firestore]);
-    const { data: quotes, isLoading: isLoadingQuotes } = useCollection<Quote>(quotesQuery);
     
     const employeesQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'employees')) : null, [firestore]);
     const { data: employees, isLoading: isLoadingEmployees } = useCollection<Employee>(employeesQuery);
 
-    // Effect to import data from a selected Albaran
+    const projectsWithAlbarans = useMemo(() => {
+        if (!albarans) return [];
+        const projectMap = new Map<string, { customerId: string, customerName: string }>();
+        albarans.forEach(a => {
+            if (a.projectName && !projectMap.has(a.projectName)) {
+                projectMap.set(a.projectName, { customerId: a.customerId, customerName: a.customerName });
+            }
+        });
+        return Array.from(projectMap.entries()).map(([projectName, data]) => ({
+            name: projectName,
+            ...data
+        }));
+    }, [albarans]);
+
     useEffect(() => {
-        const importFromAlbaran = async () => {
-            if (selectedAlbaranId === 'none' || !albarans || !firestore || !employees) return;
-            
-            const albaran = albarans.find(a => a.id === selectedAlbaranId);
-            if (!albaran) return;
-            
-            toast({ title: "Important dades de l'albarà..." });
-            
-            setSelectedQuoteId('none');
-            setSourceInfo({ id: albaran.id, type: 'albaran' });
-            setSelectedCustomerId(albaran.customerId);
-            setProjectName(albaran.projectName);
+        const importFromProject = async () => {
+            if (selectedProjectName === 'none' || !albarans || !firestore || !employees) return;
+
+            toast({ title: `Important dades de l'obra: ${selectedProjectName}...` });
+
+            const projectAlbarans = albarans.filter(a => a.projectName === selectedProjectName);
+            if (projectAlbarans.length === 0) return;
+
+            setSourceInfo(projectAlbarans.map(a => ({ id: a.id, type: 'albaran' })));
+            setSelectedCustomerId(projectAlbarans[0].customerId);
+            setProjectName(projectAlbarans[0].projectName);
 
             try {
                 const allServicesSnapshot = await getDocs(collectionGroup(firestore, 'serviceRecords'));
-                const associatedServices = albaran.serviceRecordIds.map(serviceId => {
-                    const serviceDoc = allServicesSnapshot.docs.find(doc => doc.id === serviceId);
-                    return serviceDoc ? { id: serviceDoc.id, ...serviceDoc.data() } as ServiceRecord : null;
-                }).filter(Boolean) as ServiceRecord[];
+                const allServices = allServicesSnapshot.docs.map(d => ({ id: d.id, ...d.data() } as ServiceRecord));
+                
+                let allProjectServices: ServiceRecord[] = [];
+                let allProjectItems: InvoiceItem[] = [];
 
-                const { laborCost } = calculateTotalAmount(associatedServices, employees);
+                projectAlbarans.forEach(albaran => {
+                    const associatedServices = albaran.serviceRecordIds
+                        .map(id => allServices.find(s => s.id === id))
+                        .filter(Boolean) as ServiceRecord[];
+                    
+                    allProjectServices.push(...associatedServices);
+
+                    const albaranItems = associatedServices.flatMap(s => s.materials || [])
+                        .filter(m => m.description.trim() !== '' && !m.description.toLowerCase().includes('traball'))
+                        .map(m => ({ 
+                            ...m,
+                            albaranId: albaran.id,
+                            albaranNumber: albaran.albaranNumber,
+                            discount: 0
+                        }));
+                    allProjectItems.push(...albaranItems);
+                });
+
+                const { laborCost } = calculateTotalAmount(allProjectServices, employees);
                 setLabor({ description: "Mà d'obra", cost: laborCost });
 
-                const materials = associatedServices.flatMap(s => s.materials || [])
-                    .filter(m => m.description.trim() !== '' && !m.description.toLowerCase().includes('traball'))
-                    .map(m => ({...m, discount: 0}));
+                setItems(allProjectItems.length > 0 ? allProjectItems : [{ description: '', quantity: 1, unitPrice: 0, imageDataUrl: undefined, discount: 0 }]);
 
-                setItems(materials.length > 0 ? materials : [{ description: '', quantity: 1, unitPrice: 0, imageDataUrl: undefined, discount: 0 }]);
             } catch (e) {
-                console.error("Error fetching services for albaran:", e);
-                toast({ variant: 'destructive', title: 'Error', description: "No s'han pogut carregar els detalls de l'albarà." });
+                console.error("Error fetching services for project:", e);
+                toast({ variant: 'destructive', title: 'Error', description: "No s'han pogut carregar els detalls de l'obra." });
             }
         };
-        importFromAlbaran();
-    }, [selectedAlbaranId, albarans, firestore, toast, employees]);
+        importFromProject();
+    }, [selectedProjectName, albarans, firestore, toast, employees]);
 
-    // Effect to import data from a selected Quote
-    useEffect(() => {
-        if (selectedQuoteId === 'none' || !quotes) return;
-
-        const quote = quotes.find(q => q.id === selectedQuoteId);
-        if (!quote) return;
-
-        toast({ title: "Important dades del pressupost..." });
-
-        setSelectedAlbaranId('none');
-        setSourceInfo({ id: quote.id, type: 'quote' });
-        setSelectedCustomerId(quote.customerId);
-        setProjectName(quote.projectName);
-        setItems(quote.items.map(item => ({...item, discount: item.discount || 0})));
-        setLabor(quote.labor);
-
-    }, [selectedQuoteId, quotes, toast]);
 
     const associatedCustomer = useMemo(() => {
         if (!selectedCustomerId || !customers) return undefined;
@@ -190,8 +196,7 @@ export default function InvoicesPage() {
             const totalAmount = subtotal * (1 + IVA_RATE);
 
             const invoiceRef = doc(collection(firestore, "invoices"));
-            const invoiceData = {
-                id: invoiceRef.id,
+            const invoiceData: Omit<Invoice, 'id'> = {
                 invoiceNumber: newInvoiceNumber,
                 createdAt: new Date().toISOString(),
                 customerId: associatedCustomer?.id || '',
@@ -200,8 +205,8 @@ export default function InvoicesPage() {
                 items: filteredItems,
                 labor: labor,
                 totalAmount: totalAmount,
-                sourceId: sourceInfo?.id || '',
-                sourceType: sourceInfo?.type || undefined,
+                sourceId: sourceInfo.map(s => s.id).join(','), // Store multiple source IDs
+                sourceType: sourceInfo.length > 0 ? sourceInfo[0].type : undefined,
                 status: 'pendent',
             };
 
@@ -212,8 +217,11 @@ export default function InvoicesPage() {
                 description: `La factura #${newInvoiceNumber} ha estat guardada a l'historial.`,
             });
             
-            // TODO: Implement navigation to invoice detail page
-            router.push(`/dashboard/invoices/history`);
+            if (exportAfter) {
+                router.push(`/dashboard/invoices/${invoiceRef.id}?export=true`);
+            } else {
+                 router.push(`/dashboard/invoices/${invoiceRef.id}`);
+            }
 
         } catch (error) {
             console.error("Error generating invoice:", error)
@@ -227,7 +235,7 @@ export default function InvoicesPage() {
         }
     };
 
-    const isLoading = isUserLoading || isLoadingCustomers || isLoadingAlbarans || isLoadingQuotes || isLoadingEmployees;
+    const isLoading = isUserLoading || isLoadingCustomers || isLoadingAlbarans || isLoadingEmployees;
 
     if (isLoading) {
         return <p>Carregant...</p>
@@ -255,31 +263,17 @@ export default function InvoicesPage() {
                     </CardHeader>
                     <CardContent className="space-y-6">
                         {/* --- Importers --- */}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                                <Label className="flex items-center gap-2"><Copy className="h-4 w-4"/> Importar des d'Albarà</Label>
-                                <Select value={selectedAlbaranId} onValueChange={setSelectedAlbaranId}>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Selecciona un albarà..." />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="none">No importar</SelectItem>
-                                        {albarans?.map(a => <SelectItem key={a.id} value={a.id}>Albarà #{String(a.albaranNumber).padStart(4, '0')} - {a.customerName}</SelectItem>)}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                             <div className="space-y-2">
-                                <Label className="flex items-center gap-2"><Copy className="h-4 w-4"/> Importar des de Pressupost</Label>
-                                <Select value={selectedQuoteId} onValueChange={setSelectedQuoteId}>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Selecciona un pressupost..." />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="none">No importar</SelectItem>
-                                        {quotes?.map(q => <SelectItem key={q.id} value={q.id}>Pressupost #{String(q.quoteNumber).padStart(4, '0')} - {q.customerName}</SelectItem>)}
-                                    </SelectContent>
-                                </Select>
-                            </div>
+                        <div className="space-y-2">
+                            <Label className="flex items-center gap-2"><Copy className="h-4 w-4"/> Importar Obra</Label>
+                            <Select value={selectedProjectName} onValueChange={setSelectedProjectName}>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Selecciona una obra per importar albarans..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="none">No importar</SelectItem>
+                                    {projectsWithAlbarans.map(p => <SelectItem key={p.name} value={p.name}>{p.name} ({p.customerName})</SelectItem>)}
+                                </SelectContent>
+                            </Select>
                         </div>
 
                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -290,7 +284,7 @@ export default function InvoicesPage() {
                                         <SelectValue placeholder="Selecciona un client" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="all">Cap client seleccionat</SelectItem>
+                                        <SelectItem value="">Cap client seleccionat</SelectItem>
                                         {customers?.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
                                     </SelectContent>
                                 </Select>
@@ -310,6 +304,7 @@ export default function InvoicesPage() {
                            <Label className="text-base font-semibold">Articles de la Factura</Label>
                            {items.map((item, index) => (
                                <div key={index} className="space-y-2 p-2 border-b">
+                                   {item.albaranNumber && <p className="text-xs font-bold text-muted-foreground">De l'albarà #{item.albaranNumber}</p>}
                                    <Input 
                                        placeholder="Descripció de l'article"
                                        value={item.description}
@@ -383,6 +378,10 @@ export default function InvoicesPage() {
                              <Button onClick={() => handleSaveInvoice(false)} disabled={isSaving}>
                                 {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
                                 Guardar Factura
+                            </Button>
+                             <Button onClick={() => handleSaveInvoice(true)} disabled={isSaving}>
+                                {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileDown className="mr-2 h-4 w-4" />}
+                                Guardar i Exportar
                             </Button>
                         </div>
                     </CardContent>

@@ -124,6 +124,10 @@ export default function InvoicesHistoryPage() {
                         </TableCell>
                         <TableCell className="text-right">
                             <div className="flex items-center justify-end gap-2">
+                                <Button variant="outline" size="sm" onClick={() => router.push(`/dashboard/invoices/${invoice.id}`)}>
+                                    <Eye className="mr-2 h-4 w-4" />
+                                    Veure
+                                </Button>
                                 {invoice.status !== 'pagada' && (
                                     <Button variant="outline" size="sm" onClick={() => router.push(`/dashboard/receipts/new?invoiceId=${invoice.id}`)}>
                                         <CreditCard className="mr-2 h-4 w-4" />

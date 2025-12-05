@@ -82,6 +82,8 @@ export interface InvoiceItem {
     unitPrice: number;
     imageDataUrl?: string;
     discount?: number;
+    albaranId?: string; // To trace back to the source albaran
+    albaranNumber?: number; // For display purposes
 }
 
 export interface Invoice {

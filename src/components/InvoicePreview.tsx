@@ -27,6 +27,18 @@ export const InvoicePreview = forwardRef<HTMLDivElement, InvoicePreviewProps>(({
         }, 0);
     }, [items]);
 
+    const groupedItemsByAlbaran = useMemo(() => {
+        const grouped: { [key: number]: InvoiceItem[] } = {};
+        items.forEach(item => {
+            const albaranNum = item.albaranNumber || 0; // Group items without albaran under '0'
+            if (!grouped[albaranNum]) {
+                grouped[albaranNum] = [];
+            }
+            grouped[albaranNum].push(item);
+        });
+        return grouped;
+    }, [items]);
+
     const subtotal = materialsSubtotal + labor.cost;
     const iva = subtotal * IVA_RATE;
     const totalGeneral = subtotal + iva;
@@ -79,52 +91,66 @@ export const InvoicePreview = forwardRef<HTMLDivElement, InvoicePreviewProps>(({
             
             <section className="page-break-before-auto">
                 <h3 className="font-bold text-lg mb-4">Detall de la Factura</h3>
-                <table className="w-full text-sm">
-                    <thead className="bg-gray-50">
-                        <tr className="border-b-2 border-gray-300">
-                            <th className="text-left py-2 px-3 font-semibold text-gray-600">DESCRIPCIÓ</th>
-                            <th className="text-right py-2 px-3 font-semibold text-gray-600 w-24">QUANT.</th>
-                            <th className="text-right py-2 px-3 font-semibold text-gray-600 w-24">PREU/UNIT.</th>
-                            <th className="text-right py-2 px-3 font-semibold text-gray-600 w-24">TOTAL</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {items.filter(item => item.description).map((item, index) => {
-                            const itemTotal = item.quantity * item.unitPrice;
-                            const discountAmount = itemTotal * ((item.discount || 0) / 100);
-                            const finalTotal = itemTotal - discountAmount;
-                            return (
-                            <React.Fragment key={`item-frag-${index}`}>
-                                <tr className="border-b border-gray-200">
-                                    <td className="py-2 px-3">
-                                        {item.description}
-                                        {(item.discount || 0) > 0 && (
-                                            <span className="text-xs text-red-600 ml-2">(-{item.discount}%)</span>
-                                        )}
-                                    </td>
-                                    <td className="text-right py-2 px-3 tabular-nums">{item.quantity.toFixed(2)}</td>
-                                    <td className="text-right py-2 px-3 tabular-nums">{item.unitPrice.toFixed(2)} €</td>
-                                    <td className="text-right py-2 px-3 font-medium tabular-nums">{finalTotal.toFixed(2)} €</td>
-                                </tr>
-                                {item.imageDataUrl && (
-                                    <tr className="border-b border-gray-200 bg-gray-50">
-                                        <td colSpan={4} className="py-3 px-3 text-center">
-                                            <Image src={item.imageDataUrl} alt={`Imatge per ${item.description}`} width={200} height={200} className="rounded-md object-contain mx-auto" />
-                                        </td>
-                                    </tr>
-                                )}
-                            </React.Fragment>
-                        )})}
-                         {labor.cost > 0 && (
-                            <tr className="border-b border-gray-200 font-medium">
-                                <td className="py-2 px-3">{labor.description}</td>
-                                <td className="text-right py-2 px-3 tabular-nums">1.00</td>
-                                <td className="text-right py-2 px-3 tabular-nums">{labor.cost.toFixed(2)} €</td>
-                                <td className="text-right py-2 px-3 tabular-nums">{labor.cost.toFixed(2)} €</td>
-                            </tr>
+                
+                {Object.entries(groupedItemsByAlbaran).map(([albaranNum, albaranItems]) => (
+                    <div key={albaranNum} className="mb-6">
+                        {Number(albaranNum) > 0 && (
+                            <h4 className="font-bold text-md mb-2 bg-gray-100 p-2 rounded-md">Detalls de l'Albarà #{String(albaranNum).padStart(4, '0')}</h4>
                         )}
-                    </tbody>
-                </table>
+                        <table className="w-full text-sm">
+                            <thead className="bg-gray-50">
+                                <tr className="border-b-2 border-gray-300">
+                                    <th className="text-left py-2 px-3 font-semibold text-gray-600">DESCRIPCIÓ</th>
+                                    <th className="text-right py-2 px-3 font-semibold text-gray-600 w-24">QUANT.</th>
+                                    <th className="text-right py-2 px-3 font-semibold text-gray-600 w-24">PREU/UNIT.</th>
+                                    <th className="text-right py-2 px-3 font-semibold text-gray-600 w-24">TOTAL</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {albaranItems.filter(item => item.description).map((item, index) => {
+                                    const itemTotal = item.quantity * item.unitPrice;
+                                    const discountAmount = itemTotal * ((item.discount || 0) / 100);
+                                    const finalTotal = itemTotal - discountAmount;
+                                    return (
+                                    <React.Fragment key={`item-frag-${index}`}>
+                                        <tr className="border-b border-gray-200">
+                                            <td className="py-2 px-3">
+                                                {item.description}
+                                                {(item.discount || 0) > 0 && (
+                                                    <span className="text-xs text-red-600 ml-2">(-{item.discount}%)</span>
+                                                )}
+                                            </td>
+                                            <td className="text-right py-2 px-3 tabular-nums">{item.quantity.toFixed(2)}</td>
+                                            <td className="text-right py-2 px-3 tabular-nums">{item.unitPrice.toFixed(2)} €</td>
+                                            <td className="text-right py-2 px-3 font-medium tabular-nums">{finalTotal.toFixed(2)} €</td>
+                                        </tr>
+                                        {item.imageDataUrl && (
+                                            <tr className="border-b border-gray-200 bg-gray-50">
+                                                <td colSpan={4} className="py-3 px-3 text-center">
+                                                    <Image src={item.imageDataUrl} alt={`Imatge per ${item.description}`} width={200} height={200} className="rounded-md object-contain mx-auto" />
+                                                </td>
+                                            </tr>
+                                        )}
+                                    </React.Fragment>
+                                )})}
+                            </tbody>
+                        </table>
+                    </div>
+                ))}
+                
+                {labor.cost > 0 && (
+                     <table className="w-full text-sm mt-6">
+                        <tbody>
+                            <tr className="border-y border-gray-200 font-medium bg-gray-50">
+                                <td className="py-2 px-3">{labor.description}</td>
+                                <td className="text-right py-2 px-3 tabular-nums w-24">1.00</td>
+                                <td className="text-right py-2 px-3 tabular-nums w-24">{labor.cost.toFixed(2)} €</td>
+                                <td className="text-right py-2 px-3 tabular-nums w-24">{labor.cost.toFixed(2)} €</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                )}
+
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', alignItems: 'flex-start', marginTop: '1.5rem' }}>
                     <div style={{ flex: 1 }}>

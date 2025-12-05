@@ -1,0 +1,234 @@
+'use client'
+
+import { useState, useMemo, useRef, useEffect } from 'react'
+import { useRouter, useParams, useSearchParams } from 'next/navigation'
+import { useDoc, useUser, useFirestore, useMemoFirebase, deleteDocumentNonBlocking } from '@/firebase'
+import { doc } from 'firebase/firestore'
+import type { Customer, Invoice } from '@/lib/types'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { FileDown, Loader2, ArrowLeft, Trash2, CreditCard } from 'lucide-react'
+import jsPDF from 'jspdf'
+import html2canvas from 'html2canvas'
+import { InvoicePreview } from '@/components/InvoicePreview'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
+import { useToast } from '@/hooks/use-toast'
+import { AdminGate } from '@/components/AdminGate'
+import { Badge } from '@/components/ui/badge'
+
+export default function InvoiceDetailPage() {
+    const firestore = useFirestore()
+    const router = useRouter()
+    const params = useParams()
+    const searchParams = useSearchParams()
+    const { toast } = useToast()
+    const invoiceId = params.id as string
+
+    const { user, isUserLoading } = useUser()
+    const [isGenerating, setIsGenerating] = useState(false)
+    const reportRef = useRef<HTMLDivElement>(null)
+
+    const invoiceDocRef = useMemoFirebase(() => firestore && invoiceId ? doc(firestore, 'invoices', invoiceId) : null, [firestore, invoiceId])
+    const { data: invoice, isLoading: isLoadingInvoice } = useDoc<Invoice>(invoiceDocRef)
+    
+    const customerDocRef = useMemoFirebase(() => (firestore && invoice?.customerId) ? doc(firestore, 'customers', invoice.customerId) : null, [firestore, invoice]);
+    const { data: customer, isLoading: isLoadingCustomer } = useDoc<Customer>(customerDocRef);
+
+    const shouldExport = searchParams.get('export') === 'true';
+
+    useEffect(() => {
+        if (!isUserLoading && !user) {
+            router.push('/')
+        }
+    }, [isUserLoading, user, router])
+
+    const handleExportPDF = async () => {
+        const reportElement = reportRef.current;
+        if (!reportElement) return;
+    
+        setIsGenerating(true);
+    
+        const originalStyles = {
+            width: reportElement.style.width,
+            maxWidth: reportElement.style.maxWidth,
+        };
+    
+        try {
+            reportElement.style.width = '1024px';
+            reportElement.style.maxWidth = 'none';
+    
+            const canvas = await html2canvas(reportElement, {
+                scale: 2,
+                useCORS: true,
+                logging: false,
+                windowWidth: 1440
+            });
+    
+            reportElement.style.width = originalStyles.width;
+            reportElement.style.maxWidth = originalStyles.maxWidth;
+    
+            const imgData = canvas.toDataURL('image/png');
+            const pdf = new jsPDF({
+                orientation: 'portrait',
+                unit: 'mm',
+                format: 'a4',
+            });
+    
+            const pdfWidth = pdf.internal.pageSize.getWidth();
+            const pdfHeight = pdf.internal.pageSize.getHeight();
+            
+            const imgProps = pdf.getImageProperties(imgData);
+            const imgWidth = imgProps.width;
+            const imgHeight = imgProps.height;
+    
+            const ratio = imgWidth / imgHeight;
+            let finalWidth = pdfWidth - 20; 
+            let finalHeight = finalWidth / ratio;
+    
+            if (finalHeight > pdfHeight - 20) {
+                finalHeight = pdfHeight - 20;
+                finalWidth = finalHeight * ratio;
+            }
+    
+            const x = (pdfWidth - finalWidth) / 2;
+            const y = 10;
+    
+            pdf.addImage(imgData, 'PNG', x, y, finalWidth, finalHeight);
+            
+            const fileName = `Factura_${invoice?.invoiceNumber || invoiceId}.pdf`.replace(/ /g, '_');
+            pdf.save(fileName);
+    
+        } catch (error) {
+            console.error("Error generating PDF:", error);
+            toast({ variant: 'destructive', title: 'Error', description: 'No s\'ha pogut generar el PDF.' });
+        } finally {
+            reportElement.style.width = originalStyles.width;
+            reportElement.style.maxWidth = originalStyles.maxWidth;
+            setIsGenerating(false);
+        }
+    };
+    
+    const isLoading = isUserLoading || isLoadingInvoice || isLoadingCustomer;
+    
+    useEffect(() => {
+        if (shouldExport && !isLoading && !isGenerating && invoice) {
+            handleExportPDF();
+            router.replace(`/dashboard/invoices/${invoiceId}`, { scroll: false });
+        }
+         // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [shouldExport, isLoading, isGenerating, invoice, invoiceId, router]);
+
+
+    const handleDeleteInvoice = () => {
+        if (!invoiceDocRef) return;
+        deleteDocumentNonBlocking(invoiceDocRef);
+        toast({
+            title: 'Factura Eliminada',
+            description: `La factura #${invoice?.invoiceNumber} ha estat eliminada del historial.`,
+        });
+        router.push('/dashboard/invoices/history');
+    }
+
+    const getStatusVariant = (status: Invoice['status']) => {
+        switch (status) {
+          case 'pagada':
+            return 'default'
+          case 'pendent':
+            return 'destructive'
+          case 'parcialment pagada':
+            return 'secondary'
+          default:
+            return 'outline'
+        }
+    }
+    
+
+    if (isLoading) {
+        return <div className="text-center p-8"><Loader2 className="h-8 w-8 animate-spin mx-auto" /> Carregant dades de la factura...</div>
+    }
+    
+    if (!invoice) {
+        return <p>No s'ha trobat la factura.</p>
+    }
+
+    return (
+        <AdminGate pageTitle="Detall de la Factura" pageDescription="Aquesta secció està protegida.">
+            <div className="space-y-8 max-w-5xl mx-auto">
+                <div className="flex justify-between items-center flex-wrap gap-4">
+                    <Button variant="ghost" onClick={() => router.push('/dashboard/invoices/history')}>
+                        <ArrowLeft className="mr-2 h-4 w-4" />
+                        Tornar a l'historial
+                    </Button>
+                    <div className="flex items-center gap-2 flex-wrap justify-end">
+                        <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                                <Button variant="destructive">
+                                    <Trash2 className="mr-2 h-4 w-4" /> Eliminar Factura
+                                </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                                <AlertDialogHeader>
+                                <AlertDialogTitle>Estàs segur que vols eliminar la factura?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                    Aquesta acció no es pot desfer. S'eliminarà la factura <strong>#{invoice.invoiceNumber}</strong> del historial.
+                                </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel·lar</AlertDialogCancel>
+                                <AlertDialogAction onClick={handleDeleteInvoice} className="bg-destructive hover:bg-destructive/90">Eliminar</AlertDialogAction>
+                                </AlertDialogFooter>
+                            </AlertDialogContent>
+                        </AlertDialog>
+                        
+                         {invoice.status !== 'pagada' && (
+                            <Button variant="outline" onClick={() => router.push(`/dashboard/receipts/new?invoiceId=${invoice.id}`)}>
+                                <CreditCard className="mr-2 h-4 w-4" />
+                                Registar Pagament
+                            </Button>
+                        )}
+
+                        <Button
+                            onClick={handleExportPDF}
+                            disabled={isGenerating}
+                        >
+                            {isGenerating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileDown className="mr-2 h-4 w-4" />}
+                            Exportar PDF
+                        </Button>
+                    </div>
+                </div>
+                
+                <Card>
+                    <CardHeader>
+                        <div className="flex justify-between items-start">
+                            <div>
+                                <CardTitle>Factura #{String(invoice.invoiceNumber).padStart(4, '0')}</CardTitle>
+                                <CardDescription>Generada per a l'obra "{invoice.projectName}" per al client "{invoice.customerName}".</CardDescription>
+                            </div>
+                            <Badge variant={getStatusVariant(invoice.status)} className="capitalize text-base">{invoice.status}</Badge>
+                        </div>
+                    </CardHeader>
+                    <CardContent>
+                        <InvoicePreview
+                            ref={reportRef}
+                            customer={customer || undefined}
+                            projectName={invoice.projectName}
+                            items={invoice.items}
+                            labor={invoice.labor}
+                            invoiceNumber={invoice.invoiceNumber}
+                        />
+                    </CardContent>
+                </Card>
+            </div>
+        </AdminGate>
+    )
+}
