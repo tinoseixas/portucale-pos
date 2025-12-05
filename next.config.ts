@@ -46,7 +46,6 @@ const nextConfig: NextConfig = {
         "*.cloudworkstations.dev"
       ]
     },
-    useFileSystemPublicRoutes: false,
   },
 };
 
