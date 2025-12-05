@@ -322,9 +322,38 @@
         },
         "totalAmount": { "type": "number", "description": "The total amount calculated for the invoice." },
         "sourceId": { "type": "string", "description": "ID of the albaran or quote it was created from" },
-        "sourceType": { "type": "string", "enum": ["albaran", "quote"], "description": "The type of document this invoice was created from." }
+        "sourceType": { "type": "string", "enum": ["albaran", "quote"], "description": "The type of document this invoice was created from." },
+        "status": {
+          "type": "string",
+          "enum": ["pendent", "pagada", "parcialment pagada"],
+          "description": "The payment status of the invoice."
+        },
+        "paymentDate": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The date of the last payment."
+        }
       },
-      "required": ["id", "invoiceNumber", "createdAt", "projectName", "items", "labor", "totalAmount"]
+      "required": ["id", "invoiceNumber", "createdAt", "projectName", "items", "labor", "totalAmount", "status"]
+    },
+    "Receipt": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Receipt",
+      "type": "object",
+      "description": "Represents a payment receipt for an invoice.",
+      "properties": {
+        "id": { "type": "string", "description": "Unique identifier for the receipt." },
+        "receiptNumber": { "type": "number", "description": "Sequential number for the receipt." },
+        "invoiceId": { "type": "string", "description": "ID of the associated invoice." },
+        "invoiceNumber": { "type": "number", "description": "Denormalized number of the invoice." },
+        "customerId": { "type": "string", "description": "ID of the associated customer." },
+        "customerName": { "type": "string", "description": "Denormalized name of the customer." },
+        "paymentDate": { "type": "string", "format": "date-time", "description": "Timestamp of when the payment was made." },
+        "amountPaid": { "type": "number", "description": "The amount paid in this receipt." },
+        "paymentMethod": { "type": "string", "description": "Method of payment (e.g., Transferència, Efectiu)." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Timestamp of when the receipt was generated." }
+      },
+      "required": ["id", "receiptNumber", "invoiceId", "invoiceNumber", "paymentDate", "amountPaid", "paymentMethod", "createdAt"]
     },
     "Counter": {
       "$schema": "http://json-schema.org/draft-07/schema#",
@@ -427,6 +456,15 @@
             "params": [{ "name": "invoiceId", "description": "Unique ID for the invoice." }]
         }
       },
+       {
+        "path": "/receipts/{receiptId}",
+        "definition": {
+            "entityName": "Receipt",
+            "schema": { "$ref": "#/backend/entities/Receipt" },
+            "description": "Stores historical records of generated receipts (rebuts). All authenticated users can read.",
+            "params": [{ "name": "receiptId", "description": "Unique ID for the receipt." }]
+        }
+      },
       {
         "path": "/counters/albarans",
         "definition": {
@@ -451,6 +489,15 @@
             "entityName": "Counter",
             "schema": { "$ref": "#/backend/entities/Counter" },
             "description": "Manages the sequential counter for invoice numbers. Only admins should have write access.",
+            "params": []
+        }
+      },
+       {
+        "path": "/counters/receipts",
+        "definition": {
+            "entityName": "Counter",
+            "schema": { "$ref": "#/backend/entities/Counter" },
+            "description": "Manages the sequential counter for receipt numbers. Only admins should have write access.",
             "params": []
         }
       }

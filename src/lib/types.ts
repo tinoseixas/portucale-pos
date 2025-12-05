@@ -99,4 +99,19 @@ export interface Invoice {
     totalAmount: number;
     sourceId?: string; // ID of the albaran or quote it was created from
     sourceType?: 'albaran' | 'quote';
+    status: 'pendent' | 'pagada' | 'parcialment pagada';
+    paymentDate?: string;
+}
+
+export interface Receipt {
+  id: string;
+  receiptNumber: number;
+  invoiceId: string;
+  invoiceNumber: number;
+  customerId: string;
+  customerName: string;
+  paymentDate: string;
+  amountPaid: number;
+  paymentMethod: string;
+  createdAt: string;
 }

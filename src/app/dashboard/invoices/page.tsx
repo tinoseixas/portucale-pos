@@ -202,6 +202,7 @@ export default function InvoicesPage() {
                 totalAmount: totalAmount,
                 sourceId: sourceInfo?.id || '',
                 sourceType: sourceInfo?.type || undefined,
+                status: 'pendent',
             };
 
             await setDoc(invoiceRef, invoiceData);

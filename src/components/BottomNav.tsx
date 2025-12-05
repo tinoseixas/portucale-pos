@@ -15,7 +15,7 @@ export function BottomNav() {
     { href: '/dashboard/new', icon: PlusCircle, label: 'Nou' },
     { href: '/dashboard/quotes', icon: FileSignature, label: 'Pressupostos' },
     { href: '/dashboard/reports', icon: FileText, label: 'Albarans' },
-    { href: '/dashboard/invoices', icon: Receipt, label: 'Factures' },
+    { href: '/dashboard/invoices/history', icon: Receipt, label: 'Factures' },
     { href: '/dashboard/albarans', icon: FileArchive, label: 'Historial' },
     { href: '/dashboard/customers', icon: Building, label: 'Clients' },
     { href: '/dashboard/users', icon: Users, label: 'Usuaris' },
@@ -45,6 +45,9 @@ export function BottomNav() {
         {navItems.map((item) => {
           const isActive = pathname.startsWith(item.href) && (item.href !== '/dashboard' || pathname === '/dashboard');
            if (item.href === '/dashboard/quotes' && (pathname.startsWith('/dashboard/quotes/history') || pathname.startsWith('/dashboard/quotes/edit') || /^\/dashboard\/quotes\/[^/]+$/.test(pathname))) {
+             return null;
+           }
+            if (item.href === '/dashboard/invoices' && (pathname.startsWith('/dashboard/invoices/history') || pathname.startsWith('/dashboard/receipts'))) {
              return null;
            }
           return (

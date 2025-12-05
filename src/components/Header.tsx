@@ -68,7 +68,7 @@ export function Header() {
                     </span>
                 )}
                 <>
-                    <Button variant="outline" size="sm" onClick={() => router.push('/dashboard/invoices')}>
+                    <Button variant="outline" size="sm" onClick={() => router.push('/dashboard/invoices/history')}>
                         <Receipt className="mr-2 h-4 w-4" />
                         Factures
                     </Button>
