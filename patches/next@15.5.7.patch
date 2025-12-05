@@ -1,0 +1,14 @@
+patch-package
+
+--- a/node_modules/next/dist/server/lib/start-server.js
++++ b/node_modules/next/dist/server/lib/start-server.js
+@@ -370,7 +370,7 @@
+     const valid = await (0, _startservercheck.checkIsNodeCompatibilityEnabled)(dir, isDev);
+     if (!valid) {
+         process.exit(1);
+-    }
++    } 
+     if (isDev) {
+         const { CONFIG_FILES  } = require("../../shared/lib/constants");
+         const { watchFile , findPageFile  } = require("../lib/find-page-file");
+
