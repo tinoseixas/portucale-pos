@@ -145,7 +145,7 @@ export default function InvoiceDetailPage() {
     
             pdf.addImage(imgData, 'PNG', x, y, finalWidth, finalHeight);
             
-            const fileName = `Factura_${invoice?.invoiceNumber || invoiceId}.pdf`.replace(/ /g, '_');
+            const fileName = `Factura_${invoice?.invoiceNumber || invoiceId}_${invoice?.projectName || ''}.pdf`.replace(/ /g, '_');
             pdf.save(fileName);
     
         } catch (error) {
@@ -262,7 +262,6 @@ export default function InvoiceDetailPage() {
                             ref={reportRef}
                             customer={customer || undefined}
                             projectName={invoice.projectName}
-                            items={invoice.items}
                             invoiceNumber={invoice.invoiceNumber}
                             services={services}
                             employees={employees}

@@ -160,7 +160,7 @@ export default function AlbaranDetailPage() {
     
             pdf.addImage(imgData, 'PNG', x, y, finalWidth, finalHeight);
             
-            const fileName = `Albara_${albaran?.albaranNumber || albaranId}.pdf`.replace(/ /g, '_');
+            const fileName = `Albara_${albaran?.albaranNumber || albaranId}_${albaran?.projectName || ''}.pdf`.replace(/ /g, '_');
             pdf.save(fileName);
     
         } catch (error) {

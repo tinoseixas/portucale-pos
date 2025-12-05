@@ -114,7 +114,7 @@ export default function QuoteDetailPage() {
     
             pdf.addImage(imgData, 'PNG', x, y, finalWidth, finalHeight);
             
-            const fileName = `Pressupost_${quote?.quoteNumber || quoteId}.pdf`.replace(/ /g, '_');
+            const fileName = `Pressupost_${quote?.quoteNumber || quoteId}_${quote?.projectName || ''}.pdf`.replace(/ /g, '_');
             pdf.save(fileName);
     
         } catch (error) {
