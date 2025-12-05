@@ -36,6 +36,18 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  experimental: {
+    serverActions: {
+      allowedOrigins: [
+        "*.google.com",
+        "*.firebase.app",
+        "*.cloud.run",
+        "*.cloud.goog",
+        "*.cloudworkstations.dev"
+      ]
+    },
+    useFileSystemPublicRoutes: false,
+  },
 };
 
 export default nextConfig;
