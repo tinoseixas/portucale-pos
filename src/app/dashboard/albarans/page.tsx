@@ -25,6 +25,7 @@ import {
 import { useToast } from '@/hooks/use-toast'
 import { AdminGate } from '@/components/AdminGate'
 import { calculateTotalAmount } from '@/lib/calculations'
+import { Badge } from '@/components/ui/badge'
 
 
 export default function AlbaransHistoryPage() {
@@ -106,6 +107,17 @@ export default function AlbaransHistoryPage() {
     }
   };
 
+  const getStatusVariant = (status: Albaran['status']) => {
+    switch (status) {
+      case 'facturat':
+        return 'default'
+      case 'pendent':
+        return 'secondary'
+      default:
+        return 'outline'
+    }
+  }
+
 
   if (isUserLoading || isLoadingAlbarans || isLoadingEmployees) {
     return <p>Carregant historial...</p>
@@ -117,7 +129,7 @@ export default function AlbaransHistoryPage() {
 
   return (
     <AdminGate pageTitle="Historial d'Albarans" pageDescription="Aquesta secció està protegida.">
-        <div className="max-w-6xl mx-auto">
+        <div className="max-w-full mx-auto">
         <Card>
             <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center sm:justify-between gap-4">
             <div className="flex items-center gap-4">
@@ -142,6 +154,7 @@ export default function AlbaransHistoryPage() {
                         <TableHead>Client</TableHead>
                         <TableHead>Obra</TableHead>
                         <TableHead>Total</TableHead>
+                        <TableHead>Estat</TableHead>
                         <TableHead className="text-right">Accions</TableHead>
                     </TableRow>
                     </TableHeader>
@@ -153,6 +166,11 @@ export default function AlbaransHistoryPage() {
                         <TableCell>{albaran.customerName}</TableCell>
                         <TableCell className="max-w-[200px] truncate">{albaran.projectName}</TableCell>
                         <TableCell>{albaran.totalAmount.toFixed(2)} €</TableCell>
+                        <TableCell>
+                          <Badge variant={getStatusVariant(albaran.status)} className="capitalize">
+                            {albaran.status}
+                          </Badge>
+                        </TableCell>
                         <TableCell className="text-right">
                             <div className="flex items-center justify-end gap-2">
                                 <Button variant="outline" size="sm" onClick={() => router.push(`/dashboard/albarans/${albaran.id}`)}>
@@ -183,7 +201,7 @@ export default function AlbaransHistoryPage() {
                         </TableRow>
                     )) : (
                         <TableRow>
-                        <TableCell colSpan={6} className="h-24 text-center">
+                        <TableCell colSpan={7} className="h-24 text-center">
                             No s'ha generat cap albarà encara.
                         </TableCell>
                         </TableRow>

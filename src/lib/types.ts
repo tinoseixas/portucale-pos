@@ -54,6 +54,7 @@ export interface Albaran {
   projectName: string;
   serviceRecordIds: string[];
   totalAmount: number;
+  status: 'pendent' | 'facturat';
 }
 
 export interface Quote {

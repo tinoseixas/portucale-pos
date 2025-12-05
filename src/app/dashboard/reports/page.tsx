@@ -113,6 +113,7 @@ export default function ReportsPage() {
                 projectName: selectedProject !== 'all' ? selectedProject : 'Varis Projectes',
                 serviceRecordIds: filteredServices.map(s => s.id),
                 totalAmount: totalGeneral,
+                status: 'pendent',
             });
 
             toast({
@@ -149,7 +150,7 @@ export default function ReportsPage() {
 
     return (
         <AdminGate pageTitle="Generador d'Albarans" pageDescription="Aquesta secció està protegida.">
-            <div className="space-y-8 max-w-5xl mx-auto">
+            <div className="space-y-8 max-w-7xl mx-auto">
                 <Card>
                     <CardHeader>
                         <CardTitle>Generador d'Albarans</CardTitle>

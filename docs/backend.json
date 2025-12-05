@@ -240,9 +240,14 @@
         "totalAmount": {
           "type": "number",
           "description": "The total amount calculated for the albarà."
+        },
+        "status": {
+            "type": "string",
+            "enum": ["pendent", "facturat"],
+            "description": "The status of the albarà, indicating if it has been invoiced."
         }
       },
-      "required": ["id", "albaranNumber", "createdAt", "projectName", "serviceRecordIds", "totalAmount"]
+      "required": ["id", "albaranNumber", "createdAt", "projectName", "serviceRecordIds", "totalAmount", "status"]
     },
     "Quote": {
       "$schema": "http://json-schema.org/draft-07/schema#",

@@ -42,7 +42,8 @@ export default function InvoicesPage() {
 
     const availableAlbarans = useMemo(() => {
         if (!albarans || selectedCustomerId === 'none') return [];
-        return albarans.filter(a => a.customerId === selectedCustomerId);
+        // Only show albarans that are 'pendent' (pending)
+        return albarans.filter(a => a.customerId === selectedCustomerId && a.status === 'pendent');
     }, [albarans, selectedCustomerId]);
     
     const handleAlbaranSelection = (albaranId: string, checked: boolean) => {
@@ -136,8 +137,7 @@ export default function InvoicesPage() {
                 customerId: associatedCustomer?.id || '',
                 customerName: associatedCustomer?.name || 'N/A',
                 projectName: projectName || 'Sense nom',
-                // Items will be derived from services in InvoicePreview now
-                items: [], // Kept for schema compatibility, but preview will use services
+                items: [], 
                 labor: { description: "Mà d'obra", cost: laborCost },
                 totalAmount: totalGeneral,
                 sourceId: selectedAlbaranIds.join(','),
@@ -148,11 +148,11 @@ export default function InvoicesPage() {
             const batch = writeBatch(firestore);
             batch.set(invoiceRef, { ...invoiceData, id: invoiceRef.id });
 
-            // Optional: Mark albarans as 'invoiced' if needed in the future
-            // selectedAlbaranIds.forEach(id => {
-            //     const albaranRef = doc(firestore, 'albarans', id);
-            //     batch.update(albaranRef, { invoiced: true });
-            // });
+            // Mark albarans as 'facturat'
+            selectedAlbaranIds.forEach(id => {
+                const albaranRef = doc(firestore, 'albarans', id);
+                batch.update(albaranRef, { status: 'facturat' });
+            });
 
             await batch.commit();
 
@@ -187,7 +187,7 @@ export default function InvoicesPage() {
 
     return (
         <AdminGate pageTitle="Generador de Factures" pageDescription="Aquesta secció està protegida.">
-            <div className="space-y-8 max-w-5xl mx-auto">
+            <div className="space-y-8 max-w-7xl mx-auto">
                  <Card>
                     <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center sm:justify-between gap-4">
                         <div>
@@ -240,7 +240,7 @@ export default function InvoicesPage() {
                                                 Albarà #{albaran.albaranNumber} - {albaran.projectName} ({albaran.totalAmount.toFixed(2)}€)
                                             </label>
                                         </div>
-                                    )) : <p className="text-sm text-muted-foreground">No hi ha albarans per a aquest client.</p>}
+                                    )) : <p className="text-sm text-muted-foreground">No hi ha albarans pendents de facturar per a aquest client.</p>}
                                 </div>
                             </div>
                         )}
