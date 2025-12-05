@@ -14,8 +14,8 @@ import { Briefcase, FileDown, Loader2, Users, Plus, Trash2, ImagePlus, Euro, Fil
 import { InvoicePreview } from '@/components/InvoicePreview'
 import { useToast } from '@/hooks/use-toast'
 import { AdminGate } from '@/components/AdminGate'
-import { IVA_RATE } from '@/lib/calculations'
-import { format } from 'date-fns'
+import { calculateTotalAmount } from '@/lib/calculations'
+import { format, parseISO, differenceInMinutes } from 'date-fns'
 import { ca } from 'date-fns/locale'
 
 export default function InvoicesPage() {
@@ -60,7 +60,7 @@ export default function InvoicesPage() {
 
     useEffect(() => {
         const importFromProject = async () => {
-            if (selectedProjectName === 'none' || !albarans || !firestore) {
+            if (selectedProjectName === 'none' || !albarans || !firestore || !employees) {
                 setItems([{ description: '', quantity: 1, unitPrice: 0, imageDataUrl: undefined, discount: 0 }]);
                 setServicesForInvoice([]);
                 setSourceInfo([]);
@@ -71,13 +71,14 @@ export default function InvoicesPage() {
 
             const projectAlbarans = albarans.filter(a => a.projectName === selectedProjectName);
             if (projectAlbarans.length === 0) return;
-
-            // Use the customer from the first albaran found
+            
             const mainCustomerId = projectAlbarans[0].customerId;
             if(mainCustomerId) setSelectedCustomerId(mainCustomerId);
 
             setProjectName(projectAlbarans[0].projectName);
-            setSourceInfo(projectAlbarans.map(a => ({ id: a.id, type: 'albaran' })));
+            
+            const allSourceIds = projectAlbarans.map(a => ({ id: a.id, type: 'albaran' as const }));
+            setSourceInfo(allSourceIds);
 
             try {
                 const allServicesSnapshot = await getDocs(collectionGroup(firestore, 'serviceRecords'));
@@ -110,7 +111,7 @@ export default function InvoicesPage() {
             }
         };
         importFromProject();
-    }, [selectedProjectName, albarans, firestore, toast]);
+    }, [selectedProjectName, albarans, firestore, employees, toast]);
 
 
     const associatedCustomer = useMemo(() => {
@@ -190,20 +191,8 @@ export default function InvoicesPage() {
             });
             
             const filteredItems = items.filter(item => item.description.trim() !== '');
-            const materialsSubtotal = filteredItems.reduce((acc, item) => {
-                const itemTotal = item.quantity * item.unitPrice;
-                const discountAmount = itemTotal * ((item.discount || 0) / 100);
-                return acc + (itemTotal - discountAmount);
-            }, 0);
-            const laborCost = servicesForInvoice.reduce((total, service) => {
-                const employee = employees.find(e => e.id === service.employeeId);
-                const hourlyRate = service.serviceHourlyRate ?? employee?.hourlyRate ?? 0;
-                const minutes = differenceInMinutes(parseISO(service.departureDateTime), parseISO(service.arrivalDateTime));
-                return total + (minutes > 0 ? (minutes / 60) * hourlyRate : 0);
-            }, 0);
-
-            const subtotal = materialsSubtotal + laborCost;
-            const totalAmount = subtotal * (1 + IVA_RATE);
+            
+            const { laborCost, totalGeneral } = calculateTotalAmount(servicesForInvoice, employees);
 
             const invoiceRef = doc(collection(firestore, "invoices"));
             const invoiceData: Omit<Invoice, 'id'> = {
@@ -214,7 +203,7 @@ export default function InvoicesPage() {
                 projectName: projectName || 'Sense nom',
                 items: filteredItems,
                 labor: { description: "Mà d'obra", cost: laborCost }, // Store calculated labor cost
-                totalAmount: totalAmount,
+                totalAmount: totalGeneral,
                 sourceId: sourceInfo.map(s => s.id).join(','), // Store multiple source IDs
                 sourceType: sourceInfo.length > 0 ? sourceInfo[0].type : undefined,
                 status: 'pendent',

@@ -3,7 +3,7 @@
 import { useState, useMemo, useRef, useEffect } from 'react'
 import { useRouter, useParams, useSearchParams } from 'next/navigation'
 import { useDoc, useUser, useFirestore, useMemoFirebase, deleteDocumentNonBlocking, useCollection } from '@/firebase'
-import { doc, collection, query, getDocs, collectionGroup } from 'firebase/firestore'
+import { doc, collection, query, getDocs, collectionGroup, where } from 'firebase/firestore'
 import type { Customer, Invoice, ServiceRecord, Employee } from '@/lib/types'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -69,20 +69,18 @@ export default function InvoiceDetailPage() {
                 const allServicesSnapshot = await getDocs(collectionGroup(firestore, 'serviceRecords'));
                 const allServicesData = allServicesSnapshot.docs.map(d => ({ id: d.id, ...d.data() } as ServiceRecord));
                 
-                // Get the service record IDs from the invoice. Can be comma-separated.
-                const sourceIds = invoice.sourceType === 'albaran' ? (invoice.sourceId?.split(',') || []) : [];
-                
-                if (sourceIds.length > 0) {
-                     // We need to fetch the albarans to get the serviceRecordIds
-                    const albaransSnapshot = await getDocs(query(collection(firestore, 'albarans')));
-                    const allAlbarans = albaransSnapshot.docs.map(d => d.data());
-
-                    const serviceRecordIdsFromAlbarans = allAlbarans
-                        .filter(a => sourceIds.includes(a.id))
-                        .flatMap(a => a.serviceRecordIds);
+                // Get the service record IDs from the albarans linked in the invoice
+                if (invoice.sourceType === 'albaran' && invoice.sourceId) {
+                    const sourceAlbaranIds = invoice.sourceId.split(',');
+                    const albaransSnapshot = await getDocs(query(collection(firestore, 'albarans'), where('__name__', 'in', sourceAlbaranIds)));
+                    
+                    const serviceRecordIdsFromAlbarans = albaransSnapshot.docs.flatMap(doc => doc.data().serviceRecordIds);
                     
                     const invoiceServices = allServicesData.filter(s => serviceRecordIdsFromAlbarans.includes(s.id));
                     setServices(invoiceServices);
+                } else {
+                    // Handle quotes or direct invoices if needed
+                    setServices([]);
                 }
             } catch (e) {
                 console.error("Error fetching invoice details:", e);
