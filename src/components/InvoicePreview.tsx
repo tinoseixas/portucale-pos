@@ -10,7 +10,7 @@ import { calculateTotalAmount } from '@/lib/calculations';
 interface InvoicePreviewProps {
   customer: Customer | undefined;
   projectName: string;
-  items: InvoiceItem[];
+  items?: InvoiceItem[];
   invoiceNumber?: number;
   services: ServiceRecord[];
   employees: Employee[];
@@ -30,7 +30,7 @@ export const InvoicePreview = forwardRef<HTMLDivElement, InvoicePreviewProps>(({
      const groupedByAlbaran = useMemo(() => {
         const grouped: { [key: number]: { services: ServiceRecord[], items: InvoiceItem[] } } = {};
         
-        services.forEach(service => {
+        (services || []).forEach(service => {
             const albaranNum = service.albaranNumber || 0;
             if (!grouped[albaranNum]) {
                 grouped[albaranNum] = { services: [], items: [] };
@@ -38,7 +38,7 @@ export const InvoicePreview = forwardRef<HTMLDivElement, InvoicePreviewProps>(({
             grouped[albaranNum].services.push(service);
         });
 
-        items.forEach(item => {
+        (items || []).forEach(item => { 
              const albaranNum = item.albaranNumber || 0;
              if (!grouped[albaranNum]) {
                 grouped[albaranNum] = { services: [], items: [] };
