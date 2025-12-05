@@ -2,9 +2,9 @@
 
 import { useState, useMemo, useRef, useEffect } from 'react'
 import { useRouter, useParams, useSearchParams } from 'next/navigation'
-import { useDoc, useUser, useFirestore, useMemoFirebase, deleteDocumentNonBlocking } from '@/firebase'
-import { doc } from 'firebase/firestore'
-import type { Customer, Invoice } from '@/lib/types'
+import { useDoc, useUser, useFirestore, useMemoFirebase, deleteDocumentNonBlocking, useCollection } from '@/firebase'
+import { doc, collection, query, getDocs, collectionGroup } from 'firebase/firestore'
+import type { Customer, Invoice, ServiceRecord, Employee } from '@/lib/types'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { FileDown, Loader2, ArrowLeft, Trash2, CreditCard } from 'lucide-react'
@@ -37,6 +37,9 @@ export default function InvoiceDetailPage() {
     const { user, isUserLoading } = useUser()
     const [isGenerating, setIsGenerating] = useState(false)
     const reportRef = useRef<HTMLDivElement>(null)
+    const [services, setServices] = useState<ServiceRecord[]>([])
+    const [employees, setEmployees] = useState<Employee[]>([]);
+
 
     const invoiceDocRef = useMemoFirebase(() => firestore && invoiceId ? doc(firestore, 'invoices', invoiceId) : null, [firestore, invoiceId])
     const { data: invoice, isLoading: isLoadingInvoice } = useDoc<Invoice>(invoiceDocRef)
@@ -51,6 +54,45 @@ export default function InvoiceDetailPage() {
             router.push('/')
         }
     }, [isUserLoading, user, router])
+    
+     useEffect(() => {
+        if (!firestore || !invoice?.sourceId) return;
+
+        const fetchData = async () => {
+            try {
+                // Fetch all employees first
+                const employeesSnap = await getDocs(query(collection(firestore, 'employees')));
+                const allEmployees = employeesSnap.docs.map(d => ({ id: d.id, ...d.data() } as Employee));
+                setEmployees(allEmployees);
+
+                // Fetch all services
+                const allServicesSnapshot = await getDocs(collectionGroup(firestore, 'serviceRecords'));
+                const allServicesData = allServicesSnapshot.docs.map(d => ({ id: d.id, ...d.data() } as ServiceRecord));
+                
+                // Get the service record IDs from the invoice. Can be comma-separated.
+                const sourceIds = invoice.sourceType === 'albaran' ? (invoice.sourceId?.split(',') || []) : [];
+                
+                if (sourceIds.length > 0) {
+                     // We need to fetch the albarans to get the serviceRecordIds
+                    const albaransSnapshot = await getDocs(query(collection(firestore, 'albarans')));
+                    const allAlbarans = albaransSnapshot.docs.map(d => d.data());
+
+                    const serviceRecordIdsFromAlbarans = allAlbarans
+                        .filter(a => sourceIds.includes(a.id))
+                        .flatMap(a => a.serviceRecordIds);
+                    
+                    const invoiceServices = allServicesData.filter(s => serviceRecordIdsFromAlbarans.includes(s.id));
+                    setServices(invoiceServices);
+                }
+            } catch (e) {
+                console.error("Error fetching invoice details:", e);
+                toast({ variant: 'destructive', title: 'Error', description: 'No s\'han pogut carregar els detalls dels serveis.' });
+            }
+        };
+
+        fetchData();
+    }, [invoice, firestore, toast]);
+
 
     const handleExportPDF = async () => {
         const reportElement = reportRef.current;
@@ -223,8 +265,9 @@ export default function InvoiceDetailPage() {
                             customer={customer || undefined}
                             projectName={invoice.projectName}
                             items={invoice.items}
-                            labor={invoice.labor}
                             invoiceNumber={invoice.invoiceNumber}
+                            services={services}
+                            employees={employees}
                         />
                     </CardContent>
                 </Card>

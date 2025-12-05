@@ -2,30 +2,30 @@
 import React, { forwardRef, useMemo } from 'react';
 import Image from 'next/image';
 import { Separator } from '@/components/ui/separator';
-import type { Customer, InvoiceItem } from '@/lib/types';
-import { format } from 'date-fns';
+import type { Customer, InvoiceItem, ServiceRecord, Employee } from '@/lib/types';
+import { format, differenceInMinutes, parseISO, isValid } from 'date-fns';
 import { ca } from 'date-fns/locale';
-
-const IVA_RATE = 0.045; // 4.5% IGI for Andorra
+import { calculateTotalAmount } from '@/lib/calculations';
 
 interface InvoicePreviewProps {
   customer: Customer | undefined;
   projectName: string;
   items: InvoiceItem[];
-  labor: { description: string; cost: number };
   invoiceNumber?: number;
+  services: ServiceRecord[];
+  employees: Employee[];
 }
 
 // --- Component ---
-export const InvoicePreview = forwardRef<HTMLDivElement, InvoicePreviewProps>(({ customer, projectName, items, labor, invoiceNumber }, ref) => {
-
-    const materialsSubtotal = useMemo(() => {
-        return items.reduce((acc, item) => {
-            const itemTotal = item.quantity * item.unitPrice;
-            const discountAmount = itemTotal * ((item.discount || 0) / 100);
-            return acc + (itemTotal - discountAmount);
-        }, 0);
-    }, [items]);
+export const InvoicePreview = forwardRef<HTMLDivElement, InvoicePreviewProps>(({ customer, projectName, items, invoiceNumber, services, employees }, ref) => {
+    
+    const { subtotal, iva, totalGeneral } = useMemo(() => calculateTotalAmount(services, employees), [services, employees]);
+    
+    const getEmployeeName = (employeeId?: string) => {
+        if (!employeeId || !employees) return 'Tècnic no assignat';
+        const employee = employees.find(e => e.id === employeeId);
+        return employee ? `${employee.firstName} ${employee.lastName}` : 'Tècnic desconegut';
+    };
 
     const groupedItemsByAlbaran = useMemo(() => {
         const grouped: { [key: number]: InvoiceItem[] } = {};
@@ -38,10 +38,6 @@ export const InvoicePreview = forwardRef<HTMLDivElement, InvoicePreviewProps>(({
         });
         return grouped;
     }, [items]);
-
-    const subtotal = materialsSubtotal + labor.cost;
-    const iva = subtotal * IVA_RATE;
-    const totalGeneral = subtotal + iva;
 
     return (
         <div ref={ref} className="bg-white p-8 font-sans text-gray-900 printable-area">
@@ -97,10 +93,42 @@ export const InvoicePreview = forwardRef<HTMLDivElement, InvoicePreviewProps>(({
                         {Number(albaranNum) > 0 && (
                             <h4 className="font-bold text-md mb-2 bg-gray-100 p-2 rounded-md">Detalls de l'Albarà #{String(albaranNum).padStart(4, '0')}</h4>
                         )}
+                        
+                        {/* Task Summary for this Albaran */}
+                        {Number(albaranNum) > 0 && services.length > 0 && (
+                             <table className="w-full text-sm mb-4">
+                                <thead className="bg-gray-50">
+                                    <tr className="border-b-2 border-gray-300">
+                                        <th className="text-left py-2 px-3 font-semibold text-gray-600">DATA</th>
+                                        <th className="text-left py-2 px-3 font-semibold text-gray-600">TÈCNIC</th>
+                                        <th className="text-left py-2 px-3 font-semibold text-gray-600">DESCRIPCIÓ TASCA</th>
+                                        <th className="text-right py-2 px-3 font-semibold text-gray-600">HORES</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {services.filter(s => s.albarans?.includes(String(albaranNum))).map(service => {
+                                        const arrival = parseISO(service.arrivalDateTime);
+                                        const departure = parseISO(service.departureDateTime);
+                                        const minutes = (isValid(arrival) && isValid(departure) && departure > arrival) ? differenceInMinutes(departure, arrival) : 0;
+                                        const hours = minutes > 0 ? (minutes / 60).toFixed(2) : '0.00';
+                                        return (
+                                            <tr key={service.id} className="border-b border-gray-200">
+                                                <td className="py-2 px-3 align-top whitespace-nowrap">{format(arrival, 'dd/MM/yy')}</td>
+                                                <td className="py-2 px-3 align-top">{getEmployeeName(service.employeeId)}</td>
+                                                <td className="py-2 px-3 align-top">{service.description}</td>
+                                                <td className="py-2 px-3 align-top text-right tabular-nums">{hours}</td>
+                                            </tr>
+                                        )
+                                    })}
+                                </tbody>
+                            </table>
+                        )}
+                        
+                        {/* Materials for this Albaran */}
                         <table className="w-full text-sm">
                             <thead className="bg-gray-50">
                                 <tr className="border-b-2 border-gray-300">
-                                    <th className="text-left py-2 px-3 font-semibold text-gray-600">DESCRIPCIÓ</th>
+                                    <th className="text-left py-2 px-3 font-semibold text-gray-600">DESCRIPCIÓ MATERIAL</th>
                                     <th className="text-right py-2 px-3 font-semibold text-gray-600 w-24">QUANT.</th>
                                     <th className="text-right py-2 px-3 font-semibold text-gray-600 w-24">PREU/UNIT.</th>
                                     <th className="text-right py-2 px-3 font-semibold text-gray-600 w-24">TOTAL</th>
@@ -138,19 +166,6 @@ export const InvoicePreview = forwardRef<HTMLDivElement, InvoicePreviewProps>(({
                     </div>
                 ))}
                 
-                {labor.cost > 0 && (
-                     <table className="w-full text-sm mt-6">
-                        <tbody>
-                            <tr className="border-y border-gray-200 font-medium bg-gray-50">
-                                <td className="py-2 px-3">{labor.description}</td>
-                                <td className="text-right py-2 px-3 tabular-nums w-24">1.00</td>
-                                <td className="text-right py-2 px-3 tabular-nums w-24">{labor.cost.toFixed(2)} €</td>
-                                <td className="text-right py-2 px-3 tabular-nums w-24">{labor.cost.toFixed(2)} €</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                )}
-
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', alignItems: 'flex-start', marginTop: '1.5rem' }}>
                     <div style={{ flex: 1 }}>
@@ -162,7 +177,7 @@ export const InvoicePreview = forwardRef<HTMLDivElement, InvoicePreviewProps>(({
                             <span className="font-medium tabular-nums">{subtotal.toFixed(2)} €</span>
                         </div>
                         <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                            <span className="font-semibold text-gray-700">IGI ({(IVA_RATE * 100).toFixed(1)}%):</span>
+                            <span className="font-semibold text-gray-700">IGI ({String(calculateTotalAmount([], []).iva).slice(2, 4)}%):</span>
                             <span className="font-medium tabular-nums">{iva.toFixed(2)} €</span>
                         </div>
                         <Separator />

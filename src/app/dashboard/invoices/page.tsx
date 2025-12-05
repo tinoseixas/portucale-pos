@@ -14,7 +14,7 @@ import { Briefcase, FileDown, Loader2, Users, Plus, Trash2, ImagePlus, Euro, Fil
 import { InvoicePreview } from '@/components/InvoicePreview'
 import { useToast } from '@/hooks/use-toast'
 import { AdminGate } from '@/components/AdminGate'
-import { IVA_RATE, calculateTotalAmount } from '@/lib/calculations'
+import { IVA_RATE } from '@/lib/calculations'
 import { format } from 'date-fns'
 import { ca } from 'date-fns/locale'
 
@@ -30,7 +30,7 @@ export default function InvoicesPage() {
     const [projectName, setProjectName] = useState<string>('');
     const [isSaving, setIsSaving] = useState(false);
     const [items, setItems] = useState<InvoiceItem[]>([{ description: '', quantity: 1, unitPrice: 0, imageDataUrl: undefined, discount: 0 }]);
-    const [labor, setLabor] = useState({ description: "Mà d'obra", cost: 0 });
+    const [servicesForInvoice, setServicesForInvoice] = useState<ServiceRecord[]>([]);
     const [selectedItemIndex, setSelectedItemIndex] = useState<number | null>(null);
     const [sourceInfo, setSourceInfo] = useState<{ id: string, type: 'albaran' | 'quote' }[]>([]);
 
@@ -60,32 +60,38 @@ export default function InvoicesPage() {
 
     useEffect(() => {
         const importFromProject = async () => {
-            if (selectedProjectName === 'none' || !albarans || !firestore || !employees) return;
+            if (selectedProjectName === 'none' || !albarans || !firestore) {
+                setItems([{ description: '', quantity: 1, unitPrice: 0, imageDataUrl: undefined, discount: 0 }]);
+                setServicesForInvoice([]);
+                setSourceInfo([]);
+                return;
+            };
 
             toast({ title: `Important dades de l'obra: ${selectedProjectName}...` });
 
             const projectAlbarans = albarans.filter(a => a.projectName === selectedProjectName);
             if (projectAlbarans.length === 0) return;
 
-            setSourceInfo(projectAlbarans.map(a => ({ id: a.id, type: 'albaran' })));
-            setSelectedCustomerId(projectAlbarans[0].customerId);
+            // Use the customer from the first albaran found
+            const mainCustomerId = projectAlbarans[0].customerId;
+            if(mainCustomerId) setSelectedCustomerId(mainCustomerId);
+
             setProjectName(projectAlbarans[0].projectName);
+            setSourceInfo(projectAlbarans.map(a => ({ id: a.id, type: 'albaran' })));
 
             try {
                 const allServicesSnapshot = await getDocs(collectionGroup(firestore, 'serviceRecords'));
                 const allServices = allServicesSnapshot.docs.map(d => ({ id: d.id, ...d.data() } as ServiceRecord));
                 
-                let allProjectServices: ServiceRecord[] = [];
+                const allServiceRecordIds = projectAlbarans.flatMap(a => a.serviceRecordIds);
+                const allProjectServices = allServices.filter(s => allServiceRecordIds.includes(s.id));
+                setServicesForInvoice(allProjectServices);
+                
                 let allProjectItems: InvoiceItem[] = [];
 
                 projectAlbarans.forEach(albaran => {
-                    const associatedServices = albaran.serviceRecordIds
-                        .map(id => allServices.find(s => s.id === id))
-                        .filter(Boolean) as ServiceRecord[];
-                    
-                    allProjectServices.push(...associatedServices);
-
-                    const albaranItems = associatedServices.flatMap(s => s.materials || [])
+                    const albaranItems = (albaran.serviceRecordIds || [])
+                        .flatMap(id => allServices.find(s => s.id === id)?.materials || [])
                         .filter(m => m.description.trim() !== '' && !m.description.toLowerCase().includes('traball'))
                         .map(m => ({ 
                             ...m,
@@ -96,9 +102,6 @@ export default function InvoicesPage() {
                     allProjectItems.push(...albaranItems);
                 });
 
-                const { laborCost } = calculateTotalAmount(allProjectServices, employees);
-                setLabor({ description: "Mà d'obra", cost: laborCost });
-
                 setItems(allProjectItems.length > 0 ? allProjectItems : [{ description: '', quantity: 1, unitPrice: 0, imageDataUrl: undefined, discount: 0 }]);
 
             } catch (e) {
@@ -107,7 +110,7 @@ export default function InvoicesPage() {
             }
         };
         importFromProject();
-    }, [selectedProjectName, albarans, firestore, toast, employees]);
+    }, [selectedProjectName, albarans, firestore, toast]);
 
 
     const associatedCustomer = useMemo(() => {
@@ -170,7 +173,7 @@ export default function InvoicesPage() {
     
     // --- Save and Export Logic ---
     const handleSaveInvoice = async (exportAfter: boolean) => {
-        if (!firestore) return;
+        if (!firestore || !employees) return;
         setIsSaving(true);
         
         try {
@@ -192,7 +195,14 @@ export default function InvoicesPage() {
                 const discountAmount = itemTotal * ((item.discount || 0) / 100);
                 return acc + (itemTotal - discountAmount);
             }, 0);
-            const subtotal = materialsSubtotal + labor.cost;
+            const laborCost = servicesForInvoice.reduce((total, service) => {
+                const employee = employees.find(e => e.id === service.employeeId);
+                const hourlyRate = service.serviceHourlyRate ?? employee?.hourlyRate ?? 0;
+                const minutes = differenceInMinutes(parseISO(service.departureDateTime), parseISO(service.arrivalDateTime));
+                return total + (minutes > 0 ? (minutes / 60) * hourlyRate : 0);
+            }, 0);
+
+            const subtotal = materialsSubtotal + laborCost;
             const totalAmount = subtotal * (1 + IVA_RATE);
 
             const invoiceRef = doc(collection(firestore, "invoices"));
@@ -203,14 +213,14 @@ export default function InvoicesPage() {
                 customerName: associatedCustomer?.name || 'N/A',
                 projectName: projectName || 'Sense nom',
                 items: filteredItems,
-                labor: labor,
+                labor: { description: "Mà d'obra", cost: laborCost }, // Store calculated labor cost
                 totalAmount: totalAmount,
                 sourceId: sourceInfo.map(s => s.id).join(','), // Store multiple source IDs
                 sourceType: sourceInfo.length > 0 ? sourceInfo[0].type : undefined,
                 status: 'pendent',
             };
-
-            await setDoc(invoiceRef, invoiceData);
+            
+            await setDoc(invoiceRef, { ...invoiceData, id: invoiceRef.id });
 
             toast({
                 title: "Factura Guardada",
@@ -352,27 +362,6 @@ export default function InvoicesPage() {
                            </Button>
                         </div>
                         
-                        {/* --- Labor Editor --- */}
-                         <div className="space-y-2">
-                            <Label>Cost de la Mà d'Obra</Label>
-                             <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                                 <Input 
-                                    placeholder="Descripció (ex: Mà d'obra)"
-                                    value={labor.description}
-                                    onChange={(e) => setLabor({...labor, description: e.target.value})}
-                                 />
-                                <div className="relative">
-                                     <Input
-                                        type="number"
-                                        placeholder="Cost Total"
-                                        value={labor.cost}
-                                        onChange={(e) => setLabor({...labor, cost: Number(e.target.value) || 0})}
-                                        className="pl-7"
-                                     />
-                                     <Euro className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                </div>
-                            </div>
-                         </div>
 
                         <div className="flex justify-end pt-4 gap-2 flex-wrap">
                              <Button onClick={() => handleSaveInvoice(false)} disabled={isSaving}>
@@ -397,7 +386,8 @@ export default function InvoicesPage() {
                          customer={associatedCustomer}
                          projectName={projectName}
                          items={items}
-                         labor={labor}
+                         services={servicesForInvoice}
+                         employees={employees || []}
                        />
                     </CardContent>
                 </Card>
