@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "genkit:dev": "genkit start -- tsx src/ai/dev.ts",
-    "build": "NODE_ENV=production next build",
+    "build": "npm run genkit:dev",
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
