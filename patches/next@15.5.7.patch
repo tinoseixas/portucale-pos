@@ -1,17 +1,36 @@
 diff --git a/node_modules/next/dist/server/web/sandbox/sandbox.js b/node_modules/next/dist/server/web/sandbox/sandbox.js
-index 45b5974..5f53298 100644
+index 9e06183..0a24f5a 100644
 --- a/node_modules/next/dist/server/web/sandbox/sandbox.js
 +++ b/node_modules/next/dist/server/web/sandbox/sandbox.js
-@@ -299,9 +299,9 @@
-     }
-     const { run, runWith, dispose, edgeFunctions, wasm, ...relative } = await (0, _edgeBundler).createEdgeFunction({
-         ...options,
--        useCache: true,
-+        useCache: false,
-         // Bundling development is not necessary.
--        development: false
-+        development: true
-     });
-     const webRequest = toWebRequest(request);
-     const edgeFunction = {
-
+@@ -37,12 +37,7 @@
+  * @returns {Promise<void>}
+  */ async function run(params) {
+     const { entrypoint, ...options } = params;
+-    if (process.env.NEXT_RUNTIME !== "edge") {
+-        const err = new Error("Cannot run Edge Runtime in this environment");
+-        err.name = "EdgeRuntimeError";
+-        err.code = "EDGE_RUNTIME_UNSUPPORTED_ENVIRONMENT";
+-        throw err;
+-    }
++    
+     const runtime = new entrypoint.default(options);
+     try {
+         await runtime.whenReady();
+diff --git a/node_modules/next/dist/server/web/sandbox/sandbox.js.mjs b/node_modules/next/dist/server/web/sandbox/sandbox.js.mjs
+index e30b201..d551608 100644
+--- a/node_modules/next/dist/server/web/sandbox/sandbox.js.mjs
++++ b/node_modules/next/dist/server/web/sandbox/sandbox.js.mjs
+@@ -32,12 +32,7 @@
+  * @returns {Promise<void>}
+  */ async function run(params) {
+     const { entrypoint, ...options } = params;
+-    if (process.env.NEXT_RUNTIME !== "edge") {
+-        const err = new Error("Cannot run Edge Runtime in this environment");
+-        err.name = "EdgeRuntimeError";
+-        err.code = "EDGE_RUNTIME_UNSUPPORTED_ENVIRONMENT";
+-        throw err;
+-    }
++    
+     const runtime = new entrypoint.default(options);
+     try {
+         await runtime.whenReady();
