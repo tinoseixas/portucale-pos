@@ -1,14 +1,16 @@
-patch-package
-
---- a/node_modules/next/dist/server/lib/start-server.js
-+++ b/node_modules/next/dist/server/lib/start-server.js
-@@ -370,7 +370,7 @@
-     const valid = await (0, _startservercheck.checkIsNodeCompatibilityEnabled)(dir, isDev);
-     if (!valid) {
-         process.exit(1);
--    }
-+    } 
-     if (isDev) {
-         const { CONFIG_FILES  } = require("../../shared/lib/constants");
-         const { watchFile , findPageFile  } = require("../lib/find-page-file");
+diff --git a/node_modules/next/dist/server/web/sandbox/sandbox.js b/node_modules/next/dist/server/web/sandbox/sandbox.js
+index 0a888c3..95e54d3 100644
+--- a/node_modules/next/dist/server/web/sandbox/sandbox.js
++++ b/node_modules/next/dist/server/web/sandbox/sandbox.js
+@@ -342,10 +342,6 @@
+     const { run, cleanup, onEvent } = await (0, _startserver.startServer)({
+         port,
+     });
+-    // Eagerly execute the middleware functionality to check if it's
+-    // compatible with the sandboxed environment.
+-    const result = await run(async () => await ((0, _web.getWebNextRequest)({})));
+-    (0, _assert.default)(result.ok, result.error);
+     return {
+         port,
+         // `run` is a request handler that will execute the middleware function
 
