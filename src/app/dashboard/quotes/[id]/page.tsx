@@ -9,7 +9,6 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { FileDown, Loader2, ArrowLeft, Trash2 } from 'lucide-react'
 import jsPDF from 'jspdf'
-import html2canvas from 'html2canvas'
 import { QuotePreview } from '@/components/QuotePreview'
 import {
   AlertDialog,
@@ -66,65 +65,26 @@ export default function QuoteDetailPage() {
     const handleExportPDF = async () => {
         const quoteElement = quotePreviewRef.current;
         if (!quoteElement) return;
-    
+
         setIsGenerating(true);
-    
-        const originalStyles = {
-            width: quoteElement.style.width,
-            maxWidth: quoteElement.style.maxWidth,
-        };
-    
-        try {
-            quoteElement.style.width = '1024px';
-            quoteElement.style.maxWidth = 'none';
-    
-            const canvas = await html2canvas(quoteElement, {
-                scale: 2, 
-                useCORS: true,
-                logging: false,
-                windowWidth: 1440
-            });
-    
-            quoteElement.style.width = originalStyles.width;
-            quoteElement.style.maxWidth = originalStyles.maxWidth;
-    
-            const imgData = canvas.toDataURL('image/png');
-            const pdf = new jsPDF({
-                orientation: 'portrait',
-                unit: 'mm',
-                format: 'a4',
-            });
-    
-            const pdfWidth = pdf.internal.pageSize.getWidth();
-            const pdfHeight = pdf.internal.pageSize.getHeight();
-            const imgProps = pdf.getImageProperties(imgData);
-            const imgWidth = imgProps.width;
-            const imgHeight = imgProps.height;
-            const ratio = imgWidth / imgHeight;
-            let finalWidth = pdfWidth - 20;
-            let finalHeight = finalWidth / ratio;
-    
-            if (finalHeight > pdfHeight - 20) {
-                finalHeight = pdfHeight - 20;
-                finalWidth = finalHeight * ratio;
-            }
-    
-            const x = (pdfWidth - finalWidth) / 2;
-            const y = 10;
-    
-            pdf.addImage(imgData, 'PNG', x, y, finalWidth, finalHeight);
-            
-            const fileName = `Pressupost_${quote?.quoteNumber || quoteId}_${quote?.projectName || ''}.pdf`.replace(/ /g, '_');
-            pdf.save(fileName);
-    
-        } catch (error) {
-            console.error("Error generating PDF:", error);
-            toast({ variant: 'destructive', title: 'Error', description: 'No s\'ha pogut generar el PDF.' });
-        } finally {
-            quoteElement.style.width = originalStyles.width;
-            quoteElement.style.maxWidth = originalStyles.maxWidth;
-            setIsGenerating(false);
-        }
+
+        const pdf = new jsPDF({
+            orientation: 'portrait',
+            unit: 'pt',
+            format: 'a4',
+        });
+
+        await pdf.html(quoteElement, {
+            callback: function (doc) {
+                const fileName = `Pressupost_${quote?.quoteNumber || quoteId}_${quote?.projectName || ''}.pdf`.replace(/ /g, '_');
+                doc.save(fileName);
+                setIsGenerating(false);
+            },
+            margin: [40, 40, 40, 40],
+            autoPaging: 'text',
+            width: 595, // A4 width in points
+            windowWidth: 1024,
+        });
     };
     
     const isLoading = isUserLoading || isLoadingQuote;
@@ -134,6 +94,7 @@ export default function QuoteDetailPage() {
             handleExportPDF();
             router.replace(`/dashboard/quotes/${quoteId}`, { scroll: false });
         }
+         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [shouldExport, isLoading, isGenerating, quote, quoteId, router]);
 
 

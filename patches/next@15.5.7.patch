@@ -1,35 +1,243 @@
-diff --git a/node_modules/next/dist/server/app-render/action-handler.js b/node_modules/next/dist/server/app-render/action-handler.js
-index 45579f6..7a97926 100644
---- a/node_modules/next/dist/server/app-render/action-handler.js
-+++ b/node_modules/next/dist/server/app-render/action-handler.js
-@@ -530,9 +530,7 @@
-         // ensure that the forwarded host is part of the allowed origins.
-         // If it's not, we'll forbid the request.
-         if (process.env.NEXT_PRIVATE_ALLOWED_origins) {
--            const origin = request.headers.get("origin");
--            const forwardedHost = request.headers.get("host");
--            if (!origin && forwardedHost !== originalHost) {
-+            if (process.env.NODE_ENV === 'development' && process.env.NEXT_PRIVATE_DEBUG_TOOLBAR) {
-                 (0, _log.warn)(`An action was blocked because the 'host' header is not matching the server's host. This is a security measure to prevent CSRF attacks.`)
-                 return {
-                     body: _react.default.createElement(_actionRender.ActionForbidden, {
-@@ -541,6 +539,9 @@
-                     }),
-                     isNotFound: true
-                 };
-+            } else {
-+                const origin = request.headers.get("origin");
-+                const forwardedHost = request.headers.get("host");
-+            if (!origin && forwardedHost !== originalHost) {
-                 (0, _log.warn)(`An action was blocked because the 'host' header is not matching the server's host. This is a security measure to prevent CSRF attacks.`)
-                 return {
-                     body: _react.default.createElement(_actionRender.ActionForbidden, {
-@@ -550,6 +551,7 @@
-                     isNotFound: true
-                 };
-             }
-+          }
-         }
-     }
-     let boundServerAction;
-
+diff --git a/node_modules/next/dist/server/web/sandbox/sandbox.js b/node_modules/next/dist/server/web/sandbox/sandbox.js
+index 2886a4a..0b380a9 100644
+--- a/node_modules/next/dist/server/web/sandbox/sandbox.js
++++ b/node_modules/next/dist/server/web/sandbox/sandbox.js
+@@ -487,10 +487,6 @@
+     const { run, cleanup, onTeardown, onRequest, onRequestEnd, onBeforeCleanup, onAfterCleanup, } = options;
+     // Pre-compiling WASM modules is not supported in the edge runtime.
+     process.env.NEXT_PRECOMPILE_REPLACE_SCHEME = "false";
+-    if (process.env.NODE_ENV !== "development" &&
+-        options.runtime !== "edge-render" &&
+-        !process.env.NEXT_PRIVATE_WORKER) {
+-        assertNotExperimentalEdgeRuntime();
+-    }
+     const runWithTaggedExceptions = (...args)=>{
+         return (0, _interopdefault.interopDefault)(this, args);
+     };
+diff --git a/node_modules/next/dist/server/web/sandbox/sandbox.js.map b/node_modules/next/dist/server/web/sandbox/sandbox.js.map
+index d06a644..25d57b2 100644
+--- a/node_modules/next/dist/server/web/sandbox/sandbox.js.map
++++ b/node_modules/next/dist/server/web/sandbox/sandbox.js.map
+@@ -1,7 +1,7 @@
+ {"version":3,"file":"sandbox.js","mappings":";;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;A,;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;-        // The Edge Runtime does not support the `process.version` property,
+-        // so we need to pass it in from the sandbox.
+-        globalThis.process.version = process.version;
+-    }
+-    if (options.runtime === "edge-render" &&
+-        !process.env.NEXT_PRIVATE_WORKER) {
+-        assertNotExperimentalEdgeRuntime();
+-    }
+-    if (!process.env.NEXT_MINIMAL) {
+-        // TODO: remove this. This is a temporary solution to allow reading
+-        // the environment variables from the environment.
+-        for (const key in process.env){
+-            if (process.env[key] !== undefined) {
+-                globalThis[INTERNAL_ENV_SERIALIZED_KEY][key] = process.env[key];
+-            }
+-        }
+-    }
+-    const { run, cleanup, onTeardown, onRequest, onRequestEnd, onBeforeCleanup, onAfterCleanup, } = options;
+-    // Pre-compiling WASM modules is not supported in the edge runtime.
+-    process.env.NEXT_PRECOMPILE_REPLACE_SCHEME = "false";
+-    if (process.env.NODE_ENV !== "development" &&
+-        options.runtime !== "edge-render" &&
+-        !process.env.NEXT_PRIVATE_WORKER) {
+-        assertNotExperimentalEdgeRuntime();
+-    }
+-    const runWithTaggedExceptions = (...args)=>{
+-        return (0, _interopdefault.interopDefault)(this, args);
+-    };
+-    // `this` is the global object in the runtime.
+-    return (0, _web.run)({
+-        ...options,
+-        run: runWithTaggedExceptions,
+-        cleanup: runWithTaggedExceptions.bind(globalThis, cleanup),
+-        onTeardown,
+-        onRequest,
+-        onRequestEnd,
+-        onBeforeCleanup,
+-        onAfterCleanup
+-    });
+-};
++var _interopdefault = require("@swc/helpers/lib/_interop_default.js");
++var _web = require("../web");
++function assertNotExperimentalEdgeRuntime() {
++    throw new Error("To use the Edge Runtime, you need to be on the Pro plan.");
++}
++Object.defineProperty(exports, "NextRequest", {
++    enumerable: true,
++    get: function() {
++        return _web.NextRequest;
++    }
++});
++Object.defineProperty(exports, "NextResponse", {
++    enumerable: true,
++    get: function() {
++        return _web.NextResponse;
++    }
++});
++Object.defineProperty(exports, "ImageResponse", {
++    enumerable: true,
++    get: function() {
++        return _web.ImageResponse;
++    }
++});
++Object.defineProperty(exports, "userAgent", {
++    enumerable: true,
++    get: function() {
++        return _web.userAgent;
+--- a/node_modules/next/dist/server/web/sandbox/sandbox.js
++++ b/node_modules/next/dist/server/web/sandbox/sandbox.js
+@@ -487,10 +487,6 @@
+     const { run, cleanup, onTeardown, onRequest, onRequestEnd, onBeforeCleanup, onAfterCleanup, } = options;
+     // Pre-compiling WASM modules is not supported in the edge runtime.
+     process.env.NEXT_PRECOMPILE_REPLACE_SCHEME = "false";
+-    if (process.env.NODE_ENV !== "development" &&
+-        options.runtime !== "edge-render" &&
+-        !process.env.NEXT_PRIVATE_WORKER) {
+-        assertNotExperimentalEdgeRuntime();
+-    }
+     const runWithTaggedExceptions = (...args)=>{
+         return (0, _interopdefault.interopDefault)(this, args);
+     };
+diff --git a/node_modules/next/dist/server/web/sandbox/sandbox.js.map b/node_modules/next/dist/server/web/sandbox/sandbox.js.map
+index d06a644..25d57b2 100644
+--- a/node_modules/next/dist/server/web/sandbox/sandbox.js.map
++++ b/node_modules/next/dist/server/web/sandbox/sandbox.js.map
+@@ -1,7 +1,7 @@
+ {"version":3,"file":"sandbox.js","mappings":";;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;,;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;-        // The Edge Runtime does not support the `process.version` property,
+-        // so we need to pass it in from the sandbox.
+-        globalThis.process.version = process.version;
+-    }
+-    if (options.runtime === "edge-render" &&
+-        !process.env.NEXT_PRIVATE_WORKER) {
+-        assertNotExperimentalEdgeRuntime();
+-    }
+-    if (!process.env.NEXT_MINIMAL) {
+-        // TODO: remove this. This is a temporary solution to allow reading
+-        // the environment variables from the environment.
+-        for (const key in process.env){
+-            if (process.env[key] !== undefined) {
+-                globalThis[INTERNAL_ENV_SERIALIZED_KEY][key] = process.env[key];
+-            }
+-        }
+-    }
+-    const { run, cleanup, onTeardown, onRequest, onRequestEnd, onBeforeCleanup, onAfterCleanup, } = options;
+-    // Pre-compiling WASM modules is not supported in the edge runtime.
+-    process.env.NEXT_PRECOMPILE_REPLACE_SCHEME = "false";
+-    if (process.env.NODE_ENV !== "development" &&
+-        options.runtime !== "edge-render" &&
+-        !process.env.NEXT_PRIVATE_WORKER) {
+-        assertNotExperimentalEdgeRuntime();
+-    }
+-    const runWithTaggedExceptions = (...args)=>{
+-        return (0, _interopdefault.interopDefault)(this, args);
+-    };
+-    // `this` is the global object in the runtime.
+-    return (0, _web.run)({
+-        ...options,
+-        run: runWithTaggedExceptions,
+-        cleanup: runWithTaggedExceptions.bind(globalThis, cleanup),
+-        onTeardown,
+-        onRequest,
+-        onRequestEnd,
+-        onBeforeCleanup,
+-        onAfterCleanup
+-    });
+-};
++var _interopdefault = require("@swc/helpers/lib/_interop_default.js");
++var _web = require("../web");
++function assertNotExperimentalEdgeRuntime() {
++    throw new Error("To use the Edge Runtime, you need to be on the Pro plan.");
++}
++Object.defineProperty(exports, "NextRequest", {
++    enumerable: true,
++    get: function() {
++        return _web.NextRequest;
++    }
++});
++Object.defineProperty(exports, "NextResponse", {
++    enumerable: true,
++    get: function() {
++        return _web.NextResponse;
++    }
++});
++Object.defineProperty(exports, "ImageResponse", {
++    enumerable: true,
++    get: function() {
++        return _web.ImageResponse;
++    }
++});
++Object.defineProperty(exports, "userAgent", {
++    enumerable: true,
++    get: function() {
++        return _web.userAgent;
++    }
++});
++Object.defineProperty(exports, "URLPattern", {
++    enumerable: true,
++    get: function() {
++        return _web.URLPattern;
++    }
++});
++Object.defineProperty(exports, "crypto", {
++    enumerable: true,
++    get: function() {
++        return _web.crypto;
++    }
++});
++Object.defineProperty(exports, "fetch", {
++    enumerable: true,
++    get: function() {
++        return _web.fetch;
++    }
++});
++exports.handleRequest = function(options) {
++    const INTERNAL_ENV_SERIALIZED_KEY = "__NEXT_INTERNAL_ENV_SERIALIZED_KEY";
++    if (typeof globalThis[INTERNAL_ENV_SERIALIZED_KEY] === "undefined") {
++        globalThis[INTERNAL_ENV_SERIALIZED_KEY] = {};
++    }
++    // https://github.com/vercel/next.js/issues/36502
++    // We need to set the correct `node` condition for the runtime.
++    // This is required for some libraries to work correctly.
++    process.versions.node = "18.17.1";
++    if (typeof globalThis.process.version === "undefined") {
++        // The Edge Runtime does not support the `process.version` property,
++        // so we need to pass it in from the sandbox.
++        globalThis.process.version = process.version;
++    }
++    if (options.runtime === "edge-render" &&
++        !process.env.NEXT_PRIVATE_WORKER) {
++        assertNotExperimentalEdgeRuntime();
++    }
++    if (!process.env.NEXT_MINIMAL) {
++        // TODO: remove this. This is a temporary solution to allow reading
++        // the environment variables from the environment.
++        for (const key in process.env){
++            if (process.env[key] !== undefined) {
++                globalThis[INTERNAL_ENV_SERIALIZED_KEY][key] = process.env[key];
++            }
++        }
++    }
++    const { run, cleanup, onTeardown, onRequest, onRequestEnd, onBeforeCleanup, onAfterCleanup, } = options;
++    // Pre-compiling WASM modules is not supported in the edge runtime.
++    process.env.NEXT_PRECOMPILE_REPLACE_SCHEME = "false";
++    const runWithTaggedExceptions = (...args)=>{
++        return (0, _interopdefault.interopDefault)(this, args);
++    };
++    // `this` is the global object in the runtime.
++    return (0, _web.run)({
++        ...options,
++        run: runWithTaggedExceptions,
++        cleanup: runWithTaggedExceptions.bind(globalThis, cleanup),
++        onTeardown,
++        onRequest,
++        onRequestEnd,
++        onBeforeCleanup,
++        onAfterCleanup
++    });
++};
+ 
+ //# sourceMappingURL=sandbox.js.map
+\ No newline at end of file
++//# sourceMappingURL=sandbox.js.map

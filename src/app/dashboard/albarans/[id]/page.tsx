@@ -9,7 +9,6 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { FileDown, Loader2, ArrowLeft, Trash2 } from 'lucide-react'
 import jsPDF from 'jspdf'
-import html2canvas from 'html2canvas'
 import { ReportPreview } from '@/components/ReportPreview'
 import {
   AlertDialog,
@@ -106,72 +105,26 @@ export default function AlbaranDetailPage() {
     const handleExportPDF = async () => {
         const reportElement = reportRef.current;
         if (!reportElement) return;
-    
+
         setIsGenerating(true);
-    
-        // Store original styles
-        const originalStyles = {
-            width: reportElement.style.width,
-            maxWidth: reportElement.style.maxWidth,
-        };
-    
-        try {
-            // Force desktop-like width before rendering
-            reportElement.style.width = '1024px';
-            reportElement.style.maxWidth = 'none';
-    
-            const canvas = await html2canvas(reportElement, {
-                scale: 2, // Higher scale for better quality
-                useCORS: true,
-                logging: false,
-                windowWidth: 1440 // Simulate a wider screen for rendering
-            });
-    
-            // Restore original styles after capture
-            reportElement.style.width = originalStyles.width;
-            reportElement.style.maxWidth = originalStyles.maxWidth;
-    
-            const imgData = canvas.toDataURL('image/png');
-            const pdf = new jsPDF({
-                orientation: 'portrait',
-                unit: 'mm',
-                format: 'a4',
-            });
-    
-            const pdfWidth = pdf.internal.pageSize.getWidth();
-            const pdfHeight = pdf.internal.pageSize.getHeight();
-            
-            const imgProps = pdf.getImageProperties(imgData);
-            const imgWidth = imgProps.width;
-            const imgHeight = imgProps.height;
-    
-            const ratio = imgWidth / imgHeight;
-            let finalWidth = pdfWidth - 20; // A4 width with margin
-            let finalHeight = finalWidth / ratio;
-    
-            // If height is still too large, adjust based on height
-            if (finalHeight > pdfHeight - 20) {
-                finalHeight = pdfHeight - 20; // A4 height with margin
-                finalWidth = finalHeight * ratio;
-            }
-    
-            const x = (pdfWidth - finalWidth) / 2;
-            const y = 10; // Top margin
-    
-            pdf.addImage(imgData, 'PNG', x, y, finalWidth, finalHeight);
-            
-            const fileName = `Albara_${albaran?.albaranNumber || albaranId}_${albaran?.projectName || ''}.pdf`.replace(/ /g, '_');
-            pdf.save(fileName);
-    
-        } catch (error) {
-            console.error("Error generating PDF:", error);
-            toast({ variant: 'destructive', title: 'Error', description: 'No s\'ha pogut generar el PDF.' });
-        } finally {
-            // Ensure original styles are restored even if there's an error
-            reportElement.style.width = originalStyles.width;
-            reportElement.style.maxWidth = originalStyles.maxWidth;
-            setIsGenerating(false);
-        }
+
+        const pdf = new jsPDF({
+            orientation: 'portrait',
+            unit: 'pt',
+            format: 'a4',
+        });
+
+        await pdf.html(reportElement, {
+            callback: function (doc) {
+                const fileName = `Albara_${albaran?.albaranNumber || albaranId}_${albaran?.projectName || ''}.pdf`.replace(/ /g, '_');
+                doc.save(fileName);
+                setIsGenerating(false);
+            },
+            margin: [40, 40, 40, 40],
+            autoPaging: 'text',
+            width: 595, // A4 width in points
+            windowWidth: 1024, // Simulate a wider screen for rendering
+        });
     };
     
     const isLoading = isUserLoading || isLoadingAlbaran || isLoadingData || isLoadingEmployees;

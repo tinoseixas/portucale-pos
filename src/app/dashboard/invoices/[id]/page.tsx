@@ -9,7 +9,6 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { FileDown, Loader2, ArrowLeft, Trash2, CreditCard } from 'lucide-react'
 import jsPDF from 'jspdf'
-import html2canvas from 'html2canvas'
 import { InvoicePreview } from '@/components/InvoicePreview'
 import {
   AlertDialog,
@@ -95,67 +94,26 @@ export default function InvoiceDetailPage() {
     const handleExportPDF = async () => {
         const reportElement = reportRef.current;
         if (!reportElement) return;
-    
+
         setIsGenerating(true);
-    
-        const originalStyles = {
-            width: reportElement.style.width,
-            maxWidth: reportElement.style.maxWidth,
-        };
-    
-        try {
-            reportElement.style.width = '1024px';
-            reportElement.style.maxWidth = 'none';
-    
-            const canvas = await html2canvas(reportElement, {
-                scale: 2,
-                useCORS: true,
-                logging: false,
-                windowWidth: 1440
-            });
-    
-            reportElement.style.width = originalStyles.width;
-            reportElement.style.maxWidth = originalStyles.maxWidth;
-    
-            const imgData = canvas.toDataURL('image/png');
-            const pdf = new jsPDF({
-                orientation: 'portrait',
-                unit: 'mm',
-                format: 'a4',
-            });
-    
-            const pdfWidth = pdf.internal.pageSize.getWidth();
-            const pdfHeight = pdf.internal.pageSize.getHeight();
-            
-            const imgProps = pdf.getImageProperties(imgData);
-            const imgWidth = imgProps.width;
-            const imgHeight = imgProps.height;
-    
-            const ratio = imgWidth / imgHeight;
-            let finalWidth = pdfWidth - 20; 
-            let finalHeight = finalWidth / ratio;
-    
-            if (finalHeight > pdfHeight - 20) {
-                finalHeight = pdfHeight - 20;
-                finalWidth = finalHeight * ratio;
-            }
-    
-            const x = (pdfWidth - finalWidth) / 2;
-            const y = 10;
-    
-            pdf.addImage(imgData, 'PNG', x, y, finalWidth, finalHeight);
-            
-            const fileName = `Factura_${invoice?.invoiceNumber || invoiceId}_${invoice?.projectName || ''}.pdf`.replace(/ /g, '_');
-            pdf.save(fileName);
-    
-        } catch (error) {
-            console.error("Error generating PDF:", error);
-            toast({ variant: 'destructive', title: 'Error', description: 'No s\'ha pogut generar el PDF.' });
-        } finally {
-            reportElement.style.width = originalStyles.width;
-            reportElement.style.maxWidth = originalStyles.maxWidth;
-            setIsGenerating(false);
-        }
+
+        const pdf = new jsPDF({
+            orientation: 'portrait',
+            unit: 'pt',
+            format: 'a4',
+        });
+
+        await pdf.html(reportElement, {
+            callback: function (doc) {
+                const fileName = `Factura_${invoice?.invoiceNumber || invoiceId}_${invoice?.projectName || ''}.pdf`.replace(/ /g, '_');
+                doc.save(fileName);
+                setIsGenerating(false);
+            },
+            margin: [40, 40, 40, 40],
+            autoPaging: 'text',
+            width: 595, // A4 width in points
+            windowWidth: 1024,
+        });
     };
     
     const isLoading = isUserLoading || isLoadingInvoice || isLoadingCustomer;
