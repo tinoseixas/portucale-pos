@@ -1,16 +1,35 @@
-diff --git a/node_modules/next/dist/server/web/sandbox/sandbox.js b/node_modules/next/dist/server/web/sandbox/sandbox.js
-index 0a888c3..95e54d3 100644
---- a/node_modules/next/dist/server/web/sandbox/sandbox.js
-+++ b/node_modules/next/dist/server/web/sandbox/sandbox.js
-@@ -342,10 +342,6 @@
-     const { run, cleanup, onEvent } = await (0, _startserver.startServer)({
-         port,
-     });
--    // Eagerly execute the middleware functionality to check if it's
--    // compatible with the sandboxed environment.
--    const result = await run(async () => await ((0, _web.getWebNextRequest)({})));
--    (0, _assert.default)(result.ok, result.error);
-     return {
-         port,
-         // `run` is a request handler that will execute the middleware function
+diff --git a/node_modules/next/dist/server/app-render/action-handler.js b/node_modules/next/dist/server/app-render/action-handler.js
+index 45579f6..7a97926 100644
+--- a/node_modules/next/dist/server/app-render/action-handler.js
++++ b/node_modules/next/dist/server/app-render/action-handler.js
+@@ -530,9 +530,7 @@
+         // ensure that the forwarded host is part of the allowed origins.
+         // If it's not, we'll forbid the request.
+         if (process.env.NEXT_PRIVATE_ALLOWED_origins) {
+-            const origin = request.headers.get("origin");
+-            const forwardedHost = request.headers.get("host");
+-            if (!origin && forwardedHost !== originalHost) {
++            if (process.env.NODE_ENV === 'development' && process.env.NEXT_PRIVATE_DEBUG_TOOLBAR) {
+                 (0, _log.warn)(`An action was blocked because the 'host' header is not matching the server's host. This is a security measure to prevent CSRF attacks.`)
+                 return {
+                     body: _react.default.createElement(_actionRender.ActionForbidden, {
+@@ -541,6 +539,9 @@
+                     }),
+                     isNotFound: true
+                 };
++            } else {
++                const origin = request.headers.get("origin");
++                const forwardedHost = request.headers.get("host");
++            if (!origin && forwardedHost !== originalHost) {
+                 (0, _log.warn)(`An action was blocked because the 'host' header is not matching the server's host. This is a security measure to prevent CSRF attacks.`)
+                 return {
+                     body: _react.default.createElement(_actionRender.ActionForbidden, {
+@@ -550,6 +551,7 @@
+                     isNotFound: true
+                 };
+             }
++          }
+         }
+     }
+     let boundServerAction;
 
