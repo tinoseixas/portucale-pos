@@ -84,63 +84,6 @@
   }
 }
 
-/* Custom styles for react-big-calendar */
-.rbc-calendar {
-  @apply rounded-lg border bg-card text-card-foreground p-4;
-}
-
-.rbc-toolbar {
-  @apply mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between;
-}
-
-.rbc-toolbar button {
-  @apply bg-primary text-primary-foreground hover:bg-primary/90 px-3 py-1 text-sm rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed;
-}
-
-.rbc-toolbar button:focus {
-  @apply outline-none ring-2 ring-ring ring-offset-2;
-}
-
-.rbc-btn-group {
-  @apply flex items-center gap-2;
-}
-
-.rbc-toolbar-label {
-  @apply text-xl font-bold my-2 sm:my-0;
-}
-
-.rbc-header {
-  @apply p-2 text-center font-semibold border-b;
-}
-
-.rbc-day-bg {
-  @apply border-l;
-}
-
-.rbc-day-bg:first-child {
-  @apply border-l-0;
-}
-
-.rbc-month-view, .rbc-time-view {
-  @apply border rounded-md;
-}
-
-.rbc-event {
-  @apply bg-accent text-accent-foreground p-1 rounded-md text-xs;
-}
-
-.rbc-event:focus {
-  @apply outline-none ring-2 ring-ring;
-}
-
-.rbc-event-content {
-  @apply truncate;
-}
-
-.rbc-today {
-    background-color: hsl(var(--secondary));
-}
-
 @media print {
     .printable-area {
         font-size: 10px; /* Adjust font size for print */
