@@ -5,7 +5,6 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { PlusCircle, List, Calendar as CalendarIcon, User, Edit, Search, Trash2, Briefcase } from 'lucide-react'
-// import { ServiceCalendar } from '@/components/ServiceCalendar'
 import type { ServiceRecord, Employee } from '@/lib/types'
 import { useCollection, useUser, useFirestore, useMemoFirebase, errorEmitter, FirestorePermissionError, deleteDocumentNonBlocking } from '@/firebase';
 import { collection, query, orderBy, getDocs, collectionGroup, doc } from 'firebase/firestore';
@@ -31,6 +30,8 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { useToast } from "@/hooks/use-toast"
+import { Header } from '@/components/Header'
+import { BottomNav } from '@/components/BottomNav'
 
 
 const userColors = [
@@ -190,197 +191,201 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="space-y-8">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Resum de Serveis</h1>
-          <p className="text-muted-foreground">Vista general de tots els registres.</p>
-        </div>
-        <div className="hidden md:flex items-center gap-2">
-            <Button asChild className="bg-accent hover:bg-accent/90 text-accent-foreground">
-                <Link href="/dashboard/new">
-                    <PlusCircle className="mr-2 h-4 w-4" />
-                    Nou Servei
-                </Link>
-            </Button>
-        </div>
-      </div>
-      
-      {isLoading ? renderSkeletons() : (
-        (!services || services.length === 0) && (allServices.length === 0) ? (
-          <div className="text-center py-16 border-2 border-dashed rounded-lg">
-              <h2 className="text-xl font-semibold">No hi ha serveis registrats</h2>
-              <p className="text-muted-foreground">Comença afegint el teu primer servei del dia.</p>
-              <Button asChild className="mt-4 bg-accent hover:bg-accent/90 text-accent-foreground">
+    <>
+      <Header />
+      <div className="space-y-8">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold">Resum de Serveis</h1>
+            <p className="text-muted-foreground">Vista general de tots els registres.</p>
+          </div>
+          <div className="hidden md:flex items-center gap-2">
+              <Button asChild className="bg-accent hover:bg-accent/90 text-accent-foreground">
                   <Link href="/dashboard/new">
-                  <PlusCircle className="mr-2 h-4 w-4" />
-                  Afegeix un Servei
+                      <PlusCircle className="mr-2 h-4 w-4" />
+                      Nou Servei
                   </Link>
               </Button>
           </div>
-        ) : (
-            <Card>
-            <CardHeader>
-                <div className="flex justify-between items-start flex-wrap gap-4">
-                    <div>
-                        <CardTitle>Tots els Serveis</CardTitle>
-                        <CardDescription>Visualitza, filtra i gestiona tots els registres de servei.</CardDescription>
-                    </div>
-                    {selectedRows.length > 0 && (
-                        <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                            <Button variant="destructive">
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Eliminar ({selectedRows.length})
-                            </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                            <AlertDialogHeader>
-                            <AlertDialogTitle>Estàs segur?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                                Aquesta acció eliminarà permanentment {selectedRows.length} registre(s) de servei. Aquesta acció no es pot desfer.
-                            </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel·lar</AlertDialogCancel>
-                            <AlertDialogAction onClick={handleDeleteSelected} className="bg-destructive hover:bg-destructive/90">Eliminar</AlertDialogAction>
-                            </AlertDialogFooter>
-                        </AlertDialogContent>
-                        </AlertDialog>
-                    )}
-                </div>
-                <div className="flex flex-col sm:flex-row gap-4 pt-4 flex-wrap">
-                    <Select value={selectedUser} onValueChange={setSelectedUser}>
-                    <SelectTrigger className="w-full sm:w-[200px]">
-                        <User className="mr-2 h-4 w-4 text-muted-foreground" />
-                        <SelectValue placeholder="Filtrar per usuari" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="all">Tots els Usuaris</SelectItem>
-                        {employees.map(emp => (
-                        <SelectItem key={emp.id} value={emp.id}>{emp.firstName} {emp.lastName}</SelectItem>
-                        ))}
-                    </SelectContent>
-                    </Select>
+        </div>
+        
+        {isLoading ? renderSkeletons() : (
+          (!services || services.length === 0) && (allServices.length === 0) ? (
+            <div className="text-center py-16 border-2 border-dashed rounded-lg">
+                <h2 className="text-xl font-semibold">No hi ha serveis registrats</h2>
+                <p className="text-muted-foreground">Comença afegint el teu primer servei del dia.</p>
+                <Button asChild className="mt-4 bg-accent hover:bg-accent/90 text-accent-foreground">
+                    <Link href="/dashboard/new">
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    Afegeix un Servei
+                    </Link>
+                </Button>
+            </div>
+          ) : (
+              <Card>
+              <CardHeader>
+                  <div className="flex justify-between items-start flex-wrap gap-4">
+                      <div>
+                          <CardTitle>Tots els Serveis</CardTitle>
+                          <CardDescription>Visualitza, filtra i gestiona tots els registres de servei.</CardDescription>
+                      </div>
+                      {selectedRows.length > 0 && (
+                          <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                              <Button variant="destructive">
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Eliminar ({selectedRows.length})
+                              </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                              <AlertDialogHeader>
+                              <AlertDialogTitle>Estàs segur?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                  Aquesta acció eliminarà permanentment {selectedRows.length} registre(s) de servei. Aquesta acció no es pot desfer.
+                              </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel·lar</AlertDialogCancel>
+                              <AlertDialogAction onClick={handleDeleteSelected} className="bg-destructive hover:bg-destructive/90">Eliminar</AlertDialogAction>
+                              </AlertDialogFooter>
+                          </AlertDialogContent>
+                          </AlertDialog>
+                      )}
+                  </div>
+                  <div className="flex flex-col sm:flex-row gap-4 pt-4 flex-wrap">
+                      <Select value={selectedUser} onValueChange={setSelectedUser}>
+                      <SelectTrigger className="w-full sm:w-[200px]">
+                          <User className="mr-2 h-4 w-4 text-muted-foreground" />
+                          <SelectValue placeholder="Filtrar per usuari" />
+                      </SelectTrigger>
+                      <SelectContent>
+                          <SelectItem value="all">Tots els Usuaris</SelectItem>
+                          {employees.map(emp => (
+                          <SelectItem key={emp.id} value={emp.id}>{emp.firstName} {emp.lastName}</SelectItem>
+                          ))}
+                      </SelectContent>
+                      </Select>
 
-                    <Popover>
-                    <PopoverTrigger asChild>
-                        <Button
-                        variant={"outline"}
-                        className={cn(
-                            "w-full sm:w-[240px] justify-start text-left font-normal",
-                            !selectedDate && "text-muted-foreground"
-                        )}
-                        >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {selectedDate ? format(selectedDate, "PPP", { locale: ca }) : <span>Filtrar per data</span>}
-                        </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0">
-                        <Calendar
-                        mode="single"
-                        selected={selectedDate}
-                        onSelect={setSelectedDate}
-                        initialFocus
-                        locale={ca}
-                        />
-                    </PopoverContent>
-                    </Popover>
+                      <Popover>
+                      <PopoverTrigger asChild>
+                          <Button
+                          variant={"outline"}
+                          className={cn(
+                              "w-full sm:w-[240px] justify-start text-left font-normal",
+                              !selectedDate && "text-muted-foreground"
+                          )}
+                          >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {selectedDate ? format(selectedDate, "PPP", { locale: ca }) : <span>Filtrar per data</span>}
+                          </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0">
+                          <Calendar
+                          mode="single"
+                          selected={selectedDate}
+                          onSelect={setSelectedDate}
+                          initialFocus
+                          locale={ca}
+                          />
+                      </PopoverContent>
+                      </Popover>
 
-                    <Select value={selectedProject} onValueChange={setSelectedProject}>
-                    <SelectTrigger className="w-full sm:w-[200px]">
-                        <Briefcase className="mr-2 h-4 w-4 text-muted-foreground" />
-                        <SelectValue placeholder="Filtrar per obra" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="all">Totes les Obres</SelectItem>
-                        {projectNames.map(name => (
-                        <SelectItem key={name} value={name}>{name}</SelectItem>
-                        ))}
-                    </SelectContent>
-                    </Select>
-                    
-                    {(selectedUser !== 'all' || selectedDate || selectedProject !== 'all') && (
-                    <Button variant="ghost" onClick={() => { setSelectedUser('all'); setSelectedDate(undefined); setSelectedProject('all'); }}>
-                        Neteja filtres
-                    </Button>
-                    )}
-                </div>
-            </CardHeader>
-            <CardContent>
-                <div className="overflow-x-auto">
-                    <Table>
-                    <TableHeader>
-                        <TableRow>
-                        <TableHead className="w-[40px] px-2">
-                            <Checkbox
-                                checked={selectedRows.length > 0 && services.length > 0 && selectedRows.length === services.length}
-                                onCheckedChange={(checked) => {
-                                setSelectedRows(checked ? services.map(s => s.id) : []);
-                                }}
-                                aria-label="Seleccionar totes les files"
-                            />
-                        </TableHead>
-                        <TableHead className="w-[10px]"></TableHead>
-                        <TableHead>Funcionari</TableHead>
-                        <TableHead>Data</TableHead>
-                        <TableHead>Obra</TableHead>
-                        <TableHead>Descripció</TableHead>
-                        <TableHead>Última Modificació</TableHead>
-                        <TableHead className="text-right">Accions</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {services && services.length > 0 ? (services as ServiceWithRowColor[]).map(service => (
-                        <TableRow key={service.id} className={service.rowColor} data-state={selectedRows.includes(service.id) && "selected"}>
-                            <TableCell className="px-2">
-                                <Checkbox
-                                    checked={selectedRows.includes(service.id)}
-                                    onCheckedChange={(checked) => {
-                                    setSelectedRows(
-                                        checked
-                                        ? [...selectedRows, service.id]
-                                        : selectedRows.filter((id) => id !== service.id)
-                                    );
-                                    }}
-                                    aria-label={`Seleccionar fila ${service.id}`}
-                                />
-                            </TableCell>
-                            <TableCell>
-                            <div 
-                                className="h-full w-1 rounded-full" 
-                                style={{ backgroundColor: getUserColor(service.employeeId) }}
-                            />
-                            </TableCell>
-                            <TableCell className="font-medium">{getEmployeeName(service.employeeId)}</TableCell>
-                            <TableCell>{format(parseISO(service.arrivalDateTime), 'dd/MM/yyyy HH:mm')}</TableCell>
-                            <TableCell className="max-w-[200px] truncate">{service.projectName}</TableCell>
-                            <TableCell className="max-w-[300px] truncate">{service.description}</TableCell>
-                            <TableCell>
-                            {service.updatedAt ? format(parseISO(service.updatedAt), 'dd/MM/yy HH:mm') : '-'}
-                            </TableCell>
-                            <TableCell className="text-right">
-                            <Button variant="outline" size="sm" asChild>
-                                <Link href={`/dashboard/edit/${service.id}?ownerId=${service.employeeId}`}>
-                                    <Edit className="mr-2 h-4 w-4" /> Detalls
-                                </Link>
-                            </Button>
-                            </TableCell>
-                        </TableRow>
-                        )) : (
-                        <TableRow>
-                            <TableCell colSpan={8} className="h-24 text-center">
-                            No s'han trobat serveis per als filtres seleccionats.
-                            </TableCell>
-                        </TableRow>
-                        )}
-                    </TableBody>
-                    </Table>
-                </div>
-            </CardContent>
-            </Card>
-        )
-      )}
-    </div>
+                      <Select value={selectedProject} onValueChange={setSelectedProject}>
+                      <SelectTrigger className="w-full sm:w-[200px]">
+                          <Briefcase className="mr-2 h-4 w-4 text-muted-foreground" />
+                          <SelectValue placeholder="Filtrar per obra" />
+                      </SelectTrigger>
+                      <SelectContent>
+                          <SelectItem value="all">Totes les Obres</SelectItem>
+                          {projectNames.map(name => (
+                          <SelectItem key={name} value={name}>{name}</SelectItem>
+                          ))}
+                      </SelectContent>
+                      </Select>
+                      
+                      {(selectedUser !== 'all' || selectedDate || selectedProject !== 'all') && (
+                      <Button variant="ghost" onClick={() => { setSelectedUser('all'); setSelectedDate(undefined); setSelectedProject('all'); }}>
+                          Neteja filtres
+                      </Button>
+                      )}
+                  </div>
+              </CardHeader>
+              <CardContent>
+                  <div className="overflow-x-auto">
+                      <Table>
+                      <TableHeader>
+                          <TableRow>
+                          <TableHead className="w-[40px] px-2">
+                              <Checkbox
+                                  checked={selectedRows.length > 0 && services.length > 0 && selectedRows.length === services.length}
+                                  onCheckedChange={(checked) => {
+                                  setSelectedRows(checked ? services.map(s => s.id) : []);
+                                  }}
+                                  aria-label="Seleccionar totes les files"
+                              />
+                          </TableHead>
+                          <TableHead className="w-[10px]"></TableHead>
+                          <TableHead>Funcionari</TableHead>
+                          <TableHead>Data</TableHead>
+                          <TableHead>Obra</TableHead>
+                          <TableHead>Descripció</TableHead>
+                          <TableHead>Última Modificació</TableHead>
+                          <TableHead className="text-right">Accions</TableHead>
+                          </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                          {services && services.length > 0 ? (services as ServiceWithRowColor[]).map(service => (
+                          <TableRow key={service.id} className={service.rowColor} data-state={selectedRows.includes(service.id) && "selected"}>
+                              <TableCell className="px-2">
+                                  <Checkbox
+                                      checked={selectedRows.includes(service.id)}
+                                      onCheckedChange={(checked) => {
+                                      setSelectedRows(
+                                          checked
+                                          ? [...selectedRows, service.id]
+                                          : selectedRows.filter((id) => id !== service.id)
+                                      );
+                                      }}
+                                      aria-label={`Seleccionar fila ${service.id}`}
+                                  />
+                              </TableCell>
+                              <TableCell>
+                              <div 
+                                  className="h-full w-1 rounded-full" 
+                                  style={{ backgroundColor: getUserColor(service.employeeId) }}
+                              />
+                              </TableCell>
+                              <TableCell className="font-medium">{getEmployeeName(service.employeeId)}</TableCell>
+                              <TableCell>{format(parseISO(service.arrivalDateTime), 'dd/MM/yyyy HH:mm')}</TableCell>
+                              <TableCell className="max-w-[200px] truncate">{service.projectName}</TableCell>
+                              <TableCell className="max-w-[300px] truncate">{service.description}</TableCell>
+                              <TableCell>
+                              {service.updatedAt ? format(parseISO(service.updatedAt), 'dd/MM/yy HH:mm') : '-'}
+                              </TableCell>
+                              <TableCell className="text-right">
+                              <Button variant="outline" size="sm" asChild>
+                                  <Link href={`/dashboard/edit/${service.id}?ownerId=${service.employeeId}`}>
+                                      <Edit className="mr-2 h-4 w-4" /> Detalls
+                                  </Link>
+                              </Button>
+                              </TableCell>
+                          </TableRow>
+                          )) : (
+                          <TableRow>
+                              <TableCell colSpan={8} className="h-24 text-center">
+                              No s'han trobat serveis per als filtres seleccionats.
+                              </TableCell>
+                          </TableRow>
+                          )}
+                      </TableBody>
+                      </Table>
+                  </div>
+              </CardContent>
+              </Card>
+          )
+        )}
+      </div>
+      <BottomNav />
+    </>
   )
 }

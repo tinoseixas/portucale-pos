@@ -17,6 +17,8 @@ import { doc } from 'firebase/firestore';
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import type { Employee } from '@/lib/types';
 import { Camera, Save, ArrowLeft, Phone } from 'lucide-react';
+import { Header } from '@/components/Header';
+import { BottomNav } from '@/components/BottomNav';
 
 
 const profileSchema = z.object({
@@ -146,87 +148,91 @@ export default function ProfilePage() {
   const displayAvatar = avatarUrl || user?.photoURL;
 
   return (
-    <div className="max-w-2xl mx-auto">
-      <Card>
-        <CardHeader>
-          <CardTitle>El Teu Perfil</CardTitle>
-          <CardDescription>Edita les teves dades personals i la teva foto.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-            <div className="flex flex-col items-center space-y-4">
-              <div className="relative">
-                <Avatar className="h-24 w-24 cursor-pointer" onClick={handleAvatarClick}>
-                  <AvatarImage src={displayAvatar ?? undefined} alt="User avatar" key={displayAvatar} />
-                  <AvatarFallback>{getInitials(employee)}</AvatarFallback>
-                </Avatar>
-                <div className="absolute bottom-0 right-0 bg-primary text-primary-foreground rounded-full p-1.5 cursor-pointer" onClick={handleAvatarClick}>
-                    <Camera className="h-4 w-4" />
+    <>
+      <Header />
+      <div className="max-w-2xl mx-auto">
+        <Card>
+          <CardHeader>
+            <CardTitle>El Teu Perfil</CardTitle>
+            <CardDescription>Edita les teves dades personals i la teva foto.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+              <div className="flex flex-col items-center space-y-4">
+                <div className="relative">
+                  <Avatar className="h-24 w-24 cursor-pointer" onClick={handleAvatarClick}>
+                    <AvatarImage src={displayAvatar ?? undefined} alt="User avatar" key={displayAvatar} />
+                    <AvatarFallback>{getInitials(employee)}</AvatarFallback>
+                  </Avatar>
+                  <div className="absolute bottom-0 right-0 bg-primary text-primary-foreground rounded-full p-1.5 cursor-pointer" onClick={handleAvatarClick}>
+                      <Camera className="h-4 w-4" />
+                  </div>
                 </div>
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleFileChange}
+                  accept="image/*"
+                  className="hidden"
+                />
+                <p className='text-sm text-muted-foreground'>Clica a la imatge per canviar-la</p>
               </div>
-              <input
-                type="file"
-                ref={fileInputRef}
-                onChange={handleFileChange}
-                accept="image/*"
-                className="hidden"
-              />
-              <p className='text-sm text-muted-foreground'>Clica a la imatge per canviar-la</p>
-            </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="firstName">Nom</Label>
-              <Controller
-                name="firstName"
-                control={control}
-                render={({ field }) => <Input id="firstName" {...field} />}
-              />
-              {errors.firstName && <p className="text-sm text-destructive">{errors.firstName.message}</p>}
-            </div>
+              <div className="space-y-2">
+                <Label htmlFor="firstName">Nom</Label>
+                <Controller
+                  name="firstName"
+                  control={control}
+                  render={({ field }) => <Input id="firstName" {...field} />}
+                />
+                {errors.firstName && <p className="text-sm text-destructive">{errors.firstName.message}</p>}
+              </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="lastName">Cognom</Label>
-              <Controller
-                name="lastName"
-                control={control}
-                render={({ field }) => <Input id="lastName" {...field} />}
-              />
-              {errors.lastName && <p className="text-sm text-destructive">{errors.lastName.message}</p>}
-            </div>
-            
-             <div className="space-y-2">
-              <Label htmlFor="employeeId">ID d'Empleat</Label>
-              <Controller
-                name="employeeId"
-                control={control}
-                render={({ field }) => <Input id="employeeId" {...field} />}
-              />
-              {errors.employeeId && <p className="text-sm text-destructive">{errors.employeeId.message}</p>}
-            </div>
+              <div className="space-y-2">
+                <Label htmlFor="lastName">Cognom</Label>
+                <Controller
+                  name="lastName"
+                  control={control}
+                  render={({ field }) => <Input id="lastName" {...field} />}
+                />
+                {errors.lastName && <p className="text-sm text-destructive">{errors.lastName.message}</p>}
+              </div>
+              
+               <div className="space-y-2">
+                <Label htmlFor="employeeId">ID d'Empleat</Label>
+                <Controller
+                  name="employeeId"
+                  control={control}
+                  render={({ field }) => <Input id="employeeId" {...field} />}
+                />
+                {errors.employeeId && <p className="text-sm text-destructive">{errors.employeeId.message}</p>}
+              </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="phoneNumber" className="flex items-center gap-2"><Phone className="h-4 w-4 text-muted-foreground" /> Telemòbil</Label>
-              <Controller
-                name="phoneNumber"
-                control={control}
-                render={({ field }) => <Input id="phoneNumber" type="tel" placeholder="600123456" {...field} />}
-              />
-              {errors.phoneNumber && <p className="text-sm text-destructive">{errors.phoneNumber.message}</p>}
-            </div>
+              <div className="space-y-2">
+                <Label htmlFor="phoneNumber" className="flex items-center gap-2"><Phone className="h-4 w-4 text-muted-foreground" /> Telemòbil</Label>
+                <Controller
+                  name="phoneNumber"
+                  control={control}
+                  render={({ field }) => <Input id="phoneNumber" type="tel" placeholder="600123456" {...field} />}
+                />
+                {errors.phoneNumber && <p className="text-sm text-destructive">{errors.phoneNumber.message}</p>}
+              </div>
 
-            <div className="flex justify-between items-center pt-4">
-              <Button type="button" variant="outline" onClick={() => router.push('/dashboard')}>
-                  <ArrowLeft className="mr-2 h-4 w-4"/>
-                  Tornar
-              </Button>
-              <Button type="submit" disabled={!isDirty} className="bg-accent hover:bg-accent/90 text-accent-foreground">
-                <Save className="mr-2 h-4 w-4"/>
-                Desa els Canvis
-              </Button>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
-    </div>
+              <div className="flex justify-between items-center pt-4">
+                <Button type="button" variant="outline" onClick={() => router.push('/dashboard')}>
+                    <ArrowLeft className="mr-2 h-4 w-4"/>
+                    Tornar
+                </Button>
+                <Button type="submit" disabled={!isDirty} className="bg-accent hover:bg-accent/90 text-accent-foreground">
+                  <Save className="mr-2 h-4 w-4"/>
+                  Desa els Canvis
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+      </div>
+      <BottomNav />
+    </>
   );
 }

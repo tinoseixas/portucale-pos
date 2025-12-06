@@ -10,6 +10,8 @@ import { format, differenceInMinutes, parseISO, isValid, startOfDay } from 'date
 import { ca } from 'date-fns/locale';
 import { useCollection, useDoc, useFirestore, useUser, useMemoFirebase } from '@/firebase'
 import { collection, doc } from 'firebase/firestore'
+import { Header } from '@/components/Header'
+import { BottomNav } from '@/components/BottomNav'
 
 function calculateTotalTime(services: ServiceRecord[]): string {
     if (!services) return '0h 0m';
@@ -90,6 +92,8 @@ export default function ReportPage() {
     }
     
     return (
+      <>
+        <Header />
         <div className="max-w-4xl mx-auto space-y-8">
              <div>
                 <h1 className="text-3xl font-bold">Informe d'Activitat</h1>
@@ -216,5 +220,7 @@ export default function ReportPage() {
                 </CardFooter>
             </Card>
         </div>
+        <BottomNav />
+      </>
     )
 }

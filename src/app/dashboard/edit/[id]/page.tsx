@@ -34,6 +34,8 @@ import { ca } from 'date-fns/locale'
 import { cn } from '@/lib/utils'
 import { CustomerSelectionDialog } from '@/components/CustomerSelectionDialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Header } from '@/components/Header'
+import { BottomNav } from '@/components/BottomNav'
 
 type MediaFile = {
   type: 'image' | 'video';
@@ -408,284 +410,288 @@ export default function EditServicePage() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto space-y-8">
-      <Button variant="ghost" onClick={() => router.back()} className="mb-4 -ml-4">
-        <ArrowLeft className="mr-2 h-4 w-4" />
-        Tornar
-      </Button>
-      
-      <CustomerSelectionDialog
-        open={isCustomerDialogOpen}
-        onOpenChange={setIsCustomerDialogOpen}
-        customers={customers || []}
-        onCustomerSelect={handleCustomerSelect}
-      />
-      
-      <input
-        type="file"
-        ref={materialImageInputRef}
-        onChange={handleMaterialImageFileChange}
-        accept="image/*"
-        className="hidden"
-      />
+    <>
+      <Header />
+      <div className="max-w-2xl mx-auto space-y-8">
+        <Button variant="ghost" onClick={() => router.back()} className="mb-4 -ml-4">
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Tornar
+        </Button>
+        
+        <CustomerSelectionDialog
+          open={isCustomerDialogOpen}
+          onOpenChange={setIsCustomerDialogOpen}
+          customers={customers || []}
+          onCustomerSelect={handleCustomerSelect}
+        />
+        
+        <input
+          type="file"
+          ref={materialImageInputRef}
+          onChange={handleMaterialImageFileChange}
+          accept="image/*"
+          className="hidden"
+        />
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Editar Servei #{serviceId.slice(-6)}</CardTitle>
-          <CardDescription>Modifica os detalls do servei realitzat.</CardDescription>
-          {service.updatedAt && (
-             <p className="text-xs text-muted-foreground pt-2 flex items-center gap-1">
-              <Info className="h-3 w-3" />
-              Última modificació: {format(new Date(service.updatedAt), "dd/MM/yyyy 'a les' HH:mm", { locale: ca })}
-            </p>
-          )}
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-6">
-            
-            <div className="space-y-2">
-                <Label htmlFor="date">Data del Servei</Label>
-                 <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant={"outline"}
-                      className={cn(
-                        "w-full justify-start text-left font-normal",
-                        !date && "text-muted-foreground"
+        <Card>
+          <CardHeader>
+            <CardTitle>Editar Servei #{serviceId.slice(-6)}</CardTitle>
+            <CardDescription>Modifica os detalls do servei realitzat.</CardDescription>
+            {service.updatedAt && (
+               <p className="text-xs text-muted-foreground pt-2 flex items-center gap-1">
+                <Info className="h-3 w-3" />
+                Última modificació: {format(new Date(service.updatedAt), "dd/MM/yyyy 'a les' HH:mm", { locale: ca })}
+              </p>
+            )}
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-6">
+              
+              <div className="space-y-2">
+                  <Label htmlFor="date">Data del Servei</Label>
+                   <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant={"outline"}
+                        className={cn(
+                          "w-full justify-start text-left font-normal",
+                          !date && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {date ? format(date, "PPP", { locale: ca }) : <span>Tria una data</span>}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0">
+                      <Calendar
+                        mode="single"
+                        selected={date}
+                        onSelect={setDate}
+                        initialFocus
+                        locale={ca}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="start-time" className="flex items-center gap-2"><Clock className="h-4 w-4 text-muted-foreground" /> Hora d'Arribada</Label>
+                  <Input id="start-time" type="time" required value={startTime} onChange={(e) => setStartTime(e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="end-time" className="flex items-center gap-2"><Clock className="h-4 w-4 text-muted-foreground" /> Hora de Sortida</Label>
+                  <Input id="end-time" type="time" required value={endTime} onChange={(e) => setEndTime(e.target.value)} />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                      <Label htmlFor="employeeId" className="flex items-center gap-2"><UserIcon className="h-4 w-4 text-muted-foreground" /> Tècnic</Label>
+                      <Select value={employeeId} onValueChange={setEmployeeId} disabled={isLoadingEmployees}>
+                          <SelectTrigger id="employeeId">
+                              <SelectValue placeholder={isLoadingEmployees ? "A carregar tècnics..." : "Selecciona un tècnic..."} />
+                          </SelectTrigger>
+                          <SelectContent>
+                              {employees?.map(e => (
+                              <SelectItem key={e.id} value={e.id}>{e.firstName} {e.lastName}</SelectItem>
+                              ))}
+                          </SelectContent>
+                      </Select>
+                  </div>
+                  <div className="space-y-2">
+                      <Label htmlFor="serviceHourlyRate" className="flex items-center gap-2"><Euro className="h-4 w-4 text-muted-foreground" /> Preu/Hora Mà d'Obra</Label>
+                      <Input 
+                          id="serviceHourlyRate" 
+                          type="number" 
+                          value={serviceHourlyRate}
+                          onChange={(e) => setServiceHourlyRate(e.target.value === '' ? '' : Number(e.target.value))}
+                          placeholder="Preu per defecte"
+                      />
+                  </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="customerId" className="flex items-center gap-2"><Users className="h-4 w-4 text-muted-foreground" /> Client</Label>
+                  <div className="flex items-center gap-2">
+                      <Input value={customerName} readOnly disabled className="flex-grow bg-muted" />
+                      <Button type="button" variant="outline" onClick={() => setIsCustomerDialogOpen(true)}>
+                          Seleccionar
+                      </Button>
+                  </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="projectName" className="flex items-center gap-2"><Briefcase className="h-4 w-4 text-muted-foreground" /> Nom de l'Obra</Label>
+                <Input id="projectName" placeholder="Ex: Reforma Client A" value={projectName} onChange={(e) => setProjectName(e.target.value)} list="project-names" />
+                <datalist id="project-names">
+                  {projectNames.map((name) => (
+                    <option key={name} value={name} />
+                  ))}
+                </datalist>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="description" className="flex items-center gap-2"><FileText className="h-4 w-4 text-muted-foreground" /> Descripció del Servei</Label>
+                <Textarea id="description" placeholder="Descriu les tasques realitzades..." value={description} onChange={(e) => setDescription(e.target.value)} rows={3} />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="pendingTasks" className="flex items-center gap-2"><AlertTriangle className="h-4 w-4 text-muted-foreground" /> Pendents de l'Obra</Label>
+                <Textarea id="pendingTasks" placeholder="Descriu tasques o materials pendents..." value={pendingTasks} onChange={(e) => setPendingTasks(e.target.value)} rows={3} />
+              </div>
+              
+              <div className="space-y-4 rounded-lg border p-4">
+                  <Label className="flex items-center gap-2 text-base font-semibold"><Package className="h-5 w-5 text-muted-foreground" /> Materials i Mà d'Obra</Label>
+                   <div className="space-y-3">
+                      {materials.map((material, index) => (
+                          <div key={index} className="grid grid-cols-1 md:grid-cols-12 gap-2 items-center">
+                              <Input
+                                  type="text"
+                                  placeholder="Descripció"
+                                  value={material.description}
+                                  onChange={(e) => handleMaterialChange(index, 'description', e.target.value)}
+                                  className="col-span-12 md:col-span-5"
+                              />
+                              <div className="col-span-4 md:col-span-2 relative">
+                                  <Input
+                                      type="number"
+                                      placeholder="Quant."
+                                      value={material.quantity}
+                                      onChange={(e) => handleMaterialChange(index, 'quantity', e.target.value)}
+                                      className="pl-2 pr-1"
+                                      min="0"
+                                      step="any"
+                                  />
+                              </div>
+                              <div className="col-span-5 md:col-span-2 relative">
+                                  <Input
+                                      type="number"
+                                      placeholder="Preu/u."
+                                      value={material.unitPrice}
+                                      onChange={(e) => handleMaterialChange(index, 'unitPrice', e.target.value)}
+                                      className="pl-7 pr-1"
+                                      min="0"
+                                      step="any"
+                                  />
+                                  <Euro className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                              </div>
+                              <div className="col-span-3 md:col-span-3 flex justify-end items-center gap-1">
+                                  <Button type="button" variant="outline" size="icon" onClick={() => handleMaterialImageUploadClick(index)}>
+                                      <ImagePlus className="h-4 w-4" />
+                                  </Button>
+                                  {material.imageDataUrl && (
+                                      <Button type="button" variant="ghost" size="icon" onClick={() => removeMaterialImage(index)}>
+                                          <X className="h-4 w-4 text-destructive" />
+                                      </Button>
+                                  )}
+                              </div>
+                              {material.imageDataUrl && (
+                                  <div className="col-span-12 md:col-start-6">
+                                      <Image src={material.imageDataUrl} alt="Preview" width={64} height={64} className="rounded-md object-cover" />
+                                  </div>
+                              )}
+                          </div>
+                      ))}
+                  </div>
+                  <Button type="button" variant="outline" size="sm" onClick={addMaterialInput} className="mt-2">
+                      <Plus className="mr-2 h-4 w-4" /> Afegir Línia
+                  </Button>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="albarans" className="flex items-center gap-2"><Hash className="h-4 w-4 text-muted-foreground" /> Nº d'Albarà</Label>
+                <div className="space-y-2">
+                  {albarans.map((albaran, index) => (
+                    <div key={index} className="flex items-center gap-2">
+                      <Input
+                        type="text"
+                        placeholder={`Albarà #${index + 1}`}
+                        value={albaran}
+                        onChange={(e) => handleAlbaranChange(index, e.target.value)}
+                      />
+                      {albarans.length > 1 && (
+                        <Button type="button" variant="ghost" size="icon" onClick={() => removeAlbaranInput(index)}>
+                          <X className="h-4 w-4" />
+                        </Button>
                       )}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {date ? format(date, "PPP", { locale: ca }) : <span>Tria una data</span>}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
-                    <Calendar
-                      mode="single"
-                      selected={date}
-                      onSelect={setDate}
-                      initialFocus
-                      locale={ca}
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="start-time" className="flex items-center gap-2"><Clock className="h-4 w-4 text-muted-foreground" /> Hora d'Arribada</Label>
-                <Input id="start-time" type="time" required value={startTime} onChange={(e) => setStartTime(e.target.value)} />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="end-time" className="flex items-center gap-2"><Clock className="h-4 w-4 text-muted-foreground" /> Hora de Sortida</Label>
-                <Input id="end-time" type="time" required value={endTime} onChange={(e) => setEndTime(e.target.value)} />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                    <Label htmlFor="employeeId" className="flex items-center gap-2"><UserIcon className="h-4 w-4 text-muted-foreground" /> Tècnic</Label>
-                    <Select value={employeeId} onValueChange={setEmployeeId} disabled={isLoadingEmployees}>
-                        <SelectTrigger id="employeeId">
-                            <SelectValue placeholder={isLoadingEmployees ? "A carregar tècnics..." : "Selecciona un tècnic..."} />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {employees?.map(e => (
-                            <SelectItem key={e.id} value={e.id}>{e.firstName} {e.lastName}</SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
+                    </div>
+                  ))}
                 </div>
-                <div className="space-y-2">
-                    <Label htmlFor="serviceHourlyRate" className="flex items-center gap-2"><Euro className="h-4 w-4 text-muted-foreground" /> Preu/Hora Mà d'Obra</Label>
-                    <Input 
-                        id="serviceHourlyRate" 
-                        type="number" 
-                        value={serviceHourlyRate}
-                        onChange={(e) => setServiceHourlyRate(e.target.value === '' ? '' : Number(e.target.value))}
-                        placeholder="Preu per defecte"
-                    />
-                </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="customerId" className="flex items-center gap-2"><Users className="h-4 w-4 text-muted-foreground" /> Client</Label>
-                <div className="flex items-center gap-2">
-                    <Input value={customerName} readOnly disabled className="flex-grow bg-muted" />
-                    <Button type="button" variant="outline" onClick={() => setIsCustomerDialogOpen(true)}>
-                        Seleccionar
-                    </Button>
-                </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="projectName" className="flex items-center gap-2"><Briefcase className="h-4 w-4 text-muted-foreground" /> Nom de l'Obra</Label>
-              <Input id="projectName" placeholder="Ex: Reforma Client A" value={projectName} onChange={(e) => setProjectName(e.target.value)} list="project-names" />
-              <datalist id="project-names">
-                {projectNames.map((name) => (
-                  <option key={name} value={name} />
-                ))}
-              </datalist>
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="description" className="flex items-center gap-2"><FileText className="h-4 w-4 text-muted-foreground" /> Descripció del Servei</Label>
-              <Textarea id="description" placeholder="Descriu les tasques realitzades..." value={description} onChange={(e) => setDescription(e.target.value)} rows={3} />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="pendingTasks" className="flex items-center gap-2"><AlertTriangle className="h-4 w-4 text-muted-foreground" /> Pendents de l'Obra</Label>
-              <Textarea id="pendingTasks" placeholder="Descriu tasques o materials pendents..." value={pendingTasks} onChange={(e) => setPendingTasks(e.target.value)} rows={3} />
-            </div>
-            
-            <div className="space-y-4 rounded-lg border p-4">
-                <Label className="flex items-center gap-2 text-base font-semibold"><Package className="h-5 w-5 text-muted-foreground" /> Materials i Mà d'Obra</Label>
-                 <div className="space-y-3">
-                    {materials.map((material, index) => (
-                        <div key={index} className="grid grid-cols-1 md:grid-cols-12 gap-2 items-center">
-                            <Input
-                                type="text"
-                                placeholder="Descripció"
-                                value={material.description}
-                                onChange={(e) => handleMaterialChange(index, 'description', e.target.value)}
-                                className="col-span-12 md:col-span-5"
-                            />
-                            <div className="col-span-4 md:col-span-2 relative">
-                                <Input
-                                    type="number"
-                                    placeholder="Quant."
-                                    value={material.quantity}
-                                    onChange={(e) => handleMaterialChange(index, 'quantity', e.target.value)}
-                                    className="pl-2 pr-1"
-                                    min="0"
-                                    step="any"
-                                />
-                            </div>
-                            <div className="col-span-5 md:col-span-2 relative">
-                                <Input
-                                    type="number"
-                                    placeholder="Preu/u."
-                                    value={material.unitPrice}
-                                    onChange={(e) => handleMaterialChange(index, 'unitPrice', e.target.value)}
-                                    className="pl-7 pr-1"
-                                    min="0"
-                                    step="any"
-                                />
-                                <Euro className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                            </div>
-                            <div className="col-span-3 md:col-span-3 flex justify-end items-center gap-1">
-                                <Button type="button" variant="outline" size="icon" onClick={() => handleMaterialImageUploadClick(index)}>
-                                    <ImagePlus className="h-4 w-4" />
-                                </Button>
-                                {material.imageDataUrl && (
-                                    <Button type="button" variant="ghost" size="icon" onClick={() => removeMaterialImage(index)}>
-                                        <X className="h-4 w-4 text-destructive" />
-                                    </Button>
-                                )}
-                            </div>
-                            {material.imageDataUrl && (
-                                <div className="col-span-12 md:col-start-6">
-                                    <Image src={material.imageDataUrl} alt="Preview" width={64} height={64} className="rounded-md object-cover" />
-                                </div>
-                            )}
-                        </div>
-                    ))}
-                </div>
-                <Button type="button" variant="outline" size="sm" onClick={addMaterialInput} className="mt-2">
-                    <Plus className="mr-2 h-4 w-4" /> Afegir Línia
+                <Button type="button" variant="outline" size="sm" onClick={addAlbaranInput} className="mt-2">
+                  <Plus className="mr-2 h-4 w-4" /> Afegir Albarà
                 </Button>
-            </div>
+              </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="albarans" className="flex items-center gap-2"><Hash className="h-4 w-4 text-muted-foreground" /> Nº d'Albarà</Label>
-              <div className="space-y-2">
-                {albarans.map((albaran, index) => (
-                  <div key={index} className="flex items-center gap-2">
-                    <Input
-                      type="text"
-                      placeholder={`Albarà #${index + 1}`}
-                      value={albaran}
-                      onChange={(e) => handleAlbaranChange(index, e.target.value)}
-                    />
-                    {albarans.length > 1 && (
-                      <Button type="button" variant="ghost" size="icon" onClick={() => removeAlbaranInput(index)}>
+               <div className="space-y-2">
+                <Label className="flex items-center gap-2"><Camera className="h-4 w-4 text-muted-foreground" /> Fotos i Vídeos</Label>
+                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2 my-4">
+                  {media.map((m, index) => (
+                    <div key={index} className="relative group aspect-square rounded-md overflow-hidden">
+                      {m.type === 'image' ? (
+                        <Image src={m.dataUrl} alt={`Previsualització ${index + 1}`} fill style={{ objectFit: 'cover' }} sizes="100px" />
+                      ) : (
+                        <div className="w-full h-full bg-black flex items-center justify-center">
+                           <Video className="h-8 w-8 text-white" />
+                        </div>
+                      )}
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="icon"
+                        className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={() => removeMedia(index)}
+                      >
                         <X className="h-4 w-4" />
                       </Button>
-                    )}
-                  </div>
-                ))}
+                    </div>
+                  ))}
+                </div>
+                <div className="flex gap-2 flex-col sm:flex-row">
+                   <Button type="button" variant="outline" onClick={() => setShowCamera(true)} className="flex-1">
+                      <Camera className="mr-2 h-4 w-4" /> Usar Càmera
+                   </Button>
+                  <Label htmlFor="media-upload" className="flex-1 cursor-pointer inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2">
+                      <Plus className="mr-2 h-4 w-4" /> Pujar Fitxer
+                  </Label>
+                   <Input id="media-upload" type="file" multiple onChange={handleFileChange} accept="image/*" className="hidden" />
+                </div>
+                <p className="text-sm text-muted-foreground mt-2">{media.length} fitxer(s) seleccionat(s).</p>
               </div>
-              <Button type="button" variant="outline" size="sm" onClick={addAlbaranInput} className="mt-2">
-                <Plus className="mr-2 h-4 w-4" /> Afegir Albarà
-              </Button>
-            </div>
 
-             <div className="space-y-2">
-              <Label className="flex items-center gap-2"><Camera className="h-4 w-4 text-muted-foreground" /> Fotos i Vídeos</Label>
-              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2 my-4">
-                {media.map((m, index) => (
-                  <div key={index} className="relative group aspect-square rounded-md overflow-hidden">
-                    {m.type === 'image' ? (
-                      <Image src={m.dataUrl} alt={`Previsualització ${index + 1}`} fill style={{ objectFit: 'cover' }} sizes="100px" />
-                    ) : (
-                      <div className="w-full h-full bg-black flex items-center justify-center">
-                         <Video className="h-8 w-8 text-white" />
-                      </div>
-                    )}
-                    <Button
-                      type="button"
-                      variant="destructive"
-                      size="icon"
-                      className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
-                      onClick={() => removeMedia(index)}
-                    >
-                      <X className="h-4 w-4" />
+
+              <div className="flex flex-col sm:flex-row justify-between items-center pt-4 gap-4">
+                 <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button type="button" variant="destructive" className="w-full sm:w-auto">
+                      <Trash2 className="mr-2 h-4 w-4"/>
+                      Eliminar
                     </Button>
-                  </div>
-                ))}
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Estàs segur?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Aquesta acció no es pot desfer. Això eliminarà permanentment el registre del servei.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel·lar</AlertDialogCancel>
+                      <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90">Eliminar</AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+
+                <Button type="submit" className="bg-accent hover:bg-accent/90 text-accent-foreground w-full sm:w-auto">
+                  <Save className="mr-2 h-4 w-4"/>
+                  Desa els Canvis
+                </Button>
               </div>
-              <div className="flex gap-2 flex-col sm:flex-row">
-                 <Button type="button" variant="outline" onClick={() => setShowCamera(true)} className="flex-1">
-                    <Camera className="mr-2 h-4 w-4" /> Usar Càmera
-                 </Button>
-                <Label htmlFor="media-upload" className="flex-1 cursor-pointer inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2">
-                    <Plus className="mr-2 h-4 w-4" /> Pujar Fitxer
-                </Label>
-                 <Input id="media-upload" type="file" multiple onChange={handleFileChange} accept="image/*" className="hidden" />
-              </div>
-              <p className="text-sm text-muted-foreground mt-2">{media.length} fitxer(s) seleccionat(s).</p>
-            </div>
-
-
-            <div className="flex flex-col sm:flex-row justify-between items-center pt-4 gap-4">
-               <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button type="button" variant="destructive" className="w-full sm:w-auto">
-                    <Trash2 className="mr-2 h-4 w-4"/>
-                    Eliminar
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Estàs segur?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      Aquesta acció no es pot desfer. Això eliminarà permanentment el registre del servei.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel·lar</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90">Eliminar</AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-
-              <Button type="submit" className="bg-accent hover:bg-accent/90 text-accent-foreground w-full sm:w-auto">
-                <Save className="mr-2 h-4 w-4"/>
-                Desa els Canvis
-              </Button>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
-    </div>
+            </form>
+          </CardContent>
+        </Card>
+      </div>
+      <BottomNav />
+    </>
   );
 }

@@ -12,6 +12,8 @@ import { addDoc, collection, doc, query, orderBy } from 'firebase/firestore'
 import type { Employee, Customer, ServiceRecord } from '@/lib/types'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Label } from '@/components/ui/label'
+import { Header } from '@/components/Header'
+import { BottomNav } from '@/components/BottomNav'
 
 
 export default function NewServicePage() {
@@ -117,40 +119,42 @@ export default function NewServicePage() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto flex items-center justify-center" style={{ height: '70vh' }}>
-      <Card className="w-full text-center">
-        <CardHeader>
-          <CardTitle>Preparat per començar?</CardTitle>
-          <CardDescription>Selecciona un client (opcional) i clica el botó per iniciar un nou servei.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-            <div className="space-y-2 text-left">
-              <Label htmlFor="customerId" className="flex items-center gap-2"><Users className="h-4 w-4 text-muted-foreground" /> Client</Label>
-              <Select value={selectedCustomerId} onValueChange={setSelectedCustomerId} disabled={isLoadingCustomers}>
-                <SelectTrigger id="customerId">
-                  <SelectValue placeholder={isLoadingCustomers ? "A carregar clients..." : "Selecciona un client..."} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Cap client</SelectItem>
-                  {customers?.map(c => (
-                    <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <Button 
-                size="lg" 
-                className="w-full h-16 text-lg bg-accent hover:bg-accent/90 text-accent-foreground"
-                onClick={handleStartService}
-                disabled={isDataLoading || isStarting}
-            >
-                {isDataLoading ? <Loader2 className="mr-3 h-6 w-6 animate-spin" /> : <MapPin className="mr-3 h-6 w-6" />}
-                {isDataLoading ? "Carregant dades..." : (isStarting ? "Iniciant..." : "Iniciar Servei")}
-            </Button>
-        </CardContent>
-      </Card>
-    </div>
+    <>
+      <Header />
+      <div className="max-w-2xl mx-auto flex items-center justify-center" style={{ height: '70vh' }}>
+        <Card className="w-full text-center">
+          <CardHeader>
+            <CardTitle>Preparat per començar?</CardTitle>
+            <CardDescription>Selecciona un client (opcional) i clica el botó per iniciar un nou servei.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+              <div className="space-y-2 text-left">
+                <Label htmlFor="customerId" className="flex items-center gap-2"><Users className="h-4 w-4 text-muted-foreground" /> Client</Label>
+                <Select value={selectedCustomerId} onValueChange={setSelectedCustomerId} disabled={isLoadingCustomers}>
+                  <SelectTrigger id="customerId">
+                    <SelectValue placeholder={isLoadingCustomers ? "A carregar clients..." : "Selecciona un client..."} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Cap client</SelectItem>
+                    {customers?.map(c => (
+                      <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button 
+                  size="lg" 
+                  className="w-full h-16 text-lg bg-accent hover:bg-accent/90 text-accent-foreground"
+                  onClick={handleStartService}
+                  disabled={isDataLoading || isStarting}
+              >
+                  {isDataLoading ? <Loader2 className="mr-3 h-6 w-6 animate-spin" /> : <MapPin className="mr-3 h-6 w-6" />}
+                  {isDataLoading ? "Carregant dades..." : (isStarting ? "Iniciant..." : "Iniciar Servei")}
+              </Button>
+          </CardContent>
+        </Card>
+      </div>
+      <BottomNav />
+    </>
   )
 }
-
-    
