@@ -12,8 +12,6 @@ import { addDoc, collection, doc, query, orderBy } from 'firebase/firestore'
 import type { Employee, Customer, ServiceRecord } from '@/lib/types'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Label } from '@/components/ui/label'
-import { Header } from '@/components/Header'
-import { BottomNav } from '@/components/BottomNav'
 
 
 export default function NewServicePage() {
@@ -119,8 +117,6 @@ export default function NewServicePage() {
   }
 
   return (
-    <>
-      <Header />
       <div className="max-w-2xl mx-auto flex items-center justify-center" style={{ height: '70vh' }}>
         <Card className="w-full text-center">
           <CardHeader>
@@ -154,7 +150,5 @@ export default function NewServicePage() {
           </CardContent>
         </Card>
       </div>
-      <BottomNav />
-    </>
   )
 }

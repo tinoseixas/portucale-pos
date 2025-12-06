@@ -30,9 +30,8 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { useToast } from "@/hooks/use-toast"
-import { Header } from '@/components/Header'
-import { BottomNav } from '@/components/BottomNav'
 
+const ADMIN_EMAIL = 'tinoseixas@gmail.com';
 
 const userColors = [
   '#3b82f6', '#ef4444', '#10b981', '#f97316', '#8b5cf6', '#ec4899', '#f59e0b', '#14b8a6'
@@ -53,11 +52,13 @@ export default function DashboardPage() {
   const firestore = useFirestore();
   const router = useRouter();
   const { toast } = useToast();
+
+  const isAdmin = useMemo(() => user?.email === ADMIN_EMAIL, [user]);
   
-  // State for everyone
+  // State for data
   const [allServices, setAllServices] = useState<ServiceRecord[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
-  const [isLoadingAllData, setIsLoadingAllData] = useState(true);
+  const [isLoadingData, setIsLoadingData] = useState(true);
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
 
   // Filters state
@@ -66,41 +67,51 @@ export default function DashboardPage() {
   const [selectedProject, setSelectedProject] = useState<string>('all');
 
   useEffect(() => {
-    if (isUserLoading || !firestore || !user) {
-        // If the user is not logged in, we can stop loading.
-        if(!isUserLoading && !user) setIsLoadingAllData(false);
-        return;
-    };
+    if (isUserLoading || !firestore) return;
 
-    const fetchAdminData = async () => {
-        setIsLoadingAllData(true);
+    if (!user) {
+      setIsLoadingData(false);
+      return;
+    }
+    
+    const fetchData = async () => {
+        setIsLoadingData(true);
         try {
-          const employeeSnapshot = await getDocs(query(collection(firestore, 'employees')));
-          const employeesData = employeeSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Employee));
-          setEmployees(employeesData);
-          
-          const serviceSnapshot = await getDocs(query(collectionGroup(firestore, 'serviceRecords'), orderBy('arrivalDateTime', 'desc')));
-          let servicesData = serviceSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ServiceRecord));
-          
-          setAllServices(servicesData);
+            const employeeSnapshot = await getDocs(query(collection(firestore, 'employees')));
+            const employeesData = employeeSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Employee));
+            setEmployees(employeesData);
+
+            let servicesQuery;
+            if (isAdmin) {
+                // Admin gets all services
+                servicesQuery = query(collectionGroup(firestore, 'serviceRecords'), orderBy('arrivalDateTime', 'desc'));
+            } else {
+                // Regular user gets only their own services
+                servicesQuery = query(collection(firestore, `employees/${user.uid}/serviceRecords`), orderBy('arrivalDateTime', 'desc'));
+            }
+            
+            const serviceSnapshot = await getDocs(servicesQuery);
+            const servicesData = serviceSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ServiceRecord));
+            setAllServices(servicesData);
 
         } catch (error) {
-          console.error("Data fetch failed:", error);
-          if ((error as any)?.code === 'permission-denied') {
-             const contextualError = new FirestorePermissionError({
-              operation: 'list',
-              path: 'serviceRecords (collectionGroup)',
-            });
-            errorEmitter.emit('permission-error', contextualError);
-          }
-          setAllServices([]);
-          setEmployees([]);
+            console.error("Data fetch failed:", error);
+            if ((error as any)?.code === 'permission-denied' && isAdmin) {
+                const contextualError = new FirestorePermissionError({
+                    operation: 'list',
+                    path: 'serviceRecords (collectionGroup)',
+                });
+                errorEmitter.emit('permission-error', contextualError);
+            }
+            setAllServices([]);
+            setEmployees([]);
         } finally {
-          setIsLoadingAllData(false);
+            setIsLoadingData(false);
         }
-      };
-      fetchAdminData();
-  }, [firestore, isUserLoading, user]);
+    };
+    
+    fetchData();
+  }, [firestore, isUserLoading, user, isAdmin]);
   
   const projectNames = useMemo(() => {
     if (!allServices) return [];
@@ -113,7 +124,7 @@ export default function DashboardPage() {
     if (!allServices) return [];
 
     let filtered = allServices.filter(service => {
-        const userMatch = selectedUser === 'all' || service.employeeId === selectedUser;
+        const userMatch = !isAdmin || selectedUser === 'all' || service.employeeId === selectedUser;
         const dateMatch = !selectedDate || isSameDay(parseISO(service.arrivalDateTime), selectedDate);
         const projectMatch = selectedProject === 'all' || service.projectName === selectedProject;
         return userMatch && dateMatch && projectMatch;
@@ -123,7 +134,6 @@ export default function DashboardPage() {
     let currentColorIndex = 0;
     let lastDate: string | null = null;
     
-    // Reverse for processing, then reverse back for display
     const colored = filtered.slice().reverse().map(service => {
         const serviceDay = format(startOfDay(parseISO(service.arrivalDateTime)), 'yyyy-MM-dd');
         if (lastDate === null) {
@@ -139,15 +149,14 @@ export default function DashboardPage() {
     });
     return colored.reverse();
 
-  }, [allServices, selectedUser, selectedDate, selectedProject]);
+  }, [allServices, selectedUser, selectedDate, selectedProject, isAdmin]);
   
-  // Clear selected rows when filters change
   useEffect(() => {
     setSelectedRows([]);
   }, [filteredServices]);
 
   const services = filteredServices as ServiceWithRowColor[];
-  const isLoading = isLoadingAllData || isUserLoading;
+  const isLoading = isLoadingData || isUserLoading;
   
   const getEmployeeName = (employeeId: string) => {
     const employee = employees.find(e => e.id === employeeId);
@@ -155,7 +164,7 @@ export default function DashboardPage() {
   };
 
   const handleDeleteSelected = () => {
-    if (!firestore) return;
+    if (!firestore || !isAdmin) return;
     
     selectedRows.forEach(serviceId => {
       const service = allServices.find(s => s.id === serviceId);
@@ -191,67 +200,66 @@ export default function DashboardPage() {
   }
 
   return (
-    <>
-      <Header />
-      <div className="space-y-8">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold">Resum de Serveis</h1>
-            <p className="text-muted-foreground">Vista general de tots els registres.</p>
-          </div>
-          <div className="hidden md:flex items-center gap-2">
-              <Button asChild className="bg-accent hover:bg-accent/90 text-accent-foreground">
+    <div className="space-y-8">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Resum de Serveis</h1>
+          <p className="text-muted-foreground">{isAdmin ? "Vista general de tots els registres." : "Els teus serveis registrats."}</p>
+        </div>
+        <div className="hidden md:flex items-center gap-2">
+            <Button asChild className="bg-accent hover:bg-accent/90 text-accent-foreground">
+                <Link href="/dashboard/new">
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    Nou Servei
+                </Link>
+            </Button>
+        </div>
+      </div>
+      
+      {isLoading ? renderSkeletons() : (
+        (!services || services.length === 0) && (allServices.length === 0) ? (
+          <div className="text-center py-16 border-2 border-dashed rounded-lg">
+              <h2 className="text-xl font-semibold">No hi ha serveis registrats</h2>
+              <p className="text-muted-foreground">Comença afegint el teu primer servei del dia.</p>
+              <Button asChild className="mt-4 bg-accent hover:bg-accent/90 text-accent-foreground">
                   <Link href="/dashboard/new">
-                      <PlusCircle className="mr-2 h-4 w-4" />
-                      Nou Servei
+                  <PlusCircle className="mr-2 h-4 w-4" />
+                  Afegeix un Servei
                   </Link>
               </Button>
           </div>
-        </div>
-        
-        {isLoading ? renderSkeletons() : (
-          (!services || services.length === 0) && (allServices.length === 0) ? (
-            <div className="text-center py-16 border-2 border-dashed rounded-lg">
-                <h2 className="text-xl font-semibold">No hi ha serveis registrats</h2>
-                <p className="text-muted-foreground">Comença afegint el teu primer servei del dia.</p>
-                <Button asChild className="mt-4 bg-accent hover:bg-accent/90 text-accent-foreground">
-                    <Link href="/dashboard/new">
-                    <PlusCircle className="mr-2 h-4 w-4" />
-                    Afegeix un Servei
-                    </Link>
-                </Button>
-            </div>
-          ) : (
-              <Card>
-              <CardHeader>
-                  <div className="flex justify-between items-start flex-wrap gap-4">
-                      <div>
-                          <CardTitle>Tots els Serveis</CardTitle>
-                          <CardDescription>Visualitza, filtra i gestiona tots els registres de servei.</CardDescription>
-                      </div>
-                      {selectedRows.length > 0 && (
-                          <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                              <Button variant="destructive">
-                              <Trash2 className="mr-2 h-4 w-4" />
-                              Eliminar ({selectedRows.length})
-                              </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                              <AlertDialogHeader>
-                              <AlertDialogTitle>Estàs segur?</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                  Aquesta acció eliminarà permanentment {selectedRows.length} registre(s) de servei. Aquesta acció no es pot desfer.
-                              </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                              <AlertDialogCancel>Cancel·lar</AlertDialogCancel>
-                              <AlertDialogAction onClick={handleDeleteSelected} className="bg-destructive hover:bg-destructive/90">Eliminar</AlertDialogAction>
-                              </AlertDialogFooter>
-                          </AlertDialogContent>
-                          </AlertDialog>
-                      )}
-                  </div>
+        ) : (
+            <Card>
+            <CardHeader>
+                <div className="flex justify-between items-start flex-wrap gap-4">
+                    <div>
+                        <CardTitle>Serveis Registrats</CardTitle>
+                        <CardDescription>Visualitza, filtra i gestiona els registres de servei.</CardDescription>
+                    </div>
+                    {isAdmin && selectedRows.length > 0 && (
+                        <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                            <Button variant="destructive">
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Eliminar ({selectedRows.length})
+                            </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                            <AlertDialogHeader>
+                            <AlertDialogTitle>Estàs segur?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                                Aquesta acció eliminarà permanentment {selectedRows.length} registre(s) de servei. Aquesta acció no es pot desfer.
+                            </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel·lar</AlertDialogCancel>
+                            <AlertDialogAction onClick={handleDeleteSelected} className="bg-destructive hover:bg-destructive/90">Eliminar</AlertDialogAction>
+                            </AlertDialogFooter>
+                        </AlertDialogContent>
+                        </AlertDialog>
+                    )}
+                </div>
+                {isAdmin && (
                   <div className="flex flex-col sm:flex-row gap-4 pt-4 flex-wrap">
                       <Select value={selectedUser} onValueChange={setSelectedUser}>
                       <SelectTrigger className="w-full sm:w-[200px]">
@@ -309,83 +317,86 @@ export default function DashboardPage() {
                       </Button>
                       )}
                   </div>
-              </CardHeader>
-              <CardContent>
-                  <div className="overflow-x-auto">
-                      <Table>
-                      <TableHeader>
-                          <TableRow>
-                          <TableHead className="w-[40px] px-2">
-                              <Checkbox
-                                  checked={selectedRows.length > 0 && services.length > 0 && selectedRows.length === services.length}
-                                  onCheckedChange={(checked) => {
-                                  setSelectedRows(checked ? services.map(s => s.id) : []);
-                                  }}
-                                  aria-label="Seleccionar totes les files"
-                              />
-                          </TableHead>
-                          <TableHead className="w-[10px]"></TableHead>
-                          <TableHead>Funcionari</TableHead>
-                          <TableHead>Data</TableHead>
-                          <TableHead>Obra</TableHead>
-                          <TableHead>Descripció</TableHead>
-                          <TableHead>Última Modificació</TableHead>
-                          <TableHead className="text-right">Accions</TableHead>
-                          </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                          {services && services.length > 0 ? (services as ServiceWithRowColor[]).map(service => (
-                          <TableRow key={service.id} className={service.rowColor} data-state={selectedRows.includes(service.id) && "selected"}>
-                              <TableCell className="px-2">
-                                  <Checkbox
-                                      checked={selectedRows.includes(service.id)}
-                                      onCheckedChange={(checked) => {
-                                      setSelectedRows(
-                                          checked
-                                          ? [...selectedRows, service.id]
-                                          : selectedRows.filter((id) => id !== service.id)
-                                      );
-                                      }}
-                                      aria-label={`Seleccionar fila ${service.id}`}
-                                  />
-                              </TableCell>
-                              <TableCell>
-                              <div 
-                                  className="h-full w-1 rounded-full" 
-                                  style={{ backgroundColor: getUserColor(service.employeeId) }}
-                              />
-                              </TableCell>
-                              <TableCell className="font-medium">{getEmployeeName(service.employeeId)}</TableCell>
-                              <TableCell>{format(parseISO(service.arrivalDateTime), 'dd/MM/yyyy HH:mm')}</TableCell>
-                              <TableCell className="max-w-[200px] truncate">{service.projectName}</TableCell>
-                              <TableCell className="max-w-[300px] truncate">{service.description}</TableCell>
-                              <TableCell>
-                              {service.updatedAt ? format(parseISO(service.updatedAt), 'dd/MM/yy HH:mm') : '-'}
-                              </TableCell>
-                              <TableCell className="text-right">
-                              <Button variant="outline" size="sm" asChild>
-                                  <Link href={`/dashboard/edit/${service.id}?ownerId=${service.employeeId}`}>
-                                      <Edit className="mr-2 h-4 w-4" /> Detalls
-                                  </Link>
-                              </Button>
-                              </TableCell>
-                          </TableRow>
-                          )) : (
-                          <TableRow>
-                              <TableCell colSpan={8} className="h-24 text-center">
-                              No s'han trobat serveis per als filtres seleccionats.
-                              </TableCell>
-                          </TableRow>
-                          )}
-                      </TableBody>
-                      </Table>
-                  </div>
-              </CardContent>
-              </Card>
-          )
-        )}
-      </div>
-      <BottomNav />
-    </>
+                )}
+            </CardHeader>
+            <CardContent>
+                <div className="overflow-x-auto">
+                    <Table>
+                    <TableHeader>
+                        <TableRow>
+                        {isAdmin && (
+                            <TableHead className="w-[40px] px-2">
+                                <Checkbox
+                                    checked={selectedRows.length > 0 && services.length > 0 && selectedRows.length === services.length}
+                                    onCheckedChange={(checked) => {
+                                    setSelectedRows(checked ? services.map(s => s.id) : []);
+                                    }}
+                                    aria-label="Seleccionar totes les files"
+                                />
+                            </TableHead>
+                        )}
+                        <TableHead className="w-[10px]"></TableHead>
+                        {isAdmin && <TableHead>Funcionari</TableHead>}
+                        <TableHead>Data</TableHead>
+                        <TableHead>Obra</TableHead>
+                        <TableHead>Descripció</TableHead>
+                        <TableHead>Última Modificació</TableHead>
+                        <TableHead className="text-right">Accions</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {services && services.length > 0 ? (services as ServiceWithRowColor[]).map(service => (
+                        <TableRow key={service.id} className={isAdmin ? service.rowColor : ''} data-state={selectedRows.includes(service.id) && "selected"}>
+                            {isAdmin && (
+                                <TableCell className="px-2">
+                                    <Checkbox
+                                        checked={selectedRows.includes(service.id)}
+                                        onCheckedChange={(checked) => {
+                                        setSelectedRows(
+                                            checked
+                                            ? [...selectedRows, service.id]
+                                            : selectedRows.filter((id) => id !== service.id)
+                                        );
+                                        }}
+                                        aria-label={`Seleccionar fila ${service.id}`}
+                                    />
+                                </TableCell>
+                            )}
+                            <TableCell>
+                            <div 
+                                className="h-full w-1 rounded-full" 
+                                style={{ backgroundColor: getUserColor(service.employeeId) }}
+                            />
+                            </TableCell>
+                            {isAdmin && <TableCell className="font-medium">{getEmployeeName(service.employeeId)}</TableCell>}
+                            <TableCell>{format(parseISO(service.arrivalDateTime), 'dd/MM/yyyy HH:mm')}</TableCell>
+                            <TableCell className="max-w-[200px] truncate">{service.projectName}</TableCell>
+                            <TableCell className="max-w-[300px] truncate">{service.description}</TableCell>
+                            <TableCell>
+                            {service.updatedAt ? format(parseISO(service.updatedAt), 'dd/MM/yy HH:mm') : '-'}
+                            </TableCell>
+                            <TableCell className="text-right">
+                            <Button variant="outline" size="sm" asChild>
+                                <Link href={`/dashboard/edit/${service.id}?ownerId=${service.employeeId}`}>
+                                    <Edit className="mr-2 h-4 w-4" /> Detalls
+                                </Link>
+                            </Button>
+                            </TableCell>
+                        </TableRow>
+                        )) : (
+                        <TableRow>
+                            <TableCell colSpan={isAdmin ? 8 : 6} className="h-24 text-center">
+                            {isAdmin ? "No s'han trobat serveis per als filtres seleccionats." : "No tens cap servei registrat."}
+                            </TableCell>
+                        </TableRow>
+                        )}
+                    </TableBody>
+                    </Table>
+                </div>
+            </CardContent>
+            </Card>
+        )
+      )}
+    </div>
   )
 }

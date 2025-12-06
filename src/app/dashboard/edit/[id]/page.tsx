@@ -34,8 +34,6 @@ import { ca } from 'date-fns/locale'
 import { cn } from '@/lib/utils'
 import { CustomerSelectionDialog } from '@/components/CustomerSelectionDialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Header } from '@/components/Header'
-import { BottomNav } from '@/components/BottomNav'
 
 type MediaFile = {
   type: 'image' | 'video';
@@ -410,8 +408,6 @@ export default function EditServicePage() {
   }
 
   return (
-    <>
-      <Header />
       <div className="max-w-2xl mx-auto space-y-8">
         <Button variant="ghost" onClick={() => router.back()} className="mb-4 -ml-4">
           <ArrowLeft className="mr-2 h-4 w-4" />
@@ -691,7 +687,5 @@ export default function EditServicePage() {
           </CardContent>
         </Card>
       </div>
-      <BottomNav />
-    </>
   );
 }

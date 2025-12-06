@@ -17,8 +17,6 @@ import { doc } from 'firebase/firestore';
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import type { Employee } from '@/lib/types';
 import { Camera, Save, ArrowLeft, Phone } from 'lucide-react';
-import { Header } from '@/components/Header';
-import { BottomNav } from '@/components/BottomNav';
 
 
 const profileSchema = z.object({
@@ -148,8 +146,6 @@ export default function ProfilePage() {
   const displayAvatar = avatarUrl || user?.photoURL;
 
   return (
-    <>
-      <Header />
       <div className="max-w-2xl mx-auto">
         <Card>
           <CardHeader>
@@ -232,7 +228,5 @@ export default function ProfilePage() {
           </CardContent>
         </Card>
       </div>
-      <BottomNav />
-    </>
   );
 }
