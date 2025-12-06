@@ -1,78 +1,17 @@
-diff --git a/node_modules/next/dist/build/index.js b/node_modules/next/dist/build/index.js
-index 983226a..8348a73 100644
---- a/node_modules/next/dist/build/index.js
-+++ b/node_modules/next/dist/build/index.js
-@@ -1071,9 +1071,7 @@
-     const { GSP_NO_RETURNED_VALUE, GSSP_NO_RETURNED_VALUE, SKIPPED_PAGE } = require("next/dist/shared/lib/constants");
-     const { bold, green, red, yellow, cyan } = (0, _picocolors).default;
-     const { getProperError } = require("next/dist/lib/errors");
--    const { isBlockedPage } = require("next/dist/build/utils");
-     const { builtinModules } = require("node:module");
--    const { PAGES_DIR_ALIAS, APP_DIR_ALIAS, ROOT_DIR_ALIAS, INSTRUMENTATION_HOOK_FILENAME } = require("next/dist/lib/constants");
-     const { RSC_MODULE_TYPES } = require("next/dist/shared/lib/constants");
-     const { getClientBuildManifest } = require("next/dist/build/webpack/plugins/build-manifest-plugin");
-     const { getStartServerInfo, logStartInfo } = require("next/dist/server/lib/start-server");
-@@ -2046,13 +2044,7 @@
-         const pageKeys = {
-             static: [],
-             server: [],
--            app: [],
--            edge: []
--        };
--        const getPageRuntime = async (page, isApp = false)=>{
--            if (isBlockedPage(page)) {
--                return [
--                    undefined,
--                    undefined
--                ];
--            }
-+            app: []
-         };
-         const ROUTE_TYPE_PAGES = "pages";
-         const ROUTE_TYPE_APP = "app";
-diff --git a/node_modules/next/dist/build/utils.js b/node_modules/next/dist/build/utils.js
-index 0535359..a31e846 100644
---- a/node_modules/next/dist/build/utils.js
-+++ b/node_modules/next/dist/build/utils.js
-@@ -1280,10 +1280,6 @@
-         return;
+diff --git a/node_modules/next/dist/server/web/sandbox/sandbox.js b/node_modules/next/dist/server/web/sandbox/sandbox.js
+index 45b5974..5f53298 100644
+--- a/node_modules/next/dist/server/web/sandbox/sandbox.js
++++ b/node_modules/next/dist/server/web/sandbox/sandbox.js
+@@ -299,9 +299,9 @@
      }
- }
--const BLOCKED_PAGES = [
--    "/_document",
--    "/_app"
--];
- function isBlockedPage(page) {
-     return BLOCKED_PAGES.includes(page);
- }
-diff --git a/node_modules/next/dist/server/dev/next-dev-server.js b/node_modules/next/dist/server/dev/next-dev-server.js
-index b82798e..a1a4c0a 100644
---- a/node_modules/next/dist/server/dev/next-dev-server.js
-+++ b/node_modules/next/dist/server/dev/next-dev-server.js
-@@ -1762,9 +1762,6 @@
-         }
-         const isPagesPage = this.isPagesPage(pathname);
-         const isAppPage = this.isAppPage(pathname);
--        if (isPagesPage && (0, _utils).isBlockedPage(pathname)) {
--            return this.render404(req, res, parsedUrl);
--        }
-         const pageIsDynamic = (0, _utils).isDynamicRoute(pathname);
-         if (isAppPage) {
-             this.logFirstRequest(req, "app", pathname);
-diff --git a/node_modules/next/dist/server/next-server.js b/node_modules/next/dist/server/next-server.js
-index a3522ba..e14e13d 100644
---- a/node_modules/next/dist/server/next-server.js
-+++ b/node_modules/next/dist/server/next-server.js
-@@ -1071,9 +1071,6 @@
-         const isPagesPage = this.isPagesPage(pathname);
-         const isAppPage = this.isAppPage(pathname);
-         const isCompiling = await this.isCompiling(req, isAppPage ? "app" : "pages", pathname);
--        if (isPagesPage && (0, _utils).isBlockedPage(pathname)) {
--            return {
--                type: "render",
--                result: await this.render404(req, res, parsedUrl)
--            };
--        }
-         if (isCompiling) {
-             return {
-                 type: "compile"
+     const { run, runWith, dispose, edgeFunctions, wasm, ...relative } = await (0, _edgeBundler).createEdgeFunction({
+         ...options,
+-        useCache: true,
++        useCache: false,
+         // Bundling development is not necessary.
+-        development: false
++        development: true
+     });
+     const webRequest = toWebRequest(request);
+     const edgeFunction = {
+
