@@ -1,35 +1,78 @@
---- a/node_modules/next/dist/server/web/sandbox/base-sandbox.js
-+++ b/node_modules/next/dist/server/web/sandbox/base-sandbox.js
-@@ -191,9 +191,7 @@
-         // that the code is being run in a sandbox.
-         this.context.process = new Proxy(this.context.process, {
-             get: (target, prop, receiver)=>{
--                if (prop === "env") {
--                    return new Proxy(target.env, {
--                        get: (target, prop, receiver)=>{
--                            if (prop === "__NEXT_IS_SANDBOX") {
--                                return "true";
--                            }
--                            // TODO: remove this when we can move to `next-app-loader`
--                            // and `next-edge-app-loader` which will not have this issue.
--                            if (String(prop).startsWith("NEXT_")) {
--                                return undefined;
--                            }
--                            return Reflect.get(target, prop, receiver);
--                        },
--                        has: (target, prop)=>{
--                            if (prop === "__NEXT_IS_SANDBOX") {
--                                return true;
--                            }
--                            if (String(prop).startsWith("NEXT_")) {
--                                return false;
--                            }
--                            return Reflect.has(target, prop);
--                        }
--                    });
--                }
--                return Reflect.get(target, prop, receiver);
-+                return Reflect.get(target, prop, receiver)
-             }
-         });
+diff --git a/node_modules/next/dist/build/index.js b/node_modules/next/dist/build/index.js
+index 983226a..8348a73 100644
+--- a/node_modules/next/dist/build/index.js
++++ b/node_modules/next/dist/build/index.js
+@@ -1071,9 +1071,7 @@
+     const { GSP_NO_RETURNED_VALUE, GSSP_NO_RETURNED_VALUE, SKIPPED_PAGE } = require("next/dist/shared/lib/constants");
+     const { bold, green, red, yellow, cyan } = (0, _picocolors).default;
+     const { getProperError } = require("next/dist/lib/errors");
+-    const { isBlockedPage } = require("next/dist/build/utils");
+     const { builtinModules } = require("node:module");
+-    const { PAGES_DIR_ALIAS, APP_DIR_ALIAS, ROOT_DIR_ALIAS, INSTRUMENTATION_HOOK_FILENAME } = require("next/dist/lib/constants");
+     const { RSC_MODULE_TYPES } = require("next/dist/shared/lib/constants");
+     const { getClientBuildManifest } = require("next/dist/build/webpack/plugins/build-manifest-plugin");
+     const { getStartServerInfo, logStartInfo } = require("next/dist/server/lib/start-server");
+@@ -2046,13 +2044,7 @@
+         const pageKeys = {
+             static: [],
+             server: [],
+-            app: [],
+-            edge: []
+-        };
+-        const getPageRuntime = async (page, isApp = false)=>{
+-            if (isBlockedPage(page)) {
+-                return [
+-                    undefined,
+-                    undefined
+-                ];
+-            }
++            app: []
+         };
+         const ROUTE_TYPE_PAGES = "pages";
+         const ROUTE_TYPE_APP = "app";
+diff --git a/node_modules/next/dist/build/utils.js b/node_modules/next/dist/build/utils.js
+index 0535359..a31e846 100644
+--- a/node_modules/next/dist/build/utils.js
++++ b/node_modules/next/dist/build/utils.js
+@@ -1280,10 +1280,6 @@
+         return;
      }
+ }
+-const BLOCKED_PAGES = [
+-    "/_document",
+-    "/_app"
+-];
+ function isBlockedPage(page) {
+     return BLOCKED_PAGES.includes(page);
+ }
+diff --git a/node_modules/next/dist/server/dev/next-dev-server.js b/node_modules/next/dist/server/dev/next-dev-server.js
+index b82798e..a1a4c0a 100644
+--- a/node_modules/next/dist/server/dev/next-dev-server.js
++++ b/node_modules/next/dist/server/dev/next-dev-server.js
+@@ -1762,9 +1762,6 @@
+         }
+         const isPagesPage = this.isPagesPage(pathname);
+         const isAppPage = this.isAppPage(pathname);
+-        if (isPagesPage && (0, _utils).isBlockedPage(pathname)) {
+-            return this.render404(req, res, parsedUrl);
+-        }
+         const pageIsDynamic = (0, _utils).isDynamicRoute(pathname);
+         if (isAppPage) {
+             this.logFirstRequest(req, "app", pathname);
+diff --git a/node_modules/next/dist/server/next-server.js b/node_modules/next/dist/server/next-server.js
+index a3522ba..e14e13d 100644
+--- a/node_modules/next/dist/server/next-server.js
++++ b/node_modules/next/dist/server/next-server.js
+@@ -1071,9 +1071,6 @@
+         const isPagesPage = this.isPagesPage(pathname);
+         const isAppPage = this.isAppPage(pathname);
+         const isCompiling = await this.isCompiling(req, isAppPage ? "app" : "pages", pathname);
+-        if (isPagesPage && (0, _utils).isBlockedPage(pathname)) {
+-            return {
+-                type: "render",
+-                result: await this.render404(req, res, parsedUrl)
+-            };
+-        }
+         if (isCompiling) {
+             return {
+                 type: "compile"
