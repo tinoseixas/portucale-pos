@@ -5,8 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { PlusCircle, List, Calendar as CalendarIcon, User, Edit, Search, Trash2, Briefcase } from 'lucide-react'
-import { ServiceCard } from '@/components/ServiceCard'
-import { ServiceCalendar } from '@/components/ServiceCalendar'
+// import { ServiceCalendar } from '@/components/ServiceCalendar'
 import type { ServiceRecord, Employee } from '@/lib/types'
 import { useCollection, useUser, useFirestore, useMemoFirebase, errorEmitter, FirestorePermissionError, deleteDocumentNonBlocking } from '@/firebase';
 import { collection, query, orderBy, getDocs, collectionGroup, doc } from 'firebase/firestore';

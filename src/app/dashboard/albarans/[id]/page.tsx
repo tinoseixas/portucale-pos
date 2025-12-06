@@ -8,7 +8,7 @@ import type { Customer, ServiceRecord, Albaran, Employee } from '@/lib/types'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { FileDown, Loader2, ArrowLeft, Trash2 } from 'lucide-react'
-import jsPDF from 'jspdf'
+// import jsPDF from 'jspdf'
 import { ReportPreview } from '@/components/ReportPreview'
 import {
   AlertDialog,
@@ -107,24 +107,28 @@ export default function AlbaranDetailPage() {
         if (!reportElement) return;
 
         setIsGenerating(true);
+        toast({ title: 'La exportació a PDF està temporalment desactivada.' });
+        setIsGenerating(false);
 
-        const pdf = new jsPDF({
-            orientation: 'portrait',
-            unit: 'pt',
-            format: 'a4',
-        });
+        // const { default: jsPDF } = await import('jspdf');
 
-        await pdf.html(reportElement, {
-            callback: function (doc) {
-                const fileName = `Albara_${albaran?.albaranNumber || albaranId}_${albaran?.projectName || ''}.pdf`.replace(/ /g, '_');
-                doc.save(fileName);
-                setIsGenerating(false);
-            },
-            margin: [40, 40, 40, 40],
-            autoPaging: 'text',
-            width: 595, // A4 width in points
-            windowWidth: 1024, // Simulate a wider screen for rendering
-        });
+        // const pdf = new jsPDF({
+        //     orientation: 'portrait',
+        //     unit: 'pt',
+        //     format: 'a4',
+        // });
+
+        // await pdf.html(reportElement, {
+        //     callback: function (doc) {
+        //         const fileName = `Albara_${albaran?.albaranNumber || albaranId}_${albaran?.projectName || ''}.pdf`.replace(/ /g, '_');
+        //         doc.save(fileName);
+        //         setIsGenerating(false);
+        //     },
+        //     margin: [40, 40, 40, 40],
+        //     autoPaging: 'text',
+        //     width: 595, // A4 width in points
+        //     windowWidth: 1024, // Simulate a wider screen for rendering
+        // });
     };
     
     const isLoading = isUserLoading || isLoadingAlbaran || isLoadingData || isLoadingEmployees;
