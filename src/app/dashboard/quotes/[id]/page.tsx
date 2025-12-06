@@ -8,7 +8,6 @@ import type { Customer, Quote as QuoteType } from '@/lib/types'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { FileDown, Loader2, ArrowLeft, Trash2 } from 'lucide-react'
-// import jsPDF from 'jspdf'
 import { QuotePreview } from '@/components/QuotePreview'
 import {
   AlertDialog,
@@ -69,25 +68,6 @@ export default function QuoteDetailPage() {
         setIsGenerating(true);
         toast({ title: 'La exportació a PDF està temporalment desactivada.' });
         setIsGenerating(false);
-        // const { default: jsPDF } = await import('jspdf');
-
-        // const pdf = new jsPDF({
-        //     orientation: 'portrait',
-        //     unit: 'pt',
-        //     format: 'a4',
-        // });
-
-        // await pdf.html(quoteElement, {
-        //     callback: function (doc) {
-        //         const fileName = `Pressupost_${quote?.quoteNumber || quoteId}_${quote?.projectName || ''}.pdf`.replace(/ /g, '_');
-        //         doc.save(fileName);
-        //         setIsGenerating(false);
-        //     },
-        //     margin: [40, 40, 40, 40],
-        //     autoPaging: 'text',
-        //     width: 595, // A4 width in points
-        //     windowWidth: 1024,
-        // });
     };
     
     const isLoading = isUserLoading || isLoadingQuote;
