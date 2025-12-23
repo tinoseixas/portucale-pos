@@ -16,7 +16,7 @@ import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import type { Employee } from '@/lib/types';
-import { Camera, Save, ArrowLeft, Phone } from 'lucide-react';
+import { Camera, Save, ArrowLeft, Phone, Euro } from 'lucide-react';
 
 
 const profileSchema = z.object({
@@ -24,6 +24,7 @@ const profileSchema = z.object({
   lastName: z.string().min(1, 'El cognom és obligatori'),
   employeeId: z.string().min(1, "L'ID d'empleat és obligatori"),
   phoneNumber: z.string().optional(),
+  hourlyRate: z.number().min(0, 'El preu ha de ser un número positiu').optional(),
 });
 
 type ProfileFormValues = z.infer<typeof profileSchema>;
@@ -55,6 +56,7 @@ export default function ProfilePage() {
       lastName: '',
       employeeId: '',
       phoneNumber: '',
+      hourlyRate: 0,
     },
   });
 
@@ -71,6 +73,7 @@ export default function ProfilePage() {
         lastName: employee.lastName,
         employeeId: employee.employeeId,
         phoneNumber: employee.phoneNumber || '',
+        hourlyRate: employee.hourlyRate || 0,
       });
       if (employee.avatar) {
         setAvatarUrl(employee.avatar);
@@ -144,6 +147,7 @@ export default function ProfilePage() {
   }
   
   const displayAvatar = avatarUrl || user?.photoURL;
+  const isUserAdmin = employee?.role === 'admin';
 
   return (
       <div className="max-w-2xl mx-auto">
@@ -212,6 +216,25 @@ export default function ProfilePage() {
                   render={({ field }) => <Input id="phoneNumber" type="tel" placeholder="600123456" {...field} />}
                 />
                 {errors.phoneNumber && <p className="text-sm text-destructive">{errors.phoneNumber.message}</p>}
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="hourlyRate" className="flex items-center gap-2"><Euro className="h-4 w-4 text-muted-foreground" /> Preu per Hora</Label>
+                <Controller
+                    name="hourlyRate"
+                    control={control}
+                    render={({ field }) => <Input 
+                        id="hourlyRate" 
+                        type="number" 
+                        placeholder="Ex: 25.50" 
+                        {...field} 
+                        onChange={e => field.onChange(parseFloat(e.target.value) || 0)}
+                        value={field.value || ''}
+                        disabled={!isUserAdmin}
+                    />}
+                />
+                {errors.hourlyRate && <p className="text-sm text-destructive">{errors.hourlyRate.message}</p>}
+                 {!isUserAdmin && <p className="text-xs text-muted-foreground mt-1">Només els administradors poden canviar el preu per hora.</p>}
               </div>
 
               <div className="flex justify-between items-center pt-4">

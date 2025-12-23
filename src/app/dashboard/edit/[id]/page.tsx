@@ -363,6 +363,9 @@ export default function EditServicePage() {
       updatedAt: new Date().toISOString(),
     }
 
+    // Remove serviceHourlyRate before updating
+    delete updatedData.serviceHourlyRate;
+
     updateDocumentNonBlocking(serviceDocRef, updatedData)
 
     toast({
@@ -494,16 +497,6 @@ export default function EditServicePage() {
                               ))}
                           </SelectContent>
                       </Select>
-                  </div>
-                  <div className="space-y-2">
-                      <Label htmlFor="serviceHourlyRate" className="flex items-center gap-2"><Euro className="h-4 w-4 text-muted-foreground" /> Preu/Hora Mà d'Obra</Label>
-                      <Input 
-                          id="serviceHourlyRate" 
-                          type="number" 
-                          value={serviceHourlyRate}
-                          onChange={(e) => setServiceHourlyRate(e.target.value === '' ? '' : Number(e.target.value))}
-                          placeholder="Preu per defecte"
-                      />
                   </div>
               </div>
 

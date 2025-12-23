@@ -32,7 +32,7 @@ export interface Employee {
   email?: string;
   phoneNumber?: string;
   role?: 'admin' | 'user';
-  hourlyRate?: number; // Default hourly rate
+  hourlyRate: number; // Default hourly rate - changed to required
 }
 
 export interface Customer {
