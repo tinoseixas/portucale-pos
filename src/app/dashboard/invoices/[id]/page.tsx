@@ -39,6 +39,7 @@ export default function InvoiceDetailPage() {
     const reportRef = useRef<HTMLDivElement>(null)
     const [services, setServices] = useState<ServiceRecord[]>([])
     const [employees, setEmployees] = useState<Employee[]>([]);
+    const [isLoadingData, setIsLoadingData] = useState(true);
 
 
     const invoiceDocRef = useMemoFirebase(() => firestore && invoiceId ? doc(firestore, 'invoices', invoiceId) : null, [firestore, invoiceId])
@@ -56,9 +57,13 @@ export default function InvoiceDetailPage() {
     }, [isUserLoading, user, router])
     
      useEffect(() => {
-        if (!firestore || !invoice?.sourceId) return;
+        if (!firestore || !invoice?.sourceId) {
+            setIsLoadingData(false);
+            return;
+        }
 
         const fetchData = async () => {
+            setIsLoadingData(true);
             try {
                 // Fetch all employees first
                 const employeesSnap = await getDocs(query(collection(firestore, 'employees')));
@@ -85,6 +90,8 @@ export default function InvoiceDetailPage() {
             } catch (e) {
                 console.error("Error fetching invoice details:", e);
                 toast({ variant: 'destructive', title: 'Error', description: 'No s\'han pogut carregar els detalls dels serveis.' });
+            } finally {
+                setIsLoadingData(false);
             }
         };
 
@@ -141,7 +148,7 @@ export default function InvoiceDetailPage() {
         }
     };
     
-    const isLoading = isUserLoading || isLoadingInvoice || isLoadingCustomer;
+    const isLoading = isUserLoading || isLoadingInvoice || isLoadingCustomer || isLoadingData;
     
     useEffect(() => {
         if (shouldExport && !isLoading && !isGenerating && invoice) {
@@ -222,7 +229,7 @@ export default function InvoiceDetailPage() {
 
                         <Button
                             onClick={handleExportPDF}
-                            disabled={isGenerating}
+                            disabled={isGenerating || isLoading}
                         >
                             {isGenerating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileDown className="mr-2 h-4 w-4" />}
                             Exportar PDF
