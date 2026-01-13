@@ -23,6 +23,8 @@ import {
 import { useToast } from '@/hooks/use-toast'
 import { AdminGate } from '@/components/AdminGate'
 import { Badge } from '@/components/ui/badge'
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 
 export default function InvoiceDetailPage() {
     const firestore = useFirestore()
@@ -95,8 +97,48 @@ export default function InvoiceDetailPage() {
         if (!reportElement) return;
 
         setIsGenerating(true);
-        toast({ title: 'La exportació a PDF està temporalment desactivada.' });
-        setIsGenerating(false);
+        toast({ title: 'Generant PDF...', description: 'Això pot trigar un moment.' });
+
+        try {
+            const canvas = await html2canvas(reportElement, {
+                scale: 2,
+                useCORS: true,
+                logging: false,
+            });
+
+            const imgData = canvas.toDataURL('image/png');
+            const pdf = new jsPDF('p', 'mm', 'a4');
+            const pdfWidth = pdf.internal.pageSize.getWidth();
+            const pdfHeight = pdf.internal.pageSize.getHeight();
+            const canvasWidth = canvas.width;
+            const canvasHeight = canvas.height;
+            const ratio = canvasWidth / canvasHeight;
+            const imgWidth = pdfWidth;
+            const imgHeight = imgWidth / ratio;
+
+            let heightLeft = imgHeight;
+            let position = 0;
+
+            pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+            heightLeft -= pdfHeight;
+
+            while (heightLeft > 0) {
+                position = heightLeft - imgHeight;
+                pdf.addPage();
+                pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+                heightLeft -= pdfHeight;
+            }
+
+            pdf.save(`Factura-${String(invoice?.invoiceNumber).padStart(4, '0')}.pdf`);
+
+            toast({ title: 'PDF Generat!', description: 'L\'exportació s\'ha completat correctament.' });
+
+        } catch (error) {
+            console.error("Error en generar el PDF:", error);
+            toast({ variant: 'destructive', title: 'Error', description: 'No s\'ha pogut generar el PDF.' });
+        } finally {
+            setIsGenerating(false);
+        }
     };
     
     const isLoading = isUserLoading || isLoadingInvoice || isLoadingCustomer;
