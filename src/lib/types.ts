@@ -105,6 +105,7 @@ export interface Invoice {
     sourceType?: 'albaran' | 'quote';
     status: 'pendent' | 'pagada' | 'parcialment pagada';
     paymentDate?: string;
+    applyIva?: boolean;
 }
 
 export interface Receipt {

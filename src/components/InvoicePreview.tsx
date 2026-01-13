@@ -13,12 +13,13 @@ interface InvoicePreviewProps {
   invoiceNumber?: number;
   services: ServiceRecord[];
   employees: Employee[];
+  applyIva?: boolean;
 }
 
 // --- Component ---
-export const InvoicePreview = forwardRef<HTMLDivElement, InvoicePreviewProps>(({ customer, projectName, invoiceNumber, services, employees }, ref) => {
+export const InvoicePreview = forwardRef<HTMLDivElement, InvoicePreviewProps>(({ customer, projectName, invoiceNumber, services, employees, applyIva = true }, ref) => {
     
-    const { subtotal, iva, totalGeneral } = useMemo(() => calculateTotalAmount(services, employees), [services, employees]);
+    const { subtotal, iva, totalGeneral } = useMemo(() => calculateTotalAmount(services, employees, applyIva), [services, employees, applyIva]);
     
     const getEmployeeName = (employeeId?: string) => {
         if (!employeeId || !employees) return 'Tècnic no assignat';
@@ -176,10 +177,12 @@ export const InvoicePreview = forwardRef<HTMLDivElement, InvoicePreviewProps>(({
                             <span className="font-semibold text-gray-700">Subtotal:</span>
                             <span className="font-medium tabular-nums">{subtotal.toFixed(2)} €</span>
                         </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                            <span className="font-semibold text-gray-700">IGI ({String(calculateTotalAmount([], []).iva).slice(2, 4)}%):</span>
-                            <span className="font-medium tabular-nums">{iva.toFixed(2)} €</span>
-                        </div>
+                        {applyIva && (
+                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                <span className="font-semibold text-gray-700">IGI ({String(calculateTotalAmount([], []).iva).slice(2, 4)}%):</span>
+                                <span className="font-medium tabular-nums">{iva.toFixed(2)} €</span>
+                            </div>
+                        )}
                         <Separator />
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }} className="font-bold text-base">
                             <span>Total General:</span>

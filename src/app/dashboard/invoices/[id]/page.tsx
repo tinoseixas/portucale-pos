@@ -248,6 +248,7 @@ export default function InvoiceDetailPage() {
                             invoiceNumber={invoice.invoiceNumber}
                             services={services}
                             employees={employees}
+                            applyIva={invoice.applyIva}
                         />
                     </CardContent>
                 </Card>

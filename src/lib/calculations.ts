@@ -40,7 +40,7 @@ export function calculateTotalMinutes(services: ServiceRecord[]): number {
     }, 0);
 }
 
-export function calculateTotalAmount(services: ServiceRecord[], employees: Employee[]): {
+export function calculateTotalAmount(services: ServiceRecord[], employees: Employee[], applyIva: boolean = true): {
     subtotal: number,
     iva: number,
     totalGeneral: number,
@@ -61,7 +61,7 @@ export function calculateTotalAmount(services: ServiceRecord[], employees: Emplo
     const materialsSubtotal = allMaterials.reduce((acc, material) => acc + (material.quantity * material.unitPrice), 0);
     
     const subtotal = materialsSubtotal + laborCost;
-    const iva = subtotal * IVA_RATE;
+    const iva = applyIva ? subtotal * IVA_RATE : 0;
     const totalGeneral = subtotal + iva;
     
     return {

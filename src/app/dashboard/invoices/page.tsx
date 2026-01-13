@@ -30,6 +30,8 @@ export default function InvoicesPage() {
     const [isSaving, setIsSaving] = useState(false);
     
     const [servicesForInvoice, setServicesForInvoice] = useState<ServiceRecord[]>([]);
+    const [applyIva, setApplyIva] = useState<boolean>(true);
+
     
     const customersQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'customers'), orderBy('name', 'asc')) : null, [firestore]);
     const { data: customers, isLoading: isLoadingCustomers } = useCollection<Customer>(customersQuery);
@@ -128,7 +130,7 @@ export default function InvoicesPage() {
                 return newNumber;
             });
             
-            const { laborCost, totalGeneral } = calculateTotalAmount(servicesForInvoice, employees);
+            const { laborCost, totalGeneral } = calculateTotalAmount(servicesForInvoice, employees, applyIva);
 
             const invoiceRef = doc(collection(firestore, "invoices"));
             const invoiceData: Omit<Invoice, 'id'> = {
@@ -143,6 +145,7 @@ export default function InvoicesPage() {
                 sourceId: selectedAlbaranIds.join(','),
                 sourceType: 'albaran',
                 status: 'pendent',
+                applyIva: applyIva,
             };
             
             const batch = writeBatch(firestore);
@@ -244,6 +247,21 @@ export default function InvoicesPage() {
                                 </div>
                             </div>
                         )}
+                        
+                        <div className="flex items-center space-x-2">
+                            <Checkbox
+                                id="apply-iva"
+                                checked={applyIva}
+                                onCheckedChange={(checked) => setApplyIva(!!checked)}
+                            />
+                            <label
+                                htmlFor="apply-iva"
+                                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                            >
+                                Aplicar IGI (IVA) a la factura
+                            </label>
+                        </div>
+
 
                         <div className="flex justify-end pt-4 gap-2 flex-wrap">
                              <Button onClick={() => handleSaveInvoice(false)} disabled={isSaving || servicesForInvoice.length === 0}>
@@ -269,6 +287,7 @@ export default function InvoicesPage() {
                              projectName={projectName}
                              services={servicesForInvoice}
                              employees={employees || []}
+                             applyIva={applyIva}
                            />
                         </CardContent>
                     </Card>
