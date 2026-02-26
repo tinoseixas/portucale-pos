@@ -27,12 +27,21 @@ interface QuotePreviewProps {
 // --- Component ---
 export const QuotePreview = forwardRef<HTMLDivElement, QuotePreviewProps>(({ customer, projectName, items, labor, quoteNumber }, ref) => {
 
-    const materialsSubtotal = useMemo(() => {
-        return items.reduce((acc, item) => {
+    const { materialsSubtotal, totalDiscountAmount } = useMemo(() => {
+        let subtotalAccumulator = 0;
+        let discountAccumulator = 0;
+        
+        items.forEach(item => {
             const itemTotal = item.quantity * item.unitPrice;
             const discountAmount = itemTotal * ((item.discount || 0) / 100);
-            return acc + (itemTotal - discountAmount);
-        }, 0);
+            subtotalAccumulator += (itemTotal - discountAmount);
+            discountAccumulator += discountAmount;
+        });
+        
+        return { 
+            materialsSubtotal: subtotalAccumulator, 
+            totalDiscountAmount: discountAccumulator 
+        };
     }, [items]);
 
     const subtotal = materialsSubtotal + labor.cost;
@@ -91,8 +100,9 @@ export const QuotePreview = forwardRef<HTMLDivElement, QuotePreviewProps>(({ cus
                     <thead className="bg-gray-50">
                         <tr className="border-b-2 border-gray-300">
                             <th className="text-left py-2 px-3 font-semibold text-gray-600">DESCRIPCIÓ</th>
-                            <th className="text-right py-2 px-3 font-semibold text-gray-600 w-24">QUANT.</th>
-                            <th className="text-right py-2 px-3 font-semibold text-gray-600 w-24">PREU/UNIT.</th>
+                            <th className="text-right py-2 px-3 font-semibold text-gray-600 w-20">QUANT.</th>
+                            <th className="text-right py-2 px-3 font-semibold text-gray-600 w-24">PVP UNIT.</th>
+                            <th className="text-right py-2 px-3 font-semibold text-gray-600 w-16">DTE %</th>
                             <th className="text-right py-2 px-3 font-semibold text-gray-600 w-24">TOTAL</th>
                         </tr>
                     </thead>
@@ -105,7 +115,7 @@ export const QuotePreview = forwardRef<HTMLDivElement, QuotePreviewProps>(({ cus
                             if (isEmpty) {
                                 return (
                                     <tr key={`spacer-${index}`} className="h-4">
-                                        <td colSpan={4} className="py-2 px-3">&nbsp;</td>
+                                        <td colSpan={5} className="py-2 px-3">&nbsp;</td>
                                     </tr>
                                 );
                             }
@@ -114,7 +124,7 @@ export const QuotePreview = forwardRef<HTMLDivElement, QuotePreviewProps>(({ cus
                             if (isHeader) {
                                 return (
                                     <tr key={`header-${index}`} className="border-b border-gray-200">
-                                        <td colSpan={4} className="py-2 px-3 font-bold text-gray-800 uppercase bg-gray-50/30">
+                                        <td colSpan={5} className="py-2 px-3 font-bold text-gray-800 uppercase bg-gray-50/30">
                                             {item.description}
                                         </td>
                                     </tr>
@@ -130,17 +140,15 @@ export const QuotePreview = forwardRef<HTMLDivElement, QuotePreviewProps>(({ cus
                                     <tr className="border-b border-gray-200">
                                         <td className="py-2 px-3">
                                             {item.description}
-                                            {(item.discount || 0) > 0 && (
-                                                <span className="text-xs text-red-600 ml-2">(-{item.discount}%)</span>
-                                            )}
                                         </td>
                                         <td className="text-right py-2 px-3 tabular-nums">{item.quantity.toFixed(2)}</td>
                                         <td className="text-right py-2 px-3 tabular-nums">{item.unitPrice.toFixed(2)} €</td>
+                                        <td className="text-right py-2 px-3 tabular-nums">{(item.discount || 0)}%</td>
                                         <td className="text-right py-2 px-3 font-medium tabular-nums">{finalTotal.toFixed(2)} €</td>
                                     </tr>
                                     {item.imageDataUrl && (
                                         <tr className="border-b border-gray-200 bg-gray-50">
-                                            <td colSpan={4} className="py-3 px-3 text-center">
+                                            <td colSpan={5} className="py-3 px-3 text-center">
                                                 <Image src={item.imageDataUrl} alt={`Imatge per ${item.description}`} width={200} height={200} className="rounded-md object-contain mx-auto" />
                                             </td>
                                         </tr>
@@ -153,6 +161,7 @@ export const QuotePreview = forwardRef<HTMLDivElement, QuotePreviewProps>(({ cus
                                 <td className="py-2 px-3">{labor.description}</td>
                                 <td className="text-right py-2 px-3 tabular-nums">1.00</td>
                                 <td className="text-right py-2 px-3 tabular-nums">{labor.cost.toFixed(2)} €</td>
+                                <td className="text-right py-2 px-3 tabular-nums">0%</td>
                                 <td className="text-right py-2 px-3 tabular-nums">{labor.cost.toFixed(2)} €</td>
                             </tr>
                         )}
@@ -164,6 +173,12 @@ export const QuotePreview = forwardRef<HTMLDivElement, QuotePreviewProps>(({ cus
                         {/* Placeholder for notes if needed */}
                     </div>
                     <div style={{ marginLeft: 'auto', width: '250px' }} className="space-y-2 text-sm">
+                        {totalDiscountAmount > 0 && (
+                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                <span className="font-semibold text-gray-700">Total Descontos:</span>
+                                <span className="font-medium tabular-nums text-red-600">-{totalDiscountAmount.toFixed(2)} €</span>
+                            </div>
+                        )}
                         <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                             <span className="font-semibold text-gray-700">Subtotal:</span>
                             <span className="font-medium tabular-nums">{subtotal.toFixed(2)} €</span>
