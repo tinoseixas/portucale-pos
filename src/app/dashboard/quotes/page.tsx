@@ -56,6 +56,8 @@ const PERALBA_ITEMS: QuoteItem[] = [
     { description: "BAX953035021 BAXI - SB-50XA CIRCULADOR ACS RACORDS 1\" MONOF.", quantity: 1, unitPrice: 554, discount: 10 },
     { description: "TMM0201825A TMM - M-200 VALVULA ESFERA F-F 1\" PALANCA BLAVA", quantity: 2, unitPrice: 20.41, discount: 10 },
     { description: "GNB10305 GENEBRE - YORK VALVULA RETENCIO 1\"", quantity: 1, unitPrice: 12.86, discount: 10 },
+    { description: "", quantity: 1, unitPrice: 0, discount: 0 },
+    { description: "GRUPS HIDRAULICS DIRECTES", quantity: 1, unitPrice: 0, discount: 0 },
     { description: "AQUAFLEX - COLECTOR 5M3/H 5 SORTIDES LONG.2MTS", quantity: 1, unitPrice: 747, discount: 10 },
     { description: "AQUAFLEX - ANCLATGE PARET COLECTOR", quantity: 1, unitPrice: 78, discount: 10 },
     { description: "AQU20355RP8 AQUAFLEX - 20355R-P8 GRUP HIDRAULIC IMPULSIO DIRECTE DN25", quantity: 5, unitPrice: 442, discount: 10 }
@@ -269,7 +271,7 @@ export default function QuotesPage() {
                            {items.map((item, index) => (
                                <div key={index} className="space-y-2 p-2 border-b">
                                    <Input 
-                                       placeholder="Descripció de l'article"
+                                       placeholder="Descripció de l'article (deixa buit per a espai)"
                                        value={item.description}
                                        onChange={(e) => handleItemChange(index, 'description', e.target.value)}
                                    />
@@ -283,7 +285,7 @@ export default function QuotesPage() {
                                        <div className="relative">
                                             <Input
                                                 type="number"
-                                                placeholder="Preu/Unit."
+                                                placeholder="Preu/Unit. (0 per a títol)"
                                                 value={item.unitPrice}
                                                 onChange={(e) => handleItemChange(index, 'unitPrice', e.target.value)}
                                                 className="pl-7"

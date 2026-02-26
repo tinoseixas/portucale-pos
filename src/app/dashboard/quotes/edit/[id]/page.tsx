@@ -56,6 +56,8 @@ const PERALBA_ITEMS: QuoteItem[] = [
     { description: "BAX953035021 BAXI - SB-50XA CIRCULADOR ACS RACORDS 1\" MONOF.", quantity: 1, unitPrice: 554, discount: 10 },
     { description: "TMM0201825A TMM - M-200 VALVULA ESFERA F-F 1\" PALANCA BLAVA", quantity: 2, unitPrice: 20.41, discount: 10 },
     { description: "GNB10305 GENEBRE - YORK VALVULA RETENCIO 1\"", quantity: 1, unitPrice: 12.86, discount: 10 },
+    { description: "", quantity: 1, unitPrice: 0, discount: 0 },
+    { description: "GRUPS HIDRAULICS DIRECTES", quantity: 1, unitPrice: 0, discount: 0 },
     { description: "AQUAFLEX - COLECTOR 5M3/H 5 SORTIDES LONG.2MTS", quantity: 1, unitPrice: 747, discount: 10 },
     { description: "AQUAFLEX - ANCLATGE PARET COLECTOR", quantity: 1, unitPrice: 78, discount: 10 },
     { description: "AQU20355RP8 AQUAFLEX - 20355R-P8 GRUP HIDRAULIC IMPULSIO DIRECTE DN25", quantity: 5, unitPrice: 442, discount: 10 }
@@ -216,7 +218,7 @@ export default function EditQuotePage() {
     }
 
     return (
-        <AdminGate pageTitle="Editor de Pressupostos" pageDescription="Aquesta secció està protegida.">
+        <AdminGate pageTitle="Editor de Pressupostos" pageDescription="Aquesta secció estava protegida.">
             <div className="space-y-8 max-w-5xl mx-auto">
                 <input
                     type="file"
@@ -229,7 +231,7 @@ export default function EditQuotePage() {
                     <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center sm:justify-between gap-4">
                         <div>
                             <CardTitle>Editar Pressupost #{String(quote.quoteNumber).padStart(4, '0')}</CardTitle>
-                            <CardDescription>Modifica els detalls del pressupost.</CardDescription>
+                            <CardDescription>Modifica els detalls do pressuposto.</CardDescription>
                         </div>
                         <div className="flex gap-2 flex-wrap">
                             <Button variant="outline" onClick={handleLoadPeralbaOffer}>
@@ -265,11 +267,11 @@ export default function EditQuotePage() {
                         </div>
 
                         <div className="space-y-4 rounded-lg border p-4">
-                           <Label className="text-base font-semibold">Articles del Pressupost</Label>
+                           <Label className="text-base font-semibold">Articles do Pressuposto</Label>
                            {items.map((item, index) => (
                                <div key={index} className="space-y-2 p-2 border-b">
                                    <Input 
-                                       placeholder="Descripció de l'article"
+                                       placeholder="Descripció do artigo (deixe vazio para espaço)"
                                        value={item.description}
                                        onChange={(e) => handleItemChange(index, 'description', e.target.value)}
                                    />
@@ -283,7 +285,7 @@ export default function EditQuotePage() {
                                        <div className="relative">
                                             <Input
                                                 type="number"
-                                                placeholder="Preu/Unit."
+                                                placeholder="Preu/Unit. (0 para título)"
                                                 value={item.unitPrice}
                                                 onChange={(e) => handleItemChange(index, 'unitPrice', e.target.value)}
                                                 className="pl-7"
@@ -311,12 +313,12 @@ export default function EditQuotePage() {
                                </div>
                            ))}
                            <Button type="button" variant="outline" onClick={addItem}>
-                               <Plus className="mr-2 h-4 w-4" /> Afegir Article
+                               <Plus className="mr-2 h-4 w-4" /> Afegir Artigo
                            </Button>
                         </div>
                         
                          <div className="space-y-2">
-                            <Label>Cost de la Mà d'Obra</Label>
+                            <Label>Cost da Mà d'Obra</Label>
                              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                                  <Input 
                                     placeholder="Descripció (ex: Mà d'obra)"
