@@ -115,7 +115,7 @@ export const BUILDING_SUMMARY_ITEMS: QuoteItem[] = [
     { description: "Centralitzat amb bateries, Endolls IP55 perimetrals i alimentació Porta Automàtica.", quantity: 1, unitPrice: 0, discount: 0 },
     
     { description: "🔷 7. SISTEMA DE TERRA", quantity: 1, unitPrice: 0, discount: 0 },
-    { description: "Barrament principal per habitatge, Connexió equipotencial en banys i continuïtat general.", quantity: 1, unitPrice: 0, discount: 0 },
+    { description: "Barrament principal per habitatge, Connexió equipotencial en banys i continuïtàt general.", quantity: 1, unitPrice: 0, discount: 0 },
     
     { description: "", quantity: 1, unitPrice: 0, discount: 0 },
     { description: "🔷 8. RESUM ECONÒMIC D'EXECUCIÓ", quantity: 1, unitPrice: 0, discount: 0 },
