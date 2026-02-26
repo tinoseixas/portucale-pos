@@ -61,7 +61,6 @@ const PERALBA_ITEMS: QuoteItem[] = [
     { description: "AQUAFLEX - COLECTOR 5M3/H 5 SORTIDES LONG.2MTS", quantity: 1, unitPrice: 747, discount: 10 },
     { description: "AQUAFLEX - ANCLATGE PARET COLECTOR", quantity: 1, unitPrice: 78, discount: 10 },
     { description: "AQU20355RP8 AQUAFLEX - 20355R-P8 GRUP HIDRAULIC IMPULSIO DIRECTE DN25", quantity: 5, unitPrice: 442, discount: 10 },
-    // New items added:
     { description: "", quantity: 1, unitPrice: 0, discount: 0 },
     { description: "HABITATGE ANDORRA - 416mts2 - CASA A", quantity: 1, unitPrice: 0, discount: 0 },
     { description: "PANELL LLIS", quantity: 1, unitPrice: 0, discount: 0 },
