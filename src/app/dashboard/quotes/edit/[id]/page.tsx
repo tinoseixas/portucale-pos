@@ -1,3 +1,4 @@
+
 'use client'
 
 import { useMemo, useRef, useState, useEffect } from 'react'
@@ -63,6 +64,7 @@ const PERALBA_ITEMS: QuoteItem[] = [
     { description: "AQU20355RP8 AQUAFLEX - 20355R-P8 GRUP HIDRAULIC IMPULSIO DIRECTE DN25", quantity: 5, unitPrice: 442, discount: 10 },
     { description: "", quantity: 1, unitPrice: 0, discount: 0 },
     { description: "HABITATGE ANDORRA - 416mts2 - CASA A", quantity: 1, unitPrice: 0, discount: 0 },
+    { description: "", quantity: 1, unitPrice: 0, discount: 0 },
     { description: "PANELL LLIS", quantity: 1, unitPrice: 0, discount: 0 },
     { description: "ALB18735 ALB - TR M2 PANELL LLIS ALUMINI ACUTEC H-25MM RT-0,80 ACÚSTIC (C-12M2)", quantity: 425, unitPrice: 25.20, discount: 10 },
     { description: "ALB18062 ALB - TR MTS. TUB ROTLLE MULTICAPA SUPERFLEX 16X2 (R-500MTS)", quantity: 4000, unitPrice: 1.90, discount: 10 },
