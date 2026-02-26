@@ -20,7 +20,7 @@ export type QuoteTemplate = {
 
 export const PERALBA_ITEMS: QuoteItem[] = [
     // --- SECÇÃO INICIAL ---
-    { description: "HABITATGE ANDORRA - 342mts2 - CASA C", quantity: 1, unitPrice: 0, discount: 0 },
+    { description: "HABITATGE ANDORRA - 383mts2 - CASA B", quantity: 1, unitPrice: 0, discount: 0 },
     { description: "AEROTERMIA MONOBLOC 34kw calefaccio", quantity: 1, unitPrice: 0, discount: 0 },
     
     // --- MAQUINARIA ---
@@ -66,28 +66,27 @@ export const PERALBA_ITEMS: QuoteItem[] = [
     { description: "AQUAFLEX - ANCORATGE PARET COL·LECTOR", quantity: 1, unitPrice: 78, discount: 10 },
     { description: "AQU20355RP8 AQUAFLEX - 20355R-P8 GRUP HIDRÀULIC IMPULSIÓ DIRECTE DN25", quantity: 4, unitPrice: 442, discount: 10 },
     
-    // --- CASA C - ANDORRA ---
+    // --- TERRA RADIANT ---
     { description: "", quantity: 1, unitPrice: 0, discount: 0 },
-    { description: "PANELL LLIS (CASA C - 342m2)", quantity: 1, unitPrice: 0, discount: 0 },
-    { description: "ALB18735 ALB - TR M2 PANELL LLIS ALUMINI ACUTEC H-25MM RT-0,80 ACÚSTIC", quantity: 350.00, unitPrice: 25.20, discount: 10 },
+    { description: "PANELL LLIS", quantity: 1, unitPrice: 0, discount: 0 },
+    { description: "ALB18735 ALB - TR M2 PANELL LLIS ALUMINI ACUTEC H-25MM RT-0,80 ACÚSTIC", quantity: 387.50, unitPrice: 25.20, discount: 10 },
     { description: "ALB18062 ALB - TR MTS. TUB ROTLLE MULTICAPA SUPERFLEX 16X2 (R-500MTS)", quantity: 3500, unitPrice: 1.90, discount: 10 },
     { description: "ALB18687 ALB - TR GRAPA FIXACIÓ TUB A PANELL LLIS 20MM (C-200UD)", quantity: 11000, unitPrice: 0.12, discount: 10 },
-    { description: "ALB18690 ALB - TR MTS. ROTLLE CINTA PERIMETRAL 150X8 MM. (R-50MTS)", quantity: 350, unitPrice: 3.26, discount: 10 },
+    { description: "ALB18690 ALB - TR MTS. ROTLLE CINTA PERIMETRAL 150X8 MM. (R-50MTS)", quantity: 400, unitPrice: 3.26, discount: 10 },
     { description: "ALB18836 ALB - TR TAC PLÀSTIC PER FIXACIÓ PANELLS LLISOS (C-100UD)", quantity: 300, unitPrice: 0.33, discount: 10 },
     { description: "ALB18670 ALB - TR LTS. ADHESIU MORTER S.R. (ENVÀS-10LTS)", quantity: 20, unitPrice: 5.42, discount: 10 },
     
     // --- COLECTORS ---
     { description: "", quantity: 1, unitPrice: 0, discount: 0 },
     { description: "COL·LECTORS", quantity: 1, unitPrice: 0, discount: 0 },
-    { description: "ALBPD1020816 ALB - COL·LECTOR PREMUNTAT ULTRACOMPACTE 8 SORTIDES", quantity: 1, unitPrice: 649.56, discount: 10 },
-    { description: "ALBPD1021016 ALB - COL·LECTOR ALB ULTRACOMPACTE 10 VIES", quantity: 2, unitPrice: 772.07, discount: 10 },
     { description: "ALBPD1121116 ALB - COL·LECTOR PREMUNTAT 11 VIES", quantity: 1, unitPrice: 827.10, discount: 10 },
+    { description: "ALBPD1021016 ALB - COL·LECTOR ALB ULTRACOMPACTE 10 VIES", quantity: 3, unitPrice: 772.07, discount: 10 },
     
     // --- TERMOSTATS ---
     { description: "", quantity: 1, unitPrice: 0, discount: 0 },
     { description: "TERMÒSTATS", quantity: 1, unitPrice: 0, discount: 0 },
     { description: "ALB23623 ALB- TERMÒSTAT DIGITAL PROGRAMABLE AMB WIFI DIGITAL", quantity: 10, unitPrice: 90.00, discount: 10 },
-    { description: "ALB01561 ALB - CAPÇAL ELÈCTRIC 230V NC SENSE MICRO 2 FILS", quantity: 39, unitPrice: 38.08, discount: 10 },
+    { description: "ALB01561 ALB - CAPÇAL ELÈCTRIC 230V NC SENSE MICRO 2 FILS", quantity: 41, unitPrice: 38.08, discount: 10 },
     { description: "ALB23232 ALB - MÒDUL CONNEXIÓ PER 8 TERMÒSTATS", quantity: 4, unitPrice: 134.97, discount: 10 }
 ];
 
@@ -129,10 +128,7 @@ export const BUILDING_SUMMARY_ITEMS: QuoteItem[] = [
     { description: "Instal·lació elèctrica completa Habitatge A", quantity: 1, unitPrice: 46805, discount: 0 },
     { description: "Instal·lació elèctrica completa Habitatge B", quantity: 1, unitPrice: 43654, discount: 0 },
     { description: "Instal·lació elèctrica completa Habitatge C", quantity: 1, unitPrice: 42366, discount: 0 },
-    { description: "Instal·lació elèctrica completa Garatge (-2)", quantity: 1, unitPrice: 39445, discount: 0 },
-    
-    { description: "", quantity: 1, unitPrice: 0, discount: 0 },
-    { description: "VALOR TOTAL ESTIMAT (Sense IGI)", quantity: 1, unitPrice: 0, discount: 0 }
+    { description: "Instal·lació elèctrica completa Garatge (-2)", quantity: 1, unitPrice: 39445, discount: 0 }
 ];
 
 export const HIDROSANITARIA_ITEMS: QuoteItem[] = [
@@ -162,18 +158,20 @@ export const HIDROSANITARIA_ITEMS: QuoteItem[] = [
     { description: "4️⃣ GARATGE (-2)", quantity: 1, unitPrice: 0, discount: 0 },
     { description: "• 1 punt d'aigua de manteniment i 2 embornals sifònics.", quantity: 1, unitPrice: 0, discount: 0 },
     { description: "", quantity: 1, unitPrice: 0, discount: 0 },
-    { description: "5️⃣ IMPORT ECONÒMIC D'EXECUCIÓ", quantity: 1, unitPrice: 0, discount: 0 },
+    { description: "5️⃣ IMPORT ECONÒMIC D'EXECUCIÓ", quantity: 1, unitPrice: 84500, discount: 0 },
     { description: "Execució Instal·lació Hidrosanitària completa Habitatge A", quantity: 1, unitPrice: 84500, discount: 0 },
     { description: "Execució Instal·lació Hidrosanitària completa Habitatge B", quantity: 1, unitPrice: 84500, discount: 0 },
     { description: "Execució Instal·lació Hidrosanitària completa Habitatge C", quantity: 1, unitPrice: 84500, discount: 0 },
-    { description: "Execució Instal·lació Hidrosanitària Garatge (-2)", quantity: 1, unitPrice: 6500, discount: 0 },
-    { description: "", quantity: 1, unitPrice: 0, discount: 0 },
-    { description: "💰 IMPORT TOTAL CONTRACTE (Sense IGI)", quantity: 1, unitPrice: 0, discount: 0 }
+    { description: "Execució Instal·lació Hidrosanitària Garatge (-2)", quantity: 1, unitPrice: 6500, discount: 0 }
 ];
 
 export const HIDROSANITARIA_NOTES = `30% a la signatura del contracte
 40% amb instal·lacions executades (abans de tancament de paraments)
 20% en muntatge d’aparells sanitaris
-10% a la finalització i lliurament amb proves realitzades`;
+10% a la finalització i lliurament amb proves realitzades
 
-export const DEFAULT_NOTES = `40% per iniciar el treball i la resta es pagarà mensualment a combinar.`;
+El termini d'execució depèn de diversos factors i, per tant, no podem donar un termini fix.`;
+
+export const DEFAULT_NOTES = `40% per iniciar el treball i la resta es pagarà mensualment a combinar.
+
+El termini d'execució depèn de diversos factors i, per tant, no podem donar un termini fix.`;

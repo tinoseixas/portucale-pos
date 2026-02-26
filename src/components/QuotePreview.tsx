@@ -206,6 +206,7 @@ export const QuotePreview = forwardRef<HTMLDivElement, QuotePreviewProps>(({ cus
                     <div className="whitespace-pre-line">
                         <span className="font-semibold">Pagament:</span> {notes || defaultNotes}
                     </div>
+                    <p className="mt-2"><span className="font-semibold">Termini d'execució:</span> El temps d'execució depèn de diversos factors i, per tant, no podem donar un termini fix.</p>
                     <p className="mt-2"><span className="font-semibold">Validesa:</span> Aquest pressupost és vàlid durant 15 dies.</p>
                 </div>
                 <div className="text-center text-xs text-gray-500 mt-4">
