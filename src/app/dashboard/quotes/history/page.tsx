@@ -1,14 +1,14 @@
 'use client'
 
-import { useMemo, useEffect } from 'react'
+import { useMemo, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useCollection, useUser, useFirestore, useMemoFirebase, deleteDocumentNonBlocking } from '@/firebase'
-import { collection, query, orderBy, doc } from 'firebase/firestore'
+import { collection, query, orderBy, doc, runTransaction, setDoc } from 'firebase/firestore'
 import type { Quote } from '@/lib/types'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
-import { Eye, FileSignature, Trash2, PlusCircle, Edit } from 'lucide-react'
+import { Eye, FileSignature, Trash2, PlusCircle, Edit, Copy, Loader2 } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { ca } from 'date-fns/locale'
 import {
@@ -31,6 +31,7 @@ export default function QuotesHistoryPage() {
   const { user, isUserLoading } = useUser()
   const firestore = useFirestore()
   const { toast } = useToast()
+  const [isDuplicating, setIsDuplicating] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isUserLoading && !user) {
@@ -55,6 +56,53 @@ export default function QuotesHistoryPage() {
       title: 'Pressupost Eliminat',
       description: `El pressupost #${quoteNumber} ha estat eliminat de l'historial.`,
     });
+  };
+
+  const handleDuplicateQuote = async (quote: Quote) => {
+    if (!firestore) return;
+    setIsDuplicating(quote.id);
+    
+    try {
+        const counterRef = doc(firestore, "counters", "quotes");
+        const newQuoteNumber = await runTransaction(firestore, async (transaction) => {
+            const counterDoc = await transaction.get(counterRef);
+            if (!counterDoc.exists()) {
+                transaction.set(counterRef, { lastNumber: 1 });
+                return 1;
+            }
+            const newNumber = (counterDoc.data().lastNumber || 0) + 1;
+            transaction.update(counterRef, { lastNumber: newNumber });
+            return newNumber;
+        });
+
+        const newQuoteRef = doc(collection(firestore, "quotes"));
+        const newQuoteData: Quote = {
+            ...quote,
+            id: newQuoteRef.id,
+            quoteNumber: newQuoteNumber,
+            createdAt: new Date().toISOString(),
+            projectName: quote.projectName + " (Còpia)"
+        };
+
+        await setDoc(newQuoteRef, newQuoteData);
+
+        toast({
+            title: "Pressupost Duplicat",
+            description: `Creat nou pressupost #${newQuoteNumber} a partir del #${quote.quoteNumber}.`,
+        });
+        
+        router.push(`/dashboard/quotes/edit/${newQuoteRef.id}`);
+
+    } catch (error) {
+        console.error("Error duplicant pressupost:", error);
+        toast({
+            variant: 'destructive',
+            title: 'Error',
+            description: "No s'ha pogut duplicar o pressupost.",
+        });
+    } finally {
+        setIsDuplicating(null);
+    }
   };
 
   if (isUserLoading || isLoadingQuotes) {
@@ -111,6 +159,15 @@ export default function QuotesHistoryPage() {
                                 <Button variant="outline" size="sm" onClick={() => router.push(`/dashboard/quotes/edit/${quote.id}`)}>
                                     <Edit className="mr-2 h-4 w-4" />
                                     Editar
+                                </Button>
+                                <Button 
+                                    variant="outline" 
+                                    size="sm" 
+                                    onClick={() => handleDuplicateQuote(quote)}
+                                    disabled={isDuplicating === quote.id}
+                                >
+                                    {isDuplicating === quote.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Copy className="h-4 w-4" />}
+                                    Duplicar
                                 </Button>
                                 <AlertDialog>
                                 <AlertDialogTrigger asChild>

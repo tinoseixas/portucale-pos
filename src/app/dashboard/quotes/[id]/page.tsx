@@ -1,14 +1,13 @@
-
 'use client'
 
 import { useState, useMemo, useRef, useEffect } from 'react'
 import { useRouter, useParams, useSearchParams } from 'next/navigation'
 import { useDoc, useUser, useFirestore, useMemoFirebase, deleteDocumentNonBlocking, useCollection } from '@/firebase'
-import { collection, query, doc } from 'firebase/firestore'
+import { collection, query, doc, runTransaction, setDoc } from 'firebase/firestore'
 import type { Customer, Quote as QuoteType } from '@/lib/types'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { FileDown, Loader2, ArrowLeft, Trash2 } from 'lucide-react'
+import { FileDown, Loader2, ArrowLeft, Trash2, Copy } from 'lucide-react'
 import { QuotePreview } from '@/components/QuotePreview'
 import {
   AlertDialog,
@@ -36,6 +35,7 @@ export default function QuoteDetailPage() {
 
     const { user, isUserLoading } = useUser()
     const [isGenerating, setIsGenerating] = useState(false)
+    const [isDuplicating, setIsDuplicating] = useState(false)
     const quotePreviewRef = useRef<HTMLDivElement>(null)
     const [customer, setCustomer] = useState<Customer | undefined>()
 
@@ -107,12 +107,59 @@ export default function QuoteDetailPage() {
 
         } catch (error) {
             console.error("Error en generar el PDF:", error);
-            toast({ variant: 'destructive', title: 'Error', description: "No s'ha pogut generar el PDF." });
+            toast({ variant: 'destructive', title: 'Error', description: "No s'ha pogut generar o PDF." });
         } finally {
             setIsGenerating(false);
         }
     };
     
+    const handleDuplicateQuote = async () => {
+        if (!firestore || !quote) return;
+        setIsDuplicating(true);
+        
+        try {
+            const counterRef = doc(firestore, "counters", "quotes");
+            const newQuoteNumber = await runTransaction(firestore, async (transaction) => {
+                const counterDoc = await transaction.get(counterRef);
+                if (!counterDoc.exists()) {
+                    transaction.set(counterRef, { lastNumber: 1 });
+                    return 1;
+                }
+                const newNumber = (counterDoc.data().lastNumber || 0) + 1;
+                transaction.update(counterRef, { lastNumber: newNumber });
+                return newNumber;
+            });
+
+            const newQuoteRef = doc(collection(firestore, "quotes"));
+            const newQuoteData: QuoteType = {
+                ...quote,
+                id: newQuoteRef.id,
+                quoteNumber: newQuoteNumber,
+                createdAt: new Date().toISOString(),
+                projectName: quote.projectName + " (Còpia)"
+            };
+
+            await setDoc(newQuoteRef, newQuoteData);
+
+            toast({
+                title: "Pressupost Duplicat",
+                description: `Creat nou pressupost #${newQuoteNumber} a partir do #${quote.quoteNumber}.`,
+            });
+            
+            router.push(`/dashboard/quotes/edit/${newQuoteRef.id}`);
+
+        } catch (error) {
+            console.error("Error duplicant pressupost:", error);
+            toast({
+                variant: 'destructive',
+                title: 'Error',
+                description: "No s'ha pogut duplicar o pressupost.",
+            });
+        } finally {
+            setIsDuplicating(false);
+        }
+    };
+
     const isLoading = isUserLoading || isLoadingQuote;
     
     useEffect(() => {
@@ -142,7 +189,7 @@ export default function QuoteDetailPage() {
     }
     
     if (!quote) {
-        return <p>No s'ha trobat el pressupost.</p>
+        return <p>No s'ha trobat o pressupost.</p>
     }
 
     return (
@@ -154,6 +201,15 @@ export default function QuoteDetailPage() {
                         Tornar a l'historial
                     </Button>
                     <div className="flex items-center gap-2 flex-wrap justify-end">
+                        <Button
+                            variant="outline"
+                            onClick={handleDuplicateQuote}
+                            disabled={isDuplicating}
+                        >
+                            {isDuplicating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Copy className="mr-2 h-4 w-4" />}
+                            Duplicar
+                        </Button>
+
                         <AlertDialog>
                             <AlertDialogTrigger asChild>
                                 <Button variant="destructive">
@@ -162,9 +218,9 @@ export default function QuoteDetailPage() {
                             </AlertDialogTrigger>
                             <AlertDialogContent>
                                 <AlertDialogHeader>
-                                <AlertDialogTitle>Estàs segur que vols eliminar el pressupost?</AlertDialogTitle>
+                                <AlertDialogTitle>Estàs segur que vols eliminar o pressupost?</AlertDialogTitle>
                                 <AlertDialogDescription>
-                                    Aquesta acció no es pot desfer. S'eliminarà el pressupost <strong>#{quote.quoteNumber}</strong> de l'historial.
+                                    Aquesta acció no es pot desfer. S'eliminarà o pressupost <strong>#{quote.quoteNumber}</strong> de l'historial.
                                 </AlertDialogDescription>
                                 </AlertDialogHeader>
                                 <AlertDialogFooter>
