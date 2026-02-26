@@ -48,6 +48,7 @@ const mockCustomers: Omit<Customer, 'id'>[] = [
   { name: 'Cliente Sergio -Llorts 324656', nrt: '', address: 'Andorra', email: '', contact: '' },
   { name: 'Clínica dental Diet Kahn', nrt: 'C802450z', address: 'Carrer Josep Rossel Calva 13', email: 'Clinicadietkahn@andorra.ad', contact: '803020' },
   { name: 'Comunicacio i Televisors SLU', nrt: 'L704166D', address: 'Camí de la Grau 20', email: 'i.buezas@comtv.ad', contact: '' },
+  { name: 'CONSTRUCCIONS LA BORDA, S.L.', nrt: '', address: 'CL DE LA VALIRETA, 3 2 1, AD200 Encamp, Andorra', email: '', contact: '' },
   { name: 'construcciones Andre de Sousa SL', nrt: 'B25804410', address: 'La seu', email: 'obra@andredesousa.eu', contact: '' },
   { name: 'Construluso, SLU', nrt: 'L-717525-K', address: 'Carrer Sant Miquel No. 2 baixos', email: 'construccionesluso2020@gmail.com', contact: '' },
   { name: 'Dirgest', nrt: 'L711805D', address: 'Carre Bonaventura Riberaigua, 25, 5 B', email: 'amorchon@dirgest.eu', contact: '' },
