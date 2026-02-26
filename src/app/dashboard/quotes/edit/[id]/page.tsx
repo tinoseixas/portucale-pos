@@ -108,6 +108,12 @@ export default function EditQuotePage() {
         return customers.find(c => c.id === selectedCustomerId);
     }, [selectedCustomerId, customers]);
 
+    const safeNum = (v: any): number => {
+        if (v === undefined || v === null || v === '') return 0;
+        const n = typeof v === 'string' ? parseFloat(v.replace(',', '.')) : Number(v);
+        return isNaN(n) ? 0 : n;
+    };
+
     const handleItemChange = (index: number, field: keyof QuoteItem, value: string | number) => {
         const newItems = [...items];
         const item = { ...newItems[index] };
@@ -115,12 +121,11 @@ export default function EditQuotePage() {
         if (field === 'description') {
             item.description = value as string;
         } else {
-            const numValue = Number(value);
-            if (field === 'quantity') item.quantity = isNaN(numValue) ? 0 : numValue;
-            if (field === 'unitPrice') item.unitPrice = isNaN(numValue) ? 0 : numValue;
+            const numValue = safeNum(value);
+            if (field === 'quantity') item.quantity = numValue;
+            if (field === 'unitPrice') item.unitPrice = numValue;
             if (field === 'discount') {
-                const discountValue = isNaN(numValue) ? 0 : numValue;
-                item.discount = Math.min(Math.max(discountValue, 0), 100);
+                item.discount = Math.min(Math.max(numValue, 0), 100);
             }
         }
         
@@ -174,21 +179,23 @@ export default function EditQuotePage() {
         setIsSaving(true);
         
         try {
-            const filteredItems = items.map(item => ({
+            const sanitizedItems = items.map(item => ({
                 description: item.description || '',
-                quantity: Number(item.quantity) || 0,
-                unitPrice: Number(item.unitPrice) || 0,
-                discount: Number(item.discount) || 0,
-                imageDataUrl: item.imageDataUrl || undefined
-            })).filter(item => item.description.trim() !== '' || item.unitPrice === 0);
+                quantity: safeNum(item.quantity),
+                unitPrice: safeNum(item.unitPrice),
+                discount: safeNum(item.discount),
+                imageDataUrl: item.imageDataUrl || null
+            }));
+
+            const filteredItems = sanitizedItems.filter(item => item.description.trim() !== '' || item.unitPrice === 0);
 
             const materialsSubtotal = filteredItems.reduce((acc, item) => {
-                const itemTotal = (item.quantity || 0) * (item.unitPrice || 0);
-                const discountAmount = itemTotal * ((item.discount || 0) / 100);
+                const itemTotal = item.quantity * item.unitPrice;
+                const discountAmount = itemTotal * (item.discount / 100);
                 return acc + (itemTotal - discountAmount);
             }, 0);
             
-            const laborCostValue = Number(labor.cost) || 0;
+            const laborCostValue = safeNum(labor.cost);
             const subtotal = materialsSubtotal + laborCostValue;
             const totalAmount = subtotal * (1 + IVA_RATE);
 
@@ -196,9 +203,9 @@ export default function EditQuotePage() {
                 customerId: associatedCustomer?.id || '',
                 customerName: associatedCustomer?.name || 'N/A',
                 projectName: projectName || 'Sense nom',
-                items: filteredItems,
+                items: filteredItems as any,
                 labor: { description: labor.description || "Mà d'obra", cost: laborCostValue },
-                totalAmount: totalAmount,
+                totalAmount: isNaN(totalAmount) ? 0 : totalAmount,
             };
 
             updateDocumentNonBlocking(quoteDocRef, updatedQuoteData);
@@ -215,7 +222,7 @@ export default function EditQuotePage() {
             toast({
                 variant: 'destructive',
                 title: 'Error',
-                description: "No s'ha pogut actualitzar o pressuposto. Verifica os dados numéricos.",
+                description: "Verifica os dados numéricos e tenta novamente.",
             });
         } finally {
             setIsSaving(false);
@@ -346,7 +353,7 @@ export default function EditQuotePage() {
                                         type="number"
                                         placeholder="Cost Total"
                                         value={labor.cost}
-                                        onChange={(e) => setLabor({...labor, cost: Number(e.target.value) || 0})}
+                                        onChange={(e) => setLabor({...labor, cost: safeNum(e.target.value)})}
                                         className="pl-7"
                                      />
                                      <Euro className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
