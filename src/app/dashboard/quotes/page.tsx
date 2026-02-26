@@ -143,7 +143,7 @@ export default function QuotesPage() {
     const handleLoadPeralbaOffer = () => {
         setItems(PERALBA_ITEMS);
         if (!projectName) setProjectName("Oferta Tèrmic Peralba - Habitatges Casa A i B");
-        toast({ title: "Oferta Carregada", description: `${PERALBA_ITEMS.length} artículos añadidos.` });
+        toast({ title: "Oferta Carregada", description: `${PERALBA_ITEMS.length} artigos adicionados.` });
     };
 
     const handleImageUploadClick = (index: number) => {
@@ -308,7 +308,7 @@ export default function QuotesPage() {
                         <div className="space-y-4 rounded-lg border p-4">
                            <div className="flex justify-between items-center">
                                <Label className="text-base font-semibold">Articles del Pressupost</Label>
-                               <Button type="button" variant="ghost" size="sm" onClick={() => setItems([])}>Limpar Tudo</Button>
+                               <Button type="button" variant="ghost" size="sm" onClick={() => setItems([])}>Netejar Tot</Button>
                            </div>
                            {items.map((item, index) => (
                                <div key={index} className="space-y-2 p-2 border-b">

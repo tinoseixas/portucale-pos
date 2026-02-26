@@ -164,7 +164,7 @@ export default function EditQuotePage() {
 
     const handleLoadPeralbaOffer = () => {
         setItems(PERALBA_ITEMS);
-        toast({ title: "Oferta Carregada", description: "Os artigos foram substituídos pela oferta Peralba." });
+        toast({ title: "Oferta Carregada", description: `${PERALBA_ITEMS.length} artigos adicionados.` });
     };
 
     const handleImageUploadClick = (index: number) => {
@@ -262,7 +262,7 @@ export default function EditQuotePage() {
     }
 
     return (
-        <AdminGate pageTitle="Editor de Pressupostos" pageDescription="Aquesta secció estava protegida.">
+        <AdminGate pageTitle="Editor de Pressupostos" pageDescription="Aquesta secció està protegida.">
             <div className="space-y-8 max-w-5xl mx-auto">
                 <input
                     type="file"
