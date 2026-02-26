@@ -3,7 +3,7 @@
 import { useMemo, useRef, useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useCollection, useUser, useFirestore, useMemoFirebase } from '@/firebase'
-import { collection, query, orderBy, doc, runTransaction, setDoc } from 'firebase/firestore'
+import { collection, query, orderBy, doc, runTransaction } from 'firebase/firestore'
 import type { Customer, Quote as QuoteType } from '@/lib/types'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -15,6 +15,7 @@ import { QuotePreview } from '@/components/QuotePreview'
 import { useToast } from '@/hooks/use-toast'
 import { AdminGate } from '@/components/AdminGate'
 import { IVA_RATE } from '@/lib/calculations'
+import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates'
 
 type QuoteItem = {
     description: string;
@@ -87,17 +88,21 @@ export default function QuotesPage() {
 
     const handleItemChange = (index: number, field: keyof QuoteItem, value: string | number) => {
         const newItems = [...items];
-        const item = newItems[index];
+        const item = { ...newItems[index] };
+        
         if (field === 'description') {
             item.description = value as string;
         } else {
             const numValue = Number(value);
-            if (!isNaN(numValue)) {
-                 if (field === 'quantity') item.quantity = numValue >= 0 ? numValue : 0;
-                 if (field === 'unitPrice') item.unitPrice = numValue >= 0 ? numValue : 0;
-                 if (field === 'discount') item.discount = numValue >= 0 && numValue <= 100 ? numValue : 0;
+            if (field === 'quantity') item.quantity = isNaN(numValue) ? 0 : numValue;
+            if (field === 'unitPrice') item.unitPrice = isNaN(numValue) ? 0 : numValue;
+            if (field === 'discount') {
+                const discountValue = isNaN(numValue) ? 0 : numValue;
+                item.discount = Math.min(Math.max(discountValue, 0), 100);
             }
         }
+        
+        newItems[index] = item;
         setItems(newItems);
     };
 
@@ -160,13 +165,22 @@ export default function QuotesPage() {
                 return newNumber;
             });
             
-            const filteredItems = items.filter(item => item.description.trim() !== '' || item.unitPrice === 0);
+            const filteredItems = items.map(item => ({
+                description: item.description || '',
+                quantity: Number(item.quantity) || 0,
+                unitPrice: Number(item.unitPrice) || 0,
+                discount: Number(item.discount) || 0,
+                imageDataUrl: item.imageDataUrl || undefined
+            })).filter(item => item.description.trim() !== '' || item.unitPrice === 0);
+
             const materialsSubtotal = filteredItems.reduce((acc, item) => {
-                const itemTotal = item.quantity * item.unitPrice;
+                const itemTotal = (item.quantity || 0) * (item.unitPrice || 0);
                 const discountAmount = itemTotal * ((item.discount || 0) / 100);
                 return acc + (itemTotal - discountAmount);
             }, 0);
-            const subtotal = materialsSubtotal + labor.cost;
+            
+            const laborCostValue = Number(labor.cost) || 0;
+            const subtotal = materialsSubtotal + laborCostValue;
             const totalAmount = subtotal * (1 + IVA_RATE);
 
             const quoteRef = doc(collection(firestore, "quotes"));
@@ -178,11 +192,11 @@ export default function QuotesPage() {
                 customerName: associatedCustomer?.name || 'N/A',
                 projectName: projectName || 'Sense nom',
                 items: filteredItems,
-                labor: labor,
+                labor: { description: labor.description || "Mà d'obra", cost: laborCostValue },
                 totalAmount: totalAmount,
             };
 
-            await setDoc(quoteRef, quoteData);
+            setDocumentNonBlocking(quoteRef, quoteData, { merge: false });
 
             toast({
                 title: "Pressupost Guardat",
@@ -200,7 +214,7 @@ export default function QuotesPage() {
             toast({
                 variant: 'destructive',
                 title: 'Error',
-                description: "No s'ha pogut gerar o pressuposto.",
+                description: "No s'ha pogut gerar o pressuposto. Verifica os dados numéricos.",
             });
         } finally {
             setIsSaving(false);

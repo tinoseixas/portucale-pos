@@ -90,13 +90,16 @@ export default function EditQuotePage() {
             setSelectedCustomerId(quote.customerId || 'all');
             setProjectName(quote.projectName || '');
             setItems(quote.items.map(item => ({
-                description: item.description,
-                quantity: item.quantity,
-                unitPrice: item.unitPrice,
-                imageDataUrl: item.imageDataUrl,
-                discount: item.discount !== undefined ? item.discount : 0
+                description: item.description || '',
+                quantity: Number(item.quantity) || 0,
+                unitPrice: Number(item.unitPrice) || 0,
+                imageDataUrl: item.imageDataUrl || undefined,
+                discount: Number(item.discount) || 0
             })) || [{ description: '', quantity: 1, unitPrice: 0, imageDataUrl: undefined, discount: 0 }]);
-            setLabor(quote.labor || { description: "Mà d'obra", cost: 0 });
+            setLabor({
+                description: quote.labor?.description || "Mà d'obra",
+                cost: Number(quote.labor?.cost) || 0
+            });
         }
     }, [quote]);
 
@@ -107,17 +110,21 @@ export default function EditQuotePage() {
 
     const handleItemChange = (index: number, field: keyof QuoteItem, value: string | number) => {
         const newItems = [...items];
-        const item = newItems[index];
+        const item = { ...newItems[index] };
+        
         if (field === 'description') {
             item.description = value as string;
         } else {
             const numValue = Number(value);
-            if (!isNaN(numValue)) {
-                if (field === 'quantity') item.quantity = numValue >= 0 ? numValue : 0;
-                if (field === 'unitPrice') item.unitPrice = numValue >= 0 ? numValue : 0;
-                if (field === 'discount') item.discount = numValue >= 0 && numValue <= 100 ? numValue : 0;
+            if (field === 'quantity') item.quantity = isNaN(numValue) ? 0 : numValue;
+            if (field === 'unitPrice') item.unitPrice = isNaN(numValue) ? 0 : numValue;
+            if (field === 'discount') {
+                const discountValue = isNaN(numValue) ? 0 : numValue;
+                item.discount = Math.min(Math.max(discountValue, 0), 100);
             }
         }
+        
+        newItems[index] = item;
         setItems(newItems);
     };
 
@@ -131,7 +138,7 @@ export default function EditQuotePage() {
 
     const handleLoadPeralbaOffer = () => {
         setItems(PERALBA_ITEMS);
-        toast({ title: "Oferta Carregada", description: "Os artigos foram substituídos pela oferta Peralba com descontos ajustados." });
+        toast({ title: "Oferta Carregada", description: "Os artigos foram substituídos pela oferta Peralba." });
     };
 
     const handleImageUploadClick = (index: number) => {
@@ -167,13 +174,22 @@ export default function EditQuotePage() {
         setIsSaving(true);
         
         try {
-            const filteredItems = items.filter(item => item.description.trim() !== '' || item.unitPrice === 0);
+            const filteredItems = items.map(item => ({
+                description: item.description || '',
+                quantity: Number(item.quantity) || 0,
+                unitPrice: Number(item.unitPrice) || 0,
+                discount: Number(item.discount) || 0,
+                imageDataUrl: item.imageDataUrl || undefined
+            })).filter(item => item.description.trim() !== '' || item.unitPrice === 0);
+
             const materialsSubtotal = filteredItems.reduce((acc, item) => {
-                const itemTotal = item.quantity * item.unitPrice;
+                const itemTotal = (item.quantity || 0) * (item.unitPrice || 0);
                 const discountAmount = itemTotal * ((item.discount || 0) / 100);
                 return acc + (itemTotal - discountAmount);
             }, 0);
-            const subtotal = materialsSubtotal + labor.cost;
+            
+            const laborCostValue = Number(labor.cost) || 0;
+            const subtotal = materialsSubtotal + laborCostValue;
             const totalAmount = subtotal * (1 + IVA_RATE);
 
             const updatedQuoteData: Partial<QuoteType> = {
@@ -181,7 +197,7 @@ export default function EditQuotePage() {
                 customerName: associatedCustomer?.name || 'N/A',
                 projectName: projectName || 'Sense nom',
                 items: filteredItems,
-                labor: labor,
+                labor: { description: labor.description || "Mà d'obra", cost: laborCostValue },
                 totalAmount: totalAmount,
             };
 
@@ -199,7 +215,7 @@ export default function EditQuotePage() {
             toast({
                 variant: 'destructive',
                 title: 'Error',
-                description: "No s'ha pogut actualitzar o pressuposto.",
+                description: "No s'ha pogut actualitzar o pressuposto. Verifica os dados numéricos.",
             });
         } finally {
             setIsSaving(false);
