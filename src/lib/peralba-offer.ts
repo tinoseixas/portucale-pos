@@ -162,7 +162,7 @@ export const HIDROSANITARIA_ITEMS: QuoteItem[] = [
     { description: "4️⃣ GARATGE (-2)", quantity: 1, unitPrice: 0, discount: 0 },
     { description: "• 1 punt d'aigua de manteniment i 2 embornals sifònics.", quantity: 1, unitPrice: 0, discount: 0 },
     { description: "", quantity: 1, unitPrice: 0, discount: 0 },
-    { description: "5️⃣ IMPORT ECONÒMIC D'EXECUCIÓ (Inclou imprevistos 15%)", quantity: 1, unitPrice: 0, discount: 0 },
+    { description: "5️⃣ IMPORT ECONÒMIC D'EXECUCIÓ", quantity: 1, unitPrice: 0, discount: 0 },
     { description: "Execució Instal·lació Hidrosanitària completa Habitatge A", quantity: 1, unitPrice: 84500, discount: 0 },
     { description: "Execució Instal·lació Hidrosanitària completa Habitatge B", quantity: 1, unitPrice: 84500, discount: 0 },
     { description: "Execució Instal·lació Hidrosanitària completa Habitatge C", quantity: 1, unitPrice: 84500, discount: 0 },
