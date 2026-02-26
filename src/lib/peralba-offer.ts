@@ -118,7 +118,7 @@ export const BUILDING_SUMMARY_ITEMS: QuoteItem[] = [
     { description: "Barrament principal per habitatge, Connexió equipotencial en banys i continuïtat general.", quantity: 1, unitPrice: 0, discount: 0 },
     
     { description: "", quantity: 1, unitPrice: 0, discount: 0 },
-    { description: "🔷 8. RESUM ECONÒMIC D'EXECUCIÓ (Preus finals amb imprevistos)", quantity: 1, unitPrice: 0, discount: 0 },
+    { description: "🔷 8. RESUM ECONÒMIC D'EXECUCIÓ", quantity: 1, unitPrice: 0, discount: 0 },
     { description: "Instal·lació elèctrica completa Habitatge A (Inclou rases, cablatge i muntatge)", quantity: 1, unitPrice: 46805, discount: 0 },
     { description: "Instal·lació elèctrica completa Habitatge B (Inclou rases, cablatge i muntatge)", quantity: 1, unitPrice: 43654, discount: 0 },
     { description: "Instal·lació elèctrica completa Habitatge C (Inclou rases, cablatge i muntatge)", quantity: 1, unitPrice: 42366, discount: 0 },
