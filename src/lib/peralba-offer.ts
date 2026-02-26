@@ -64,23 +64,23 @@ export const PERALBA_ITEMS: QuoteItem[] = [
     { description: "", quantity: 1, unitPrice: 0, discount: 0 },
     { description: "HABITATGE ANDORRA - 383mts2 - CASA B", quantity: 1, unitPrice: 0, discount: 0 },
     { description: "PANELL LLIS", quantity: 1, unitPrice: 0, discount: 0 },
-    { description: "ALB18735 ALB - TR M2 PANELL LLIS ALUMINI ACUTEC H-25MM RT-0,80 ACÚSTIC (C-12M2)", quantity: 387.50, unitPrice: 25.20, discount: 48 },
-    { description: "ALB18062 ALB - TR MTS. TUB ROTLLE MULTICAPA SUPERFLEX 16X2 (R-500MTS)", quantity: 3500, unitPrice: 1.90, discount: 50 },
-    { description: "ALB18687 ALB - TR GRAPA FIXACIO TUB A PANELL LLIS 20MM (C-200UD)", quantity: 11000, unitPrice: 0.12, discount: 45 },
-    { description: "ALB18690 ALB - TR MTS. ROTLLE CINTA PERIMETRAL 150X8 MM. (R-50MTS)", quantity: 400, unitPrice: 3.26, discount: 45 },
-    { description: "ALB18836 ALB - TR TAC PLÀSTIC PER FIXACIÓ PANELLS LLISOS (C-100UD)", quantity: 300, unitPrice: 0.33, discount: 45 },
-    { description: "ALB18670 ALB - TR LTS. ADHITIU MORTER S.R. (ENVAS-10LTS)", quantity: 20, unitPrice: 5.42, discount: 45 },
+    { description: "ALB18735 ALB - TR M2 PANELL LLIS ALUMINI ACUTEC H-25MM RT-0,80 ACÚSTIC (C-12M2)", quantity: 387.50, unitPrice: 25.20, discount: 10 },
+    { description: "ALB18062 ALB - TR MTS. TUB ROTLLE MULTICAPA SUPERFLEX 16X2 (R-500MTS)", quantity: 3500, unitPrice: 1.90, discount: 10 },
+    { description: "ALB18687 ALB - TR GRAPA FIXACIO TUB A PANELL LLIS 20MM (C-200UD)", quantity: 11000, unitPrice: 0.12, discount: 10 },
+    { description: "ALB18690 ALB - TR MTS. ROTLLE CINTA PERIMETRAL 150X8 MM. (R-50MTS)", quantity: 400, unitPrice: 3.26, discount: 10 },
+    { description: "ALB18836 ALB - TR TAC PLÀSTIC PER FIXACIÓ PANELLS LLISOS (C-100UD)", quantity: 300, unitPrice: 0.33, discount: 10 },
+    { description: "ALB18670 ALB - TR LTS. ADHITIU MORTER S.R. (ENVAS-10LTS)", quantity: 20, unitPrice: 5.42, discount: 10 },
     
     // --- COLECTORS ---
     { description: "", quantity: 1, unitPrice: 0, discount: 0 },
     { description: "COLECTORS 10, 10, 11, 10", quantity: 1, unitPrice: 0, discount: 0 },
-    { description: "ALBPD1121116 ALB - COL·LECTOR PREMUNTAT 11 VIES", quantity: 1, unitPrice: 827.10, discount: 50 },
-    { description: "ALBPD1021016 ALB - COL.LECTOR ALB ULTRACOMPACTE 2+3 EN CAIXA ALB 10 VIES BICONOS 16", quantity: 3, unitPrice: 772.07, discount: 50 },
+    { description: "ALBPD1121116 ALB - COL·LECTOR PREMUNTAT 11 VIES", quantity: 1, unitPrice: 827.10, discount: 10 },
+    { description: "ALBPD1021016 ALB - COL.LECTOR ALB ULTRACOMPACTE 2+3 EN CAIXA ALB 10 VIES BICONOS 16", quantity: 3, unitPrice: 772.07, discount: 10 },
     
     // --- TERMOSTATS ---
     { description: "", quantity: 1, unitPrice: 0, discount: 0 },
     { description: "PER ZONES - CONCRETAR NUMERO DE TERMOSTATS", quantity: 1, unitPrice: 0, discount: 0 },
-    { description: "ALB23623 ALB- TERMOSTAT DIGITAL PROGRAMABLE AMB WIFI DIGITAL", quantity: 10, unitPrice: 90.00, discount: 45 },
-    { description: "ALB01561 ALB - CAPÇAL ELÈCTRIC 230V NC SENSE MICRO 2FILS", quantity: 41, unitPrice: 38.08, discount: 45 },
-    { description: "ALB23232 ALB - MODUL CONNEXIO PER 8 TERMOSTATS", quantity: 4, unitPrice: 134.97, discount: 45 }
+    { description: "ALB23623 ALB- TERMOSTAT DIGITAL PROGRAMABLE AMB WIFI DIGITAL", quantity: 10, unitPrice: 90.00, discount: 10 },
+    { description: "ALB01561 ALB - CAPÇAL ELÈCTRIC 230V NC SENSE MICRO 2FILS", quantity: 41, unitPrice: 38.08, discount: 10 },
+    { description: "ALB23232 ALB - MODUL CONNEXIO PER 8 TERMOSTATS", quantity: 4, unitPrice: 134.97, discount: 10 }
 ];
