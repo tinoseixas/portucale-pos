@@ -28,10 +28,10 @@ type QuoteItem = {
 const PERALBA_ITEMS: QuoteItem[] = [
     { description: "", quantity: 1, unitPrice: 0, discount: 0 },
     { description: "HABITATGE CASA A - 416mts2 terra radiant", quantity: 1, unitPrice: 0, discount: 0 },
-    { description: "", quantity: 1, unitPrice: 0, discount: 0 },
     { description: "HABITATGE CASA B - 382mts2 terra radiant", quantity: 1, unitPrice: 0, discount: 0 },
-    { description: "", quantity: 1, unitPrice: 0, discount: 0 },
     { description: "AEROTERMIA MONOBLOC 40kw calefaccio", quantity: 1, unitPrice: 0, discount: 0 },
+    { description: "", quantity: 1, unitPrice: 0, discount: 0 },
+    { description: "MAQUINARIA", quantity: 1, unitPrice: 0, discount: 0 },
     { description: "MSHMEHPIBG0740Y MITSUBISHI - REFREDADORA BOMBA DE CALOR MEHP-iB-G07 40Y", quantity: 1, unitPrice: 23761, discount: 10 },
     { description: "CLT20036000 ACC. FRED - BROOKLYN BASE SUPORT SBR TERRA 600X95X130 500KG (2U)", quantity: 1, unitPrice: 67.5, discount: 10 },
     { description: "GNB283008 GENEBRE - MANEGUET ANTIVIBRATORI ROSCA 1 1/2\"", quantity: 2, unitPrice: 32.42, discount: 10 },
