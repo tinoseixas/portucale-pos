@@ -1,6 +1,7 @@
+
 /**
  * @fileOverview Llista centralitzada d'articles per a l'Oferta Tèrmic Peralba.
- * Conté l'oferta detallada per a la Casa C i el Resum General de l'Edifici.
+ * Conté l'oferta detallada per a la Casa C, o Resum General de l'Edifici e Proposta Hidrosanitària.
  */
 
 export type QuoteItem = {
@@ -9,6 +10,12 @@ export type QuoteItem = {
     unitPrice: number;
     imageDataUrl?: string;
     discount?: number;
+}
+
+export type QuoteTemplate = {
+    items: QuoteItem[];
+    projectName: string;
+    notes?: string;
 }
 
 export const PERALBA_ITEMS: QuoteItem[] = [
@@ -119,11 +126,54 @@ export const BUILDING_SUMMARY_ITEMS: QuoteItem[] = [
     
     { description: "", quantity: 1, unitPrice: 0, discount: 0 },
     { description: "🔷 8. RESUM ECONÒMIC D'EXECUCIÓ", quantity: 1, unitPrice: 0, discount: 0 },
-    { description: "Instal·lació elèctrica completa Habitatge A (Inclou rases, cablatge i muntatge)", quantity: 1, unitPrice: 46805, discount: 0 },
-    { description: "Instal·lació elèctrica completa Habitatge B (Inclou rases, cablatge i muntatge)", quantity: 1, unitPrice: 43654, discount: 0 },
-    { description: "Instal·lació elèctrica completa Habitatge C (Inclou rases, cablatge i muntatge)", quantity: 1, unitPrice: 42366, discount: 0 },
-    { description: "Instal·lació elèctrica completa Garatge (-2) (Inclou il·luminació i emergències)", quantity: 1, unitPrice: 39445, discount: 0 },
+    { description: "Instal·lació elèctrica completa Habitatge A", quantity: 1, unitPrice: 46805, discount: 0 },
+    { description: "Instal·lació elèctrica completa Habitatge B", quantity: 1, unitPrice: 43654, discount: 0 },
+    { description: "Instal·lació elèctrica completa Habitatge C", quantity: 1, unitPrice: 42366, discount: 0 },
+    { description: "Instal·lació elèctrica completa Garatge (-2)", quantity: 1, unitPrice: 39445, discount: 0 },
     
     { description: "", quantity: 1, unitPrice: 0, discount: 0 },
     { description: "VALOR TOTAL ESTIMAT (Sense IGI)", quantity: 1, unitPrice: 0, discount: 0 }
 ];
+
+export const HIDROSANITARIA_ITEMS: QuoteItem[] = [
+    { description: "📄 PROPOSTA ECONÒMICA - INSTAL·LACIONS HIDROSANITÀRIES", quantity: 1, unitPrice: 0, discount: 0 },
+    { description: "Vivendes A, B i C + Garatge", quantity: 1, unitPrice: 0, discount: 0 },
+    { description: "", quantity: 1, unitPrice: 0, discount: 0 },
+    { description: "1️⃣ OBJECTE", quantity: 1, unitPrice: 0, discount: 0 },
+    { description: "Execució completa de les instal·lacions d'aigua freda, aigua calenta sanitària (AQS), xarxa d'evacuació d'aigües residuals, subministrament i muntatge d'aparells sanitaris, mobles i aixeteria segons especificacions acordades.", quantity: 1, unitPrice: 0, discount: 0 },
+    { description: "", quantity: 1, unitPrice: 0, discount: 0 },
+    { description: "2️⃣ DESCRIPCIÓ TÈCNICA DELS TREBALLS (PER VIVENDA)", quantity: 1, unitPrice: 0, discount: 0 },
+    { description: "🔹 8 Banys per vivenda:", quantity: 1, unitPrice: 0, discount: 0 },
+    { description: "• 8 sanitaris suspesos Roca One amb bastidors i cisterna encastada.", quantity: 1, unitPrice: 0, discount: 0 },
+    { description: "• Mobles: 1 Coverlam Traverti (suite) i 7 Alpine Roca.", quantity: 1, unitPrice: 0, discount: 0 },
+    { description: "• Aixeteria hansgrohe Logis i conjunts Vernis Shape 230 EcoSmart.", quantity: 1, unitPrice: 0, discount: 0 },
+    { description: "• Plats de dutxa: 1 Coverlam (suite) i 7 Roca Terran.", quantity: 1, unitPrice: 0, discount: 0 },
+    { description: "• 4 Bidets per vivenda amb aixeta hansgrohe Logis.", quantity: 1, unitPrice: 0, discount: 0 },
+    { description: "• 1 Banyera d'hidromassatge per vivenda amb aixeta Roca Evolution.", quantity: 1, unitPrice: 0, discount: 0 },
+    { description: "🔹 Cuina i Safareig:", quantity: 1, unitPrice: 0, discount: 0 },
+    { description: "• Punts AF/AQS per aigüera, rentavaixelles i rentadora.", quantity: 1, unitPrice: 0, discount: 0 },
+    { description: "• Safareig tècnic i xarxa de desguàs Ø50.", quantity: 1, unitPrice: 0, discount: 0 },
+    { description: "", quantity: 1, unitPrice: 0, discount: 0 },
+    { description: "3️⃣ XARXES D'INSTAL·LACIÓ", quantity: 1, unitPrice: 0, discount: 0 },
+    { description: "• Tub multicapa insonoritzat, aïllament tèrmic i col·lectors per planta.", quantity: 1, unitPrice: 0, discount: 0 },
+    { description: "• Connexió hidràulica a aerotèrmia (sense màquina).", quantity: 1, unitPrice: 0, discount: 0 },
+    { description: "• Proves de pressió i estanquitat realitzades.", quantity: 1, unitPrice: 0, discount: 0 },
+    { description: "", quantity: 1, unitPrice: 0, discount: 0 },
+    { description: "4️⃣ GARATGE (-2)", quantity: 1, unitPrice: 0, discount: 0 },
+    { description: "• 1 punt d'aigua de manteniment i 2 embornals sifònics.", quantity: 1, unitPrice: 0, discount: 0 },
+    { description: "", quantity: 1, unitPrice: 0, discount: 0 },
+    { description: "5️⃣ IMPORT ECONÒMIC D'EXECUCIÓ (Inclou imprevistos 15%)", quantity: 1, unitPrice: 0, discount: 0 },
+    { description: "Execució Instal·lació Hidrosanitària completa Habitatge A", quantity: 1, unitPrice: 84500, discount: 0 },
+    { description: "Execució Instal·lació Hidrosanitària completa Habitatge B", quantity: 1, unitPrice: 84500, discount: 0 },
+    { description: "Execució Instal·lació Hidrosanitària completa Habitatge C", quantity: 1, unitPrice: 84500, discount: 0 },
+    { description: "Execució Instal·lació Hidrosanitària Garatge (-2)", quantity: 1, unitPrice: 6500, discount: 0 },
+    { description: "", quantity: 1, unitPrice: 0, discount: 0 },
+    { description: "💰 IMPORT TOTAL CONTRACTE (Sense IGI)", quantity: 1, unitPrice: 0, discount: 0 }
+];
+
+export const HIDROSANITARIA_NOTES = `30% a la signatura del contracte
+40% amb instal·lacions executades (abans de tancament de paraments)
+20% en muntatge d’aparells sanitaris
+10% a la finalització i lliurament amb proves realitzades`;
+
+export const DEFAULT_NOTES = `40% per iniciar el treball i la resta es pagarà mensualment a combinar.`;

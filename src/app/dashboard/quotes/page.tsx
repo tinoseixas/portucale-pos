@@ -1,3 +1,4 @@
+
 'use client'
 
 import { useMemo, useRef, useState, useEffect } from 'react'
@@ -10,13 +11,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Briefcase, FileDown, Loader2, Users, Plus, Trash2, ImagePlus, Euro, FileArchive, Save, FileText, LayoutList } from 'lucide-react'
+import { Textarea } from '@/components/ui/textarea'
+import { Briefcase, FileDown, Loader2, Users, Plus, Trash2, ImagePlus, Euro, FileArchive, Save, FileText, LayoutList, Droplets } from 'lucide-react'
 import { QuotePreview } from '@/components/QuotePreview'
 import { useToast } from '@/hooks/use-toast'
 import { AdminGate } from '@/components/AdminGate'
 import { IVA_RATE } from '@/lib/calculations'
 import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates'
-import { PERALBA_ITEMS, BUILDING_SUMMARY_ITEMS, type QuoteItem } from '@/lib/peralba-offer'
+import { PERALBA_ITEMS, BUILDING_SUMMARY_ITEMS, HIDROSANITARIA_ITEMS, HIDROSANITARIA_NOTES, DEFAULT_NOTES, type QuoteItem } from '@/lib/peralba-offer'
 
 export default function QuotesPage() {
     const firestore = useFirestore()
@@ -30,6 +32,7 @@ export default function QuotesPage() {
     const [isSaving, setIsSaving] = useState(false)
     const [items, setItems] = useState<QuoteItem[]>([{ description: '', quantity: 1, unitPrice: 0, imageDataUrl: undefined, discount: 0 }]);
     const [labor, setLabor] = useState({ description: "Mà d'obra", cost: 0 });
+    const [notes, setNotes] = useState<string>(DEFAULT_NOTES);
     const [selectedItemIndex, setSelectedItemIndex] = useState<number | null>(null);
 
     const customersQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'customers'), orderBy('name', 'asc')) : null, [firestore]);
@@ -76,13 +79,22 @@ export default function QuotesPage() {
     const handleLoadPeralbaOffer = () => {
         setItems([...PERALBA_ITEMS]);
         if (!projectName) setProjectName("Oferta Tèrmic Peralba - Habitatges");
+        setNotes(DEFAULT_NOTES);
         toast({ title: "Oferta Carregada", description: "Artigos da Casa C adicionados." });
     };
 
     const handleLoadBuildingSummary = () => {
         setItems([...BUILDING_SUMMARY_ITEMS]);
         setProjectName("Resum General d'Instal·lacions - Edifici");
+        setNotes(DEFAULT_NOTES);
         toast({ title: "Resum Carregat", description: "Resumo de todas as casas e garagem adicionado." });
+    };
+
+    const handleLoadHidrosanitaria = () => {
+        setItems([...HIDROSANITARIA_ITEMS]);
+        setProjectName("Instal·lacions Hidrosanitàries - Edifici");
+        setNotes(HIDROSANITARIA_NOTES);
+        toast({ title: "Proposta Carregada", description: "Instal·lacions hidrosanitàries adicionades." });
     };
 
     const handleImageUploadClick = (index: number) => {
@@ -160,6 +172,7 @@ export default function QuotesPage() {
                 items: filteredItems as any,
                 labor: { description: labor.description || "Mà d'obra", cost: laborCostValue },
                 totalAmount: isNaN(totalAmount) ? 0 : totalAmount,
+                notes: notes,
             };
 
             setDocumentNonBlocking(quoteRef, { ...quoteData, id: quoteRef.id }, { merge: false });
@@ -211,6 +224,9 @@ export default function QuotesPage() {
                             <CardDescription>Crea um novo orçamento manualmente ou usa os modelos rápidos abaixo.</CardDescription>
                         </div>
                         <div className="flex gap-2 flex-wrap">
+                            <Button variant="outline" onClick={handleLoadHidrosanitaria} className="bg-cyan-500/10 text-cyan-700 hover:bg-cyan-500/20">
+                                <Droplets className="mr-2 h-4 w-4" /> Hidrosanitària
+                            </Button>
                             <Button variant="outline" onClick={handleLoadBuildingSummary} className="bg-blue-500/10 text-blue-700 hover:bg-blue-500/20">
                                 <LayoutList className="mr-2 h-4 w-4" /> Resum Edifici
                             </Button>
@@ -337,6 +353,16 @@ export default function QuotesPage() {
                             </div>
                          </div>
 
+                         <div className="space-y-2">
+                            <Label>Condicions de Pagament i Notes</Label>
+                            <Textarea 
+                                placeholder="Escriu les condicions de pagament..."
+                                value={notes}
+                                onChange={(e) => setNotes(e.target.value)}
+                                rows={4}
+                            />
+                         </div>
+
                         <div className="flex justify-end pt-4 gap-2 flex-wrap">
                              <Button onClick={() => handleSaveQuote(false)} disabled={isSaving}>
                                 {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
@@ -353,6 +379,23 @@ export default function QuotesPage() {
                         </div>
                     </CardContent>
                 </Card>
+                
+                {items.length > 0 && (
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Previsualització del Pressupost</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                           <QuotePreview
+                             customer={associatedCustomer}
+                             projectName={projectName}
+                             items={items}
+                             labor={labor}
+                             notes={notes}
+                           />
+                        </CardContent>
+                    </Card>
+                )}
             </div>
         </AdminGate>
     )

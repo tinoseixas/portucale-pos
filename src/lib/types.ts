@@ -1,3 +1,4 @@
+
 export interface ServiceRecord {
   id: string;
   employeeId: string;
@@ -76,6 +77,7 @@ export interface Quote {
         cost: number;
     };
     totalAmount: number;
+    notes?: string;
 }
 
 export interface InvoiceItem {
@@ -106,6 +108,7 @@ export interface Invoice {
     status: 'pendent' | 'pagada' | 'parcialment pagada';
     paymentDate?: string;
     applyIva?: boolean;
+    notes?: string;
 }
 
 export interface Receipt {

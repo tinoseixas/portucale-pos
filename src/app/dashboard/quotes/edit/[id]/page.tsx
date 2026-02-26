@@ -1,3 +1,4 @@
+
 'use client'
 
 import { useMemo, useRef, useState, useEffect } from 'react'
@@ -10,12 +11,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Briefcase, FileArchive, Loader2, Users, Plus, Trash2, ImagePlus, Euro, Save, ArrowLeft, FileText, LayoutList } from 'lucide-react'
+import { Textarea } from '@/components/ui/textarea'
+import { Briefcase, FileArchive, Loader2, Users, Plus, Trash2, ImagePlus, Euro, Save, ArrowLeft, FileText, LayoutList, Droplets } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { AdminGate } from '@/components/AdminGate'
 import { IVA_RATE } from '@/lib/calculations'
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates'
-import { PERALBA_ITEMS, BUILDING_SUMMARY_ITEMS, type QuoteItem } from '@/lib/peralba-offer'
+import { PERALBA_ITEMS, BUILDING_SUMMARY_ITEMS, HIDROSANITARIA_ITEMS, HIDROSANITARIA_NOTES, DEFAULT_NOTES, type QuoteItem } from '@/lib/peralba-offer'
 
 export default function EditQuotePage() {
     const firestore = useFirestore()
@@ -31,6 +33,7 @@ export default function EditQuotePage() {
     const [isSaving, setIsSaving] = useState(false)
     const [items, setItems] = useState<QuoteItem[]>([{ description: '', quantity: 1, unitPrice: 0, imageDataUrl: undefined, discount: 0 }]);
     const [labor, setLabor] = useState({ description: "Mà d'obra", cost: 0 });
+    const [notes, setNotes] = useState<string>(DEFAULT_NOTES);
     const [selectedItemIndex, setSelectedItemIndex] = useState<number | null>(null);
 
     const quoteDocRef = useMemoFirebase(() => (firestore && quoteId ? doc(firestore, 'quotes', quoteId) : null), [firestore, quoteId]);
@@ -54,6 +57,7 @@ export default function EditQuotePage() {
                 description: quote.labor?.description || "Mà d'obra",
                 cost: Number(quote.labor?.cost) || 0
             });
+            setNotes(quote.notes || DEFAULT_NOTES);
         }
     }, [quote]);
 
@@ -97,12 +101,20 @@ export default function EditQuotePage() {
 
     const handleLoadPeralbaOffer = () => {
         setItems([...PERALBA_ITEMS]);
+        setNotes(DEFAULT_NOTES);
         toast({ title: "Oferta Carregada", description: "Artigos da Casa C adicionados." });
     };
 
     const handleLoadBuildingSummary = () => {
         setItems([...BUILDING_SUMMARY_ITEMS]);
+        setNotes(DEFAULT_NOTES);
         toast({ title: "Resum Carregat", description: "Resumo consolidado adicionado." });
+    };
+
+    const handleLoadHidrosanitaria = () => {
+        setItems([...HIDROSANITARIA_ITEMS]);
+        setNotes(HIDROSANITARIA_NOTES);
+        toast({ title: "Proposta Carregada", description: "Instal·lacions hidrosanitàries adicionades." });
     };
 
     const handleImageUploadClick = (index: number) => {
@@ -165,6 +177,7 @@ export default function EditQuotePage() {
                 items: filteredItems as any,
                 labor: { description: labor.description || "Mà d'obra", cost: laborCostValue },
                 totalAmount: isNaN(totalAmount) ? 0 : totalAmount,
+                notes: notes,
             };
 
             updateDocumentNonBlocking(quoteDocRef, updatedQuoteData);
@@ -216,6 +229,9 @@ export default function EditQuotePage() {
                             <CardDescription>Modifica os detalhes do orçamento e use os modelos rápidos.</CardDescription>
                         </div>
                         <div className="flex gap-2 flex-wrap">
+                            <Button variant="outline" onClick={handleLoadHidrosanitaria} className="bg-cyan-500/10 text-cyan-700 hover:bg-cyan-500/20">
+                                <Droplets className="mr-2 h-4 w-4" /> Hidrosanitària
+                            </Button>
                             <Button variant="outline" onClick={handleLoadBuildingSummary} className="bg-blue-500/10 text-blue-700 hover:bg-blue-500/20">
                                 <LayoutList className="mr-2 h-4 w-4" /> Resum Edifici
                             </Button>
@@ -333,6 +349,16 @@ export default function EditQuotePage() {
                                      <Euro className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                                 </div>
                             </div>
+                         </div>
+
+                         <div className="space-y-2">
+                            <Label>Condicions de Pagament i Notes</Label>
+                            <Textarea 
+                                placeholder="Escriu les condicions de pagament..."
+                                value={notes}
+                                onChange={(e) => setNotes(e.target.value)}
+                                rows={4}
+                            />
                          </div>
 
                         <div className="flex justify-end pt-4 gap-2 flex-wrap">

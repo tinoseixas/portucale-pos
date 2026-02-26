@@ -1,3 +1,4 @@
+
 'use client'
 import React, { forwardRef, useMemo } from 'react';
 import Image from 'next/image';
@@ -22,10 +23,11 @@ interface QuotePreviewProps {
   items: QuoteItem[];
   labor: { description: string; cost: number };
   quoteNumber?: number;
+  notes?: string;
 }
 
 // --- Component ---
-export const QuotePreview = forwardRef<HTMLDivElement, QuotePreviewProps>(({ customer, projectName, items, labor, quoteNumber }, ref) => {
+export const QuotePreview = forwardRef<HTMLDivElement, QuotePreviewProps>(({ customer, projectName, items, labor, quoteNumber, notes }, ref) => {
 
     const { materialsSubtotal, totalDiscountAmount } = useMemo(() => {
         let subtotalAccumulator = 0;
@@ -47,6 +49,8 @@ export const QuotePreview = forwardRef<HTMLDivElement, QuotePreviewProps>(({ cus
     const subtotal = materialsSubtotal + labor.cost;
     const iva = subtotal * IVA_RATE;
     const totalGeneral = subtotal + iva;
+
+    const defaultNotes = "40% per iniciar el treball i la resta es pagarà mensualment a combinar.";
 
     return (
         <div ref={ref} className="bg-white p-8 font-sans text-gray-900 printable-area">
@@ -199,8 +203,10 @@ export const QuotePreview = forwardRef<HTMLDivElement, QuotePreviewProps>(({ cus
             <footer className="mt-16 pt-6 border-t text-sm text-gray-600">
                 <div className="bg-gray-100 p-4 rounded-lg border border-gray-300 text-center">
                     <p className="font-bold text-base text-gray-800 mb-2">Condicions de Pagament i Validesa</p>
-                    <p><span className="font-semibold">Pagament:</span> 40% per iniciar el treball i la resta es pagarà mensualment a combinar.</p>
-                    <p><span className="font-semibold">Validesa:</span> Aquest pressupost és vàlid durant 15 dies.</p>
+                    <div className="whitespace-pre-line">
+                        <span className="font-semibold">Pagament:</span> {notes || defaultNotes}
+                    </div>
+                    <p className="mt-2"><span className="font-semibold">Validesa:</span> Aquest pressupost és vàlid durant 15 dies.</p>
                 </div>
                 <div className="text-center text-xs text-gray-500 mt-4">
                     <p>Gràcies per l'oportunitat de presentar aquest pressupost.</p>

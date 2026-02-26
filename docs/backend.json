@@ -285,7 +285,8 @@
           },
           "required": ["description", "cost"]
         },
-        "totalAmount": { "type": "number", "description": "The total amount calculated for the quote." }
+        "totalAmount": { "type": "number", "description": "The total amount calculated for the quote." },
+        "notes": { "type": "string", "description": "Custom conditions or notes for the quote." }
       },
       "required": ["id", "quoteNumber", "createdAt", "projectName", "items", "labor", "totalAmount"]
     },
@@ -337,7 +338,8 @@
           "type": "string",
           "format": "date-time",
           "description": "The date of the last payment."
-        }
+        },
+        "notes": { "type": "string", "description": "Custom conditions or notes for the invoice." }
       },
       "required": ["id", "invoiceNumber", "createdAt", "projectName", "items", "labor", "totalAmount", "status"]
     },
