@@ -1,7 +1,6 @@
 /**
  * @fileOverview Lista centralizada de artigos para a Oferta Tèrmic Peralba.
- * Contém todos os itens solicitados para Maquinaria, Depósitos, Casa C e Termostatos.
- * Descontos fixados em 10% para todos os artigos, conforme solicitado.
+ * Contém a oferta detalhada para a Casa C e o Resumo Geral do Edifício.
  */
 
 export type QuoteItem = {
@@ -14,8 +13,7 @@ export type QuoteItem = {
 
 export const PERALBA_ITEMS: QuoteItem[] = [
     // --- SECÇÃO INICIAL ---
-    { description: "", quantity: 1, unitPrice: 0, discount: 0 },
-    { description: "HABITATGE CASA C - 342mts2 terra radiant", quantity: 1, unitPrice: 0, discount: 0 },
+    { description: "HABITATGE ANDORRA - 342mts2 - CASA C", quantity: 1, unitPrice: 0, discount: 0 },
     { description: "AEROTERMIA MONOBLOC 34kw calefaccio", quantity: 1, unitPrice: 0, discount: 0 },
     
     // --- MAQUINARIA ---
@@ -56,16 +54,15 @@ export const PERALBA_ITEMS: QuoteItem[] = [
     
     // --- GRUPS HIDRAULICS ---
     { description: "", quantity: 1, unitPrice: 0, discount: 0 },
-    { description: "GRUPS HIDRAULICS DIRECTES - CONFIRMAR", quantity: 1, unitPrice: 0, discount: 0 },
+    { description: "GRUPS HIDRAULICS DIRECTES", quantity: 1, unitPrice: 0, discount: 0 },
     { description: "AQUAFLEX - COLECTOR COL120/4-125", quantity: 1, unitPrice: 609, discount: 10 },
     { description: "AQUAFLEX - ANCLATGE PARET COLECTOR", quantity: 1, unitPrice: 78, discount: 10 },
     { description: "AQU20355RP8 AQUAFLEX - 20355R-P8 GRUP HIDRAULIC IMPULSIO DIRECTE DN25", quantity: 4, unitPrice: 442, discount: 10 },
     
     // --- CASA C - ANDORRA ---
     { description: "", quantity: 1, unitPrice: 0, discount: 0 },
-    { description: "HABITATGE ANDORRA - 342mts2 - CASA C", quantity: 1, unitPrice: 0, discount: 0 },
     { description: "PANELL LLIS", quantity: 1, unitPrice: 0, discount: 0 },
-    { description: "ALB18735 ALB - TR M2 PANELL LLIS ALUMINI ACUTEC H-25MM RT-0,80 ACÚSTIC (C-12M2)", quantity: 350, unitPrice: 25.20, discount: 10 },
+    { description: "ALB18735 ALB - TR M2 PANELL LLIS ALUMINI ACUTEC H-25MM RT-0,80 ACÚSTIC", quantity: 350, unitPrice: 25.20, discount: 10 },
     { description: "ALB18062 ALB - TR MTS. TUB ROTLLE MULTICAPA SUPERFLEX 16X2 (R-500MTS)", quantity: 3500, unitPrice: 1.90, discount: 10 },
     { description: "ALB18687 ALB - TR GRAPA FIXACIO TUB A PANELL LLIS 20MM (C-200UD)", quantity: 11000, unitPrice: 0.12, discount: 10 },
     { description: "ALB18690 ALB - TR MTS. ROTLLE CINTA PERIMETRAL 150X8 MM. (R-50MTS)", quantity: 350, unitPrice: 3.26, discount: 10 },
@@ -74,15 +71,46 @@ export const PERALBA_ITEMS: QuoteItem[] = [
     
     // --- COLECTORS ---
     { description: "", quantity: 1, unitPrice: 0, discount: 0 },
-    { description: "COLECTORS 8, 10, 11, 10", quantity: 1, unitPrice: 0, discount: 0 },
-    { description: "ALBPD1020816 ALB - COL·LECTOR PREMUNTAT ULTRACOMPACTE \"2+3\" 8 SORT. A/CABALIMETRE A/CAIXA (TUB 16X2)", quantity: 1, unitPrice: 649.56, discount: 10 },
-    { description: "ALBPD1021016 ALB - COL.LECTOR ALB ULTRACOMPACTE 2+3 EN CAIXA ALB 10 VIES BICONOS 16", quantity: 2, unitPrice: 772.07, discount: 10 },
+    { description: "COLECTORS", quantity: 1, unitPrice: 0, discount: 0 },
+    { description: "ALBPD1020816 ALB - COL·LECTOR PREMUNTAT ULTRACOMPACTE 8 SORT.", quantity: 1, unitPrice: 649.56, discount: 10 },
+    { description: "ALBPD1021016 ALB - COL.LECTOR ALB ULTRACOMPACTE 10 VIES", quantity: 2, unitPrice: 772.07, discount: 10 },
     { description: "ALBPD1121116 ALB - COL·LECTOR PREMUNTAT 11 VIES", quantity: 1, unitPrice: 827.10, discount: 10 },
     
     // --- TERMOSTATS ---
     { description: "", quantity: 1, unitPrice: 0, discount: 0 },
-    { description: "PER ZONES - CONCRETAR NUMERO DE TERMOSTATS", quantity: 1, unitPrice: 0, discount: 0 },
+    { description: "TERMOSTATS", quantity: 1, unitPrice: 0, discount: 0 },
     { description: "ALB23623 ALB- TERMOSTAT DIGITAL PROGRAMABLE AMB WIFI DIGITAL", quantity: 10, unitPrice: 90.00, discount: 10 },
     { description: "ALB01561 ALB - CAPÇAL ELÈCTRIC 230V NC SENSE MICRO 2FILS", quantity: 39, unitPrice: 38.08, discount: 10 },
     { description: "ALB23232 ALB - MODUL CONNEXIO PER 8 TERMOSTATS", quantity: 4, unitPrice: 134.97, discount: 10 }
+];
+
+export const BUILDING_SUMMARY_ITEMS: QuoteItem[] = [
+    { description: "RESUM GENERAL INSTAL·LACIONS EDIFICI", quantity: 1, unitPrice: 0, discount: 0 },
+    { description: "", quantity: 1, unitPrice: 0, discount: 0 },
+    
+    // CASA A
+    { description: "CASA A", quantity: 1, unitPrice: 0, discount: 0 },
+    { description: "Instal·lació completa Casa A (40 €/h)", quantity: 1, unitPrice: 40700, discount: 0 },
+    { description: "Imprevistos Casa A (15%)", quantity: 1, unitPrice: 6105, discount: 0 },
+    { description: "", quantity: 1, unitPrice: 0, discount: 0 },
+    
+    // CASA B
+    { description: "CASA B", quantity: 1, unitPrice: 0, discount: 0 },
+    { description: "Instal·lació completa Casa B", quantity: 1, unitPrice: 37960, discount: 0 },
+    { description: "Imprevistos Casa B (15%)", quantity: 1, unitPrice: 5694, discount: 0 },
+    { description: "", quantity: 1, unitPrice: 0, discount: 0 },
+    
+    // CASA C
+    { description: "CASA C", quantity: 1, unitPrice: 0, discount: 0 },
+    { description: "Instal·lació completa Casa C", quantity: 1, unitPrice: 36840, discount: 0 },
+    { description: "Imprevistos Casa C (15%)", quantity: 1, unitPrice: 5526, discount: 0 },
+    { description: "", quantity: 1, unitPrice: 0, discount: 0 },
+    
+    // GARAGEM
+    { description: "GARAGEM (-2)", quantity: 1, unitPrice: 0, discount: 0 },
+    { description: "Instal·lació completa Garagem", quantity: 1, unitPrice: 34300, discount: 0 },
+    { description: "Imprevistos Garagem (15%)", quantity: 1, unitPrice: 5145, discount: 0 },
+    
+    { description: "", quantity: 1, unitPrice: 0, discount: 0 },
+    { description: "VALOR TOTAL ESTIMAT (Sense IGI)", quantity: 1, unitPrice: 0, discount: 0 }
 ];

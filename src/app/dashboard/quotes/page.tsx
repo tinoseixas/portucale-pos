@@ -1,4 +1,3 @@
-
 'use client'
 
 import { useMemo, useRef, useState, useEffect } from 'react'
@@ -11,13 +10,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Briefcase, FileDown, Loader2, Users, Plus, Trash2, ImagePlus, Euro, FileArchive, Save, FileText } from 'lucide-react'
+import { Briefcase, FileDown, Loader2, Users, Plus, Trash2, ImagePlus, Euro, FileArchive, Save, FileText, LayoutList } from 'lucide-react'
 import { QuotePreview } from '@/components/QuotePreview'
 import { useToast } from '@/hooks/use-toast'
 import { AdminGate } from '@/components/AdminGate'
 import { IVA_RATE } from '@/lib/calculations'
 import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates'
-import { PERALBA_ITEMS, type QuoteItem } from '@/lib/peralba-offer'
+import { PERALBA_ITEMS, BUILDING_SUMMARY_ITEMS, type QuoteItem } from '@/lib/peralba-offer'
 
 export default function QuotesPage() {
     const firestore = useFirestore()
@@ -76,8 +75,14 @@ export default function QuotesPage() {
 
     const handleLoadPeralbaOffer = () => {
         setItems([...PERALBA_ITEMS]);
-        if (!projectName) setProjectName("Oferta Tèrmic Peralba - Habitatges Casa A i B");
-        toast({ title: "Oferta Carregada", description: `${PERALBA_ITEMS.length} artigos adicionados.` });
+        if (!projectName) setProjectName("Oferta Tèrmic Peralba - Habitatges");
+        toast({ title: "Oferta Carregada", description: "Artigos da Casa C adicionados." });
+    };
+
+    const handleLoadBuildingSummary = () => {
+        setItems([...BUILDING_SUMMARY_ITEMS]);
+        setProjectName("Resum General d'Instal·lacions - Edifici");
+        toast({ title: "Resum Carregat", description: "Resumo de todas as casas e garagem adicionado." });
     };
 
     const handleImageUploadClick = (index: number) => {
@@ -133,7 +138,7 @@ export default function QuotesPage() {
                 imageDataUrl: item.imageDataUrl || null
             }));
 
-            const filteredItems = sanitizedItems.filter(item => item.description.trim() !== '' || item.unitPrice === 0);
+            const filteredItems = sanitizedItems.filter(item => item.description.trim() !== '' || item.unitPrice > 0);
 
             const materialsSubtotal = filteredItems.reduce((acc, item) => {
                 const itemTotal = item.quantity * item.unitPrice;
@@ -146,8 +151,7 @@ export default function QuotesPage() {
             const totalAmount = subtotal * (1 + IVA_RATE);
 
             const quoteRef = doc(collection(firestore, "quotes"));
-            const quoteData: QuoteType = {
-                id: quoteRef.id,
+            const quoteData: Omit<QuoteType, 'id'> = {
                 quoteNumber: newQuoteNumber,
                 createdAt: new Date().toISOString(),
                 customerId: associatedCustomer?.id || '',
@@ -158,7 +162,7 @@ export default function QuotesPage() {
                 totalAmount: isNaN(totalAmount) ? 0 : totalAmount,
             };
 
-            setDocumentNonBlocking(quoteRef, quoteData, { merge: false });
+            setDocumentNonBlocking(quoteRef, { ...quoteData, id: quoteRef.id }, { merge: false });
 
             toast({
                 title: "Pressupost Guardat",
@@ -204,13 +208,16 @@ export default function QuotesPage() {
                     <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center sm:justify-between gap-4">
                         <div>
                             <CardTitle>Generador de Pressupostos</CardTitle>
-                            <CardDescription>Crea um novo orçamento. Use o botão abaixo para carregar a oferta completa da Peralba.</CardDescription>
+                            <CardDescription>Crea um novo orçamento manualmente ou usa os modelos rápidos abaixo.</CardDescription>
                         </div>
                         <div className="flex gap-2 flex-wrap">
-                            <Button variant="outline" onClick={handleLoadPeralbaOffer} className="bg-primary/10">
-                                <FileText className="mr-2 h-4 w-4" /> Carregar Oferta Peralba
+                            <Button variant="outline" onClick={handleLoadBuildingSummary} className="bg-blue-500/10 text-blue-700 hover:bg-blue-500/20">
+                                <LayoutList className="mr-2 h-4 w-4" /> Resum Edifici
                             </Button>
-                            <Button onClick={() => router.push('/dashboard/quotes/history')}>
+                            <Button variant="outline" onClick={handleLoadPeralbaOffer} className="bg-primary/10">
+                                <FileText className="mr-2 h-4 w-4" /> Oferta Peralba
+                            </Button>
+                            <Button onClick={() => router.push('/dashboard/quotes/history')} variant="ghost">
                                 <FileArchive className="mr-2 h-4 w-4" /> Historial
                             </Button>
                         </div>
@@ -250,7 +257,7 @@ export default function QuotesPage() {
                                         <div className="flex gap-2 items-start">
                                             <div className="flex-grow space-y-2">
                                                 <Input 
-                                                    placeholder="Descripció do artigo (ou deixe vazio para linha em branco)"
+                                                    placeholder="Descripció do artigo"
                                                     value={item.description}
                                                     onChange={(e) => handleItemChange(index, 'description', e.target.value)}
                                                     className="bg-background"

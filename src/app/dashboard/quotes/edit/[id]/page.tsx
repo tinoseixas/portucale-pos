@@ -1,4 +1,3 @@
-
 'use client'
 
 import { useMemo, useRef, useState, useEffect } from 'react'
@@ -11,12 +10,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Briefcase, FileArchive, Loader2, Users, Plus, Trash2, ImagePlus, Euro, Save, ArrowLeft, FileText } from 'lucide-react'
+import { Briefcase, FileArchive, Loader2, Users, Plus, Trash2, ImagePlus, Euro, Save, ArrowLeft, FileText, LayoutList } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { AdminGate } from '@/components/AdminGate'
 import { IVA_RATE } from '@/lib/calculations'
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates'
-import { PERALBA_ITEMS, type QuoteItem } from '@/lib/peralba-offer'
+import { PERALBA_ITEMS, BUILDING_SUMMARY_ITEMS, type QuoteItem } from '@/lib/peralba-offer'
 
 export default function EditQuotePage() {
     const firestore = useFirestore()
@@ -98,7 +97,12 @@ export default function EditQuotePage() {
 
     const handleLoadPeralbaOffer = () => {
         setItems([...PERALBA_ITEMS]);
-        toast({ title: "Oferta Carregada", description: "Todos os 58 artigos adicionados." });
+        toast({ title: "Oferta Carregada", description: "Artigos da Casa C adicionados." });
+    };
+
+    const handleLoadBuildingSummary = () => {
+        setItems([...BUILDING_SUMMARY_ITEMS]);
+        toast({ title: "Resum Carregat", description: "Resumo consolidado adicionado." });
     };
 
     const handleImageUploadClick = (index: number) => {
@@ -142,7 +146,7 @@ export default function EditQuotePage() {
                 imageDataUrl: item.imageDataUrl || null
             }));
 
-            const filteredItems = sanitizedItems.filter(item => item.description.trim() !== '' || item.unitPrice === 0);
+            const filteredItems = sanitizedItems.filter(item => item.description.trim() !== '' || item.unitPrice > 0);
 
             const materialsSubtotal = filteredItems.reduce((acc, item) => {
                 const itemTotal = item.quantity * item.unitPrice;
@@ -209,11 +213,14 @@ export default function EditQuotePage() {
                     <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center sm:justify-between gap-4">
                         <div>
                             <CardTitle>Editar Pressupost #{String(quote.quoteNumber).padStart(4, '0')}</CardTitle>
-                            <CardDescription>Modifica os detalhes do orçamento e use o botão Peralba para recarregar a oferta completa se necessário.</CardDescription>
+                            <CardDescription>Modifica os detalhes do orçamento e use os modelos rápidos.</CardDescription>
                         </div>
                         <div className="flex gap-2 flex-wrap">
+                            <Button variant="outline" onClick={handleLoadBuildingSummary} className="bg-blue-500/10 text-blue-700 hover:bg-blue-500/20">
+                                <LayoutList className="mr-2 h-4 w-4" /> Resum Edifici
+                            </Button>
                             <Button variant="outline" onClick={handleLoadPeralbaOffer} className="bg-primary/10">
-                                <FileText className="mr-2 h-4 w-4" /> Recarregar Oferta Peralba
+                                <FileText className="mr-2 h-4 w-4" /> Oferta Peralba
                             </Button>
                             <Button variant="ghost" onClick={() => router.back()}>
                                 <ArrowLeft className="mr-2 h-4 w-4" /> Tornar
