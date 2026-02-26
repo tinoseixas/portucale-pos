@@ -1,3 +1,4 @@
+
 'use client'
 
 import { useMemo, useRef, useState, useEffect } from 'react'
@@ -10,7 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Briefcase, FileArchive, Loader2, Users, Plus, Trash2, ImagePlus, Euro, Save, ArrowLeft } from 'lucide-react'
+import { Briefcase, FileArchive, Loader2, Users, Plus, Trash2, ImagePlus, Euro, Save, ArrowLeft, FileText } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { AdminGate } from '@/components/AdminGate'
 import { IVA_RATE } from '@/lib/calculations'
@@ -23,6 +24,37 @@ type QuoteItem = {
     imageDataUrl?: string;
     discount?: number;
 }
+
+const PERALBA_ITEMS: QuoteItem[] = [
+    { description: "HABITATGE CASA A - 416mts2 terra radiant", quantity: 1, unitPrice: 0, discount: 0 },
+    { description: "HABITATGE CASA B - 382mts2 terra radiant", quantity: 1, unitPrice: 0, discount: 0 },
+    { description: "AEROTERMIA MONOBLOC 40kw calefaccio", quantity: 1, unitPrice: 0, discount: 0 },
+    { description: "MSHMEHPIBG0740Y MITSUBISHI - REFREDADORA BOMBA DE CALOR MEHP-iB-G07 40Y", quantity: 1, unitPrice: 23761, discount: 40 },
+    { description: "CLT20036000 ACC. FRED - BROOKLYN BASE SUPORT SBR TERRA 600X95X130 500KG (2U)", quantity: 1, unitPrice: 67.5, discount: 35 },
+    { description: "GNB283008 GENEBRE - MANEGUET ANTIVIBRATORI ROSCA 1 1/2\"", quantity: 2, unitPrice: 32.42, discount: 30 },
+    { description: "BAX7504412 BAXI - QUANTUM ECO 32H CIRCULADOR CALEFACCIO RACORDS 1 1/4\" MONOF.", quantity: 1, unitPrice: 1310, discount: 38 },
+    { description: "TUC0201827A TMM - M-200 VALVULA ESFERA F-F 1 1/2\" PALANCA BLAVA", quantity: 2, unitPrice: 46.98, discount: 40 },
+    { description: "GNB10307 GENEBRE - YORK VALVULA RETENCIO 1 1/2\"", quantity: 1, unitPrice: 28.59, discount: 35 },
+    { description: "BAX7841698 BAXI - VALVULA ANTIGEL PER BOMBES DE CALOR MONOBLOC 1.1/2\"", quantity: 1, unitPrice: 242, discount: 40 },
+    { description: "DIPOSIT INERCIA", quantity: 1, unitPrice: 0, discount: 0 },
+    { description: "SUIDI050X06RG SUICALSA - DIPOSIT INERCIA INOXIDABLE 6BAR DE 500LTS", quantity: 1, unitPrice: 2606, discount: 32 },
+    { description: "BAX950053011 BAXI - VASOFLEX VAS EXP. MEM/FIXA CALEFACCIO 80LTS 1BAR", quantity: 1, unitPrice: 267, discount: 35 },
+    { description: "BAX195230003 BAXI - PRESCOMANO VALVULA SEGURETAT 3/4\" 3BAR A/MANOMETRE", quantity: 1, unitPrice: 46.9, discount: 35 },
+    { description: "TUC0201827A TMM - M-200 VALVULA ESFERA F-F 1 1/2\" PALANCA BLAVA", quantity: 4, unitPrice: 46.98, discount: 40 },
+    { description: "DIPOSIT ACS 390lts", quantity: 1, unitPrice: 0, discount: 0 },
+    { description: "MITSUBISHI - VAL. 3 VIES 1 1/4 ACS/CALEFACCIO", quantity: 1, unitPrice: 356, discount: 35 },
+    { description: "MITSUBISHI - KIT 2 SONDES ACS I INERCIA", quantity: 1, unitPrice: 70, discount: 35 },
+    { description: "VSMZ026497 VIESSMANN - INTERACUMULADOR VITOCELL 100-V CVWB 390 L", quantity: 1, unitPrice: 3761, discount: 35 },
+    { description: "BAX195200005 BAXI - VASOFLEX/S ACS VAS EXP. MEM/FIXA ACS 25LTS 4BAR", quantity: 1, unitPrice: 158, discount: 35 },
+    { description: "BAX195230007 BAXI - FLEXBRANE GRUP SEGURETAT 1\"", quantity: 1, unitPrice: 117, discount: 35 },
+    { description: "RECIRCULACIO ACS", quantity: 1, unitPrice: 0, discount: 0 },
+    { description: "BAX953035021 BAXI - SB-50XA CIRCULADOR ACS RACORDS 1\" MONOF.", quantity: 1, unitPrice: 554, discount: 38 },
+    { description: "TMM0201825A TMM - M-200 VALVULA ESFERA F-F 1\" PALANCA BLAVA", quantity: 2, unitPrice: 20.41, discount: 40 },
+    { description: "GNB10305 GENEBRE - YORK VALVULA RETENCIO 1\"", quantity: 1, unitPrice: 12.86, discount: 35 },
+    { description: "AQUAFLEX - COLECTOR 5M3/H 5 SORTIDES LONG.2MTS", quantity: 1, unitPrice: 747, discount: 35 },
+    { description: "AQUAFLEX - ANCLATGE PARET COLECTOR", quantity: 1, unitPrice: 78, discount: 35 },
+    { description: "AQU20355RP8 AQUAFLEX - 20355R-P8 GRUP HIDRAULIC IMPULSIO DIRECTE DN25", quantity: 5, unitPrice: 442, discount: 35 }
+];
 
 export default function EditQuotePage() {
     const firestore = useFirestore()
@@ -82,6 +114,11 @@ export default function EditQuotePage() {
 
     const removeItem = (index: number) => {
         setItems(items.filter((_, i) => i !== index));
+    };
+
+    const handleLoadPeralbaOffer = () => {
+        setItems(PERALBA_ITEMS);
+        toast({ title: "Oferta Carregada", description: "Os itens foram substituídos pela oferta Peralba." });
     };
 
     const handleImageUploadClick = (index: number) => {
@@ -183,9 +220,14 @@ export default function EditQuotePage() {
                             <CardTitle>Editar Pressupost #{String(quote.quoteNumber).padStart(4, '0')}</CardTitle>
                             <CardDescription>Modifica els detalls del pressupost.</CardDescription>
                         </div>
-                         <Button variant="ghost" onClick={() => router.back()}>
-                            <ArrowLeft className="mr-2 h-4 w-4" /> Tornar
-                        </Button>
+                        <div className="flex gap-2 flex-wrap">
+                            <Button variant="outline" onClick={handleLoadPeralbaOffer}>
+                                <FileText className="mr-2 h-4 w-4" /> Carregar Oferta Peralba
+                            </Button>
+                            <Button variant="ghost" onClick={() => router.back()}>
+                                <ArrowLeft className="mr-2 h-4 w-4" /> Tornar
+                            </Button>
+                        </div>
                     </CardHeader>
                     <CardContent className="space-y-6">
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
