@@ -4,7 +4,7 @@
 import { useMemo, useRef, useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { useCollection, useUser, useFirestore, useMemoFirebase, useDoc } from '@/firebase'
-import { collection, query, orderBy, doc, updateDoc } from 'firebase/firestore'
+import { collection, query, orderBy, doc } from 'firebase/firestore'
 import type { Customer, Quote as QuoteType } from '@/lib/types'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -82,7 +82,13 @@ export default function EditQuotePage() {
         if (quote) {
             setSelectedCustomerId(quote.customerId || 'all');
             setProjectName(quote.projectName || '');
-            setItems(quote.items.map(item => ({...item, discount: item.discount || 0})) || [{ description: '', quantity: 1, unitPrice: 0, imageDataUrl: undefined, discount: 0 }]);
+            setItems(quote.items.map(item => ({
+                description: item.description,
+                quantity: item.quantity,
+                unitPrice: item.unitPrice,
+                imageDataUrl: item.imageDataUrl,
+                discount: item.discount !== undefined ? item.discount : 0
+            })) || [{ description: '', quantity: 1, unitPrice: 0, imageDataUrl: undefined, discount: 0 }]);
             setLabor(quote.labor || { description: "Mà d'obra", cost: 0 });
         }
     }, [quote]);
@@ -118,7 +124,7 @@ export default function EditQuotePage() {
 
     const handleLoadPeralbaOffer = () => {
         setItems(PERALBA_ITEMS);
-        toast({ title: "Oferta Carregada", description: "Os itens foram substituídos pela oferta Peralba." });
+        toast({ title: "Oferta Carregada", description: "Els articles han estat substituïts per l'oferta Peralba." });
     };
 
     const handleImageUploadClick = (index: number) => {
@@ -172,11 +178,11 @@ export default function EditQuotePage() {
                 totalAmount: totalAmount,
             };
 
-            await updateDoc(quoteDocRef, updatedQuoteData);
+            updateDocumentNonBlocking(quoteDocRef, updatedQuoteData);
 
             toast({
                 title: "Pressupost Actualitzat",
-                description: `El pressupost #${quote?.quoteNumber} ha estat actualitzat.`,
+                description: `El pressupost #${quote?.quoteNumber} ha estat actualitzat correctament.`,
             });
             
             router.push(`/dashboard/quotes/${quoteId}`);
@@ -283,7 +289,7 @@ export default function EditQuotePage() {
                                             <Input
                                                 type="number"
                                                 placeholder="Desc. %"
-                                                value={item.discount || ''}
+                                                value={item.discount !== undefined ? item.discount : 0}
                                                 onChange={(e) => handleItemChange(index, 'discount', e.target.value)}
                                                 className="pl-2 pr-7"
                                             />

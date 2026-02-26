@@ -4,7 +4,7 @@
 import { useMemo, useRef, useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useCollection, useUser, useFirestore, useMemoFirebase } from '@/firebase'
-import { collection, query, orderBy, doc, runTransaction, setDoc, updateDoc } from 'firebase/firestore'
+import { collection, query, orderBy, doc, runTransaction, setDoc } from 'firebase/firestore'
 import type { Customer, Quote as QuoteType } from '@/lib/types'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -65,7 +65,7 @@ export default function QuotesPage() {
 
     const [selectedCustomerId, setSelectedCustomerId] = useState<string>('all');
     const [projectName, setProjectName] = useState<string>('')
-    const [isGenerating, setIsGenerating] = useState(false)
+    const [isSaving, setIsSaving] = useState(false)
     const [items, setItems] = useState<QuoteItem[]>([{ description: '', quantity: 1, unitPrice: 0, imageDataUrl: undefined, discount: 0 }]);
     const [labor, setLabor] = useState({ description: "Mà d'obra", cost: 0 });
     const [selectedItemIndex, setSelectedItemIndex] = useState<number | null>(null);
@@ -138,7 +138,7 @@ export default function QuotesPage() {
     
     const handleSaveQuote = async (exportAfter: boolean) => {
         if (!firestore) return;
-        setIsGenerating(true);
+        setIsSaving(true);
         
         try {
             const counterRef = doc(firestore, "counters", "quotes");
@@ -162,7 +162,9 @@ export default function QuotesPage() {
             const subtotal = materialsSubtotal + labor.cost;
             const totalAmount = subtotal * (1 + IVA_RATE);
 
-            const quoteData: Omit<QuoteType, 'id'> = {
+            const quoteRef = doc(collection(firestore, "quotes"));
+            const quoteData: QuoteType = {
+                id: quoteRef.id,
                 quoteNumber: newQuoteNumber,
                 createdAt: new Date().toISOString(),
                 customerId: associatedCustomer?.id || '',
@@ -173,10 +175,7 @@ export default function QuotesPage() {
                 totalAmount: totalAmount,
             };
 
-            const quoteRef = doc(collection(firestore, "quotes"));
             await setDoc(quoteRef, quoteData);
-            await updateDoc(quoteRef, { id: quoteRef.id });
-
 
             toast({
                 title: "Pressupost Guardat",
@@ -197,7 +196,7 @@ export default function QuotesPage() {
                 description: "No s'ha pogut generar el pressupost.",
             });
         } finally {
-            setIsGenerating(false);
+            setIsSaving(false);
         }
     };
 
@@ -290,7 +289,7 @@ export default function QuotesPage() {
                                             <Input
                                                 type="number"
                                                 placeholder="Desc. %"
-                                                value={item.discount || ''}
+                                                value={item.discount !== undefined ? item.discount : 0}
                                                 onChange={(e) => handleItemChange(index, 'discount', e.target.value)}
                                                 className="pl-2 pr-7"
                                             />
@@ -333,15 +332,15 @@ export default function QuotesPage() {
                          </div>
 
                         <div className="flex justify-end pt-4 gap-2 flex-wrap">
-                             <Button onClick={() => handleSaveQuote(false)} disabled={isGenerating}>
-                                {isGenerating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                             <Button onClick={() => handleSaveQuote(false)} disabled={isSaving}>
+                                {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
                                 Guardar Pressupost
                             </Button>
                             <Button
                                 onClick={() => handleSaveQuote(true)}
-                                disabled={isGenerating}
+                                disabled={isSaving}
                             >
-                                {isGenerating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileDown className="mr-2 h-4 w-4" />}
+                                {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileDown className="mr-2 h-4 w-4" />}
                                 Guardar i Exportar PDF
                             </Button>
                         </div>
