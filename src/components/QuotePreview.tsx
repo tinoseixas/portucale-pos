@@ -199,7 +199,7 @@ export const QuotePreview = forwardRef<HTMLDivElement, QuotePreviewProps>(({ cus
             <footer className="mt-16 pt-6 border-t text-sm text-gray-600">
                 <div className="bg-gray-100 p-4 rounded-lg border border-gray-300 text-center">
                     <p className="font-bold text-base text-gray-800 mb-2">Condicions de Pagament i Validesa</p>
-                    <p><span className="font-semibold">Pagament:</span> 50% per formalitzar el pressupost i la resta al finalitzar.</p>
+                    <p><span className="font-semibold">Pagament:</span> 40% per iniciar el treball i la resta es pagarà mensualment a combinar.</p>
                     <p><span className="font-semibold">Validesa:</span> Aquest pressupost és vàlid durant 15 dies.</p>
                 </div>
                 <div className="text-center text-xs text-gray-500 mt-4">
