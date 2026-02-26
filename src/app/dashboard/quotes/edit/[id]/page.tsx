@@ -25,9 +25,12 @@ type QuoteItem = {
 }
 
 const PERALBA_ITEMS: QuoteItem[] = [
-    { description: "HABITATGE CASA A - 416mts2 terra radiant", quantity: 1, unitPrice: 0, discount: 10 },
-    { description: "HABITATGE CASA B - 382mts2 terra radiant", quantity: 1, unitPrice: 0, discount: 10 },
-    { description: "AEROTERMIA MONOBLOC 40kw calefaccio", quantity: 1, unitPrice: 0, discount: 10 },
+    { description: "", quantity: 1, unitPrice: 0, discount: 0 },
+    { description: "HABITATGE CASA A - 416mts2 terra radiant", quantity: 1, unitPrice: 0, discount: 0 },
+    { description: "", quantity: 1, unitPrice: 0, discount: 0 },
+    { description: "HABITATGE CASA B - 382mts2 terra radiant", quantity: 1, unitPrice: 0, discount: 0 },
+    { description: "", quantity: 1, unitPrice: 0, discount: 0 },
+    { description: "AEROTERMIA MONOBLOC 40kw calefaccio", quantity: 1, unitPrice: 0, discount: 0 },
     { description: "MSHMEHPIBG0740Y MITSUBISHI - REFREDADORA BOMBA DE CALOR MEHP-iB-G07 40Y", quantity: 1, unitPrice: 23761, discount: 10 },
     { description: "CLT20036000 ACC. FRED - BROOKLYN BASE SUPORT SBR TERRA 600X95X130 500KG (2U)", quantity: 1, unitPrice: 67.5, discount: 10 },
     { description: "GNB283008 GENEBRE - MANEGUET ANTIVIBRATORI ROSCA 1 1/2\"", quantity: 2, unitPrice: 32.42, discount: 10 },
@@ -35,18 +38,21 @@ const PERALBA_ITEMS: QuoteItem[] = [
     { description: "TUC0201827A TMM - M-200 VALVULA ESFERA F-F 1 1/2\" PALANCA BLAVA", quantity: 2, unitPrice: 46.98, discount: 10 },
     { description: "GNB10307 GENEBRE - YORK VALVULA RETENCIO 1 1/2\"", quantity: 1, unitPrice: 28.59, discount: 10 },
     { description: "BAX7841698 BAXI - VALVULA ANTIGEL PER BOMBES DE CALOR MONOBLOC 1.1/2\"", quantity: 1, unitPrice: 242, discount: 10 },
-    { description: "DIPOSIT INERCIA", quantity: 1, unitPrice: 0, discount: 10 },
+    { description: "", quantity: 1, unitPrice: 0, discount: 0 },
+    { description: "DIPOSIT INERCIA", quantity: 1, unitPrice: 0, discount: 0 },
     { description: "SUIDI050X06RG SUICALSA - DIPOSIT INERCIA INOXIDABLE 6BAR DE 500LTS", quantity: 1, unitPrice: 2606, discount: 10 },
     { description: "BAX950053011 BAXI - VASOFLEX VAS EXP. MEM/FIXA CALEFACCIO 80LTS 1BAR", quantity: 1, unitPrice: 267, discount: 10 },
     { description: "BAX195230003 BAXI - PRESCOMANO VALVULA SEGURETAT 3/4\" 3BAR A/MANOMETRE", quantity: 1, unitPrice: 46.9, discount: 10 },
     { description: "TUC0201827A TMM - M-200 VALVULA ESFERA F-F 1 1/2\" PALANCA BLAVA", quantity: 4, unitPrice: 46.98, discount: 10 },
-    { description: "DIPOSIT ACS 390lts", quantity: 1, unitPrice: 0, discount: 10 },
+    { description: "", quantity: 1, unitPrice: 0, discount: 0 },
+    { description: "DIPOSIT ACS 390lts", quantity: 1, unitPrice: 0, discount: 0 },
     { description: "MITSUBISHI - VAL. 3 VIES 1 1/4 ACS/CALEFACCIO", quantity: 1, unitPrice: 356, discount: 10 },
     { description: "MITSUBISHI - KIT 2 SONDES ACS I INERCIA", quantity: 1, unitPrice: 70, discount: 10 },
     { description: "VSMZ026497 VIESSMANN - INTERACUMULADOR VITOCELL 100-V CVWB 390 L", quantity: 1, unitPrice: 3761, discount: 10 },
     { description: "BAX195200005 BAXI - VASOFLEX/S ACS VAS EXP. MEM/FIXA ACS 25LTS 4BAR", quantity: 1, unitPrice: 158, discount: 10 },
     { description: "BAX195230007 BAXI - FLEXBRANE GRUP SEGURETAT 1\"", quantity: 1, unitPrice: 117, discount: 10 },
-    { description: "RECIRCULACIO ACS", quantity: 1, unitPrice: 0, discount: 10 },
+    { description: "", quantity: 1, unitPrice: 0, discount: 0 },
+    { description: "RECIRCULACIO ACS", quantity: 1, unitPrice: 0, discount: 0 },
     { description: "BAX953035021 BAXI - SB-50XA CIRCULADOR ACS RACORDS 1\" MONOF.", quantity: 1, unitPrice: 554, discount: 10 },
     { description: "TMM0201825A TMM - M-200 VALVULA ESFERA F-F 1\" PALANCA BLAVA", quantity: 2, unitPrice: 20.41, discount: 10 },
     { description: "GNB10305 GENEBRE - YORK VALVULA RETENCIO 1\"", quantity: 1, unitPrice: 12.86, discount: 10 },
@@ -123,7 +129,7 @@ export default function EditQuotePage() {
 
     const handleLoadPeralbaOffer = () => {
         setItems(PERALBA_ITEMS);
-        toast({ title: "Oferta Carregada", description: "Els articles han estat substituïts per l'oferta Peralba amb 10% de descompte." });
+        toast({ title: "Oferta Carregada", description: "Os artigos foram substituídos pela oferta Peralba com descontos ajustados." });
     };
 
     const handleImageUploadClick = (index: number) => {
@@ -159,7 +165,7 @@ export default function EditQuotePage() {
         setIsSaving(true);
         
         try {
-            const filteredItems = items.filter(item => item.description.trim() !== '');
+            const filteredItems = items.filter(item => item.description.trim() !== '' || item.unitPrice === 0);
             const materialsSubtotal = filteredItems.reduce((acc, item) => {
                 const itemTotal = item.quantity * item.unitPrice;
                 const discountAmount = itemTotal * ((item.discount || 0) / 100);
