@@ -1,9 +1,9 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { useRouter, useParams, useSearchParams } from 'next/navigation'
 import { useDoc, useUser, useFirestore, useMemoFirebase, deleteDocumentNonBlocking, useCollection } from '@/firebase'
-import { collection, query, where, getDocs, doc, collectionGroup } from 'firebase/firestore'
+import { collection, query, where, getDocs, doc, collectionGroup, getDoc } from 'firebase/firestore'
 import type { Customer, ServiceRecord, Albaran, Employee } from '@/lib/types'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -41,6 +41,7 @@ export default function AlbaranDetailPage() {
     const [services, setServices] = useState<ServiceRecord[]>([])
     const [customer, setCustomer] = useState<Customer | undefined>()
     const [isLoadingData, setIsLoadingData] = useState(true)
+    const dataFetchedRef = useRef(false)
 
     const albaranDocRef = useMemoFirebase(() => firestore && albaranId ? doc(firestore, 'albarans', albaranId) : null, [firestore, albaranId])
     const { data: albaran, isLoading: isLoadingAlbaran } = useDoc<Albaran>(albaranDocRef)
@@ -56,58 +57,57 @@ export default function AlbaranDetailPage() {
         }
     }, [isUserLoading, user, router])
 
-    useEffect(() => {
-        const fetchData = async () => {
-            if (!firestore || !albaran || !employees) return
+    const fetchData = useCallback(async () => {
+        if (!firestore || !albaran || !employees || dataFetchedRef.current) return
 
-            setIsLoadingData(true)
-            
-            try {
-                // 1. Carregar dades del client de forma optimitzada
-                if (albaran.customerId) {
-                    const customerRef = doc(firestore, 'customers', albaran.customerId);
-                    const customerSnap = await getDocs(query(collection(firestore, 'customers'), where('__name__', '==', albaran.customerId)));
-                    if (!customerSnap.empty) {
-                        setCustomer({ id: customerSnap.docs[0].id, ...customerSnap.docs[0].data() } as Customer)
-                    }
+        setIsLoadingData(true)
+        dataFetchedRef.current = true
+        
+        try {
+            // 1. Carregar dades del client directe
+            if (albaran.customerId) {
+                const customerSnap = await getDoc(doc(firestore, 'customers', albaran.customerId));
+                if (customerSnap.exists()) {
+                    setCustomer({ id: customerSnap.id, ...customerSnap.data() } as Customer)
                 }
-                
-                // 2. Carregar només els serveis d'aquesta obra específica (OPTIMITZACIÓ CRÍTICA)
-                if (albaran.serviceRecordIds && albaran.serviceRecordIds.length > 0) {
-                    const optimizedQuery = query(
-                        collectionGroup(firestore, 'serviceRecords'),
-                        where('customerId', '==', albaran.customerId),
-                        where('projectName', '==', albaran.projectName)
-                    );
-                    
-                    const servicesSnapshot = await getDocs(optimizedQuery);
-                    
-                    const fetchedServices = servicesSnapshot.docs
-                        .map(doc => ({ id: doc.id, ...doc.data() } as ServiceRecord))
-                        .filter(s => albaran.serviceRecordIds.includes(s.id)) // Filtrar exactament els que formen part de l'albarà
-                        .map(serviceData => {
-                            // Assegurar nom del tècnic si falta
-                            if (!serviceData.employeeName) {
-                                const employee = employees.find(e => e.id === serviceData.employeeId);
-                                if (employee) {
-                                    serviceData.employeeName = `${employee.firstName} ${employee.lastName}`;
-                                }
-                            }
-                            return serviceData;
-                        });
-                    
-                    setServices(fetchedServices);
-                }
-            } catch (e) {
-                console.error("Error carrgant dades:", e);
-                toast({ variant: 'destructive', title: 'Error', description: 'No s\'han pogut carregar els detalls del document.' });
-            } finally {
-                setIsLoadingData(false)
             }
+            
+            // 2. Carregar serveis (sense loop)
+            if (albaran.serviceRecordIds && albaran.serviceRecordIds.length > 0) {
+                const optimizedQuery = query(
+                    collectionGroup(firestore, 'serviceRecords'),
+                    where('customerId', '==', albaran.customerId),
+                    where('projectName', '==', albaran.projectName)
+                );
+                
+                const servicesSnapshot = await getDocs(optimizedQuery);
+                
+                const fetchedServices = servicesSnapshot.docs
+                    .map(doc => ({ id: doc.id, ...doc.data() } as ServiceRecord))
+                    .filter(s => albaran.serviceRecordIds.includes(s.id))
+                    .map(serviceData => {
+                        if (!serviceData.employeeName) {
+                            const employee = employees.find(e => e.id === serviceData.employeeId);
+                            if (employee) {
+                                serviceData.employeeName = `${employee.firstName} ${employee.lastName}`;
+                            }
+                        }
+                        return serviceData;
+                    });
+                
+                setServices(fetchedServices);
+            }
+        } catch (e) {
+            console.error("Error carrgant dades:", e);
+            toast({ variant: 'destructive', title: 'Error', description: 'No s\'han pogut carregar els detalls.' });
+        } finally {
+            setIsLoadingData(false)
         }
+    }, [albaran, firestore, employees, toast]);
 
-        fetchData()
-    }, [albaran, firestore, employees, toast])
+    useEffect(() => {
+        fetchData();
+    }, [fetchData]);
 
 
     const handleExportPDF = async () => {
@@ -115,17 +115,17 @@ export default function AlbaranDetailPage() {
         if (!reportElement) return;
 
         setIsGenerating(true);
-        toast({ title: 'Generant PDF...', description: 'Processant document d\'alta qualitat.' });
+        toast({ title: 'Generant PDF...', description: 'Optimitzant per a enviament ràpid.' });
 
         try {
             const canvas = await html2canvas(reportElement, {
-                scale: 1.2, 
+                scale: 1.2, // Escala reduïda per a menys pes
                 useCORS: true,
                 logging: false,
                 backgroundColor: '#ffffff'
             });
             
-            const imgData = canvas.toDataURL('image/jpeg', 0.6);
+            const imgData = canvas.toDataURL('image/jpeg', 0.6); // Compressió 60%
             const pdf = new jsPDF('p', 'mm', 'a4', true);
             const pdfWidth = pdf.internal.pageSize.getWidth();
             const pdfHeight = pdf.internal.pageSize.getHeight();
@@ -149,7 +149,7 @@ export default function AlbaranDetailPage() {
             }
             
             pdf.save(`Albara-${albaran?.projectName.replace(/\s+/g, '-')}.pdf`);
-            toast({ title: 'PDF Generat!', description: 'El fitxer està llest per enviar.' });
+            toast({ title: 'PDF Generat!', description: 'El fitxer és ara més lleuger.' });
 
         } catch (error) {
             console.error("Error PDF:", error);
@@ -167,19 +167,19 @@ export default function AlbaranDetailPage() {
             router.replace(`/dashboard/albarans/${albaranId}`, { scroll: false });
         }
          // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [shouldExport, isLoading, isGenerating, services, albaranId, router]);
+    }, [shouldExport, isLoading, isGenerating, services.length, albaranId, router]);
 
 
     const handleDeleteAlbaran = () => {
         if (!albaranDocRef) return;
         deleteDocumentNonBlocking(albaranDocRef);
-        toast({ title: 'Document Eliminat', description: `L'albarà de l'obra ${albaran?.projectName} ha estat esborrat.` });
+        toast({ title: 'Document Eliminat', description: `L'albarà ha estat esborrat.` });
         router.push('/dashboard/albarans');
     }
     
 
     if (isLoading) {
-        return <div className="text-center p-12"><Loader2 className="h-10 w-10 animate-spin mx-auto text-primary" /><p className="mt-4 text-muted-foreground font-medium">Carregant dades optimitzades de l'obra...</p></div>
+        return <div className="text-center p-12 flex flex-col items-center justify-center h-[60vh]"><Loader2 className="h-12 w-12 animate-spin text-primary" /><p className="mt-4 text-muted-foreground font-medium">Carregant dades de l'obra...</p></div>
     }
     
     if (!albaran) {
@@ -187,19 +187,19 @@ export default function AlbaranDetailPage() {
     }
 
     return (
-        <AdminGate pageTitle="Detall de l'Albarà d'Obra" pageDescription="Visió conjunta de tots els treballs de l'obra.">
-            <div className="space-y-8 max-w-5xl mx-auto">
+        <AdminGate pageTitle="Detall de l'Albarà" pageDescription="Consulta els treballs agrupats.">
+            <div className="space-y-8 max-w-5xl mx-auto pb-10">
                 <div className="flex justify-between items-center flex-wrap gap-4">
                     <Button variant="ghost" onClick={() => router.push('/dashboard/albarans')} className="font-bold">
                         <ArrowLeft className="mr-2 h-4 w-4" />
-                        Tornar al historial
+                        Tornar enrere
                     </Button>
                     <div className="flex items-center gap-2 flex-wrap justify-end">
                         {albaran.status === 'pendent' && (
                             <Button asChild className="bg-green-600 hover:bg-green-700 shadow-md font-bold">
                                 <Link href={`/dashboard/invoices?customerId=${albaran.customerId}&albaranId=${albaran.id}`}>
                                     <CreditCard className="mr-2 h-4 w-4" />
-                                    Facturar Obra
+                                    Facturar Ara
                                 </Link>
                             </Button>
                         )}
@@ -207,20 +207,19 @@ export default function AlbaranDetailPage() {
                         <AlertDialog>
                             <AlertDialogTrigger asChild>
                                 <Button variant="destructive" className="font-bold">
-                                    <Trash2 className="mr-2 h-4 w-4" /> Eliminar Albarà
+                                    <Trash2 className="mr-2 h-4 w-4" /> Eliminar
                                 </Button>
                             </AlertDialogTrigger>
                             <AlertDialogContent>
                                 <AlertDialogHeader>
-                                <AlertDialogTitle>Vols eliminar aquest albarà d'obra?</AlertDialogTitle>
+                                <AlertDialogTitle>Eliminar Albarà?</AlertDialogTitle>
                                 <AlertDialogDescription>
-                                    Aquesta acció eliminarà l'albarà <strong>#{albaran.albaranNumber}</strong>. 
-                                    Els registres de treball dels tècnics <strong>NO</strong> seran esborrats.
+                                    Aquesta acció esborra el document però manté els registres de treball intactes.
                                 </AlertDialogDescription>
                                 </AlertDialogHeader>
                                 <AlertDialogFooter>
                                 <AlertDialogCancel>Cancel·lar</AlertDialogCancel>
-                                <AlertDialogAction onClick={handleDeleteAlbaran} className="bg-destructive hover:bg-destructive/90">Eliminar definitivament</AlertDialogAction>
+                                <AlertDialogAction onClick={handleDeleteAlbaran} className="bg-destructive">Eliminar definitivament</AlertDialogAction>
                                 </AlertDialogFooter>
                             </AlertDialogContent>
                         </AlertDialog>
@@ -228,10 +227,10 @@ export default function AlbaranDetailPage() {
                         <Button
                             onClick={handleExportPDF}
                             disabled={isGenerating}
-                            className="bg-slate-900 hover:bg-slate-800 text-white shadow-md font-bold"
+                            className="bg-slate-900 hover:bg-slate-800 text-white font-bold"
                         >
                             {isGenerating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileDown className="mr-2 h-4 w-4" />}
-                            Exportar PDF Lleuger
+                            PDF Lleuger
                         </Button>
                     </div>
                 </div>
@@ -242,11 +241,11 @@ export default function AlbaranDetailPage() {
                             <div>
                                 <CardTitle className="flex items-center gap-2 text-2xl">
                                     <Briefcase className="h-6 w-6 text-primary" />
-                                    Albarà d'Obra #{String(albaran.albaranNumber).padStart(4, '0')}
+                                    Albarà #{String(albaran.albaranNumber).padStart(4, '0')}
                                 </CardTitle>
-                                <CardDescription className="text-slate-400 font-medium">Projecte: {albaran.projectName} | Client: {albaran.customerName}</CardDescription>
+                                <CardDescription className="text-slate-400">Projecte: {albaran.projectName}</CardDescription>
                             </div>
-                            <Badge variant={albaran.status === 'facturat' ? 'default' : 'destructive'} className="text-sm px-4 py-1 uppercase tracking-widest">
+                            <Badge variant={albaran.status === 'facturat' ? 'default' : 'destructive'} className="uppercase">
                                 {albaran.status}
                             </Badge>
                         </div>

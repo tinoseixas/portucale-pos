@@ -1,9 +1,9 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { useRouter, useParams, useSearchParams } from 'next/navigation'
 import { useDoc, useUser, useFirestore, useMemoFirebase, deleteDocumentNonBlocking, useCollection } from '@/firebase'
-import { doc, collection, query, getDocs, collectionGroup, where } from 'firebase/firestore'
+import { doc, collection, query, getDocs, collectionGroup, where, getDoc } from 'firebase/firestore'
 import type { Customer, Invoice, ServiceRecord, Employee } from '@/lib/types'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -40,13 +40,12 @@ export default function InvoiceDetailPage() {
     const [services, setServices] = useState<ServiceRecord[]>([])
     const [employees, setEmployees] = useState<Employee[]>([]);
     const [isLoadingData, setIsLoadingData] = useState(true);
-
+    const dataFetchedRef = useRef(false)
 
     const invoiceDocRef = useMemoFirebase(() => firestore && invoiceId ? doc(firestore, 'invoices', invoiceId) : null, [firestore, invoiceId])
     const { data: invoice, isLoading: isLoadingInvoice } = useDoc<Invoice>(invoiceDocRef)
     
-    const customerDocRef = useMemoFirebase(() => (firestore && invoice?.customerId) ? doc(firestore, 'customers', invoice.customerId) : null, [firestore, invoice]);
-    const { data: customer, isLoading: isLoadingCustomer } = useDoc<Customer>(customerDocRef);
+    const [customer, setCustomer] = useState<Customer | undefined>();
 
     const shouldExport = searchParams.get('export') === 'true';
 
@@ -56,53 +55,59 @@ export default function InvoiceDetailPage() {
         }
     }, [isUserLoading, user, router])
     
-     useEffect(() => {
-        if (!firestore || !invoice) {
-            setIsLoadingData(false);
+    const fetchData = useCallback(async () => {
+        if (!firestore || !invoice || dataFetchedRef.current) {
+            if (!invoice) setIsLoadingData(false);
             return;
         }
 
-        const fetchData = async () => {
-            setIsLoadingData(true);
-            try {
-                // Carregar empleats un cop
-                const employeesSnap = await getDocs(query(collection(firestore, 'employees')));
-                const allEmployees = employeesSnap.docs.map(d => ({ id: d.id, ...d.data() } as Employee));
-                setEmployees(allEmployees);
+        setIsLoadingData(true);
+        dataFetchedRef.current = true;
+        
+        try {
+            // 1. Carregar Empleats
+            const employeesSnap = await getDocs(query(collection(firestore, 'employees')));
+            const allEmployees = employeesSnap.docs.map(d => ({ id: d.id, ...d.data() } as Employee));
+            setEmployees(allEmployees);
 
-                // Optimització: Només demanar serveis del client i obra de la factura
-                const optimizedQuery = query(
-                    collectionGroup(firestore, 'serviceRecords'),
-                    where('customerId', '==', invoice.customerId),
-                    where('projectName', '==', invoice.projectName)
-                );
-                
-                const servicesSnapshot = await getDocs(optimizedQuery);
-                const allServicesData = servicesSnapshot.docs.map(d => ({ id: d.id, ...d.data() } as ServiceRecord));
-                
-                if (invoice.sourceType === 'albaran' && invoice.sourceId) {
-                    const sourceAlbaranIds = invoice.sourceId.split(',');
-                    
-                    // Obtenir IDs de registres vinculats als albarans font
-                    const albaransSnapshot = await getDocs(query(collection(firestore, 'albarans'), where('__name__', 'in', sourceAlbaranIds)));
-                    const serviceRecordIdsFromAlbarans = albaransSnapshot.docs.flatMap(doc => doc.data().serviceRecordIds);
-                    
-                    const invoiceServices = allServicesData.filter(s => serviceRecordIdsFromAlbarans.includes(s.id));
-                    setServices(invoiceServices);
-                } else {
-                    // Si no hi ha albarans font, mostrem els serveis filtrats per projecte que coincideixin
-                    setServices(allServicesData);
+            // 2. Carregar Client
+            if (invoice.customerId) {
+                const customerSnap = await getDoc(doc(firestore, 'customers', invoice.customerId));
+                if (customerSnap.exists()) {
+                    setCustomer({ id: customerSnap.id, ...customerSnap.data() } as Customer);
                 }
-            } catch (e) {
-                console.error("Error fetching invoice details:", e);
-                toast({ variant: 'destructive', title: 'Error', description: 'No s\'han pogut carregar els detalls optimitzats.' });
-            } finally {
-                setIsLoadingData(false);
             }
-        };
 
-        fetchData();
+            // 3. Carregar Serveis optimitzats
+            const optimizedQuery = query(
+                collectionGroup(firestore, 'serviceRecords'),
+                where('customerId', '==', invoice.customerId),
+                where('projectName', '==', invoice.projectName)
+            );
+            
+            const servicesSnapshot = await getDocs(optimizedQuery);
+            const allServicesData = servicesSnapshot.docs.map(d => ({ id: d.id, ...d.data() } as ServiceRecord));
+            
+            if (invoice.sourceType === 'albaran' && invoice.sourceId) {
+                const sourceAlbaranIds = invoice.sourceId.split(',');
+                const albaransSnapshot = await getDocs(query(collection(firestore, 'albarans'), where('__name__', 'in', sourceAlbaranIds)));
+                const serviceRecordIdsFromAlbarans = albaransSnapshot.docs.flatMap(doc => doc.data().serviceRecordIds);
+                
+                setServices(allServicesData.filter(s => serviceRecordIdsFromAlbarans.includes(s.id)));
+            } else {
+                setServices(allServicesData);
+            }
+        } catch (e) {
+            console.error("Error fetching details:", e);
+            toast({ variant: 'destructive', title: 'Error', description: 'No s\'han pogut carregar les dades.' });
+        } finally {
+            setIsLoadingData(false);
+        }
     }, [invoice, firestore, toast]);
+
+    useEffect(() => {
+        fetchData();
+    }, [fetchData]);
 
 
     const handleExportPDF = async () => {
@@ -110,16 +115,16 @@ export default function InvoiceDetailPage() {
         if (!reportElement) return;
 
         setIsGenerating(true);
-        toast({ title: 'Generant PDF...', description: 'Això pot trigar un moment.' });
+        toast({ title: 'Generant PDF...', description: 'Processant document lleuger.' });
 
         try {
             const canvas = await html2canvas(reportElement, {
-                scale: 1.5,
+                scale: 1.2,
                 useCORS: true,
                 logging: false,
             });
 
-            const imgData = canvas.toDataURL('image/jpeg', 0.7);
+            const imgData = canvas.toDataURL('image/jpeg', 0.6);
             const pdf = new jsPDF('p', 'mm', 'a4');
             const pdfWidth = pdf.internal.pageSize.getWidth();
             const pdfHeight = pdf.internal.pageSize.getHeight();
@@ -143,17 +148,17 @@ export default function InvoiceDetailPage() {
             }
 
             pdf.save(`Factura-${String(invoice?.invoiceNumber).padStart(4, '0')}.pdf`);
-            toast({ title: 'PDF Generat!', description: 'L\'exportació s\'ha completat correctament.' });
+            toast({ title: 'PDF Generat!', description: 'Exportació finalitzada.' });
 
         } catch (error) {
-            console.error("Error en generar el PDF:", error);
+            console.error("Error PDF:", error);
             toast({ variant: 'destructive', title: 'Error', description: 'No s\'ha pogut generar el PDF.' });
         } finally {
             setIsGenerating(false);
         }
     };
     
-    const isLoading = isUserLoading || isLoadingInvoice || isLoadingCustomer || isLoadingData;
+    const isLoading = isUserLoading || isLoadingInvoice || isLoadingData;
     
     useEffect(() => {
         if (shouldExport && !isLoading && !isGenerating && invoice) {
@@ -161,72 +166,65 @@ export default function InvoiceDetailPage() {
             router.replace(`/dashboard/invoices/${invoiceId}`, { scroll: false });
         }
          // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [shouldExport, isLoading, isGenerating, invoice, invoiceId, router]);
+    }, [shouldExport, isLoading, isGenerating, invoice?.id, invoiceId, router]);
 
 
     const handleDeleteInvoice = () => {
         if (!invoiceDocRef) return;
         deleteDocumentNonBlocking(invoiceDocRef);
-        toast({
-            title: 'Factura Eliminada',
-            description: `La factura #${invoice?.invoiceNumber} ha estat eliminada de l'historial.`,
-        });
+        toast({ title: 'Factura Eliminada', description: 'S\'ha esborrat de l\'historial.' });
         router.push('/dashboard/invoices/history');
     }
 
     const getStatusVariant = (status: Invoice['status']) => {
         switch (status) {
-          case 'pagada':
-            return 'default'
-          case 'pendent':
-            return 'destructive'
-          case 'parcialment pagada':
-            return 'secondary'
-          default:
-            return 'outline'
+          case 'pagada': return 'default'
+          case 'pendent': return 'destructive'
+          case 'parcialment pagada': return 'secondary'
+          default: return 'outline'
         }
     }
     
 
     if (isLoading) {
-        return <div className="text-center p-12"><Loader2 className="h-10 w-10 animate-spin mx-auto text-primary" /><p className="mt-4 text-muted-foreground">Carregant dades de la factura...</p></div>
+        return <div className="text-center p-12 flex flex-col items-center justify-center h-[60vh]"><Loader2 className="h-12 w-12 animate-spin text-primary" /><p className="mt-4 text-muted-foreground">Carregant dades de la factura...</p></div>
     }
     
     if (!invoice) {
-        return <p>No s'ha trobat la factura.</p>
+        return <p className="p-8 text-center">No s'ha trobat la factura.</p>
     }
 
     return (
-        <AdminGate pageTitle="Detall de la Factura" pageDescription="Consulta els detalls del document emès.">
-            <div className="space-y-8 max-w-5xl mx-auto">
+        <AdminGate pageTitle="Detall de la Factura" pageDescription="Detalls del document emès.">
+            <div className="space-y-8 max-w-5xl mx-auto pb-10">
                 <div className="flex justify-between items-center flex-wrap gap-4">
-                    <Button variant="ghost" onClick={() => router.push('/dashboard/invoices/history')}>
+                    <Button variant="ghost" onClick={() => router.push('/dashboard/invoices/history')} className="font-bold">
                         <ArrowLeft className="mr-2 h-4 w-4" />
                         Tornar a l'historial
                     </Button>
                     <div className="flex items-center gap-2 flex-wrap justify-end">
                         <AlertDialog>
                             <AlertDialogTrigger asChild>
-                                <Button variant="destructive">
-                                    <Trash2 className="mr-2 h-4 w-4" /> Eliminar Factura
+                                <Button variant="destructive" className="font-bold">
+                                    <Trash2 className="mr-2 h-4 w-4" /> Eliminar
                                 </Button>
                             </AlertDialogTrigger>
                             <AlertDialogContent>
                                 <AlertDialogHeader>
-                                <AlertDialogTitle>Estàs segur que vols eliminar la factura?</AlertDialogTitle>
+                                <AlertDialogTitle>Eliminar Factura?</AlertDialogTitle>
                                 <AlertDialogDescription>
-                                    Aquesta acció no es pot desfer. S'eliminarà la factura <strong>#{invoice.invoiceNumber}</strong> de l'historial.
+                                    Aquesta acció esborrarà la factura #{invoice.invoiceNumber}.
                                 </AlertDialogDescription>
                                 </AlertDialogHeader>
                                 <AlertDialogFooter>
                                 <AlertDialogCancel>Cancel·lar</AlertDialogCancel>
-                                <AlertDialogAction onClick={handleDeleteInvoice} className="bg-destructive hover:bg-destructive/90">Eliminar</AlertDialogAction>
+                                <AlertDialogAction onClick={handleDeleteInvoice} className="bg-destructive">Eliminar</AlertDialogAction>
                                 </AlertDialogFooter>
                             </AlertDialogContent>
                         </AlertDialog>
                         
                          {invoice.status !== 'pagada' && (
-                            <Button variant="outline" onClick={() => router.push(`/dashboard/receipts/new?invoiceId=${invoice.id}`)}>
+                            <Button variant="outline" onClick={() => router.push(`/dashboard/receipts/new?invoiceId=${invoice.id}`)} className="font-bold">
                                 <CreditCard className="mr-2 h-4 w-4" />
                                 Registrar Pagament
                             </Button>
@@ -235,27 +233,30 @@ export default function InvoiceDetailPage() {
                         <Button
                             onClick={handleExportPDF}
                             disabled={isGenerating || isLoading}
+                            className="bg-primary font-bold"
                         >
                             {isGenerating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileDown className="mr-2 h-4 w-4" />}
-                            Exportar PDF
+                            Exportar PDF Lleuger
                         </Button>
                     </div>
                 </div>
                 
-                <Card>
-                    <CardHeader>
+                <Card className="shadow-xl border-none">
+                    <CardHeader className="bg-slate-900 text-white rounded-t-lg">
                         <div className="flex justify-between items-start">
                             <div>
-                                <CardTitle>Factura #{String(invoice.invoiceNumber).padStart(4, '0')}</CardTitle>
-                                <CardDescription>Generada per a l'obra "{invoice.projectName}" per al client "{invoice.customerName}".</CardDescription>
+                                <CardTitle className="text-2xl">Factura #{String(invoice.invoiceNumber).padStart(4, '0')}</CardTitle>
+                                <CardDescription className="text-slate-400">Obra: {invoice.projectName}</CardDescription>
                             </div>
-                            <Badge variant={getStatusVariant(invoice.status)} className="capitalize text-base">{invoice.status}</Badge>
+                            <Badge variant={getStatusVariant(invoice.status)} className="capitalize text-sm px-4">
+                                {invoice.status}
+                            </Badge>
                         </div>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent className="p-0">
                         <InvoicePreview
                             ref={reportRef}
-                            customer={customer || undefined}
+                            customer={customer}
                             projectName={invoice.projectName}
                             invoiceNumber={invoice.invoiceNumber}
                             services={services}
