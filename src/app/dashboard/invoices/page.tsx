@@ -1,4 +1,3 @@
-
 'use client'
 
 import { useMemo, useState, useEffect, useCallback, Suspense } from 'react'
@@ -43,7 +42,7 @@ function InvoicesPageContent() {
     const employeesQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'employees'), orderBy('firstName', 'asc')) : null, [firestore]);
     const { data: employees, isLoading: isLoadingEmployees } = useCollection<Employee>(employeesQuery);
 
-    // Auto-select customer and albaran from URL params
+    // Selecció automàtica des de URL
     useEffect(() => {
         const customerIdParam = searchParams.get('customerId');
         const albaranIdParam = searchParams.get('albaranId');
@@ -59,7 +58,7 @@ function InvoicesPageContent() {
 
     const availableAlbarans = useMemo(() => {
         if (!albarans || selectedCustomerId === 'none') return [];
-        // Only show albarans that are 'pendent' (pending)
+        // Només mostrem els que estan PENDENTS per evitar facturar dues vegades el mateix
         return albarans.filter(a => a.customerId === selectedCustomerId && a.status === 'pendent');
     }, [albarans, selectedCustomerId]);
     
@@ -76,9 +75,7 @@ function InvoicesPageContent() {
         }
 
         const selectedAlbarans = albarans.filter(a => selectedAlbaranIds.includes(a.id));
-        if (selectedAlbarans.length === 0) {
-            return;
-        }
+        if (selectedAlbarans.length === 0) return;
 
         const firstAlbaran = selectedAlbarans[0];
         setProjectName(firstAlbaran.projectName);
@@ -107,7 +104,7 @@ function InvoicesPageContent() {
             setServicesForInvoice(aggregatedServices);
 
         } catch (e) {
-            console.error("Error fetching services for albarans:", e);
+            console.error("Error important serveis:", e);
             toast({ variant: 'destructive', title: 'Error', description: "No s'han pogut carregar els detalls dels serveis." });
         }
     }, [selectedAlbaranIds, albarans, firestore, employees, toast]);
@@ -163,7 +160,7 @@ function InvoicesPageContent() {
             const batch = writeBatch(firestore);
             batch.set(invoiceRef, { ...invoiceData, id: invoiceRef.id });
 
-            // Mark albarans as 'facturat'
+            // CRÍTIC: Marcar els albarans com a 'facturat' per moure'ls de llista immediatament
             selectedAlbaranIds.forEach(id => {
                 const albaranRef = doc(firestore, 'albarans', id);
                 batch.update(albaranRef, { status: 'facturat' });
@@ -172,8 +169,8 @@ function InvoicesPageContent() {
             await batch.commit();
 
             toast({
-                title: "Factura Guardada",
-                description: `La factura #${newInvoiceNumber} ha estat guardada a l'historial.`,
+                title: "Factura Generada",
+                description: `L'obra ha estat facturada i l'albarà s'ha mogut a l'historial.`,
             });
             
             if (exportAfter) {
@@ -183,7 +180,7 @@ function InvoicesPageContent() {
             }
 
         } catch (error) {
-            console.error("Error generating invoice:", error)
+            console.error("Error guardant factura:", error)
             toast({
                 variant: 'destructive',
                 title: 'Error',
@@ -197,28 +194,28 @@ function InvoicesPageContent() {
     const isLoading = isUserLoading || isLoadingCustomers || isLoadingAlbarans || isLoadingEmployees;
 
     if (isLoading) {
-        return <p>Carregant...</p>
+        return <div className="p-12 text-center"><Loader2 className="h-12 w-12 animate-spin mx-auto text-primary" /><p className="mt-4">Carregant dades de facturació...</p></div>
     }
 
     return (
-        <AdminGate pageTitle="Generador de Factures" pageDescription="Aquesta secció està protegida.">
+        <AdminGate pageTitle="Generador de Factures" pageDescription="Crea factures oficials a partir d'albarans d'obra.">
             <div className="space-y-8 max-w-7xl mx-auto">
-                 <Card>
-                    <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center sm:justify-between gap-4">
+                 <Card className="shadow-lg">
+                    <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center sm:justify-between gap-4 border-b bg-slate-50/50">
                         <div>
-                            <CardTitle>Generador de Factures</CardTitle>
-                            <CardDescription>Crea una factura important dades d'un o més albarans.</CardDescription>
+                            <CardTitle className="text-2xl font-bold">Generador de Factures</CardTitle>
+                            <CardDescription>Selecciona un client i un o més albarans per facturar l'obra.</CardDescription>
                         </div>
-                         <Button onClick={() => router.push('/dashboard/invoices/history')}>
+                         <Button variant="outline" onClick={() => router.push('/dashboard/invoices/history')} className="font-bold">
                             <FileArchive className="mr-2 h-4 w-4" /> Historial de Factures
                         </Button>
                     </CardHeader>
-                    <CardContent className="space-y-6">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <CardContent className="space-y-6 pt-6">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                             <div className="space-y-2">
-                                <Label className="flex items-center gap-2"><Users className="h-4 w-4" /> Client</Label>
+                                <Label className="flex items-center gap-2 font-bold"><Users className="h-4 w-4 text-primary" /> Client</Label>
                                 <Select value={selectedCustomerId} onValueChange={setSelectedCustomerId}>
-                                    <SelectTrigger>
+                                    <SelectTrigger className="h-12 bg-white">
                                         <SelectValue placeholder="Selecciona un client" />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -228,21 +225,22 @@ function InvoicesPageContent() {
                                 </Select>
                             </div>
                             <div className="space-y-2">
-                                <Label className="flex items-center gap-2"><Briefcase className="h-4 w-4" /> Obra</Label>
+                                <Label className="flex items-center gap-2 font-bold"><Briefcase className="h-4 w-4 text-primary" /> Nom de l'Obra (Factura)</Label>
                                 <Input 
                                     placeholder="Nom del projecte o obra"
                                     value={projectName}
                                     onChange={(e) => setProjectName(e.target.value)}
+                                    className="h-12 bg-white"
                                 />
                             </div>
                         </div>
 
                         {selectedCustomerId !== 'none' && (
-                            <div className="space-y-2">
-                                <Label>Selecciona Albarans per Facturar</Label>
-                                <div className="max-h-60 overflow-y-auto space-y-2 rounded-md border p-4">
+                            <div className="space-y-3">
+                                <Label className="font-bold">Selecciona els Albarans a incloure:</Label>
+                                <div className="max-h-60 overflow-y-auto space-y-2 rounded-xl border p-4 bg-slate-50 shadow-inner">
                                     {availableAlbarans.length > 0 ? availableAlbarans.map(albaran => (
-                                        <div key={albaran.id} className="flex items-center space-x-2">
+                                        <div key={albaran.id} className="flex items-center space-x-3 p-2 bg-white rounded-lg border border-slate-200">
                                             <Checkbox
                                                 id={`albaran-${albaran.id}`}
                                                 checked={selectedAlbaranIds.includes(albaran.id)}
@@ -250,17 +248,23 @@ function InvoicesPageContent() {
                                             />
                                             <label
                                                 htmlFor={`albaran-${albaran.id}`}
-                                                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex-grow"
+                                                className="text-sm font-bold leading-none cursor-pointer flex-grow"
                                             >
-                                                Albarà #{albaran.albaranNumber} - {albaran.projectName} ({albaran.totalAmount.toFixed(2)}€)
+                                                Albarà #{String(albaran.albaranNumber).padStart(4, '0')} - {albaran.projectName} 
+                                                <span className="ml-2 text-primary font-black">({albaran.totalAmount.toFixed(2)}€)</span>
                                             </label>
                                         </div>
-                                    )) : <p className="text-sm text-muted-foreground">No hi ha albarans pendents de facturar per a aquest client.</p>}
+                                    )) : (
+                                        <div className="text-center py-4 text-muted-foreground flex flex-col items-center gap-2">
+                                            <AlertCircle className="h-5 w-5 opacity-20" />
+                                            <p className="text-sm italic">No s'han trobat albarans pendents per a aquest client.</p>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         )}
                         
-                        <div className="flex items-center space-x-2">
+                        <div className="flex items-center space-x-2 bg-slate-100 p-3 rounded-lg w-fit">
                             <Checkbox
                                 id="apply-iva"
                                 checked={applyIva}
@@ -268,32 +272,32 @@ function InvoicesPageContent() {
                             />
                             <label
                                 htmlFor="apply-iva"
-                                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                                className="text-sm font-bold cursor-pointer select-none"
                             >
-                                Aplicar IGI (IVA) a la factura
+                                Aplicar IGI (4.5%) a la factura
                             </label>
                         </div>
 
 
-                        <div className="flex justify-end pt-4 gap-2 flex-wrap">
-                             <Button onClick={() => handleSaveInvoice(false)} disabled={isSaving || servicesForInvoice.length === 0}>
+                        <div className="flex justify-end pt-4 gap-3 flex-wrap">
+                             <Button onClick={() => handleSaveInvoice(false)} disabled={isSaving || servicesForInvoice.length === 0} variant="outline" className="h-12 px-6 font-bold">
                                 {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
                                 Guardar Factura
                             </Button>
-                             <Button onClick={() => handleSaveInvoice(true)} disabled={isSaving || servicesForInvoice.length === 0}>
+                             <Button onClick={() => handleSaveInvoice(true)} disabled={isSaving || servicesForInvoice.length === 0} className="bg-primary hover:bg-primary/90 h-12 px-8 font-black shadow-lg">
                                 {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileDown className="mr-2 h-4 w-4" />}
-                                Guardar i Exportar
+                                Generar i Exportar PDF
                             </Button>
                         </div>
                     </CardContent>
                 </Card>
                 
                 {servicesForInvoice.length > 0 && (
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Previsualització de la Factura</CardTitle>
+                    <Card className="border-2 border-primary/10 shadow-xl overflow-hidden">
+                        <CardHeader className="bg-slate-900 text-white">
+                            <CardTitle className="text-lg">Previsualització del Document Final</CardTitle>
                         </CardHeader>
-                        <CardContent>
+                        <CardContent className="p-0 bg-slate-100">
                            <InvoicePreview
                              customer={associatedCustomer}
                              projectName={projectName}
@@ -311,7 +315,7 @@ function InvoicesPageContent() {
 
 export default function InvoicesPage() {
     return (
-        <Suspense fallback={<p>Carregant gerador de factures...</p>}>
+        <Suspense fallback={<div className="p-12 text-center"><Loader2 className="h-12 w-12 animate-spin mx-auto" /></div>}>
             <InvoicesPageContent />
         </Suspense>
     )
