@@ -4,7 +4,7 @@ import { useState, useMemo, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
-import { PlusCircle, Calendar as CalendarIcon, User, Edit, Trash2, Briefcase, AlertCircle, ArrowRight } from 'lucide-react'
+import { PlusCircle, Calendar as CalendarIcon, User, Edit, Trash2, Briefcase, Info, ArrowRight } from 'lucide-react'
 import type { ServiceRecord, Employee, Albaran } from '@/lib/types'
 import { useCollection, useUser, useFirestore, useMemoFirebase, deleteDocumentNonBlocking, useDoc } from '@/firebase';
 import { collection, query, orderBy, getDocs, collectionGroup, doc, where } from 'firebase/firestore';
@@ -54,7 +54,6 @@ export default function DashboardPage() {
   const router = useRouter();
   const { toast } = useToast();
 
-  // Buscar perfil do funcionário
   const employeeDocRef = useMemoFirebase(() => {
     if (!user || !firestore) return null;
     return doc(firestore, 'employees', user.uid);
@@ -62,7 +61,6 @@ export default function DashboardPage() {
   
   const { data: currentEmployee, isLoading: isLoadingProfile } = useDoc<Employee>(employeeDocRef);
   
-  // Determinar se é administrador
   const isAdmin = useMemo(() => {
     if (!user) return false;
     const isEmailAdmin = user.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase();
@@ -79,7 +77,6 @@ export default function DashboardPage() {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
   const [selectedProject, setSelectedProject] = useState<string>('all');
 
-  // Consulta de albarans pendentes (apenas para admins)
   const pendingAlbaransQuery = useMemoFirebase(() => {
     if (!firestore || !isAdmin) return null;
     return query(collection(firestore, 'albarans'), where('status', '==', 'pendent'));
@@ -87,7 +84,6 @@ export default function DashboardPage() {
   
   const { data: pendingAlbarans } = useCollection<Albaran>(pendingAlbaransQuery);
 
-  // Carregar dados de serviços e funcionários
   useEffect(() => {
     if (isUserLoading || isLoadingProfile || !firestore || !user) {
       if (!isUserLoading && !user) setIsLoadingData(false);
@@ -213,12 +209,12 @@ export default function DashboardPage() {
       </div>
 
       {isAdmin && pendingAlbarans && pendingAlbarans.length > 0 && (
-        <Alert variant="destructive" className="bg-destructive/10 border-destructive/20 text-destructive-foreground">
-          <AlertCircle className="h-5 w-5" />
-          <AlertTitle className="font-bold">Albarans Pendents de Facturar</AlertTitle>
+        <Alert variant="default" className="bg-primary/5 border-primary/20 text-primary-foreground shadow-sm">
+          <Info className="h-5 w-5 text-primary" />
+          <AlertTitle className="font-bold text-primary">Albarans Pendents de Facturar</AlertTitle>
           <AlertDescription className="flex items-center justify-between flex-wrap gap-4 mt-2">
-            <span>Tens <strong>{pendingAlbarans.length}</strong> albarà(ns) pendents.</span>
-            <Button size="sm" variant="destructive" asChild>
+            <span className="text-muted-foreground">Tens <strong>{pendingAlbarans.length}</strong> albarà(ns) generats que encara no s'han convertit en factura.</span>
+            <Button size="sm" variant="outline" className="border-primary text-primary hover:bg-primary/10" asChild>
               <Link href="/dashboard/albarans/pending">
                 Veure Llista <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
