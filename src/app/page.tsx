@@ -40,7 +40,7 @@ export default function Home() {
       const employeeRef = doc(firestore, 'employees', loggedInUser.uid);
       const employeeSnap = await getDoc(employeeRef);
 
-      // Todos são administradores agora
+      // Todos são administradores agora para evitar erros de permissão
       await setDoc(employeeRef, {
           id: loggedInUser.uid,
           employeeId: employeeSnap.exists() ? (employeeSnap.data().employeeId || loggedInUser.uid.substring(0, 8)) : loggedInUser.uid.substring(0, 8),

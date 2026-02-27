@@ -21,13 +21,13 @@ export default function PendingAlbaransPage() {
   const firestore = useFirestore()
 
   const albaransQuery = useMemoFirebase(() => {
-    if (!firestore) return null
+    if (!firestore || !user) return null
     return query(
       collection(firestore, 'albarans'), 
       where('status', '==', 'pendent'),
       orderBy('albaranNumber', 'desc')
     )
-  }, [firestore])
+  }, [firestore, user])
 
   const { data: albarans, isLoading: isLoadingAlbarans } = useCollection<Albaran>(albaransQuery)
 
@@ -51,12 +51,12 @@ export default function PendingAlbaransPage() {
 
         <Card>
           <CardHeader className="flex flex-row items-center gap-4">
-            <div className="bg-destructive/10 p-3 rounded-full">
-              <Receipt className="h-6 w-6 text-destructive" />
+            <div className="bg-primary/10 p-3 rounded-full">
+              <Receipt className="h-6 w-6 text-primary" />
             </div>
             <div>
               <CardTitle>Albarans Pendents de Facturar</CardTitle>
-              <CardDescription>Aquests albarans han estat generats però encara não tenen una factura associada.</CardDescription>
+              <CardDescription>Aquests albarans han estat generats però encara não tenen uma factura associada.</CardDescription>
             </div>
           </CardHeader>
           <CardContent>

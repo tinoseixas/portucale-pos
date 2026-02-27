@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { PlusCircle, Calendar as CalendarIcon, User, Edit, Trash2, Briefcase, Info, ArrowRight } from 'lucide-react'
 import type { ServiceRecord, Employee, Albaran } from '@/lib/types'
-import { useCollection, useUser, useFirestore, useMemoFirebase, deleteDocumentNonBlocking, useDoc } from '@/firebase';
+import { useCollection, useUser, useFirestore, useMemoFirebase, deleteDocumentNonBlocking } from '@/firebase';
 import { collection, query, orderBy, getDocs, collectionGroup, doc, where } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton'
 import { Card, CardHeader, CardContent, CardDescription, CardTitle } from '@/components/ui/card'
@@ -53,9 +53,6 @@ export default function DashboardPage() {
   const router = useRouter();
   const { toast } = useToast();
 
-  // Todos os utilizadores autenticados são administradores agora
-  const isAdmin = !!user;
-  
   const [allServices, setAllServices] = useState<ServiceRecord[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [isLoadingData, setIsLoadingData] = useState(true);
@@ -65,10 +62,11 @@ export default function DashboardPage() {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
   const [selectedProject, setSelectedProject] = useState<string>('all');
 
+  // Consulta de albarans pendentes só dispara quando o user está carregado
   const pendingAlbaransQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
+    if (!firestore || !user) return null;
     return query(collection(firestore, 'albarans'), where('status', '==', 'pendent'));
-  }, [firestore]);
+  }, [firestore, user]);
   
   const { data: pendingAlbarans } = useCollection<Albaran>(pendingAlbaransQuery);
 
@@ -85,7 +83,6 @@ export default function DashboardPage() {
             const employeesData = employeeSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Employee));
             setEmployees(employeesData);
 
-            // Carregar todos os serviços (visão de admin para todos)
             const servicesQuery = query(collectionGroup(firestore, 'serviceRecords'), orderBy('arrivalDateTime', 'desc'));
             const serviceSnapshot = await getDocs(servicesQuery);
             const servicesData = serviceSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ServiceRecord));
@@ -196,7 +193,7 @@ export default function DashboardPage() {
           <Info className="h-5 w-5 text-primary" />
           <AlertTitle className="font-bold text-primary">Albarans Pendents de Facturar</AlertTitle>
           <AlertDescription className="flex items-center justify-between flex-wrap gap-4 mt-2">
-            <span className="text-muted-foreground">Tens <strong>{pendingAlbarans.length}</strong> albarà(ns) generats que encara no s'han convertit en factura.</span>
+            <span className="text-muted-foreground">Tens <strong>{pendingAlbarans.length}</strong> albarà(ns) generats que encara no s'han convertit em factura.</span>
             <Button size="sm" variant="outline" className="border-primary text-primary hover:bg-primary/10" asChild>
               <Link href="/dashboard/albarans/pending">
                 Veure Llista <ArrowRight className="ml-2 h-4 w-4" />
