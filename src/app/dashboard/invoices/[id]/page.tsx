@@ -39,8 +39,8 @@ export default function InvoiceDetailPage() {
     const reportRef = useRef<HTMLDivElement>(null)
     const [services, setServices] = useState<ServiceRecord[]>([])
     const [employees, setEmployees] = useState<Employee[]>([]);
-    const [isLoadingData, setIsLoadingData] = useState(true);
-    const dataFetchedRef = useRef(false)
+    const [isLoadingData, setIsLoadingData] = useState(false);
+    const [hasLoaded, setHasLoaded] = useState(false);
 
     const invoiceDocRef = useMemoFirebase(() => firestore && invoiceId ? doc(firestore, 'invoices', invoiceId) : null, [firestore, invoiceId])
     const { data: invoice, isLoading: isLoadingInvoice } = useDoc<Invoice>(invoiceDocRef)
@@ -49,20 +49,10 @@ export default function InvoiceDetailPage() {
 
     const shouldExport = searchParams.get('export') === 'true';
 
-    useEffect(() => {
-        if (!isUserLoading && !user) {
-            router.push('/')
-        }
-    }, [isUserLoading, user, router])
-    
     const fetchData = useCallback(async () => {
-        if (!firestore || !invoice || dataFetchedRef.current) {
-            if (!invoice) setIsLoadingData(false);
-            return;
-        }
+        if (!firestore || !invoice || hasLoaded) return;
 
         setIsLoadingData(true);
-        dataFetchedRef.current = true;
         
         try {
             // 1. Carregar Empleats
@@ -88,7 +78,7 @@ export default function InvoiceDetailPage() {
             const servicesSnapshot = await getDocs(optimizedQuery);
             const allServicesData = servicesSnapshot.docs.map(d => ({ id: d.id, ...d.data() } as ServiceRecord));
             
-            if (invoice.sourceType === 'albaran' && invoice.sourceId) {
+            if (invoice.sourceId) {
                 const sourceAlbaranIds = invoice.sourceId.split(',');
                 const albaransSnapshot = await getDocs(query(collection(firestore, 'albarans'), where('__name__', 'in', sourceAlbaranIds)));
                 const serviceRecordIdsFromAlbarans = albaransSnapshot.docs.flatMap(doc => doc.data().serviceRecordIds);
@@ -97,17 +87,20 @@ export default function InvoiceDetailPage() {
             } else {
                 setServices(allServicesData);
             }
+            setHasLoaded(true);
         } catch (e) {
             console.error("Error fetching details:", e);
-            toast({ variant: 'destructive', title: 'Error', description: 'No s\'han pogut carregar les dades.' });
+            toast({ variant: 'destructive', title: 'Error', description: 'No s\'han pogut carregar les dades de la factura.' });
         } finally {
             setIsLoadingData(false);
         }
-    }, [invoice, firestore, toast]);
+    }, [invoice, firestore, toast, hasLoaded]);
 
     useEffect(() => {
-        fetchData();
-    }, [fetchData]);
+        if (invoice) {
+            fetchData();
+        }
+    }, [invoice, fetchData]);
 
 
     const handleExportPDF = async () => {
@@ -115,24 +108,21 @@ export default function InvoiceDetailPage() {
         if (!reportElement) return;
 
         setIsGenerating(true);
-        toast({ title: 'Generant PDF...', description: 'Processant document lleuger.' });
+        toast({ title: 'Generant PDF...', description: 'Processant document lleuger per a enviament ràpid.' });
 
         try {
             const canvas = await html2canvas(reportElement, {
-                scale: 1.2,
+                scale: 1.0,
                 useCORS: true,
                 logging: false,
             });
 
-            const imgData = canvas.toDataURL('image/jpeg', 0.6);
+            const imgData = canvas.toDataURL('image/jpeg', 0.5);
             const pdf = new jsPDF('p', 'mm', 'a4');
             const pdfWidth = pdf.internal.pageSize.getWidth();
             const pdfHeight = pdf.internal.pageSize.getHeight();
-            const canvasWidth = canvas.width;
-            const canvasHeight = canvas.height;
-            const ratio = canvasWidth / canvasHeight;
             const imgWidth = pdfWidth;
-            const imgHeight = imgWidth / ratio;
+            const imgHeight = (canvas.height * imgWidth) / canvas.width;
 
             let heightLeft = imgHeight;
             let position = 0;
@@ -148,31 +138,29 @@ export default function InvoiceDetailPage() {
             }
 
             pdf.save(`Factura-${String(invoice?.invoiceNumber).padStart(4, '0')}.pdf`);
-            toast({ title: 'PDF Generat!', description: 'Exportació finalitzada.' });
+            toast({ title: 'PDF Generat!', description: 'L\'exportació s\'ha completat.' });
 
         } catch (error) {
             console.error("Error PDF:", error);
-            toast({ variant: 'destructive', title: 'Error', description: 'No s\'ha pogut generar el PDF.' });
+            toast({ variant: 'destructive', title: 'Error', description: 'No s\'ha pogut crear el fitxer PDF.' });
         } finally {
             setIsGenerating(false);
         }
     };
     
-    const isLoading = isUserLoading || isLoadingInvoice || isLoadingData;
-    
     useEffect(() => {
-        if (shouldExport && !isLoading && !isGenerating && invoice) {
+        if (shouldExport && hasLoaded && !isLoadingData && !isGenerating && invoice) {
             handleExportPDF();
             router.replace(`/dashboard/invoices/${invoiceId}`, { scroll: false });
         }
          // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [shouldExport, isLoading, isGenerating, invoice?.id, invoiceId, router]);
+    }, [shouldExport, hasLoaded, isLoadingData, isGenerating, invoice?.id, invoiceId, router]);
 
 
     const handleDeleteInvoice = () => {
         if (!invoiceDocRef) return;
         deleteDocumentNonBlocking(invoiceDocRef);
-        toast({ title: 'Factura Eliminada', description: 'S\'ha esborrat de l\'historial.' });
+        toast({ title: 'Factura eliminada', description: 'S\'ha esborrat correctament.' });
         router.push('/dashboard/invoices/history');
     }
 
@@ -185,17 +173,18 @@ export default function InvoiceDetailPage() {
         }
     }
     
+    const isLoading = isUserLoading || isLoadingInvoice || (isLoadingData && !hasLoaded);
 
     if (isLoading) {
-        return <div className="text-center p-12 flex flex-col items-center justify-center h-[60vh]"><Loader2 className="h-12 w-12 animate-spin text-primary" /><p className="mt-4 text-muted-foreground">Carregant dades de la factura...</p></div>
+        return <div className="text-center p-12 flex flex-col items-center justify-center h-[60vh]"><Loader2 className="h-12 w-12 animate-spin text-primary" /><p className="mt-4 text-muted-foreground">Carregant factura...</p></div>
     }
     
     if (!invoice) {
-        return <p className="p-8 text-center">No s'ha trobat la factura.</p>
+        return <p className="p-8 text-center">No s'ha trobat la factura demanada.</p>
     }
 
     return (
-        <AdminGate pageTitle="Detall de la Factura" pageDescription="Detalls del document emès.">
+        <AdminGate pageTitle="Detall de la Factura" pageDescription="Document oficial de facturació.">
             <div className="space-y-8 max-w-5xl mx-auto pb-10">
                 <div className="flex justify-between items-center flex-wrap gap-4">
                     <Button variant="ghost" onClick={() => router.push('/dashboard/invoices/history')} className="font-bold">
@@ -211,14 +200,14 @@ export default function InvoiceDetailPage() {
                             </AlertDialogTrigger>
                             <AlertDialogContent>
                                 <AlertDialogHeader>
-                                <AlertDialogTitle>Eliminar Factura?</AlertDialogTitle>
+                                <AlertDialogTitle>Vols eliminar la factura?</AlertDialogTitle>
                                 <AlertDialogDescription>
-                                    Aquesta acció esborrarà la factura #{invoice.invoiceNumber}.
+                                    Aquesta acció esborrarà la factura #{invoice.invoiceNumber} de forma permanent.
                                 </AlertDialogDescription>
                                 </AlertDialogHeader>
                                 <AlertDialogFooter>
                                 <AlertDialogCancel>Cancel·lar</AlertDialogCancel>
-                                <AlertDialogAction onClick={handleDeleteInvoice} className="bg-destructive">Eliminar</AlertDialogAction>
+                                <AlertDialogAction onClick={handleDeleteInvoice} className="bg-destructive">Eliminar definitivament</AlertDialogAction>
                                 </AlertDialogFooter>
                             </AlertDialogContent>
                         </AlertDialog>

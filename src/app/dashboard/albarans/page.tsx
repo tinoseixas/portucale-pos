@@ -1,16 +1,14 @@
 'use client'
 
-import { useMemo, useEffect, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useCollection, useUser, useFirestore, useMemoFirebase, deleteDocumentNonBlocking } from '@/firebase'
-import { collection, query, orderBy, doc, getDocs, collectionGroup, setDoc, runTransaction, where, writeBatch } from 'firebase/firestore'
+import { collection, query, orderBy, doc, getDocs, collectionGroup, writeBatch, where } from 'firebase/firestore'
 import type { Albaran, ServiceRecord, Employee } from '@/lib/types'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
 import { Eye, FileArchive, CreditCard, Clock, CheckCircle2, Loader2, Trash2, Users, RefreshCw, Briefcase, AlertCircle } from 'lucide-react'
-import { format, parseISO } from 'date-fns'
-import { ca } from 'date-fns/locale'
 import { AdminGate } from '@/components/AdminGate'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -30,13 +28,11 @@ import Link from 'next/link'
 import { calculateTotalAmount } from '@/lib/calculations'
 
 export default function AlbaransHistoryPage() {
-  const router = useRouter()
   const { toast } = useToast()
-  const { user, isUserLoading } = useUser()
+  const { isUserLoading } = useUser()
   const firestore = useFirestore()
   const [isSyncing, setIsSyncing] = useState(false)
 
-  // Consulta tots els albarans
   const albaransQuery = useMemoFirebase(() => {
     if (!firestore) return null
     return query(collection(firestore, 'albarans'), orderBy('albaranNumber', 'desc'))
@@ -44,7 +40,6 @@ export default function AlbaransHistoryPage() {
 
   const { data: albarans, isLoading: isLoadingAlbarans } = useCollection<Albaran>(albaransQuery)
 
-  // Filtres per pestanyes
   const pendingAlbarans = useMemo(() => albarans?.filter(a => a.status === 'pendent') || [], [albarans]);
   const historyAlbarans = useMemo(() => albarans?.filter(a => a.status === 'facturat') || [], [albarans]);
 
@@ -53,15 +48,15 @@ export default function AlbaransHistoryPage() {
     const albaranRef = doc(firestore, 'albarans', albaranId);
     deleteDocumentNonBlocking(albaranRef);
     toast({ 
-        title: 'Albarà Eliminat', 
-        description: `L'albarà #${albaranNumber} ha estat esborrat de la llista.` 
+        title: 'Document esborrat', 
+        description: `L'albarà #${albaranNumber} s'ha eliminat de la llista.` 
     });
   }
 
   const handleSyncAlbarans = async () => {
     if (!firestore) return;
     setIsSyncing(true);
-    toast({ title: 'Consolidant dades...', description: 'Agrupant serveis de tota l\'equip per obra.' });
+    toast({ title: 'Agrupant serveis...', description: 'Consolidant la feina de tot l\'equip per obra.' });
 
     try {
         const employeesSnap = await getDocs(collection(firestore, 'employees'));
@@ -70,10 +65,8 @@ export default function AlbaransHistoryPage() {
         const servicesSnap = await getDocs(collectionGroup(firestore, 'serviceRecords'));
         const allServices = servicesSnap.docs.map(d => ({ id: d.id, ...d.data() } as ServiceRecord));
         
-        // Identificar serveis que ja estan en albarans FACTURATS
         const invoicedServiceIds = new Set(historyAlbarans.flatMap(a => a.serviceRecordIds));
         
-        // Serveis realment pendents (no facturats, no buits, amb client i obra)
         const pendingServices = allServices.filter(s => 
             !invoicedServiceIds.has(s.id) && 
             s.description !== "Servei en curs..." &&
@@ -81,12 +74,11 @@ export default function AlbaransHistoryPage() {
         );
 
         if (pendingServices.length === 0 && pendingAlbarans.length === 0) {
-            toast({ title: 'Tot al dia', description: 'No hi ha serveis nous per consolidar.' });
+            toast({ title: 'Sense canvis', description: 'No hi ha nous serveis per agrupar.' });
             setIsSyncing(false);
             return;
         }
 
-        // Agrupar serveis per Client + Obra
         const groupedByProject: Record<string, ServiceRecord[]> = {};
         pendingServices.forEach(s => {
             const key = `${s.customerId}_${s.projectName.trim().toLowerCase()}`;
@@ -96,12 +88,9 @@ export default function AlbaransHistoryPage() {
 
         const batch = writeBatch(firestore);
         
-        // Obtenir últim número d'albarà
-        const counterRef = doc(firestore, "counters", "albarans");
         const counterSnap = await getDocs(query(collection(firestore, "counters"), where("__name__", "==", "albarans")));
         let nextNum = !counterSnap.empty ? counterSnap.docs[0].data().lastNumber : 0;
 
-        // Esborrar albarans PENDENTS actuals per regenerar-los sense duplicats
         pendingAlbarans.forEach(a => {
             batch.delete(doc(firestore, 'albarans', a.id));
         });
@@ -133,31 +122,31 @@ export default function AlbaransHistoryPage() {
             createdCount++;
         }
 
-        batch.set(counterRef, { lastNumber: nextNum }, { merge: true });
+        batch.set(doc(firestore, "counters", "albarans"), { lastNumber: nextNum }, { merge: true });
         await batch.commit();
 
         toast({ 
             title: 'Sincronització completada', 
-            description: `S'han consolidat ${createdCount} albarans d'obra pendents.` 
+            description: `S'han generat ${createdCount} albarans d'obra.` 
         });
     } catch (error) {
         console.error(error);
-        toast({ variant: 'destructive', title: 'Error', description: 'No s\'ha pogut realitzar la consolidació.' });
+        toast({ variant: 'destructive', title: 'Error', description: 'No s\'ha pogut realitzar l\'agrupació.' });
     } finally {
         setIsSyncing(false);
     }
   };
 
-  if (isUserLoading || isLoadingAlbarans) return <div className="p-12 text-center"><Loader2 className="h-12 w-12 animate-spin mx-auto text-primary" /><p className="mt-4">Carregant documents de l'empresa...</p></div>
+  if (isUserLoading || isLoadingAlbarans) return <div className="p-12 text-center"><Loader2 className="h-12 w-12 animate-spin mx-auto text-primary" /><p className="mt-4">Carregant historial d'albarans...</p></div>
 
   return (
-    <AdminGate pageTitle="Gestió d'Albarans" pageDescription="Supervisió i facturació agrupada per projecte.">
+    <AdminGate pageTitle="Gestió d'Albarans" pageDescription="Supervisió i agrupació de treballs per projecte.">
       <div className="max-w-full mx-auto space-y-6">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <h1 className="text-3xl font-black tracking-tighter flex items-center gap-2 uppercase">
-                <FileArchive className="h-8 w-8 text-primary" /> Albarans per Obra
+                <FileArchive className="h-8 w-8 text-primary" /> Historial d'Albarans
             </h1>
-            <Button variant="default" onClick={handleSyncAlbarans} disabled={isSyncing} className="w-full sm:w-auto bg-primary hover:bg-primary/90 shadow-lg">
+            <Button variant="default" onClick={handleSyncAlbarans} disabled={isSyncing} className="w-full sm:w-auto bg-primary hover:bg-primary/90 shadow-lg font-bold">
                 {isSyncing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
                 Actualitzar Albarans de l'Equip
             </Button>
@@ -176,8 +165,8 @@ export default function AlbaransHistoryPage() {
           <TabsContent value="pendents">
             <Card className="border-primary/20 shadow-md">
               <CardHeader className="bg-primary/5">
-                <CardTitle className="text-primary flex items-center gap-2">Treballs Pendents de Facturar</CardTitle>
-                <CardDescription>Agrupació de tots els serveis realitzats per l'equip que encara no s'han cobrat.</CardDescription>
+                <CardTitle className="text-primary flex items-center gap-2">Treballs pendents de facturar</CardTitle>
+                <CardDescription>Agrupació per obra de tota la feina feta encara no cobrada.</CardDescription>
               </CardHeader>
               <CardContent className="pt-6">
                 <div className="overflow-x-auto">
@@ -187,8 +176,8 @@ export default function AlbaransHistoryPage() {
                                 <TableHead>Nº Albarà</TableHead>
                                 <TableHead>Obra / Projecte</TableHead>
                                 <TableHead>Client</TableHead>
-                                <TableHead>Equip</TableHead>
-                                <TableHead>Total Estimant</TableHead>
+                                <TableHead>Tècnics</TableHead>
+                                <TableHead>Total Est.</TableHead>
                                 <TableHead className="text-right">Accions</TableHead>
                             </TableRow>
                         </TableHeader>
@@ -211,12 +200,12 @@ export default function AlbaransHistoryPage() {
                                 <TableCell className="font-black text-lg text-slate-900">{albaran.totalAmount.toFixed(2)} €</TableCell>
                                 <TableCell className="text-right">
                                     <div className="flex justify-end gap-2">
-                                        <Button variant="outline" size="sm" asChild className="h-8">
+                                        <Button variant="outline" size="sm" asChild className="h-8 font-bold">
                                             <Link href={`/dashboard/albarans/${albaran.id}`}>
                                                 <Eye className="h-4 w-4 mr-1" /> Veure
                                             </Link>
                                         </Button>
-                                        <Button size="sm" asChild className="bg-primary hover:bg-primary/90 h-8 shadow-sm">
+                                        <Button size="sm" asChild className="bg-primary hover:bg-primary/90 h-8 shadow-sm font-bold">
                                             <Link href={`/dashboard/invoices?customerId=${albaran.customerId}&albaranId=${albaran.id}`}>
                                                 <CreditCard className="mr-2 h-4 w-4" /> Facturar
                                             </Link>
@@ -230,15 +219,14 @@ export default function AlbaransHistoryPage() {
                                             </AlertDialogTrigger>
                                             <AlertDialogContent>
                                                 <AlertDialogHeader>
-                                                    <AlertDialogTitle>Vols eliminar aquest albarà?</AlertDialogTitle>
+                                                    <AlertDialogTitle>Vols eliminar aquest document?</AlertDialogTitle>
                                                     <AlertDialogDescription>
-                                                        Això només esborra el document de l'albarà per permetre reagrupar els serveis de nou. 
-                                                        Els registres de treball dels tècnics **no s'esborraran**.
+                                                        Això només esborra l'albarà de resum. Els registres de treball dels tècnics es mantindran intactes per poder-los tornar a agrupar si cal.
                                                     </AlertDialogDescription>
                                                 </AlertDialogHeader>
                                                 <AlertDialogFooter>
-                                                    <AlertDialogCancel>Cancel·lar</AlertDialogCancel>
-                                                    <AlertDialogAction onClick={() => handleDeleteAlbaran(albaran.id, albaran.albaranNumber)} className="bg-destructive hover:bg-destructive/90">Eliminar Document</AlertDialogAction>
+                                                    <AlertDialogCancel>Enrere</AlertDialogCancel>
+                                                    <AlertDialogAction onClick={() => handleDeleteAlbaran(albaran.id, albaran.albaranNumber)} className="bg-destructive hover:bg-destructive/90">Eliminar</AlertDialogAction>
                                                 </AlertDialogFooter>
                                             </AlertDialogContent>
                                         </AlertDialog>
@@ -251,8 +239,8 @@ export default function AlbaransHistoryPage() {
                                 <TableCell colSpan={6} className="h-48 text-center">
                                     <div className="flex flex-col items-center justify-center text-muted-foreground space-y-2">
                                         <AlertCircle className="h-8 w-8 opacity-20" />
-                                        <p className="italic">No hi ha treballs pendents de facturar.</p>
-                                        <p className="text-xs">Prem el botó "Actualitzar Albarans" si has creat serveis nous.</p>
+                                        <p className="italic">No hi ha albarans pendents de facturar.</p>
+                                        <p className="text-xs">Prem el botó "Actualitzar" per consolidar els serveis recents.</p>
                                     </div>
                                 </TableCell>
                             </TableRow>
@@ -267,8 +255,8 @@ export default function AlbaransHistoryPage() {
           <TabsContent value="historial">
             <Card className="shadow-sm">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">Documents d'Obra Facturats</CardTitle>
-                <CardDescription>Consulta els albarans que ja han estat convertits en factures oficials.</CardDescription>
+                <CardTitle className="flex items-center gap-2">Albarans ja facturats</CardTitle>
+                <CardDescription>Consulta el registre de documents que ja han estat convertits en factures.</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="overflow-x-auto">
@@ -278,7 +266,7 @@ export default function AlbaransHistoryPage() {
                                 <TableHead>Nº Albarà</TableHead>
                                 <TableHead>Obra</TableHead>
                                 <TableHead>Client</TableHead>
-                                <TableHead>Total Facturat</TableHead>
+                                <TableHead>Total</TableHead>
                                 <TableHead className="text-right">Accions</TableHead>
                             </TableRow>
                         </TableHeader>
@@ -291,9 +279,9 @@ export default function AlbaransHistoryPage() {
                                     <TableCell className="font-bold">{albaran.totalAmount.toFixed(2)} €</TableCell>
                                     <TableCell className="text-right">
                                         <div className="flex justify-end gap-2">
-                                            <Button variant="outline" size="sm" asChild className="h-8">
+                                            <Button variant="outline" size="sm" asChild className="h-8 font-bold">
                                                 <Link href={`/dashboard/albarans/${albaran.id}`}>
-                                                    <Eye className="h-4 w-4" />
+                                                    <Eye className="h-4 w-4 mr-1" /> Veure
                                                 </Link>
                                             </Button>
                                             <AlertDialog>
@@ -304,8 +292,8 @@ export default function AlbaransHistoryPage() {
                                                 </AlertDialogTrigger>
                                                 <AlertDialogContent>
                                                     <AlertDialogHeader>
-                                                        <AlertDialogTitle>Eliminar del historial?</AlertDialogTitle>
-                                                        <AlertDialogDescription>Aquesta acció esborrarà l'albarà facturat. No recomanem esborrar documents ja processats fiscalment.</AlertDialogDescription>
+                                                        <AlertDialogTitle>Eliminar de l'historial?</AlertDialogTitle>
+                                                        <AlertDialogDescription>Aquesta acció esborrarà el document de l'albarà facturat. No es recomana esborrar documents ja processats.</AlertDialogDescription>
                                                     </AlertDialogHeader>
                                                     <AlertDialogFooter>
                                                         <AlertDialogCancel>Enrere</AlertDialogCancel>
@@ -319,7 +307,7 @@ export default function AlbaransHistoryPage() {
                             ))}
                             {historyAlbarans.length === 0 && (
                                 <TableRow>
-                                    <TableCell colSpan={5} className="h-32 text-center text-muted-foreground italic">Encara no s'ha facturat cap albarà.</TableCell>
+                                    <TableCell colSpan={5} className="h-32 text-center text-muted-foreground italic">Encara no s'ha facturat cap albarà d'obra.</TableCell>
                                 </TableRow>
                             )}
                         </TableBody>

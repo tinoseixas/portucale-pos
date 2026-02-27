@@ -1,16 +1,15 @@
-
 'use client'
 
 import { useState, useMemo, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
-import { PlusCircle, Calendar as CalendarIcon, User, Edit, Trash2, Briefcase, Info, ArrowRight, Filter } from 'lucide-react'
+import { PlusCircle, Calendar as CalendarIcon, User, Edit, Trash2, Briefcase, Filter } from 'lucide-react'
 import type { ServiceRecord, Employee } from '@/lib/types'
-import { useCollection, useUser, useFirestore, useMemoFirebase, deleteDocumentNonBlocking } from '@/firebase';
-import { collection, query, orderBy, getDocs, collectionGroup, doc, where } from 'firebase/firestore';
+import { useUser, useFirestore, deleteDocumentNonBlocking } from '@/firebase';
+import { collection, query, orderBy, getDocs, collectionGroup, doc } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton'
-import { Card, CardHeader, CardContent, CardDescription, CardTitle } from '@/components/ui/card'
+import { Card, CardHeader, CardContent, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Calendar } from '@/components/ui/calendar'
@@ -57,7 +56,6 @@ export default function DashboardPage() {
   const [isLoadingData, setIsLoadingData] = useState(true);
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
 
-  // Per defecte 'all' per veure la feina de tota l'equip, o l'usuari actual si ho prefereixes
   const [selectedUser, setSelectedUser] = useState<string>('all');
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
   const [selectedProject, setSelectedProject] = useState<string>('all');
@@ -142,7 +140,7 @@ export default function DashboardPage() {
 
     toast({
       title: `${selectedRows.length} registres eliminats`,
-      description: 'Els registres seleccionats s\'han eliminat correctament.',
+      description: 'Els serveis seleccionats s\'han esborrat correctament.',
     });
 
     setAllServices(allServices.filter(s => !selectedRows.includes(s.id)));
@@ -167,11 +165,11 @@ export default function DashboardPage() {
     <div className="space-y-8">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Registres de Treball</h1>
-          <p className="text-muted-foreground">Gestió global de serveis de tota l'equip.</p>
+          <h1 className="text-3xl font-black tracking-tight uppercase">Registres de Treball</h1>
+          <p className="text-muted-foreground">Gestió de tots els serveis realitzats per l'equip.</p>
         </div>
         <div className="flex items-center gap-2 w-full sm:w-auto">
-            <Button asChild className="bg-accent hover:bg-accent/90 text-accent-foreground flex-1 sm:flex-none">
+            <Button asChild className="bg-accent hover:bg-accent/90 text-accent-foreground flex-1 sm:flex-none font-bold">
                 <Link href="/dashboard/new">
                     <PlusCircle className="mr-2 h-4 w-4" />
                     Nou Servei
@@ -196,17 +194,17 @@ export default function DashboardPage() {
                     {selectedRows.length > 0 && (
                         <AlertDialog>
                         <AlertDialogTrigger asChild>
-                            <Button variant="destructive" size="sm">
+                            <Button variant="destructive" size="sm" className="font-bold">
                             <Trash2 className="mr-2 h-4 w-4" /> Eliminar Seleccionats ({selectedRows.length})
                             </Button>
                         </AlertDialogTrigger>
                         <AlertDialogContent>
                             <AlertDialogHeader>
-                            <AlertDialogTitle>Estàs segur?</AlertDialogTitle>
-                            <AlertDialogDescription>Aquesta acció eliminarà permanentment {selectedRows.length} registres de la base de dades.</AlertDialogDescription>
+                            <AlertDialogTitle>Vols eliminar els serveis seleccionats?</AlertDialogTitle>
+                            <AlertDialogDescription>Aquesta acció esborrarà permanentment {selectedRows.length} registres. Recorda que si ja tenen albarà, l'hauràs d'actualitzar.</AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel·lar</AlertDialogCancel>
+                            <AlertDialogCancel>Enrere</AlertDialogCancel>
                             <AlertDialogAction onClick={handleDeleteSelected} className="bg-destructive">Eliminar definitivament</AlertDialogAction>
                             </AlertDialogFooter>
                         </AlertDialogContent>
@@ -215,9 +213,9 @@ export default function DashboardPage() {
                 </div>
                 <div className="flex flex-col sm:flex-row gap-3 pt-4 flex-wrap">
                     <Select value={selectedUser} onValueChange={setSelectedUser}>
-                    <SelectTrigger className="w-full sm:w-[220px] bg-white">
+                    <SelectTrigger className="w-full sm:w-[220px] bg-white h-10">
                         <User className="mr-2 h-4 w-4 text-muted-foreground" />
-                        <SelectValue placeholder="Filtrar per Tècnic" />
+                        <SelectValue placeholder="Tècnic" />
                     </SelectTrigger>
                     <SelectContent>
                         <SelectItem value="all">Tots els Tècnics</SelectItem>
@@ -230,9 +228,9 @@ export default function DashboardPage() {
 
                     <Popover>
                     <PopoverTrigger asChild>
-                        <Button variant="outline" className="w-full sm:w-[240px] justify-start text-left font-normal bg-white">
+                        <Button variant="outline" className="w-full sm:w-[240px] justify-start text-left font-normal bg-white h-10">
                         <CalendarIcon className="mr-2 h-4 w-4 text-muted-foreground" />
-                        {selectedDate ? format(selectedDate, "PPP", { locale: ca }) : <span>Filtrar per data</span>}
+                        {selectedDate ? format(selectedDate, "PPP", { locale: ca }) : <span>Tria una data</span>}
                         </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0" align="start">
@@ -241,9 +239,9 @@ export default function DashboardPage() {
                     </Popover>
 
                     <Select value={selectedProject} onValueChange={setSelectedProject}>
-                    <SelectTrigger className="w-full sm:w-[220px] bg-white">
+                    <SelectTrigger className="w-full sm:w-[220px] bg-white h-10">
                         <Briefcase className="mr-2 h-4 w-4 text-muted-foreground" />
-                        <SelectValue placeholder="Filtrar per Obra" />
+                        <SelectValue placeholder="Obra / Projecte" />
                     </SelectTrigger>
                     <SelectContent>
                         <SelectItem value="all">Totes les Obres</SelectItem>
@@ -272,10 +270,10 @@ export default function DashboardPage() {
                             />
                         </TableHead>
                         <TableHead>Tècnic</TableHead>
-                        <TableHead>Data</TableHead>
+                        <TableHead>Data i Hora</TableHead>
                         <TableHead>Obra</TableHead>
                         <TableHead className="hidden md:table-cell">Descripció</TableHead>
-                        <TableHead className="text-right px-4">Accions</TableHead>
+                        <TableHead className="text-right px-4">Acció</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -299,7 +297,7 @@ export default function DashboardPage() {
                             <TableCell className="max-w-[150px] truncate font-medium">{service.projectName || 'Sense nom'}</TableCell>
                             <TableCell className="max-w-[250px] truncate text-muted-foreground text-xs hidden md:table-cell">{service.description}</TableCell>
                             <TableCell className="text-right px-4">
-                                <Button variant="outline" size="sm" asChild className="h-8">
+                                <Button variant="outline" size="sm" asChild className="h-8 font-bold">
                                     <Link href={`/dashboard/edit/${service.id}?ownerId=${service.employeeId}`}>
                                         <Edit className="h-3 w-3 mr-1" /> Editar
                                     </Link>
@@ -308,7 +306,7 @@ export default function DashboardPage() {
                         </TableRow>
                         )) : (
                         <TableRow>
-                            <TableCell colSpan={6} className="h-32 text-center text-muted-foreground italic">No s'ha trobat cap registre amb aquests filtres.</TableCell>
+                            <TableCell colSpan={6} className="h-32 text-center text-muted-foreground italic">No s'han trobat registres que coincideixin.</TableCell>
                         </TableRow>
                         )}
                     </TableBody>

@@ -40,8 +40,8 @@ export default function AlbaranDetailPage() {
     const reportRef = useRef<HTMLDivElement>(null)
     const [services, setServices] = useState<ServiceRecord[]>([])
     const [customer, setCustomer] = useState<Customer | undefined>()
-    const [isLoadingData, setIsLoadingData] = useState(true)
-    const dataFetchedRef = useRef(false)
+    const [isLoadingData, setIsLoadingData] = useState(false)
+    const [hasLoaded, setHasLoaded] = useState(false)
 
     const albaranDocRef = useMemoFirebase(() => firestore && albaranId ? doc(firestore, 'albarans', albaranId) : null, [firestore, albaranId])
     const { data: albaran, isLoading: isLoadingAlbaran } = useDoc<Albaran>(albaranDocRef)
@@ -51,20 +51,13 @@ export default function AlbaranDetailPage() {
     
     const shouldExport = searchParams.get('export') === 'true';
 
-    useEffect(() => {
-        if (!isUserLoading && !user) {
-            router.push('/')
-        }
-    }, [isUserLoading, user, router])
-
     const fetchData = useCallback(async () => {
-        if (!firestore || !albaran || !employees || dataFetchedRef.current) return
+        if (!firestore || !albaran || !employees || hasLoaded) return
 
         setIsLoadingData(true)
-        dataFetchedRef.current = true
         
         try {
-            // 1. Carregar dades del client directe
+            // 1. Carregar dades del client
             if (albaran.customerId) {
                 const customerSnap = await getDoc(doc(firestore, 'customers', albaran.customerId));
                 if (customerSnap.exists()) {
@@ -72,7 +65,7 @@ export default function AlbaranDetailPage() {
                 }
             }
             
-            // 2. Carregar serveis (sense loop)
+            // 2. Carregar serveis optimitzats
             if (albaran.serviceRecordIds && albaran.serviceRecordIds.length > 0) {
                 const optimizedQuery = query(
                     collectionGroup(firestore, 'serviceRecords'),
@@ -97,17 +90,20 @@ export default function AlbaranDetailPage() {
                 
                 setServices(fetchedServices);
             }
+            setHasLoaded(true);
         } catch (e) {
-            console.error("Error carrgant dades:", e);
-            toast({ variant: 'destructive', title: 'Error', description: 'No s\'han pogut carregar els detalls.' });
+            console.error("Error carregant dades:", e);
+            toast({ variant: 'destructive', title: 'Error', description: 'No s\'han pogut carregar els detalls del document.' });
         } finally {
             setIsLoadingData(false)
         }
-    }, [albaran, firestore, employees, toast]);
+    }, [albaran, firestore, employees, toast, hasLoaded]);
 
     useEffect(() => {
-        fetchData();
-    }, [fetchData]);
+        if (albaran && employees) {
+            fetchData();
+        }
+    }, [albaran, employees, fetchData]);
 
 
     const handleExportPDF = async () => {
@@ -115,25 +111,22 @@ export default function AlbaranDetailPage() {
         if (!reportElement) return;
 
         setIsGenerating(true);
-        toast({ title: 'Generant PDF...', description: 'Optimitzant per a enviament ràpid.' });
+        toast({ title: 'Generant PDF...', description: 'Optimitzant mida per a enviament ràpid.' });
 
         try {
             const canvas = await html2canvas(reportElement, {
-                scale: 1.2, // Escala reduïda per a menys pes
+                scale: 1.0, // Escala 1:1 per reduir pes dràsticament
                 useCORS: true,
                 logging: false,
                 backgroundColor: '#ffffff'
             });
             
-            const imgData = canvas.toDataURL('image/jpeg', 0.6); // Compressió 60%
+            const imgData = canvas.toDataURL('image/jpeg', 0.5); // Qualitat 50% per fitxer ultra-lleuger
             const pdf = new jsPDF('p', 'mm', 'a4', true);
             const pdfWidth = pdf.internal.pageSize.getWidth();
             const pdfHeight = pdf.internal.pageSize.getHeight();
-            const canvasWidth = canvas.width;
-            const canvasHeight = canvas.height;
-            const ratio = canvasWidth / canvasHeight;
             const imgWidth = pdfWidth;
-            const imgHeight = imgWidth / ratio;
+            const imgHeight = (canvas.height * imgWidth) / canvas.width;
 
             let heightLeft = imgHeight;
             let position = 0;
@@ -149,57 +142,56 @@ export default function AlbaranDetailPage() {
             }
             
             pdf.save(`Albara-${albaran?.projectName.replace(/\s+/g, '-')}.pdf`);
-            toast({ title: 'PDF Generat!', description: 'El fitxer és ara més lleuger.' });
+            toast({ title: 'PDF Generat!', description: 'El document ja es pot enviar.' });
 
         } catch (error) {
             console.error("Error PDF:", error);
-            toast({ variant: 'destructive', title: 'Error', description: 'No s\'ha pogut generar el PDF.' });
+            toast({ variant: 'destructive', title: 'Error', description: 'No s\'ha pogut crear el PDF.' });
         } finally {
             setIsGenerating(false);
         }
     };
     
-    const isLoading = isUserLoading || isLoadingAlbaran || isLoadingData || isLoadingEmployees;
-    
     useEffect(() => {
-        if (shouldExport && !isLoading && !isGenerating && services.length > 0) {
+        if (shouldExport && hasLoaded && !isLoadingData && !isGenerating && services.length > 0) {
             handleExportPDF();
             router.replace(`/dashboard/albarans/${albaranId}`, { scroll: false });
         }
          // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [shouldExport, isLoading, isGenerating, services.length, albaranId, router]);
+    }, [shouldExport, hasLoaded, isLoadingData, isGenerating, services.length, albaranId, router]);
 
 
     const handleDeleteAlbaran = () => {
         if (!albaranDocRef) return;
         deleteDocumentNonBlocking(albaranDocRef);
-        toast({ title: 'Document Eliminat', description: `L'albarà ha estat esborrat.` });
+        toast({ title: 'Albarà eliminat', description: `S'ha esborrat correctament.` });
         router.push('/dashboard/albarans');
     }
     
+    const isLoading = isUserLoading || isLoadingAlbaran || (isLoadingData && !hasLoaded) || isLoadingEmployees;
 
     if (isLoading) {
-        return <div className="text-center p-12 flex flex-col items-center justify-center h-[60vh]"><Loader2 className="h-12 w-12 animate-spin text-primary" /><p className="mt-4 text-muted-foreground font-medium">Carregant dades de l'obra...</p></div>
+        return <div className="text-center p-12 flex flex-col items-center justify-center h-[60vh]"><Loader2 className="h-12 w-12 animate-spin text-primary" /><p className="mt-4 text-muted-foreground font-medium">Carregant detalls de l'obra...</p></div>
     }
     
     if (!albaran) {
-        return <div className="p-8 text-center">No s'ha trobat el document de l'albarà.</div>
+        return <div className="p-8 text-center">No s'ha trobat l'albarà demanat.</div>
     }
 
     return (
-        <AdminGate pageTitle="Detall de l'Albarà" pageDescription="Consulta els treballs agrupats.">
+        <AdminGate pageTitle="Detall de l'Albarà" pageDescription="Consulta els treballs agrupats per projecte.">
             <div className="space-y-8 max-w-5xl mx-auto pb-10">
                 <div className="flex justify-between items-center flex-wrap gap-4">
                     <Button variant="ghost" onClick={() => router.push('/dashboard/albarans')} className="font-bold">
                         <ArrowLeft className="mr-2 h-4 w-4" />
-                        Tornar enrere
+                        Tornar a la llista
                     </Button>
                     <div className="flex items-center gap-2 flex-wrap justify-end">
                         {albaran.status === 'pendent' && (
                             <Button asChild className="bg-green-600 hover:bg-green-700 shadow-md font-bold">
                                 <Link href={`/dashboard/invoices?customerId=${albaran.customerId}&albaranId=${albaran.id}`}>
                                     <CreditCard className="mr-2 h-4 w-4" />
-                                    Facturar Ara
+                                    Facturar Obra
                                 </Link>
                             </Button>
                         )}
@@ -212,9 +204,9 @@ export default function AlbaranDetailPage() {
                             </AlertDialogTrigger>
                             <AlertDialogContent>
                                 <AlertDialogHeader>
-                                <AlertDialogTitle>Eliminar Albarà?</AlertDialogTitle>
+                                <AlertDialogTitle>Vols eliminar l'albarà?</AlertDialogTitle>
                                 <AlertDialogDescription>
-                                    Aquesta acció esborra el document però manté els registres de treball intactes.
+                                    Aquesta acció només esborra el document de resum. Els registres de treball dels tècnics no es veuran afectats.
                                 </AlertDialogDescription>
                                 </AlertDialogHeader>
                                 <AlertDialogFooter>
