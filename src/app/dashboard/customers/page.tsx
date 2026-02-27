@@ -1,9 +1,10 @@
+
 'use client'
 
 import { useMemo, useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useCollection, useUser, useFirestore, useMemoFirebase, deleteDocumentNonBlocking } from '@/firebase'
-import { collection, query, addDoc, doc, writeBatch, orderBy } from 'firebase/firestore'
+import { collection, query, addDoc, doc, writeBatch, orderBy, getDocs } from 'firebase/firestore'
 import type { Customer } from '@/lib/types'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
@@ -149,20 +150,35 @@ export default function CustomersPage() {
     setIsImporting(true);
 
     try {
+      // 1. Obtenir els clients actuals per comprovar duplicats
+      const existingSnap = await getDocs(collection(firestore, 'customers'));
+      const existingNames = new Set(existingSnap.docs.map(doc => doc.data().name.toLowerCase().trim()));
+
       const batch = writeBatch(firestore);
       const customersCollection = collection(firestore, 'customers');
       
+      let addedCount = 0;
       mockCustomers.forEach(customerData => {
-        const docRef = doc(customersCollection); // Create a new doc with a random ID
-        batch.set(docRef, customerData);
+        // Només afegir si el nom no existeix ja a la base de dades
+        if (!existingNames.has(customerData.name.toLowerCase().trim())) {
+          const docRef = doc(customersCollection);
+          batch.set(docRef, customerData);
+          addedCount++;
+        }
       });
 
-      await batch.commit();
-
-      toast({
-        title: 'Importació Completa',
-        description: `${mockCustomers.length} clients de mostra han estat afegits.`,
-      });
+      if (addedCount > 0) {
+        await batch.commit();
+        toast({
+          title: 'Importació Completa',
+          description: `${addedCount} nous clients han estat afegits sense duplicats.`,
+        });
+      } else {
+        toast({
+          title: 'Sense canvis',
+          description: 'Tots els clients de mostra ja existeixen a la teva base de dades.',
+        });
+      }
     } catch (error) {
       console.error("Error en importar clients:", error);
       toast({
@@ -209,7 +225,7 @@ export default function CustomersPage() {
             <div className="flex gap-2 flex-wrap w-full sm:w-auto">
                 <Button variant="outline" onClick={handleImportMockData} disabled={isImporting} className="w-full sm:w-auto">
                 <Upload className="mr-2 h-4 w-4" />
-                {isImporting ? 'Important...' : 'Importar Dades'}
+                {isImporting ? 'Sincronitzant...' : 'Sincronitzar Dades'}
                 </Button>
                 <Button onClick={() => router.push('/dashboard/customers/edit/new')} className="w-full sm:w-auto">
                     <PlusCircle className="mr-2 h-4 w-4" />
@@ -288,7 +304,7 @@ export default function CustomersPage() {
                     )) : (
                         <TableRow>
                             <TableCell colSpan={5} className="h-24 text-center">
-                                No s'han trobat clients. Comença afegint-ne un o important dades de mostra.
+                                No s'han trobat clients. Comença afegint-ne un o sincronitzant les dades.
                             </TableCell>
                         </TableRow>
                     )}
