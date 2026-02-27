@@ -4,10 +4,10 @@ import { useState, useMemo, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
-import { PlusCircle, List, Calendar as CalendarIcon, User, Edit, Search, Trash2, Briefcase } from 'lucide-react'
-import type { ServiceRecord, Employee } from '@/lib/types'
+import { PlusCircle, List, Calendar as CalendarIcon, User, Edit, Search, Trash2, Briefcase, FileText, ArrowRight, AlertTriangle } from 'lucide-react'
+import type { ServiceRecord, Employee, Albaran } from '@/lib/types'
 import { useCollection, useUser, useFirestore, useMemoFirebase, errorEmitter, FirestorePermissionError, deleteDocumentNonBlocking } from '@/firebase';
-import { collection, query, orderBy, getDocs, collectionGroup, doc } from 'firebase/firestore';
+import { collection, query, orderBy, getDocs, collectionGroup, doc, where } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton'
 import { Card, CardHeader, CardContent, CardDescription, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
@@ -30,6 +30,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { useToast } from "@/hooks/use-toast"
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert'
 
 const ADMIN_EMAIL = 'tinoseixas@gmail.com';
 
@@ -65,6 +66,14 @@ export default function DashboardPage() {
   const [selectedUser, setSelectedUser] = useState<string>('all');
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
   const [selectedProject, setSelectedProject] = useState<string>('all');
+
+  // Pending albarans query
+  const albaransQuery = useMemoFirebase(() => {
+    if (!firestore || !isAdmin) return null;
+    return query(collection(firestore, 'albarans'), where('status', '==', 'pendent'));
+  }, [firestore, isAdmin]);
+
+  const { data: pendingAlbarans, isLoading: isLoadingAlbarans } = useCollection<Albaran>(albaransQuery);
 
   useEffect(() => {
     if (isUserLoading || !firestore) return;
@@ -215,6 +224,27 @@ export default function DashboardPage() {
             </Button>
         </div>
       </div>
+
+      {/* Pending Albarans Alert */}
+      {isAdmin && pendingAlbarans && pendingAlbarans.length > 0 && (
+        <Alert className="bg-amber-50 border-amber-200 text-amber-900 border-l-4">
+          <AlertTriangle className="h-5 w-5 text-amber-600" />
+          <div className="w-full">
+            <AlertTitle className="font-bold flex items-center justify-between">
+              Albarans pendents de facturar
+              <span className="bg-amber-200 text-amber-900 text-[10px] px-2 py-0.5 rounded-full uppercase tracking-wider">Acumulat</span>
+            </AlertTitle>
+            <AlertDescription className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mt-2">
+              <p>Tens <strong>{pendingAlbarans.length}</strong> albarans que encara no han estat convertits em factura.</p>
+              <Button size="sm" asChild className="bg-amber-600 hover:bg-amber-700 text-white shadow-sm">
+                <Link href="/dashboard/invoices">
+                  Facturar Ara <ArrowRight className="ml-2 h-4 w-4" />
+                </Link>
+              </Button>
+            </AlertDescription>
+          </div>
+        </Alert>
+      )}
       
       {isLoading ? renderSkeletons() : (
         (!services || services.length === 0) && (allServices.length === 0) ? (
@@ -249,7 +279,7 @@ export default function DashboardPage() {
                             <AlertDialogTitle>Estàs segur?</AlertDialogTitle>
                             <AlertDialogDescription>
                                 Aquesta acció eliminarà permanentment {selectedRows.length} registre(s) de servei. Aquesta acció no es pot desfer.
-                            </AlertDialogDescription>
+                            </AlertDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
                             <AlertDialogCancel>Cancel·lar</AlertDialogCancel>
