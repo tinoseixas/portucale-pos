@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { PlusCircle, Calendar as CalendarIcon, User, Edit, Trash2, Briefcase, ArrowRight, AlertTriangle, Receipt } from 'lucide-react'
 import type { ServiceRecord, Employee, Albaran } from '@/lib/types'
-import { useCollection, useUser, useFirestore, useMemoFirebase, errorEmitter, FirestorePermissionError, deleteDocumentNonBlocking } from '@/firebase';
+import { useCollection, useUser, useFirestore, useMemoFirebase, errorEmitter, FirestorePermissionError, deleteDocumentNonBlocking, useDoc } from '@/firebase';
 import { collection, query, orderBy, getDocs, collectionGroup, doc, where } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton'
 import { Card, CardHeader, CardContent, CardDescription, CardTitle } from '@/components/ui/card'
@@ -31,8 +31,6 @@ import {
 } from "@/components/ui/alert-dialog"
 import { useToast } from "@/hooks/use-toast"
 
-const ADMIN_EMAIL = 'tinoseixas@gmail.com';
-
 const userColors = [
   '#3b82f6', '#ef4444', '#10b981', '#f97316', '#8b5cf6', '#ec4899', '#f59e0b', '#14b8a6'
 ];
@@ -53,7 +51,14 @@ export default function DashboardPage() {
   const router = useRouter();
   const { toast } = useToast();
 
-  const isAdmin = useMemo(() => user?.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase(), [user]);
+  // Profile data fetch
+  const employeeDocRef = useMemoFirebase(() => {
+    if (!user || !firestore) return null;
+    return doc(firestore, 'employees', user.uid);
+  }, [firestore, user]);
+  
+  const { data: currentEmployee, isLoading: isLoadingProfile } = useDoc<Employee>(employeeDocRef);
+  const isAdmin = currentEmployee?.role === 'admin';
   
   const [allServices, setAllServices] = useState<ServiceRecord[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
@@ -69,10 +74,10 @@ export default function DashboardPage() {
     return query(collection(firestore, 'albarans'), where('status', '==', 'pendent'), orderBy('albaranNumber', 'desc'));
   }, [firestore, isAdmin]);
 
-  const { data: pendingAlbarans, isLoading: isLoadingAlbarans } = useCollection<Albaran>(albaransQuery);
+  const { data: pendingAlbarans } = useCollection<Albaran>(albaransQuery);
 
   useEffect(() => {
-    if (isUserLoading || !firestore) return;
+    if (isUserLoading || isLoadingProfile || !firestore) return;
 
     if (!user) {
       setIsLoadingData(false);
@@ -114,7 +119,7 @@ export default function DashboardPage() {
     };
     
     fetchData();
-  }, [firestore, isUserLoading, user, isAdmin]);
+  }, [firestore, isUserLoading, user, isAdmin, isLoadingProfile]);
   
   const projectNames = useMemo(() => {
     if (!allServices) return [];
@@ -158,7 +163,7 @@ export default function DashboardPage() {
   }, [filteredServices]);
 
   const services = filteredServices;
-  const isLoading = isLoadingData || isUserLoading;
+  const isLoading = isLoadingData || isUserLoading || isLoadingProfile;
   
   const getEmployeeName = (employeeId: string) => {
     const employee = employees.find(e => e.id === employeeId);
@@ -192,7 +197,7 @@ export default function DashboardPage() {
     </div>
   );
   
-  if (isUserLoading) {
+  if (isUserLoading || isLoadingProfile) {
     return <div className="space-y-8 p-4">{renderSkeletons()}</div>;
   }
   

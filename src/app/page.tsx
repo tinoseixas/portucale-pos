@@ -12,6 +12,9 @@ import { useAuth, useUser, useFirestore } from '@/firebase'
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth'
 import { doc, setDoc, getDoc } from 'firebase/firestore'
 
+// Default admin email for first-time login bootstrap
+const ADMIN_EMAIL = 'tinoseixas@gmail.com';
+
 export default function Home() {
   const router = useRouter()
   const { toast } = useToast()
@@ -39,6 +42,7 @@ export default function Home() {
       const employeeSnap = await getDoc(employeeRef);
 
       if (!employeeSnap.exists()) {
+        const isInitialAdmin = loggedInUser.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase();
         await setDoc(employeeRef, {
             id: loggedInUser.uid,
             employeeId: loggedInUser.uid.substring(0, 8),
@@ -46,7 +50,8 @@ export default function Home() {
             lastName: 'Usuari',
             email: loggedInUser.email,
             phoneNumber: '',
-            role: loggedInUser.email === 'tinoseixas@gmail.com' ? 'admin' : 'user',
+            role: isInitialAdmin ? 'admin' : 'user',
+            hourlyRate: isInitialAdmin ? 30 : 27,
         }, { merge: true });
       }
 
@@ -59,7 +64,7 @@ export default function Home() {
        toast({
           variant: "destructive",
           title: "Error d'inici de sessió",
-          description: "Credencials incorrectes o l'usuari no existeix. Intenta-ho de nou o registra't.",
+          description: "Credencials incorrectes o l'usuari no existeix.",
         })
     }
   }
@@ -71,6 +76,7 @@ export default function Home() {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const newUser = userCredential.user;
       
+      const isInitialAdmin = newUser.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase();
       const employeeRef = doc(firestore, 'employees', newUser.uid);
       await setDoc(employeeRef, {
         id: newUser.uid,
@@ -79,7 +85,8 @@ export default function Home() {
         lastName: 'Usuari',
         email: newUser.email,
         phoneNumber: '',
-        role: newUser.email === 'tinoseixas@gmail.com' ? 'admin' : 'user',
+        role: isInitialAdmin ? 'admin' : 'user',
+        hourlyRate: isInitialAdmin ? 30 : 27,
       }, { merge: true });
 
       toast({
@@ -88,19 +95,11 @@ export default function Home() {
       });
       router.push('/dashboard');
     } catch (error: any) {
-      if (error.code === 'auth/email-already-in-use') {
-        toast({
-            variant: "destructive",
-            title: "Error de registre",
-            description: "Aquest correu electrònic ja està en ús. Prova d'iniciar sessió.",
-          });
-      } else {
-        toast({
-            variant: "destructive",
-            title: "Error de registre",
-            description: error.message || "No s'ha pogut crear el compte.",
-          });
-      }
+      toast({
+        variant: "destructive",
+        title: "Error de registre",
+        description: error.message || "No s'ha pogut crear el compte.",
+      });
     }
   }
 
@@ -125,7 +124,7 @@ export default function Home() {
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="space-y-2">
-              <Label htmlFor="employee-id">Correu electrònic</Label>
+              <Label htmlFor="email">Correu electrònic</Label>
               <div className="relative">
                 <User className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                 <Input 

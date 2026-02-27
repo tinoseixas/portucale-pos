@@ -2,17 +2,13 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     // Permite leitura e escrita em qualquer documento se o utilizador estiver autenticado.
+    // Esta regra ampla resolve o problema de permissões insuficientes para operações de listagem.
     match /{document=**} {
       allow read, write: if request.auth != null;
     }
 
     // Regra específica para Collection Group (necessária para consultas que cruzam subcoleções)
     match /{path=**}/serviceRecords/{id} {
-      allow read, write: if request.auth != null;
-    }
-    
-    // Regra explícita para a coleção de albarans para garantir acesso ao admin
-    match /albarans/{albaranId} {
       allow read, write: if request.auth != null;
     }
   }
