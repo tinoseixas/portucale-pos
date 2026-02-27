@@ -1,3 +1,4 @@
+
 'use client'
 
 import { useState, useMemo, useEffect } from 'react'
@@ -32,8 +33,6 @@ import {
 import { useToast } from "@/hooks/use-toast"
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 
-const ADMIN_EMAIL = 'tinoseixas@gmail.com';
-
 const userColors = [
   '#3b82f6', '#ef4444', '#10b981', '#f97316', '#8b5cf6', '#ec4899', '#f59e0b', '#14b8a6'
 ];
@@ -54,19 +53,8 @@ export default function DashboardPage() {
   const router = useRouter();
   const { toast } = useToast();
 
-  const employeeDocRef = useMemoFirebase(() => {
-    if (!user || !firestore) return null;
-    return doc(firestore, 'employees', user.uid);
-  }, [firestore, user]);
-  
-  const { data: currentEmployee, isLoading: isLoadingProfile } = useDoc<Employee>(employeeDocRef);
-  
-  const isAdmin = useMemo(() => {
-    if (!user) return false;
-    const isEmailAdmin = user.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase();
-    const isRoleAdmin = currentEmployee?.role === 'admin';
-    return isEmailAdmin || isRoleAdmin;
-  }, [user, currentEmployee]);
+  // Todos os utilizadores autenticados são administradores agora
+  const isAdmin = !!user;
   
   const [allServices, setAllServices] = useState<ServiceRecord[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
@@ -78,14 +66,14 @@ export default function DashboardPage() {
   const [selectedProject, setSelectedProject] = useState<string>('all');
 
   const pendingAlbaransQuery = useMemoFirebase(() => {
-    if (!firestore || !isAdmin) return null;
+    if (!firestore) return null;
     return query(collection(firestore, 'albarans'), where('status', '==', 'pendent'));
-  }, [firestore, isAdmin]);
+  }, [firestore]);
   
   const { data: pendingAlbarans } = useCollection<Albaran>(pendingAlbaransQuery);
 
   useEffect(() => {
-    if (isUserLoading || isLoadingProfile || !firestore || !user) {
+    if (isUserLoading || !firestore || !user) {
       if (!isUserLoading && !user) setIsLoadingData(false);
       return;
     }
@@ -97,13 +85,8 @@ export default function DashboardPage() {
             const employeesData = employeeSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Employee));
             setEmployees(employeesData);
 
-            let servicesQuery;
-            if (isAdmin) {
-                servicesQuery = query(collectionGroup(firestore, 'serviceRecords'), orderBy('arrivalDateTime', 'desc'));
-            } else {
-                servicesQuery = query(collection(firestore, `employees/${user.uid}/serviceRecords`), orderBy('arrivalDateTime', 'desc'));
-            }
-            
+            // Carregar todos os serviços (visão de admin para todos)
+            const servicesQuery = query(collectionGroup(firestore, 'serviceRecords'), orderBy('arrivalDateTime', 'desc'));
             const serviceSnapshot = await getDocs(servicesQuery);
             const servicesData = serviceSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ServiceRecord));
             setAllServices(servicesData);
@@ -116,7 +99,7 @@ export default function DashboardPage() {
     };
     
     fetchData();
-  }, [firestore, isUserLoading, user, isAdmin, isLoadingProfile]);
+  }, [firestore, isUserLoading, user]);
   
   const projectNames = useMemo(() => {
     const names = allServices.map(service => service.projectName).filter(Boolean);
@@ -125,7 +108,7 @@ export default function DashboardPage() {
 
   const filteredServices = useMemo(() => {
     let filtered = allServices.filter(service => {
-        const userMatch = !isAdmin || selectedUser === 'all' || service.employeeId === selectedUser;
+        const userMatch = selectedUser === 'all' || service.employeeId === selectedUser;
         const dateMatch = !selectedDate || isSameDay(parseISO(service.arrivalDateTime), selectedDate);
         const projectMatch = selectedProject === 'all' || service.projectName === selectedProject;
         return userMatch && dateMatch && projectMatch;
@@ -150,7 +133,7 @@ export default function DashboardPage() {
     });
     return colored.reverse();
 
-  }, [allServices, selectedUser, selectedDate, selectedProject, isAdmin]);
+  }, [allServices, selectedUser, selectedDate, selectedProject]);
   
   const getEmployeeName = (employeeId: string) => {
     const employee = employees.find(e => e.id === employeeId);
@@ -158,7 +141,7 @@ export default function DashboardPage() {
   };
 
   const handleDeleteSelected = () => {
-    if (!firestore || !isAdmin) return;
+    if (!firestore) return;
     
     selectedRows.forEach(serviceId => {
       const service = allServices.find(s => s.id === serviceId);
@@ -177,7 +160,7 @@ export default function DashboardPage() {
     setSelectedRows([]);
   };
   
-  if (isUserLoading || isLoadingProfile) {
+  if (isUserLoading) {
     return (
       <div className="space-y-8 p-4">
         <Skeleton className="h-10 w-full" />
@@ -196,7 +179,7 @@ export default function DashboardPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Resum de Serveis</h1>
-          <p className="text-muted-foreground">{isAdmin ? "Vista general de tots els registres." : "Els teus serveis registrats."}</p>
+          <p className="text-muted-foreground">Vista general de tots els registres.</p>
         </div>
         <div className="hidden md:flex items-center gap-2">
             <Button asChild className="bg-accent hover:bg-accent/90 text-accent-foreground">
@@ -208,7 +191,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {isAdmin && pendingAlbarans && pendingAlbarans.length > 0 && (
+      {pendingAlbarans && pendingAlbarans.length > 0 && (
         <Alert variant="default" className="bg-primary/5 border-primary/20 text-primary-foreground shadow-sm">
           <Info className="h-5 w-5 text-primary" />
           <AlertTitle className="font-bold text-primary">Albarans Pendents de Facturar</AlertTitle>
@@ -236,7 +219,7 @@ export default function DashboardPage() {
                         <CardTitle>Serveis Registrats</CardTitle>
                         <CardDescription>Visualitza i filtra els registres de servei.</CardDescription>
                     </div>
-                    {isAdmin && selectedRows.length > 0 && (
+                    {selectedRows.length > 0 && (
                         <AlertDialog>
                         <AlertDialogTrigger asChild>
                             <Button variant="destructive">
@@ -256,69 +239,65 @@ export default function DashboardPage() {
                         </AlertDialog>
                     )}
                 </div>
-                {isAdmin && (
-                  <div className="flex flex-col sm:flex-row gap-4 pt-4 flex-wrap">
-                      <Select value={selectedUser} onValueChange={setSelectedUser}>
-                      <SelectTrigger className="w-full sm:w-[200px]">
-                          <User className="mr-2 h-4 w-4" />
-                          <SelectValue placeholder="Usuari" />
-                      </SelectTrigger>
-                      <SelectContent>
-                          <SelectItem value="all">Tots els Usuaris</SelectItem>
-                          {employees.map(emp => (
-                          <SelectItem key={emp.id} value={emp.id}>{emp.firstName} {emp.lastName}</SelectItem>
-                          ))}
-                      </SelectContent>
-                      </Select>
+                <div className="flex flex-col sm:flex-row gap-4 pt-4 flex-wrap">
+                    <Select value={selectedUser} onValueChange={setSelectedUser}>
+                    <SelectTrigger className="w-full sm:w-[200px]">
+                        <User className="mr-2 h-4 w-4" />
+                        <SelectValue placeholder="Usuari" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="all">Tots els Usuaris</SelectItem>
+                        {employees.map(emp => (
+                        <SelectItem key={emp.id} value={emp.id}>{emp.firstName} {emp.lastName}</SelectItem>
+                        ))}
+                    </SelectContent>
+                    </Select>
 
-                      <Popover>
-                      <PopoverTrigger asChild>
-                          <Button variant="outline" className="w-full sm:w-[240px] justify-start text-left font-normal">
-                          <CalendarIcon className="mr-2 h-4 w-4" />
-                          {selectedDate ? format(selectedDate, "PPP", { locale: ca }) : <span>Filtrar por data</span>}
-                          </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0">
-                          <Calendar mode="single" selected={selectedDate} onSelect={setSelectedDate} initialFocus locale={ca} />
-                      </PopoverContent>
-                      </Popover>
+                    <Popover>
+                    <PopoverTrigger asChild>
+                        <Button variant="outline" className="w-full sm:w-[240px] justify-start text-left font-normal">
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {selectedDate ? format(selectedDate, "PPP", { locale: ca }) : <span>Filtrar por data</span>}
+                        </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0">
+                        <Calendar mode="single" selected={selectedDate} onSelect={setSelectedDate} initialFocus locale={ca} />
+                    </PopoverContent>
+                    </Popover>
 
-                      <Select value={selectedProject} onValueChange={setSelectedProject}>
-                      <SelectTrigger className="w-full sm:w-[200px]">
-                          <Briefcase className="mr-2 h-4 w-4" />
-                          <SelectValue placeholder="Obra" />
-                      </SelectTrigger>
-                      <SelectContent>
-                          <SelectItem value="all">Totes les Obres</SelectItem>
-                          {projectNames.map(name => (
-                          <SelectItem key={name} value={name}>{name}</SelectItem>
-                          ))}
-                      </SelectContent>
-                      </Select>
-                      
-                      {(selectedUser !== 'all' || selectedDate || selectedProject !== 'all') && (
-                      <Button variant="ghost" onClick={() => { setSelectedUser('all'); setSelectedDate(undefined); setSelectedProject('all'); }}>
-                          Neteja filtres
-                      </Button>
-                      )}
-                  </div>
-                )}
+                    <Select value={selectedProject} onValueChange={setSelectedProject}>
+                    <SelectTrigger className="w-full sm:w-[200px]">
+                        <Briefcase className="mr-2 h-4 w-4" />
+                        <SelectValue placeholder="Obra" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="all">Totes les Obres</SelectItem>
+                        {projectNames.map(name => (
+                        <SelectItem key={name} value={name}>{name}</SelectItem>
+                        ))}
+                    </SelectContent>
+                    </Select>
+                    
+                    {(selectedUser !== 'all' || selectedDate || selectedProject !== 'all') && (
+                    <Button variant="ghost" onClick={() => { setSelectedUser('all'); setSelectedDate(undefined); setSelectedProject('all'); }}>
+                        Neteja filtres
+                    </Button>
+                    )}
+                </div>
             </CardHeader>
             <CardContent>
                 <div className="overflow-x-auto">
                     <Table>
                     <TableHeader>
                         <TableRow>
-                        {isAdmin && (
-                            <TableHead className="w-[40px] px-2">
-                                <Checkbox
-                                    checked={selectedRows.length > 0 && filteredServices.length > 0 && selectedRows.length === filteredServices.length}
-                                    onCheckedChange={(checked) => setSelectedRows(checked ? filteredServices.map(s => s.id) : [])}
-                                />
-                            </TableHead>
-                        )}
+                        <TableHead className="w-[40px] px-2">
+                            <Checkbox
+                                checked={selectedRows.length > 0 && filteredServices.length > 0 && selectedRows.length === filteredServices.length}
+                                onCheckedChange={(checked) => setSelectedRows(checked ? filteredServices.map(s => s.id) : [])}
+                            />
+                        </TableHead>
                         <TableHead className="w-[10px]"></TableHead>
-                        {isAdmin && <TableHead>Funcionari</TableHead>}
+                        <TableHead>Funcionari</TableHead>
                         <TableHead>Data</TableHead>
                         <TableHead>Obra</TableHead>
                         <TableHead>Descripció</TableHead>
@@ -327,21 +306,19 @@ export default function DashboardPage() {
                     </TableHeader>
                     <TableBody>
                         {filteredServices.length > 0 ? filteredServices.map(service => (
-                        <TableRow key={service.id} className={isAdmin ? (service as any).rowColor : ''}>
-                            {isAdmin && (
-                                <TableCell className="px-2">
-                                    <Checkbox
-                                        checked={selectedRows.includes(service.id)}
-                                        onCheckedChange={(checked) => {
-                                            setSelectedRows(checked ? [...selectedRows, service.id] : selectedRows.filter(id => id !== service.id));
-                                        }}
-                                    />
-                                </TableCell>
-                            )}
+                        <TableRow key={service.id} className={(service as any).rowColor}>
+                            <TableCell className="px-2">
+                                <Checkbox
+                                    checked={selectedRows.includes(service.id)}
+                                    onCheckedChange={(checked) => {
+                                        setSelectedRows(checked ? [...selectedRows, service.id] : selectedRows.filter(id => id !== service.id));
+                                    }}
+                                />
+                            </TableCell>
                             <TableCell>
                                 <div className="h-full w-1 rounded-full" style={{ backgroundColor: getUserColor(service.employeeId), minHeight: '20px' }} />
                             </TableCell>
-                            {isAdmin && <TableCell className="font-medium">{getEmployeeName(service.employeeId)}</TableCell>}
+                            <TableCell className="font-medium">{getEmployeeName(service.employeeId)}</TableCell>
                             <TableCell>{format(parseISO(service.arrivalDateTime), 'dd/MM/yyyy HH:mm')}</TableCell>
                             <TableCell className="max-w-[200px] truncate">{service.projectName}</TableCell>
                             <TableCell className="max-w-[300px] truncate">{service.description}</TableCell>
@@ -353,7 +330,7 @@ export default function DashboardPage() {
                         </TableRow>
                         )) : (
                         <TableRow>
-                            <TableCell colSpan={isAdmin ? 7 : 5} className="h-24 text-center text-muted-foreground">No s'han trobat serveis.</TableCell>
+                            <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">No s'han trobat serveis.</TableCell>
                         </TableRow>
                         )}
                     </TableBody>

@@ -1,3 +1,4 @@
+
 'use client'
 
 import { useState, useEffect } from 'react'
@@ -11,9 +12,6 @@ import { useToast } from "@/hooks/use-toast"
 import { useAuth, useUser, useFirestore } from '@/firebase'
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth'
 import { doc, setDoc, getDoc } from 'firebase/firestore'
-
-// E-mail de administrador padrão
-const ADMIN_EMAIL = 'tinoseixas@gmail.com';
 
 export default function Home() {
   const router = useRouter()
@@ -39,24 +37,21 @@ export default function Home() {
       const userCredential = await signInWithEmailAndPassword(auth, email, password)
       const loggedInUser = userCredential.user;
 
-      // Garante que o perfil de funcionário existe e tem o papel correto
       const employeeRef = doc(firestore, 'employees', loggedInUser.uid);
-      const isInitialAdmin = loggedInUser.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase();
-      
       const employeeSnap = await getDoc(employeeRef);
 
-      // Sempre forçar admin para o email principal no login para garantir permissões
+      // Todos são administradores agora
       await setDoc(employeeRef, {
           id: loggedInUser.uid,
           employeeId: employeeSnap.exists() ? (employeeSnap.data().employeeId || loggedInUser.uid.substring(0, 8)) : loggedInUser.uid.substring(0, 8),
           firstName: employeeSnap.exists() ? (employeeSnap.data().firstName || loggedInUser.email?.split('@')[0]) : (loggedInUser.email?.split('@')[0] || 'Usuari'),
           lastName: employeeSnap.exists() ? (employeeSnap.data().lastName || 'TS') : 'TS',
           email: loggedInUser.email,
-          role: isInitialAdmin ? 'admin' : (employeeSnap.exists() ? (employeeSnap.data()?.role || 'user') : 'user'),
-          hourlyRate: employeeSnap.exists() ? (employeeSnap.data()?.hourlyRate || (isInitialAdmin ? 30 : 27)) : (isInitialAdmin ? 30 : 27),
+          role: 'admin',
+          hourlyRate: employeeSnap.exists() ? (employeeSnap.data()?.hourlyRate || 30) : 30,
       }, { merge: true });
 
-      toast({ title: "Sessió iniciada", description: "Benvingut de nou!" });
+      toast({ title: "Sessió iniciada", description: "Benvingut!" });
       router.push('/dashboard')
     } catch (error: any) {
        console.error("Login error:", error);
@@ -78,7 +73,6 @@ export default function Home() {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const newUser = userCredential.user;
       
-      const isInitialAdmin = newUser.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase();
       const employeeRef = doc(firestore, 'employees', newUser.uid);
       await setDoc(employeeRef, {
         id: newUser.uid,
@@ -87,11 +81,11 @@ export default function Home() {
         lastName: 'Usuari',
         email: newUser.email,
         phoneNumber: '',
-        role: isInitialAdmin ? 'admin' : 'user',
-        hourlyRate: isInitialAdmin ? 30 : 27,
+        role: 'admin',
+        hourlyRate: 30,
       }, { merge: true });
 
-      toast({ title: "Compte creat", description: "El teu nou conta ha estat creat." });
+      toast({ title: "Compte creat", description: "Benvingut ao sistema." });
       router.push('/dashboard');
     } catch (error: any) {
       toast({
@@ -122,38 +116,30 @@ export default function Home() {
                <Briefcase size={32} />
             </div>
             <CardTitle className="text-3xl font-bold">TS Serveis</CardTitle>
-            <CardDescription>Identifica't per registrar els serveis</CardDescription>
+            <CardDescription>Identifica't per entrar ao sistema</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="space-y-2">
               <Label htmlFor="email">Correu electrònic</Label>
-              <div className="relative">
-                <User className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                <Input 
-                  id="email"
-                  type="email"
-                  placeholder="usuari@exemple.com" 
-                  className="pl-10"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  disabled={isAuthenticating}
-                />
-              </div>
+              <Input 
+                id="email"
+                type="email"
+                placeholder="usuari@exemple.com" 
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                disabled={isAuthenticating}
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="password">Contrasenya</Label>
-               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                <Input 
-                  id="password" 
-                  type="password" 
-                  placeholder="Escriu la teva contrasenya"
-                  className="pl-10"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  disabled={isAuthenticating}
-                />
-              </div>
+              <Input 
+                id="password" 
+                type="password" 
+                placeholder="Escriu la teva contrasenya"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                disabled={isAuthenticating}
+              />
             </div>
           </CardContent>
           <CardFooter className="flex flex-col gap-4">
