@@ -58,17 +58,25 @@ export default function DashboardPage() {
   const [isLoadingData, setIsLoadingData] = useState(true);
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
 
-  const [selectedUser, setSelectedUser] = useState<string>('all');
+  // Inicializamos o filtro com o utilizador atual para que ele veja os SEUS registos primeiro
+  const [selectedUser, setSelectedUser] = useState<string>('loading');
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
   const [selectedProject, setSelectedProject] = useState<string>('all');
 
-  // Consulta de albarans pendentes - Sem restrições de permissão
+  // Consulta de albarans pendentes - Apenas se o utilizador estiver pronto
   const pendingAlbaransQuery = useMemoFirebase(() => {
     if (!firestore || !user) return null;
     return query(collection(firestore, 'albarans'), where('status', '==', 'pendent'));
   }, [firestore, user]);
   
   const { data: pendingAlbarans } = useCollection<Albaran>(pendingAlbaransQuery);
+
+  // Sincronizar o filtro inicial com o utilizador logado
+  useEffect(() => {
+    if (user && selectedUser === 'loading') {
+      setSelectedUser(user.uid);
+    }
+  }, [user, selectedUser]);
 
   useEffect(() => {
     if (isUserLoading || !firestore || !user) {
@@ -83,6 +91,7 @@ export default function DashboardPage() {
             const employeesData = employeeSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Employee));
             setEmployees(employeesData);
 
+            // Carregar todos os serviços (a filtragem é feita em memória para permitir mudar entre "meus" e "todos" sem nova consulta)
             const servicesQuery = query(collectionGroup(firestore, 'serviceRecords'), orderBy('arrivalDateTime', 'desc'));
             const serviceSnapshot = await getDocs(servicesQuery);
             const servicesData = serviceSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ServiceRecord));
@@ -105,7 +114,8 @@ export default function DashboardPage() {
 
   const filteredServices = useMemo(() => {
     let filtered = allServices.filter(service => {
-        const userMatch = selectedUser === 'all' || service.employeeId === selectedUser;
+        // Se selectedUser for 'all', mostra tudo. Se não, filtra pelo ID.
+        const userMatch = selectedUser === 'all' || service.employeeId === selectedUser || selectedUser === 'loading';
         const dateMatch = !selectedDate || isSameDay(parseISO(service.arrivalDateTime), selectedDate);
         const projectMatch = selectedProject === 'all' || service.projectName === selectedProject;
         return userMatch && dateMatch && projectMatch;
@@ -175,8 +185,8 @@ export default function DashboardPage() {
     <div className="space-y-8">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Resumo de Serviços</h1>
-          <p className="text-muted-foreground">Painel de controlo central.</p>
+          <h1 className="text-3xl font-bold">Olá, {getEmployeeName(user.uid).split(' ')[0]}</h1>
+          <p className="text-muted-foreground">Aqui estão os seus registos de serviço.</p>
         </div>
         <div className="hidden md:flex items-center gap-2">
             <Button asChild className="bg-accent hover:bg-accent/90 text-accent-foreground">
@@ -213,8 +223,8 @@ export default function DashboardPage() {
             <CardHeader>
                 <div className="flex justify-between items-start flex-wrap gap-4">
                     <div>
-                        <CardTitle>Todos os Registos</CardTitle>
-                        <CardDescription>Visualize todos os serviços da equipa sem restrições.</CardDescription>
+                        <CardTitle>{selectedUser === user.uid ? 'Meus Registos' : 'Todos os Registos'}</CardTitle>
+                        <CardDescription>Visualize e gira os serviços realizados.</CardDescription>
                     </div>
                     {selectedRows.length > 0 && (
                         <AlertDialog>
@@ -275,8 +285,8 @@ export default function DashboardPage() {
                     </SelectContent>
                     </Select>
                     
-                    {(selectedUser !== 'all' || selectedDate || selectedProject !== 'all') && (
-                    <Button variant="ghost" onClick={() => { setSelectedUser('all'); setSelectedDate(undefined); setSelectedProject('all'); }}>
+                    {(selectedUser !== user.uid || selectedDate || selectedProject !== 'all') && (
+                    <Button variant="ghost" onClick={() => { setSelectedUser(user.uid); setSelectedDate(undefined); setSelectedProject('all'); }}>
                         Limpar Filtros
                     </Button>
                     )}

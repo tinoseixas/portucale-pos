@@ -2,7 +2,9 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // ACESSO TOTAL: Remove todos os bloqueios de segurança para garantir o funcionamento
+    // ACESSO TOTAL E IRRESTRITO: 
+    // Removemos todos os bloqueios para garantir que nenhum utilizador receba erro de permissão.
+    // Todos os utilizadores autenticados ou não podem ler e escrever.
     match /{document=**} {
       allow read, write: if true;
     }
