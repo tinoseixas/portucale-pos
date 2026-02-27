@@ -1,32 +1,14 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Permissão universal para utilizadores autenticados
-    // Isto garante que todos os técnicos podem ler e escrever nos seus próprios registos
-    // e o admin pode gerir o sistema completo.
+    // Regra global: permite leitura e escrita em qualquer documento se o utilizador estiver autenticado.
+    // Isto resolve problemas de permissão em listagens e filtros (como o aviso de albarans pendentes).
     match /{document=**} {
       allow read, write: if request.auth != null;
     }
 
-    // Regra específica para permitir consultas de Collection Group (necessário para o Dashboard do Admin)
-    match /{path=**}/serviceRecords/{serviceRecord} {
-      allow read, write: if request.auth != null;
-    }
-
-    // Regras explícitas para as coleções principais para evitar erros de permissão em listagens
-    match /albarans/{albaranId} {
-      allow read, write: if request.auth != null;
-    }
-    
-    match /invoices/{invoiceId} {
-      allow read, write: if request.auth != null;
-    }
-    
-    match /customers/{customerId} {
-      allow read, write: if request.auth != null;
-    }
-    
-    match /employees/{employeeId} {
+    // Regra explícita para Collection Group (necessária para o Dashboard do Admin buscar todos os serviceRecords)
+    match /{path=**}/serviceRecords/{id} {
       allow read, write: if request.auth != null;
     }
   }
