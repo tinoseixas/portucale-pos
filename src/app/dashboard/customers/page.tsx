@@ -78,6 +78,7 @@ const mockCustomers: Omit<Customer, 'id'>[] = [
   { name: 'Joao Vitor Marracho Rodrigues', nrt: 'L-718454-N', address: 'Av.Dr.Mitjavila 13 2-1 Edifici Montnegre', email: 'guiropatrimonia@gmail.com', contact: '' },
   { name: 'Jordi Pérez Miquel Pérez', nrt: '', address: 'Avinguda francois Mitterrand 66 1-1', email: '', contact: '' },
   { name: 'Jordi Sansa', nrt: '', address: 'Av. Meritxell, 42 4t', email: 'jordicoletes@gmail.com', contact: '326013' },
+  { name: 'Jordi Tuneu Busquets Enginyer Industrial', nrt: 'F-156989-M', address: 'Andorra', email: 'jordi_tb@icloud.com', contact: '317888' },
   { name: 'JORGE CASTELLS TEIXIDO', nrt: '', address: 'Andorra la Vella', email: '', contact: '' },
   { name: 'Josep Baro', nrt: '', address: 'S.Julian', email: '', contact: '332650' },
   { name: 'Josep Garcia Fernandez', nrt: 'F-012972-X', address: 'Carretera General d’Escàs, Xalet Daniela, 57', email: 'info@carracedo-and.com', contact: '' },
