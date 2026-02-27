@@ -1,18 +1,18 @@
+
 'use client'
 
 import { useEffect, useState, useMemo, useRef } from 'react'
 import { useRouter, useParams, useSearchParams } from 'next/navigation'
-import dynamic from 'next/dynamic'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Clock, FileText, Camera, ArrowLeft, Save, Trash2, Hash, Plus, X, Video, Calendar as CalendarIcon, Info, Briefcase, AlertTriangle, Users, Package, Euro, MapPin, User as UserIcon, ImagePlus, PenTool, CheckCircle } from 'lucide-react'
+import { Clock, FileText, Camera, ArrowLeft, Save, Trash2, Hash, Plus, X, Video, Calendar as CalendarIcon, Info, Briefcase, AlertTriangle, Users, Package, Euro, User as UserIcon, ImagePlus, PenTool, CheckCircle, Loader2 } from 'lucide-react'
 import { useToast } from "@/hooks/use-toast"
 import { useFirestore, useUser, useDoc, useMemoFirebase, useCollection } from '@/firebase'
-import { doc, deleteDoc, collection, query, getDocs, collectionGroup, orderBy } from 'firebase/firestore'
-import type { ServiceRecord, Customer, Employee } from '@/lib/types'
+import { doc, deleteDoc, collection, query, getDocs, collectionGroup, orderBy, runTransaction, setDoc } from 'firebase/firestore'
+import type { ServiceRecord, Customer, Employee, Albaran } from '@/lib/types'
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates'
 import Image from 'next/image'
 import {
@@ -29,12 +29,13 @@ import {
 import { CameraCapture } from '@/components/CameraCapture'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Calendar } from '@/components/ui/calendar'
-import { format, parseISO, isValid, differenceInMinutes } from 'date-fns'
+import { format, parseISO, isValid } from 'date-fns'
 import { ca } from 'date-fns/locale'
 import { cn } from '@/lib/utils'
 import { CustomerSelectionDialog } from '@/components/CustomerSelectionDialog'
 import { ServiceConfirmationDialog } from '@/components/ServiceConfirmationDialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { calculateTotalAmount } from '@/lib/calculations'
 
 type MediaFile = {
   type: 'image' | 'video';
@@ -49,8 +50,7 @@ type Material = {
 }
 
 const MAX_IMAGE_WIDTH = 1024;
-const MAX_IMAGE_HEIGHT = 1024;
-const IMAGE_QUALITY = 0.75; // Reduït per millorar pes
+const IMAGE_QUALITY = 0.6; // Optimitzat per pes
 
 function resizeAndCompressImage(file: File): Promise<string> {
     return new Promise((resolve, reject) => {
@@ -60,37 +60,22 @@ function resizeAndCompressImage(file: File): Promise<string> {
             img.onload = () => {
                 const canvas = document.createElement('canvas');
                 let { width, height } = img;
-
-                if (width > height) {
-                    if (width > MAX_IMAGE_WIDTH) {
-                        height = Math.round((height * MAX_IMAGE_WIDTH) / width);
-                        width = MAX_IMAGE_WIDTH;
-                    }
-                } else {
-                    if (height > MAX_IMAGE_HEIGHT) {
-                        width = Math.round((width * MAX_IMAGE_HEIGHT) / height);
-                        height = MAX_IMAGE_HEIGHT;
-                    }
+                if (width > MAX_IMAGE_WIDTH) {
+                    height = Math.round((height * MAX_IMAGE_WIDTH) / width);
+                    width = MAX_IMAGE_WIDTH;
                 }
-
                 canvas.width = width;
                 canvas.height = height;
                 const ctx = canvas.getContext('2d');
-                if (!ctx) {
-                    return reject(new Error('Could not get canvas context'));
-                }
+                if (!ctx) return reject(new Error('Canvas Error'));
                 ctx.drawImage(img, 0, 0, width, height);
-
                 resolve(canvas.toDataURL('image/jpeg', IMAGE_QUALITY));
             };
-            img.onerror = reject;
             img.src = event.target?.result as string;
         };
-        reader.onerror = reject;
         reader.readAsDataURL(file);
     });
 }
-
 
 export default function EditServicePage() {
   const router = useRouter()
@@ -102,6 +87,7 @@ export default function EditServicePage() {
   const serviceId = params.id as string
   const materialImageInputRef = useRef<HTMLInputElement>(null);
   const [selectedMaterialIndex, setSelectedMaterialIndex] = useState<number | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   const recordOwnerId = searchParams.get('ownerId');
 
@@ -112,32 +98,12 @@ export default function EditServicePage() {
   
   const { data: service, isLoading } = useDoc<ServiceRecord>(serviceDocRef)
   
-  const customersQuery = useMemoFirebase(() => {
-    if (!firestore || !user) return null
-    return query(collection(firestore, 'customers'), orderBy('name', 'asc'))
-  }, [firestore, user]);
-  
-  const { data: customers, isLoading: isLoadingCustomers } = useCollection<Customer>(customersQuery);
+  const customersQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'customers'), orderBy('name', 'asc')) : null, [firestore]);
+  const { data: customers } = useCollection<Customer>(customersQuery);
 
-  const employeesQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return query(collection(firestore, 'employees'), orderBy('firstName', 'asc'));
-  }, [firestore]);
-  const { data: employees, isLoading: isLoadingEmployees } = useCollection<Employee>(employeesQuery);
+  const employeesQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'employees')) : null, [firestore]);
+  const { data: employees } = useCollection<Employee>(employeesQuery);
 
-  const projectNamesQuery = useMemoFirebase(() => {
-      if (!firestore) return null;
-      return query(collectionGroup(firestore, 'serviceRecords'));
-  }, [firestore]);
-
-  const { data: allServices, isLoading: isLoadingAllServices } = useCollection<ServiceRecord>(projectNamesQuery);
-
-  const projectNames = useMemo(() => {
-      if (!allServices) return [];
-      const uniqueProjectNames = [...new Set(allServices.map(d => d.projectName).filter(Boolean))];
-      return uniqueProjectNames;
-  }, [allServices]);
-  
   const [date, setDate] = useState<Date | undefined>()
   const [startTime, setStartTime] = useState('')
   const [endTime, setEndTime] = useState('')
@@ -156,23 +122,17 @@ export default function EditServicePage() {
   const [customerSignatureName, setCustomerSignatureName] = useState('');
   const [customerSignatureDataUrl, setCustomerSignatureDataUrl] = useState('');
 
-
   useEffect(() => {
     if (service) {
       const arrival = parseISO(service.arrivalDateTime);
       const departure = parseISO(service.departureDateTime);
-      
       if (isValid(arrival)) {
         setDate(arrival)
         setStartTime(format(arrival, 'HH:mm'))
       }
-      
       if (isValid(departure) && arrival.getTime() !== departure.getTime()) {
         setEndTime(format(departure, 'HH:mm'))
-      } else {
-        setEndTime('')
       }
-      
       setDescription(service.description !== "Servei en curs..." ? service.description : '')
       setProjectName(service.projectName || '');
       setPendingTasks(service.pendingTasks || '');
@@ -180,551 +140,204 @@ export default function EditServicePage() {
       setEmployeeId(service.employeeId || '');
       setMedia(service.media || [])
       setAlbarans(service.albarans?.length > 0 ? service.albarans : [''])
-      if (service.materials && service.materials.length > 0) {
-        setMaterials(service.materials)
-      } else {
-        setMaterials([{ description: '', quantity: 1, unitPrice: 0 }]);
-      }
-      
+      setMaterials(service.materials?.length ? service.materials : [{ description: '', quantity: 1, unitPrice: 0 }]);
       setCustomerSignatureName(service.customerSignatureName || '');
       setCustomerSignatureDataUrl(service.customerSignatureDataUrl || '');
-
-      const employee = employees?.find(e => e.id === service.employeeId);
-      setServiceHourlyRate(service.serviceHourlyRate ?? employee?.hourlyRate ?? '');
-
-    } else if (employees && !service) {
-      const currentEmployee = employees.find(e => e.id === user?.uid);
-      setEmployeeId(user?.uid || '');
-      setServiceHourlyRate(currentEmployee?.hourlyRate ?? '');
+      setServiceHourlyRate(service.serviceHourlyRate ?? '');
     }
-  }, [service, employees, user])
-
-  useEffect(() => {
-    if (!date && service === undefined) { 
-      setDate(new Date());
-    }
-  }, [date, service]); 
+  }, [service]);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
         const files = Array.from(e.target.files);
-        toast({ title: 'Processant imatges...', description: 'Si us plau, espera un moment.' });
-        try {
-            const filePromises = files.map(async (file) => {
-                if (file.type.startsWith('image/')) {
-                    const compressedDataUrl = await resizeAndCompressImage(file);
-                    return { type: 'image' as const, dataUrl: compressedDataUrl };
-                }
-                return null;
-            });
-
-            const newFiles = (await Promise.all(filePromises)).filter((file): file is MediaFile => file !== null);
-            setMedia(prev => [...prev, ...newFiles]);
-            toast({ title: 'Imatges afegides!', description: 'Les imatges han estat comprimides i afegides.' });
-        } catch (error) {
-            console.error('Error processing files:', error);
-            toast({ variant: 'destructive', title: 'Error', description: 'No s\'ha pogut processar un dels fitxers.' });
-        } finally {
-            e.target.value = '';
-        }
-    }
-};
-
-  const handleAlbaranChange = (index: number, value: string) => {
-    const newAlbarans = [...albarans]
-    newAlbarans[index] = value
-    setAlbarans(newAlbarans)
-  }
-
-  const addAlbaranInput = () => {
-    setAlbarans([...albarans, ''])
-  }
-
-  const removeAlbaranInput = (index: number) => {
-    const newAlbarans = albarans.filter((_, i) => i !== index)
-    setAlbarans(newAlbarans)
-  }
-  
-  const handleMaterialChange = (index: number, field: keyof Material, value: string | number) => {
-    const newMaterials = [...materials];
-    const material = newMaterials[index];
-    if (field === 'description') {
-        material.description = value as string;
-    } else {
-        const numValue = Number(value);
-        if (!isNaN(numValue) && numValue >= 0) {
-            if (field === 'quantity') material.quantity = numValue;
-            if (field === 'unitPrice') material.unitPrice = numValue;
-        }
-    }
-    setMaterials(newMaterials);
-  };
-
-  const addMaterialInput = () => {
-    setMaterials([...materials, { description: '', quantity: 1, unitPrice: 0 }]);
-  };
-
-  const removeMaterialInput = (index: number) => {
-    const newMaterials = materials.filter((_, i) => i !== index);
-    setMaterials(newMaterials);
-  };
-    
-  const handleMaterialImageUploadClick = (index: number) => {
-    setSelectedMaterialIndex(index);
-    materialImageInputRef.current?.click();
-  };
-
-  const handleMaterialImageFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0] && selectedMaterialIndex !== null) {
-      const file = e.target.files[0];
-      try {
-        toast({ title: 'Processant imatge del material...' });
-        const compressedDataUrl = await resizeAndCompressImage(file);
-        const newMaterials = [...materials];
-        newMaterials[selectedMaterialIndex].imageDataUrl = compressedDataUrl;
-        setMaterials(newMaterials);
-        toast({ title: 'Imatge del material afegida!' });
-      } catch (error) {
-        console.error('Error processing material image:', error);
-        toast({ variant: 'destructive', title: 'Error', description: "No s'ha pogut processar la imatge." });
-      } finally {
-        e.target.value = '';
-        setSelectedMaterialIndex(null);
-      }
+        toast({ title: 'Processant...' });
+        const newFiles = await Promise.all(files.map(async f => ({ type: 'image' as const, dataUrl: await resizeAndCompressImage(f) })));
+        setMedia(prev => [...prev, ...newFiles]);
     }
   };
 
-  const removeMaterialImage = (index: number) => {
-    const newMaterials = [...materials];
-    newMaterials[index].imageDataUrl = undefined;
-    setMaterials(newMaterials);
-  };
-
-  const handleCapture = (dataUrl: string, type: 'image' | 'video') => {
-    setMedia(prev => [...prev, { type, dataUrl }]);
-    setShowCamera(false);
-  };
-  
-  const removeMedia = (index: number) => {
-    setMedia(prev => prev.filter((_, i) => i !== index));
-  }
-  
-  const handleCustomerSelect = (customer: Customer) => {
-    setCustomerId(customer.id);
-    setIsCustomerDialogOpen(false);
-  };
-
-  const handleSignatureConfirm = (name: string, signatureDataUrl: string) => {
-    setCustomerSignatureName(name);
-    setCustomerSignatureDataUrl(signatureDataUrl);
-    toast({ title: "Signatura desada!", description: "El client ha confirmat el servei." });
-  };
-
-
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!serviceDocRef || !date || !startTime || !endTime) {
-        toast({
-            variant: 'destructive',
-            title: 'Camps obligatoris',
-            description: "Si us plau, omple la data i les hores d'inici i final.",
-        });
+    if (!firestore || !serviceDocRef || !date || !startTime || !endTime) {
+        toast({ variant: 'destructive', title: 'Camps obligatoris' });
         return;
     }
 
+    setIsSaving(true);
     const selectedDateStr = format(date, 'yyyy-MM-dd')
-    const arrivalDate = new Date(`${selectedDateStr}T${startTime}`);
-    const departureDate = new Date(`${selectedDateStr}T${endTime}`);
-    
-    if (!isValid(arrivalDate) || !isValid(departureDate) || departureDate <= arrivalDate) {
-        toast({ variant: 'destructive', title: 'Data/hora invàlida', description: "La hora de sortida ha de ser posterior a la d'arribada." });
-        return;
-    }
-    
-    const arrivalDateTime = arrivalDate.toISOString();
-    const departureDateTime = departureDate.toISOString();
-    const filteredAlbarans = albarans.filter(a => a.trim() !== '');
-    const processedMaterials = materials.filter(m => m.description.trim() !== '');
+    const arrivalDateTime = new Date(`${selectedDateStr}T${startTime}`).toISOString();
+    const departureDateTime = new Date(`${selectedDateStr}T${endTime}`).toISOString();
     const selectedCustomer = customers?.find(c => c.id === customerId);
     const selectedEmployee = employees?.find(e => e.id === employeeId);
     
-    const updatedData: Partial<ServiceRecord> = {
-      arrivalDateTime,
-      departureDateTime,
-      description: description || "Servei finalitzat",
-      projectName,
-      pendingTasks,
-      customerId,
-      customerName: selectedCustomer?.name || service?.customerName || '',
-      employeeId: selectedEmployee?.id || service?.employeeId,
-      employeeName: (selectedEmployee ? `${selectedEmployee.firstName} ${selectedEmployee.lastName}` : service?.employeeName) || '',
-      serviceHourlyRate: typeof serviceHourlyRate === 'number' ? serviceHourlyRate : undefined,
-      media: media, 
-      albarans: filteredAlbarans,
-      materials: processedMaterials,
-      customerSignatureName,
-      customerSignatureDataUrl,
-      updatedAt: new Date().toISOString(),
-    }
-
-    updateDocumentNonBlocking(serviceDocRef, updatedData)
-
-    toast({
-      title: "Servei actualitzat!",
-      description: "El servei ha estat modificat correctament.",
-    })
-    router.push('/dashboard')
-  }
-  
-  const handleDelete = async () => {
-    if (!serviceDocRef) return;
     try {
-      await deleteDoc(serviceDocRef);
-      toast({
-        title: 'Servei eliminat',
-        description: 'El registre del servei ha estat eliminat correctament.',
-      });
-      router.push('/dashboard');
+        let finalAlbaranNumber = service?.albaranNumber;
+
+        // Assignar número d'albarà si no en té
+        if (!finalAlbaranNumber) {
+            const counterRef = doc(firestore, "counters", "albarans");
+            finalAlbaranNumber = await runTransaction(firestore, async (transaction) => {
+                const counterDoc = await transaction.get(counterRef);
+                const nextNum = (counterDoc.exists() ? counterDoc.data().lastNumber : 0) + 1;
+                transaction.set(counterRef, { lastNumber: nextNum }, { merge: true });
+                return nextNum;
+            });
+        }
+
+        const updatedData: Partial<ServiceRecord> = {
+            arrivalDateTime,
+            departureDateTime,
+            description: description || "Servei finalitzat",
+            projectName,
+            pendingTasks,
+            customerId,
+            customerName: selectedCustomer?.name || '',
+            employeeId: employeeId,
+            employeeName: selectedEmployee ? `${selectedEmployee.firstName} ${selectedEmployee.lastName}` : '',
+            serviceHourlyRate: Number(serviceHourlyRate) || undefined,
+            media,
+            albarans: albarans.filter(a => a.trim() !== ''),
+            materials: materials.filter(m => m.description.trim() !== ''),
+            customerSignatureName,
+            customerSignatureDataUrl,
+            albaranNumber: finalAlbaranNumber,
+            status: service?.status || 'pendent',
+            updatedAt: new Date().toISOString(),
+        };
+
+        // 1. Actualitzar el registre de servei
+        await setDoc(serviceDocRef, updatedData, { merge: true });
+
+        // 2. Crear/Actualitzar l'Albarà 1:1 (L'ID de l'albarà és el mateix que el del servei)
+        const { totalGeneral } = calculateTotalAmount([ { ...updatedData, id: serviceId } as ServiceRecord ], employees || []);
+        const albaranRef = doc(firestore, 'albarans', serviceId);
+        const albaranData: Albaran = {
+            id: serviceId,
+            albaranNumber: finalAlbaranNumber,
+            createdAt: service?.createdAt || new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            customerId: customerId,
+            customerName: selectedCustomer?.name || 'N/A',
+            projectName: projectName || 'Sense nom',
+            serviceRecordIds: [serviceId],
+            totalAmount: totalGeneral,
+            status: (service?.status as any) || 'pendent',
+        };
+        await setDoc(albaranRef, albaranData);
+
+        toast({ title: "Desat correctament", description: `Albarà #${finalAlbaranNumber} actualitzat.` });
+        router.push('/dashboard');
     } catch (error) {
-       toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: "No s'ha pogut eliminar el servei.",
-      });
+        console.error(error);
+        toast({ variant: 'destructive', title: 'Error al desar' });
+    } finally {
+        setIsSaving(false);
     }
   }
 
-  const customerName = useMemo(() => {
-      if (isLoadingCustomers || !customers) return service?.customerName || '';
-      return customers.find(c => c.id === customerId)?.name || service?.customerName || 'Cap client assignat';
-  }, [customerId, customers, isLoadingCustomers, service]);
-
-  if (isUserLoading || isLoading || isLoadingCustomers || isLoadingAllServices || isLoadingEmployees) {
-    return <p>Carregant servei...</p>
-  }
-
-  if (!service) {
-    return <p>No s'ha trobat el servei o no tens permisos per veure'l.</p>
-  }
-
-  if (showCamera) {
-    return <CameraCapture onCapture={handleCapture} onClose={() => setShowCamera(false)} />;
-  }
+  if (isUserLoading || isLoading || isSaving) return <div className="p-8 text-center"><Loader2 className="h-8 w-8 animate-spin mx-auto" /><p className="mt-2">Desant dades i generant albarà...</p></div>
+  if (!service) return <p>No s'ha trobat el servei.</p>
+  if (showCamera) return <CameraCapture onCapture={(url, type) => { setMedia(prev => [...prev, { type, dataUrl: url }]); setShowCamera(false); }} onClose={() => setShowCamera(false)} />;
 
   return (
       <div className="max-w-2xl mx-auto space-y-8">
         <Button variant="ghost" onClick={() => router.back()} className="mb-4 -ml-4">
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Tornar
+          <ArrowLeft className="mr-2 h-4 w-4" /> Tornar
         </Button>
         
         <CustomerSelectionDialog
           open={isCustomerDialogOpen}
           onOpenChange={setIsCustomerDialogOpen}
           customers={customers || []}
-          onCustomerSelect={handleCustomerSelect}
+          onCustomerSelect={(c) => { setCustomerId(c.id); setIsCustomerDialogOpen(false); }}
         />
 
         <ServiceConfirmationDialog
           open={isSignatureDialogOpen}
           onOpenChange={setIsSignatureDialogOpen}
-          onConfirm={handleSignatureConfirm}
-          initialName={customerSignatureName || customerName}
+          onConfirm={(n, s) => { setCustomerSignatureName(n); setCustomerSignatureDataUrl(s); }}
+          initialName={customerSignatureName || customers?.find(c => c.id === customerId)?.name || ''}
         />
         
-        <input
-          type="file"
-          ref={materialImageInputRef}
-          onChange={handleMaterialImageFileChange}
-          accept="image/*"
-          className="hidden"
-        />
-
         <Card>
           <CardHeader>
-            <CardTitle>Editar Servei #{serviceId.slice(-6)}</CardTitle>
-            <CardDescription>Modifica els detalls del servei realitzat.</CardDescription>
-            {service.updatedAt && (
-               <p className="text-xs text-muted-foreground pt-2 flex items-center gap-1">
-                <Info className="h-3 w-3" />
-                Última modificació: {format(new Date(service.updatedAt), "dd/MM/yyyy 'a les' HH:mm", { locale: ca })}
-              </p>
-            )}
+            <CardTitle>Editar Servei {service.albaranNumber ? `#${service.albaranNumber}` : ''}</CardTitle>
+            <CardDescription>Cada servei genera automàticament el seu propi albarà.</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
-              
               <div className="space-y-2">
-                  <Label htmlFor="date">Data del Servei</Label>
+                  <Label>Data del Servei</Label>
                    <Popover>
                     <PopoverTrigger asChild>
-                      <Button
-                        variant={"outline"}
-                        className={cn(
-                          "w-full justify-start text-left font-normal",
-                          !date && "text-muted-foreground"
-                        )}
-                      >
+                      <Button variant="outline" className="w-full justify-start text-left font-normal">
                         <CalendarIcon className="mr-2 h-4 w-4" />
                         {date ? format(date, "PPP", { locale: ca }) : <span>Tria una data</span>}
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0">
-                      <Calendar
-                        mode="single"
-                        selected={date}
-                        onSelect={setDate}
-                        initialFocus
-                        locale={ca}
-                      />
-                    </PopoverContent>
+                    <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={date} onSelect={setDate} initialFocus locale={ca} /></PopoverContent>
                   </Popover>
                 </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="start-time" className="flex items-center gap-2"><Clock className="h-4 w-4 text-muted-foreground" /> Hora d'Arribada</Label>
-                  <Input id="start-time" type="time" required value={startTime} onChange={(e) => setStartTime(e.target.value)} />
+                  <Label>Arribada</Label>
+                  <Input type="time" required value={startTime} onChange={(e) => setStartTime(e.target.value)} />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="end-time" className="flex items-center gap-2"><Clock className="h-4 w-4 text-muted-foreground" /> Hora de Sortida</Label>
-                  <Input id="end-time" type="time" required value={endTime} onChange={(e) => setEndTime(e.target.value)} />
+                  <Label>Sortida</Label>
+                  <Input type="time" required value={endTime} onChange={(e) => setEndTime(e.target.value)} />
                 </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                      <Label htmlFor="employeeId" className="flex items-center gap-2"><UserIcon className="h-4 w-4 text-muted-foreground" /> Tècnic</Label>
-                      <Select value={employeeId} onValueChange={setEmployeeId} disabled={isLoadingEmployees}>
-                          <SelectTrigger id="employeeId">
-                              <SelectValue placeholder={isLoadingEmployees ? "A carregar tècnics..." : "Selecciona un tècnic..."} />
-                          </SelectTrigger>
-                          <SelectContent>
-                              {employees?.map(e => (
-                              <SelectItem key={e.id} value={e.id}>{e.firstName} {e.lastName}</SelectItem>
-                              ))}
-                          </SelectContent>
-                      </Select>
-                  </div>
-                  <div className="space-y-2">
-                      <Label htmlFor="serviceHourlyRate" className="flex items-center gap-2"><Euro className="h-4 w-4 text-muted-foreground" /> Preu/Hora</Label>
-                      <Input 
-                        id="serviceHourlyRate" 
-                        type="number" 
-                        step="0.01"
-                        value={serviceHourlyRate} 
-                        onChange={(e) => setServiceHourlyRate(e.target.value === '' ? '' : parseFloat(e.target.value))} 
-                      />
-                  </div>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="customerId" className="flex items-center gap-2"><Users className="h-4 w-4 text-muted-foreground" /> Client</Label>
-                  <div className="flex items-center gap-2">
-                      <Input value={customerName} readOnly disabled className="flex-grow bg-muted" />
-                      <Button type="button" variant="outline" onClick={() => setIsCustomerDialogOpen(true)}>
-                          Seleccionar
-                      </Button>
-                  </div>
+                <Label>Client</Label>
+                <div className="flex gap-2">
+                    <Input value={customers?.find(c => c.id === customerId)?.name || 'Cap client assignat'} readOnly disabled className="bg-muted" />
+                    <Button type="button" variant="outline" onClick={() => setIsCustomerDialogOpen(true)}>Seleccionar</Button>
+                </div>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="projectName" className="flex items-center gap-2"><Briefcase className="h-4 w-4 text-muted-foreground" /> Nom de l'Obra</Label>
-                <Input id="projectName" placeholder="Ex: Reforma Client A" value={projectName} onChange={(e) => setProjectName(e.target.value)} list="project-names" />
-                <datalist id="project-names">
-                  {projectNames.map((name) => (
-                    <option key={name} value={name} />
-                  ))}
-                </datalist>
+                <Label>Nom de l'Obra</Label>
+                <Input placeholder="Ex: Reforma Cuina" value={projectName} onChange={(e) => setProjectName(e.target.value)} />
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="description" className="flex items-center gap-2"><FileText className="h-4 w-4 text-muted-foreground" /> Descripció del Servei</Label>
-                <Textarea id="description" placeholder="Descriu les tasques realitzades..." value={description} onChange={(e) => setDescription(e.target.value)} rows={3} />
+                <Label>Descripció del Treball</Label>
+                <Textarea placeholder="Què s'ha fet avui?" value={description} onChange={(e) => setDescription(e.target.value)} rows={3} />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="pendingTasks" className="flex items-center gap-2"><AlertTriangle className="h-4 w-4 text-muted-foreground" /> Pendents de l'Obra</Label>
-                <Textarea id="pendingTasks" placeholder="Descriu tasques o materials pendents..." value={pendingTasks} onChange={(e) => setPendingTasks(e.target.value)} rows={3} />
-              </div>
-              
               <div className="space-y-4 rounded-lg border p-4">
-                  <Label className="flex items-center gap-2 text-base font-semibold"><Package className="h-5 w-5 text-muted-foreground" /> Materials i Mà d'Obra</Label>
+                  <Label className="font-bold flex items-center gap-2"><Package className="h-4 w-4" /> Materials</Label>
                    <div className="space-y-3">
-                      {materials.map((material, index) => (
-                          <div key={index} className="grid grid-cols-1 md:grid-cols-12 gap-2 items-center">
-                              <Input
-                                  type="text"
-                                  placeholder="Descripció"
-                                  value={material.description}
-                                  onChange={(e) => handleMaterialChange(index, 'description', e.target.value)}
-                                  className="col-span-12 md:col-span-5"
-                              />
-                              <div className="col-span-4 md:col-span-2 relative">
-                                  <Input
-                                      type="number"
-                                      placeholder="Quant."
-                                      value={material.quantity}
-                                      onChange={(e) => handleMaterialChange(index, 'quantity', e.target.value)}
-                                      className="pl-2 pr-1"
-                                      min="0"
-                                      step="any"
-                                  />
-                              </div>
-                              <div className="col-span-5 md:col-span-2 relative">
-                                  <Input
-                                      type="number"
-                                      placeholder="Preu/u."
-                                      value={material.unitPrice}
-                                      onChange={(e) => handleMaterialChange(index, 'unitPrice', e.target.value)}
-                                      className="pl-7 pr-1"
-                                      min="0"
-                                      step="any"
-                                  />
-                                  <Euro className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                              </div>
-                              <div className="col-span-3 md:col-span-3 flex justify-end items-center gap-1">
-                                  <Button type="button" variant="outline" size="icon" onClick={() => handleMaterialImageUploadClick(index)}>
-                                      <ImagePlus className="h-4 w-4" />
-                                  </Button>
-                                  {material.imageDataUrl && (
-                                      <Button type="button" variant="ghost" size="icon" onClick={() => removeMaterialImage(index)}>
-                                          <X className="h-4 w-4 text-destructive" />
-                                      </Button>
-                                  )}
-                              </div>
-                              {material.imageDataUrl && (
-                                  <div className="col-span-12 md:col-start-6">
-                                      <Image src={material.imageDataUrl} alt="Preview" width={64} height={64} className="rounded-md object-cover" />
-                                  </div>
-                              )}
+                      {materials.map((m, i) => (
+                          <div key={i} className="flex gap-2 items-center">
+                              <Input placeholder="Material" value={m.description} onChange={(e) => { const nm = [...materials]; nm[i].description = e.target.value; setMaterials(nm); }} className="flex-grow" />
+                              <Input type="number" placeholder="Cant." value={m.quantity} onChange={(e) => { const nm = [...materials]; nm[i].quantity = Number(e.target.value); setMaterials(nm); }} className="w-20" />
+                              <Button type="button" variant="ghost" size="icon" onClick={() => setMaterials(materials.filter((_, idx) => idx !== i))}><X className="h-4 w-4" /></Button>
                           </div>
                       ))}
                   </div>
-                  <Button type="button" variant="outline" size="sm" onClick={addMaterialInput} className="mt-2">
-                      <Plus className="mr-2 h-4 w-4" /> Afegir Línia
-                  </Button>
+                  <Button type="button" variant="outline" size="sm" onClick={() => setMaterials([...materials, { description: '', quantity: 1, unitPrice: 0 }])}>+ Afegir Línia</Button>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="albarans" className="flex items-center gap-2"><Hash className="h-4 w-4 text-muted-foreground" /> Nº d'Albarà</Label>
-                <div className="space-y-2">
-                  {albarans.map((albaran, index) => (
-                    <div key={index} className="flex items-center gap-2">
-                      <Input
-                        type="text"
-                        placeholder={`Albarà #${index + 1}`}
-                        value={albaran}
-                        onChange={(e) => handleAlbaranChange(index, e.target.value)}
-                      />
-                      {albarans.length > 1 && (
-                        <Button type="button" variant="ghost" size="icon" onClick={() => removeAlbaranInput(index)}>
-                          <X className="h-4 w-4" />
-                        </Button>
-                      )}
-                    </div>
-                  ))}
-                </div>
-                <Button type="button" variant="outline" size="sm" onClick={addAlbaranInput} className="mt-2">
-                  <Plus className="mr-2 h-4 w-4" /> Afegir Albarà
-                </Button>
-              </div>
-
-               <div className="space-y-2">
-                <Label className="flex items-center gap-2"><Camera className="h-4 w-4 text-muted-foreground" /> Fotos i Vídeos</Label>
-                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2 my-4">
-                  {media.map((m, index) => (
-                    <div key={index} className="relative group aspect-square rounded-md overflow-hidden">
-                      {m.type === 'image' ? (
-                        <Image src={m.dataUrl} alt={`Previsualització ${index + 1}`} fill style={{ objectFit: 'cover' }} sizes="100px" />
-                      ) : (
-                        <div className="w-full h-full bg-black flex items-center justify-center">
-                           <Video className="h-8 w-8 text-white" />
-                        </div>
-                      )}
-                      <Button
-                        type="button"
-                        variant="destructive"
-                        size="icon"
-                        className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
-                        onClick={() => removeMedia(index)}
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-                <div className="flex gap-2 flex-col sm:flex-row">
-                   <Button type="button" variant="outline" onClick={() => setShowCamera(true)} className="flex-1">
-                      <Camera className="mr-2 h-4 w-4" /> Usar Càmera
-                   </Button>
-                  <Label htmlFor="media-upload" className="flex-1 cursor-pointer inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2">
-                      <Plus className="mr-2 h-4 w-4" /> Pujar Fitxer
-                  </Label>
-                   <Input id="media-upload" type="file" multiple onChange={handleFileChange} accept="image/*" className="hidden" />
-                </div>
-                <p className="text-sm text-muted-foreground mt-2">{media.length} fitxer(s) seleccionat(s).</p>
-              </div>
-
-              {/* Signature Section */}
               <div className="space-y-4 rounded-lg border p-4 bg-muted/20">
-                  <div className="flex items-center justify-between">
-                      <Label className="flex items-center gap-2 text-base font-semibold">
-                        <PenTool className="h-5 w-5 text-muted-foreground" /> 
-                        Confirmació de Recepció
-                      </Label>
-                      {customerSignatureDataUrl && (
-                        <CheckCircle className="h-5 w-5 text-green-500" />
-                      )}
-                  </div>
-                  
+                  <Label className="font-bold flex items-center gap-2"><PenTool className="h-4 w-4" /> Signatura</Label>
                   {customerSignatureDataUrl ? (
                     <div className="space-y-2">
-                        <p className="text-sm font-medium">Signat per: <span className="text-primary">{customerSignatureName}</span></p>
-                        <div className="relative h-24 w-48 border rounded bg-white">
-                            <Image src={customerSignatureDataUrl} alt="Signature" fill style={{ objectFit: 'contain' }} />
-                        </div>
-                        <Button type="button" variant="ghost" size="sm" onClick={() => setIsSignatureDialogOpen(true)} className="text-xs">
-                            Canviar Signatura
-                        </Button>
+                        <p className="text-xs">Signat per: <strong>{customerSignatureName}</strong></p>
+                        <div className="relative h-20 w-40 border bg-white rounded"><Image src={customerSignatureDataUrl} alt="Signature" fill style={{ objectFit: 'contain' }} /></div>
+                        <Button type="button" variant="ghost" size="sm" onClick={() => setIsSignatureDialogOpen(true)}>Canviar</Button>
                     </div>
                   ) : (
-                    <div className="text-center py-4">
-                        <Button type="button" variant="outline" onClick={() => setIsSignatureDialogOpen(true)}>
-                            <PenTool className="mr-2 h-4 w-4" /> Recollir Signatura Client
-                        </Button>
-                        <p className="text-[10px] text-muted-foreground mt-2 uppercase">Necessari per validar el treball en obra</p>
-                    </div>
+                    <Button type="button" variant="outline" onClick={() => setIsSignatureDialogOpen(true)} className="w-full">Recollir Signatura</Button>
                   )}
               </div>
 
-
-              <div className="flex flex-col sm:flex-row justify-between items-center pt-4 gap-4">
-                 <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button type="button" variant="destructive" className="w-full sm:w-auto">
-                      <Trash2 className="mr-2 h-4 w-4"/>
-                      Eliminar
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Estàs segur?</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        Aquesta acció no es pot desfer. Això eliminarà permanentment el registre del servei.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancel·lar</AlertDialogCancel>
-                      <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90">Eliminar</AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-
-                <Button type="submit" className="bg-accent hover:bg-accent/90 text-accent-foreground w-full sm:w-auto">
-                  <Save className="mr-2 h-4 w-4"/>
-                  Desa els Canvis
-                </Button>
+              <div className="flex justify-between items-center pt-4">
+                <Button type="button" variant="destructive" onClick={async () => { if(confirm('Segur?')) { await deleteDoc(serviceDocRef!); router.push('/dashboard'); } }}><Trash2 className="mr-2 h-4 w-4" /> Eliminar</Button>
+                <Button type="submit" className="bg-primary px-8" disabled={isSaving}><Save className="mr-2 h-4 w-4" /> {isSaving ? 'Desant...' : 'Desar Canvis'}</Button>
               </div>
             </form>
           </CardContent>

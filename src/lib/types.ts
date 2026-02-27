@@ -21,7 +21,8 @@ export interface ServiceRecord {
   }[];
   updatedAt?: string;
   createdAt?: string; 
-  albaranNumber?: number; // For grouping in invoices
+  albaranNumber?: number; // Unique albaran number assigned to this record
+  status?: 'pendent' | 'facturat'; // Invoicing status
   customerSignatureName?: string; // Name of the person who signed
   customerSignatureDataUrl?: string; // Base64 signature image
 }
@@ -58,6 +59,7 @@ export interface Albaran {
   serviceRecordIds: string[];
   totalAmount: number;
   status: 'pendent' | 'facturat';
+  updatedAt?: string;
 }
 
 export interface Quote {
