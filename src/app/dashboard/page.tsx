@@ -31,6 +31,8 @@ import {
 } from "@/components/ui/alert-dialog"
 import { useToast } from "@/hooks/use-toast"
 
+const ADMIN_EMAIL = 'tinoseixas@gmail.com';
+
 const userColors = [
   '#3b82f6', '#ef4444', '#10b981', '#f97316', '#8b5cf6', '#ec4899', '#f59e0b', '#14b8a6'
 ];
@@ -51,14 +53,17 @@ export default function DashboardPage() {
   const router = useRouter();
   const { toast } = useToast();
 
-  // Profile data fetch
   const employeeDocRef = useMemoFirebase(() => {
     if (!user || !firestore) return null;
     return doc(firestore, 'employees', user.uid);
   }, [firestore, user]);
   
   const { data: currentEmployee, isLoading: isLoadingProfile } = useDoc<Employee>(employeeDocRef);
-  const isAdmin = currentEmployee?.role === 'admin';
+  
+  const isAdmin = useMemo(() => {
+    if (!user) return false;
+    return user.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase() || currentEmployee?.role === 'admin';
+  }, [user, currentEmployee]);
   
   const [allServices, setAllServices] = useState<ServiceRecord[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
@@ -122,14 +127,11 @@ export default function DashboardPage() {
   }, [firestore, isUserLoading, user, isAdmin, isLoadingProfile]);
   
   const projectNames = useMemo(() => {
-    if (!allServices) return [];
     const names = allServices.map(service => service.projectName).filter(Boolean);
     return [...new Set(names)];
   }, [allServices]);
 
   const filteredServices = useMemo(() => {
-    if (!allServices) return [];
-
     let filtered = allServices.filter(service => {
         const userMatch = !isAdmin || selectedUser === 'all' || service.employeeId === selectedUser;
         const dateMatch = !selectedDate || isSameDay(parseISO(service.arrivalDateTime), selectedDate);
@@ -162,9 +164,6 @@ export default function DashboardPage() {
     setSelectedRows([]);
   }, [filteredServices]);
 
-  const services = filteredServices;
-  const isLoading = isLoadingData || isUserLoading || isLoadingProfile;
-  
   const getEmployeeName = (employeeId: string) => {
     const employee = employees.find(e => e.id === employeeId);
     return employee ? `${employee.firstName} ${employee.lastName}` : 'Desconegut';
@@ -190,15 +189,13 @@ export default function DashboardPage() {
     setSelectedRows([]);
   };
   
-  const renderSkeletons = () => (
-    <div className="space-y-4">
+  if (isUserLoading || isLoadingProfile) {
+    return (
+      <div className="space-y-8 p-4">
         <Skeleton className="h-10 w-full" />
         <Skeleton className="h-40 w-full" />
-    </div>
-  );
-  
-  if (isUserLoading || isLoadingProfile) {
-    return <div className="space-y-8 p-4">{renderSkeletons()}</div>;
+      </div>
+    );
   }
   
   if (!user) {
@@ -278,8 +275,13 @@ export default function DashboardPage() {
         </Card>
       )}
       
-      {isLoading ? renderSkeletons() : (
-        (!services || services.length === 0) && (allServices.length === 0) ? (
+      {isLoadingData ? (
+        <div className="space-y-4">
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-40 w-full" />
+        </div>
+      ) : (
+        (!filteredServices || filteredServices.length === 0) && (allServices.length === 0) ? (
           <div className="text-center py-16 border-2 border-dashed rounded-lg">
               <h2 className="text-xl font-semibold">No hi ha serveis registrats</h2>
               <p className="text-muted-foreground">Comença afegint el teu primer servei del dia.</p>
@@ -389,9 +391,9 @@ export default function DashboardPage() {
                         {isAdmin && (
                             <TableHead className="w-[40px] px-2">
                                 <Checkbox
-                                    checked={selectedRows.length > 0 && services.length > 0 && selectedRows.length === services.length}
+                                    checked={selectedRows.length > 0 && filteredServices.length > 0 && selectedRows.length === filteredServices.length}
                                     onCheckedChange={(checked) => {
-                                    setSelectedRows(checked ? services.map(s => s.id) : []);
+                                    setSelectedRows(checked ? filteredServices.map(s => s.id) : []);
                                     }}
                                     aria-label="Seleccionar totes les files"
                                 />
@@ -407,8 +409,8 @@ export default function DashboardPage() {
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {services && services.length > 0 ? services.map(service => (
-                        <TableRow key={service.id} className={isAdmin ? service.rowColor : ''} data-state={selectedRows.includes(service.id) && "selected"}>
+                        {filteredServices && filteredServices.length > 0 ? filteredServices.map(service => (
+                        <TableRow key={service.id} className={isAdmin ? (service as any).rowColor : ''} data-state={selectedRows.includes(service.id) && "selected"}>
                             {isAdmin && (
                                 <TableCell className="px-2">
                                     <Checkbox

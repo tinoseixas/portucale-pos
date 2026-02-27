@@ -12,7 +12,7 @@ import { useAuth, useUser, useFirestore } from '@/firebase'
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth'
 import { doc, setDoc, getDoc } from 'firebase/firestore'
 
-// Default admin email for first-time login bootstrap
+// E-mail de administrador padrão
 const ADMIN_EMAIL = 'tinoseixas@gmail.com';
 
 export default function Home() {
@@ -37,28 +37,25 @@ export default function Home() {
       const userCredential = await signInWithEmailAndPassword(auth, email, password)
       const loggedInUser = userCredential.user;
 
-      // Ensure employee profile exists
+      // Garante que o perfil de funcionário existe e tem o papel correto
       const employeeRef = doc(firestore, 'employees', loggedInUser.uid);
+      const isInitialAdmin = loggedInUser.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase();
+      
       const employeeSnap = await getDoc(employeeRef);
 
-      if (!employeeSnap.exists()) {
-        const isInitialAdmin = loggedInUser.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase();
+      if (!employeeSnap.exists() || isInitialAdmin) {
         await setDoc(employeeRef, {
             id: loggedInUser.uid,
             employeeId: loggedInUser.uid.substring(0, 8),
-            firstName: loggedInUser.email?.split('@')[0] || 'Nou',
-            lastName: 'Usuari',
+            firstName: loggedInUser.email?.split('@')[0] || 'Usuari',
+            lastName: 'TS',
             email: loggedInUser.email,
-            phoneNumber: '',
-            role: isInitialAdmin ? 'admin' : 'user',
-            hourlyRate: isInitialAdmin ? 30 : 27,
+            role: isInitialAdmin ? 'admin' : (employeeSnap.data()?.role || 'user'),
+            hourlyRate: isInitialAdmin ? 30 : (employeeSnap.data()?.hourlyRate || 27),
         }, { merge: true });
       }
 
-      toast({
-        title: "Sessió iniciada",
-        description: "Benvingut de nou!",
-      })
+      toast({ title: "Sessió iniciada", description: "Benvingut de nou!" });
       router.push('/dashboard')
     } catch (error: any) {
        toast({
@@ -89,10 +86,7 @@ export default function Home() {
         hourlyRate: isInitialAdmin ? 30 : 27,
       }, { merge: true });
 
-      toast({
-        title: "Compte creat",
-        description: "El teu nou compte ha estat creat correctament.",
-      });
+      toast({ title: "Compte creat", description: "El teu nou conta ha estat creat." });
       router.push('/dashboard');
     } catch (error: any) {
       toast({
@@ -119,7 +113,7 @@ export default function Home() {
             <div className="mx-auto bg-primary/20 text-primary p-3 rounded-full w-fit mb-4">
                <Briefcase size={32} />
             </div>
-            <CardTitle className="text-3xl font-bold">Registre de Serveis</CardTitle>
+            <CardTitle className="text-3xl font-bold">TS Serveis</CardTitle>
             <CardDescription>Identifica't per registrar els serveis</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -131,7 +125,6 @@ export default function Home() {
                   id="email"
                   type="email"
                   placeholder="usuari@exemple.com" 
-                  required 
                   className="pl-10"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
@@ -146,7 +139,6 @@ export default function Home() {
                   id="password" 
                   type="password" 
                   placeholder="Escriu la teva contrasenya"
-                  required 
                   className="pl-10"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
@@ -155,12 +147,8 @@ export default function Home() {
             </div>
           </CardContent>
           <CardFooter className="flex flex-col gap-4">
-            <Button onClick={handleSignIn} className="w-full">
-              Entrar
-            </Button>
-            <Button onClick={handleSignUp} variant="outline" className="w-full">
-              Registar
-            </Button>
+            <Button onClick={handleSignIn} className="w-full">Entrar</Button>
+            <Button onClick={handleSignUp} variant="outline" className="w-full">Registar</Button>
           </CardFooter>
         </Card>
       </div>
