@@ -1,4 +1,3 @@
-
 'use client'
 
 import { useState, useMemo, useEffect } from 'react'
@@ -31,8 +30,6 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { useToast } from "@/hooks/use-toast"
-import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert'
-import { Badge } from '@/components/ui/badge'
 
 const ADMIN_EMAIL = 'tinoseixas@gmail.com';
 
