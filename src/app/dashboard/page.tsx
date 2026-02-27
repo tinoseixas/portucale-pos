@@ -62,7 +62,9 @@ export default function DashboardPage() {
   
   const isAdmin = useMemo(() => {
     if (!user) return false;
-    return user.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase() || currentEmployee?.role === 'admin';
+    const isEmailAdmin = user.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase();
+    const isRoleAdmin = currentEmployee?.role === 'admin';
+    return isEmailAdmin || isRoleAdmin;
   }, [user, currentEmployee]);
   
   const [allServices, setAllServices] = useState<ServiceRecord[]>([]);
@@ -74,10 +76,11 @@ export default function DashboardPage() {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
   const [selectedProject, setSelectedProject] = useState<string>('all');
 
+  // Query for pending albarans - only for admins and when profile is ready to avoid permissions race conditions
   const albaransQuery = useMemoFirebase(() => {
-    if (!firestore || !isAdmin) return null;
+    if (!firestore || !isAdmin || isLoadingProfile) return null;
     return query(collection(firestore, 'albarans'), where('status', '==', 'pendent'), orderBy('albaranNumber', 'desc'));
-  }, [firestore, isAdmin]);
+  }, [firestore, isAdmin, isLoadingProfile]);
 
   const { data: pendingAlbarans } = useCollection<Albaran>(albaransQuery);
 
@@ -284,7 +287,7 @@ export default function DashboardPage() {
         (!filteredServices || filteredServices.length === 0) && (allServices.length === 0) ? (
           <div className="text-center py-16 border-2 border-dashed rounded-lg">
               <h2 className="text-xl font-semibold">No hi ha serveis registrats</h2>
-              <p className="text-muted-foreground">Comença afegint el teu primer servei del dia.</p>
+              <p className="text-muted-foreground">Comença afegint el teu primer servei do dia.</p>
               <Button asChild className="mt-4 bg-accent hover:bg-accent/90 text-accent-foreground">
                   <Link href="/dashboard/new">
                   <PlusCircle className="mr-2 h-4 w-4" />
@@ -328,7 +331,7 @@ export default function DashboardPage() {
                       <Select value={selectedUser} onValueChange={setSelectedUser}>
                       <SelectTrigger className="w-full sm:w-[200px]">
                           <User className="mr-2 h-4 w-4 text-muted-foreground" />
-                          <SelectValue placeholder="Filtrar per usuari" />
+                          <SelectValue placeholder="Filtrar por usuari" />
                       </SelectTrigger>
                       <SelectContent>
                           <SelectItem value="all">Tots els Usuaris</SelectItem>
@@ -348,7 +351,7 @@ export default function DashboardPage() {
                           )}
                           >
                           <CalendarIcon className="mr-2 h-4 w-4" />
-                          {selectedDate ? format(selectedDate, "PPP", { locale: ca }) : <span>Filtrar per data</span>}
+                          {selectedDate ? format(selectedDate, "PPP", { locale: ca }) : <span>Filtrar por data</span>}
                           </Button>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0">
@@ -365,7 +368,7 @@ export default function DashboardPage() {
                       <Select value={selectedProject} onValueChange={setSelectedProject}>
                       <SelectTrigger className="w-full sm:w-[200px]">
                           <Briefcase className="mr-2 h-4 w-4 text-muted-foreground" />
-                          <SelectValue placeholder="Filtrar per obra" />
+                          <SelectValue placeholder="Filtrar por obra" />
                       </SelectTrigger>
                       <SelectContent>
                           <SelectItem value="all">Totes les Obres</SelectItem>
