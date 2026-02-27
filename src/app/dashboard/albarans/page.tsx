@@ -8,7 +8,7 @@ import type { Albaran, ServiceRecord, Employee } from '@/lib/types'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
-import { Eye, FileArchive, Trash2, RefreshCw, Loader2, AlertCircle, CreditCard, ArrowRight } from 'lucide-react'
+import { Eye, FileArchive, Trash2, RefreshCw, Loader2, AlertCircle, CreditCard, ArrowRight, Clock } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { ca } from 'date-fns/locale'
 import {
@@ -29,7 +29,6 @@ import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import Link from 'next/link'
 
-
 export default function AlbaransHistoryPage() {
   const router = useRouter()
   const { user, isUserLoading } = useUser()
@@ -44,9 +43,9 @@ export default function AlbaransHistoryPage() {
   }, [isUserLoading, user, router])
 
   const albaransQuery = useMemoFirebase(() => {
-    if (!firestore) return null
+    if (!firestore || !user) return null
     return query(collection(firestore, 'albarans'), orderBy('albaranNumber', 'desc'))
-  }, [firestore])
+  }, [firestore, user])
 
   const { data: albarans, isLoading: isLoadingAlbarans } = useCollection<Albaran>(albaransQuery)
   
@@ -55,6 +54,10 @@ export default function AlbaransHistoryPage() {
 
   const pendingAlbarans = useMemo(() => {
     return albarans?.filter(a => a.status === 'pendent') || [];
+  }, [albarans]);
+
+  const historyAlbarans = useMemo(() => {
+    return albarans?.filter(a => a.status !== 'pendent') || [];
   }, [albarans]);
 
   const handleDeleteAlbaran = (albaranId: string, albaranNumber: number) => {
@@ -113,147 +116,179 @@ export default function AlbaransHistoryPage() {
     }
   };
 
-  const getStatusVariant = (status: Albaran['status']) => {
-    switch (status) {
-      case 'facturat':
-        return 'default'
-      case 'pendent':
-        return 'secondary'
-      default:
-        return 'outline'
-    }
-  }
-
-
   if (isUserLoading || isLoadingAlbarans || isLoadingEmployees) {
-    return <div className="flex items-center justify-center p-12"><Loader2 className="h-8 w-8 animate-spin text-primary" /><span className="ml-3">Carregant historial d'albarans...</span></div>
-  }
-
-  if (!user) {
-    return null
+    return (
+      <div className="flex flex-col items-center justify-center p-12 space-y-4">
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+        <p className="text-muted-foreground animate-pulse">Carregant historial d'albarans...</p>
+      </div>
+    )
   }
 
   return (
-    <AdminGate pageTitle="Historial d'Albarans" pageDescription="Consulta i gestiona tots els albarans generats.">
-        <div className="max-w-full mx-auto space-y-6">
+    <AdminGate pageTitle="Historial d'Albarans" pageDescription="Gestiona els albarans pendents i l'historial.">
+      <div className="max-w-full mx-auto space-y-8">
         
-        {/* Aviso de Albarans Pendents */}
-        {pendingAlbarans.length > 0 && (
-          <Alert className="bg-primary/5 border-primary/20 shadow-sm">
-            <AlertCircle className="h-5 w-5 text-primary" />
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 w-full">
-              <div>
-                <AlertTitle className="text-primary font-bold">Tens {pendingAlbarans.length} albarans pendents de facturar</AlertTitle>
-                <AlertDescription className="text-muted-foreground">
-                  Aquests documents han estat validats però encara no s'han convertit en factura.
-                </AlertDescription>
-              </div>
-              <Button asChild size="sm" className="bg-primary hover:bg-primary/90 shrink-0">
-                <Link href="/dashboard/invoices">
-                  Anar a Facturació <ArrowRight className="ml-2 h-4 w-4" />
-                </Link>
-              </Button>
-            </div>
-          </Alert>
-        )}
+        {/* SECCIÓ D'ALBARANS PENDENTS - LA MÉS IMPORTANT */}
+        <section className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-2xl font-bold flex items-center gap-2 text-primary">
+              <Clock className="h-6 w-6" />
+              Albarans Pendents de Facturar
+              {pendingAlbarans.length > 0 && (
+                <Badge className="ml-2 bg-primary text-primary-foreground">
+                  {pendingAlbarans.length}
+                </Badge>
+              )}
+            </h2>
+          </div>
 
-        <Card>
-            <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center sm:justify-between gap-4">
-            <div className="flex items-center gap-4">
-                <div className="bg-primary/10 p-3 rounded-xl">
-                  <FileArchive className="h-8 w-8 text-primary" />
-                </div>
-                <div>
-                    <CardTitle>Historial d'Albarans</CardTitle>
-                    <CardDescription>Consulta tots els albarans que s'han generat al sistema.</CardDescription>
-                </div>
-            </div>
-            <Button onClick={handleUpdateAllAlbarans} disabled={isUpdating} variant="outline" className="w-full sm:w-auto">
-              {isUpdating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
-              {isUpdating ? 'Actualitzant...' : 'Actualitzar Totals'}
-            </Button>
-            </CardHeader>
-            <CardContent>
-            <div className="overflow-x-auto">
-                <Table>
+          {pendingAlbarans.length > 0 ? (
+            <Card className="border-primary/20 bg-primary/5 shadow-md">
+              <CardHeader className="pb-2">
+                <CardDescription>Aquests documents han estat generats però encara no s'han convertit en factura.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="overflow-x-auto">
+                  <Table>
                     <TableHeader>
-                    <TableRow>
-                        <TableHead>Nº Albarà</TableHead>
-                        <TableHead>Data Creació</TableHead>
-                        <TableHead>Client</TableHead>
-                        <TableHead>Obra</TableHead>
-                        <TableHead>Total</TableHead>
-                        <TableHead>Estat</TableHead>
-                        <TableHead className="text-right">Accions</TableHead>
-                    </TableRow>
+                      <TableRow className="hover:bg-transparent border-primary/10">
+                        <TableHead className="font-bold text-primary">Nº Albarà</TableHead>
+                        <TableHead className="font-bold text-primary">Data</TableHead>
+                        <TableHead className="font-bold text-primary">Client</TableHead>
+                        <TableHead className="font-bold text-primary">Obra</TableHead>
+                        <TableHead className="font-bold text-primary">Total</TableHead>
+                        <TableHead className="text-right font-bold text-primary">Acció</TableHead>
+                      </TableRow>
                     </TableHeader>
                     <TableBody>
-                    {albarans && albarans.length > 0 ? albarans.map(albaran => (
-                        <TableRow key={albaran.id} className={albaran.status === 'pendent' ? 'bg-primary/[0.02]' : ''}>
+                      {pendingAlbarans.map(albaran => (
+                        <TableRow key={albaran.id} className="border-primary/10 hover:bg-primary/10 transition-colors">
+                          <TableCell className="font-black">#{String(albaran.albaranNumber).padStart(4, '0')}</TableCell>
+                          <TableCell>{format(parseISO(albaran.createdAt), 'dd/MM/yyyy', { locale: ca })}</TableCell>
+                          <TableCell className="font-semibold">{albaran.customerName}</TableCell>
+                          <TableCell className="max-w-[200px] truncate">{albaran.projectName}</TableCell>
+                          <TableCell className="font-black">{albaran.totalAmount.toFixed(2)} €</TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex items-center justify-end gap-2">
+                              <Button variant="outline" size="sm" asChild className="bg-white">
+                                <Link href={`/dashboard/albarans/${albaran.id}`}>
+                                  <Eye className="h-4 w-4 mr-1" /> Veure
+                                </Link>
+                              </Button>
+                              <Button size="sm" asChild className="bg-primary hover:bg-primary/90 shadow-sm">
+                                <Link href={`/dashboard/invoices?customerId=${albaran.customerId}&albaranId=${albaran.id}`}>
+                                  <CreditCard className="mr-2 h-4 w-4" /> Facturar Ara
+                                </Link>
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <Card className="border-dashed">
+              <CardContent className="py-10 text-center space-y-2">
+                <div className="mx-auto w-12 h-12 rounded-full bg-muted flex items-center justify-center">
+                  <AlertCircle className="h-6 w-6 text-muted-foreground" />
+                </div>
+                <p className="text-muted-foreground font-medium">No hi ha cap albarà pendent de facturar.</p>
+                <Button variant="link" asChild>
+                  <Link href="/dashboard/reports">Generar nou albarà <ArrowRight className="ml-1 h-4 w-4" /></Link>
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+        </section>
+
+        {/* SECCIÓ D'HISTORIAL COMPLET */}
+        <section className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-2xl font-bold flex items-center gap-2">
+              <FileArchive className="h-6 w-6" />
+              Historial d'Albarans Facturats
+            </h2>
+            <Button onClick={handleUpdateAllAlbarans} disabled={isUpdating} variant="outline" size="sm">
+              {isUpdating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
+              Actualitzar Totals
+            </Button>
+          </div>
+
+          <Card>
+            <CardContent className="pt-6">
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Nº Albarà</TableHead>
+                      <TableHead>Data</TableHead>
+                      <TableHead>Client</TableHead>
+                      <TableHead>Obra</TableHead>
+                      <TableHead>Total</TableHead>
+                      <TableHead>Estat</TableHead>
+                      <TableHead className="text-right">Accions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {historyAlbarans.length > 0 ? historyAlbarans.map(albaran => (
+                      <TableRow key={albaran.id}>
                         <TableCell className="font-bold">#{String(albaran.albaranNumber).padStart(4, '0')}</TableCell>
-                        <TableCell>{format(parseISO(albaran.createdAt), 'dd/MM/yyyy HH:mm', { locale: ca })}</TableCell>
+                        <TableCell>{format(parseISO(albaran.createdAt), 'dd/MM/yyyy', { locale: ca })}</TableCell>
                         <TableCell className="font-medium">{albaran.customerName}</TableCell>
                         <TableCell className="max-w-[200px] truncate">{albaran.projectName}</TableCell>
                         <TableCell className="font-semibold">{albaran.totalAmount.toFixed(2)} €</TableCell>
                         <TableCell>
-                          <Badge variant={getStatusVariant(albaran.status)} className="capitalize">
-                            {albaran.status}
+                          <Badge variant="default" className="bg-green-500 hover:bg-green-600">
+                            Facturat
                           </Badge>
                         </TableCell>
                         <TableCell className="text-right">
-                            <div className="flex items-center justify-end gap-2">
-                                {albaran.status === 'pendent' && (
-                                  <Button 
-                                    variant="secondary" 
-                                    size="sm" 
-                                    asChild
-                                    className="bg-accent/10 text-accent-foreground hover:bg-accent/20 border-accent/20"
-                                  >
-                                    <Link href={`/dashboard/invoices?customerId=${albaran.customerId}&albaranId=${albaran.id}`}>
-                                      <CreditCard className="mr-2 h-4 w-4" />
-                                      Facturar
-                                    </Link>
-                                  </Button>
-                                )}
-                                <Button variant="outline" size="sm" onClick={() => router.push(`/dashboard/albarans/${albaran.id}`)}>
-                                <Eye className="mr-2 h-4 w-4" />
-                                Veure
+                          <div className="flex items-center justify-end gap-2">
+                            <Button variant="outline" size="sm" asChild>
+                              <Link href={`/dashboard/albarans/${albaran.id}`}>
+                                <Eye className="h-4 w-4" />
+                              </Link>
+                            </Button>
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive hover:bg-destructive/10">
+                                  <Trash2 className="h-4 w-4" />
                                 </Button>
-                                <AlertDialog>
-                                <AlertDialogTrigger asChild>
-                                    <Button variant="destructive" size="icon">
-                                        <Trash2 className="h-4 w-4" />
-                                    </Button>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent>
-                                    <AlertDialogHeader>
-                                    <AlertDialogTitle>Estàs segur?</AlertDialogTitle>
-                                    <AlertDialogDescription>
-                                        Aquesta acció no es pot desfer. Això eliminarà l'albarà <strong>#{albaran.albaranNumber}</strong> del historial, però no els registres de servei associats.
-                                    </AlertDialogDescription>
-                                    </AlertDialogHeader>
-                                    <AlertDialogFooter>
-                                    <AlertDialogCancel>Cancel·lar</AlertDialogCancel>
-                                    <AlertDialogAction onClick={() => handleDeleteAlbaran(albaran.id, albaran.albaranNumber)} className="bg-destructive hover:bg-destructive/90">Eliminar</AlertDialogAction>
-                                    </AlertDialogFooter>
-                                </AlertDialogContent>
-                                </AlertDialog>
-                            </div>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Estàs segur?</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Aquesta acció no es pot desfer. S'eliminarà l'albarà <strong>#{albaran.albaranNumber}</strong> de l'historial.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancel·lar</AlertDialogCancel>
+                                  <AlertDialogAction onClick={() => handleDeleteAlbaran(albaran.id, albaran.albaranNumber)} className="bg-destructive hover:bg-destructive/90">Eliminar</AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          </div>
                         </TableCell>
-                        </TableRow>
+                      </TableRow>
                     )) : (
-                        <TableRow>
-                        <TableCell colSpan={7} className="h-24 text-center">
-                            No s'ha generat cap albarà encara.
+                      <TableRow>
+                        <TableCell colSpan={7} className="h-32 text-center text-muted-foreground italic">
+                          No hi ha cap albarà facturat encara.
                         </TableCell>
-                        </TableRow>
+                      </TableRow>
                     )}
-                    </TableBody>
+                  </TableBody>
                 </Table>
-            </div>
+              </div>
             </CardContent>
-        </Card>
-        </div>
+          </Card>
+        </section>
+      </div>
     </AdminGate>
   )
 }
