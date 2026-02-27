@@ -60,6 +60,8 @@ export interface Albaran {
   totalAmount: number;
   status: 'pendent' | 'facturat';
   updatedAt?: string;
+  employeeId?: string;
+  employeeName?: string;
 }
 
 export interface Quote {

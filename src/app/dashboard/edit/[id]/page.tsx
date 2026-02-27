@@ -184,6 +184,8 @@ export default function EditServicePage() {
             });
         }
 
+        const employeeNameStr = selectedEmployee ? `${selectedEmployee.firstName} ${selectedEmployee.lastName}` : '';
+
         const updatedData: Partial<ServiceRecord> = {
             arrivalDateTime,
             departureDateTime,
@@ -193,7 +195,7 @@ export default function EditServicePage() {
             customerId,
             customerName: selectedCustomer?.name || '',
             employeeId: employeeId,
-            employeeName: selectedEmployee ? `${selectedEmployee.firstName} ${selectedEmployee.lastName}` : '',
+            employeeName: employeeNameStr,
             serviceHourlyRate: Number(serviceHourlyRate) || undefined,
             media,
             albarans: albarans.filter(a => a.trim() !== ''),
@@ -208,7 +210,7 @@ export default function EditServicePage() {
         // 1. Actualitzar el registre de servei
         await setDoc(serviceDocRef, updatedData, { merge: true });
 
-        // 2. Crear/Actualitzar l'Albarà 1:1 (L'ID de l'albarà és el mateix que el del servei)
+        // 2. Crear/Actualitzar l'Albarà 1:1
         const { totalGeneral } = calculateTotalAmount([ { ...updatedData, id: serviceId } as ServiceRecord ], employees || []);
         const albaranRef = doc(firestore, 'albarans', serviceId);
         const albaranData: Albaran = {
@@ -222,6 +224,8 @@ export default function EditServicePage() {
             serviceRecordIds: [serviceId],
             totalAmount: totalGeneral,
             status: (service?.status as any) || 'pendent',
+            employeeId: employeeId,
+            employeeName: employeeNameStr,
         };
         await setDoc(albaranRef, albaranData);
 

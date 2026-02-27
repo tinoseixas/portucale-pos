@@ -9,7 +9,7 @@ import type { Albaran } from '@/lib/types'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
-import { Eye, FileArchive, CreditCard, Clock, CheckCircle2, Loader2, Trash2 } from 'lucide-react'
+import { Eye, FileArchive, CreditCard, Clock, CheckCircle2, Loader2, Trash2, User } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { ca } from 'date-fns/locale'
 import { AdminGate } from '@/components/AdminGate'
@@ -78,19 +78,28 @@ export default function AlbaransHistoryPage() {
             <Card className="border-primary/20 bg-primary/5">
               <CardHeader>
                 <CardTitle className="text-primary flex items-center gap-2">Albarans Pendents de Facturar</CardTitle>
-                <CardDescription>Cada servei finalitzat apareix aquí automàticament.</CardDescription>
+                <CardDescription>Supervisió de serveis realitzats per tots els tècnics.</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="overflow-x-auto">
                     <Table>
                         <TableHeader>
-                            <TableRow><TableHead>Nº Albarà</TableHead><TableHead>Data</TableHead><TableHead>Client</TableHead><TableHead>Obra</TableHead><TableHead>Total</TableHead><TableHead className="text-right">Accions</TableHead></TableRow>
+                            <TableRow>
+                                <TableHead>Nº Albarà</TableHead>
+                                <TableHead>Data</TableHead>
+                                <TableHead>Tècnic</TableHead>
+                                <TableHead>Client</TableHead>
+                                <TableHead>Obra</TableHead>
+                                <TableHead>Total</TableHead>
+                                <TableHead className="text-right">Accions</TableHead>
+                            </TableRow>
                         </TableHeader>
                         <TableBody>
                         {pendingAlbarans.map(albaran => (
                             <TableRow key={albaran.id}>
                                 <TableCell className="font-black">#{String(albaran.albaranNumber).padStart(4, '0')}</TableCell>
                                 <TableCell className="text-xs">{format(parseISO(albaran.createdAt), 'dd/MM/yyyy', { locale: ca })}</TableCell>
+                                <TableCell className="text-xs flex items-center gap-1"><User className="h-3 w-3" /> {albaran.employeeName || 'N/A'}</TableCell>
                                 <TableCell className="font-bold">{albaran.customerName}</TableCell>
                                 <TableCell className="italic">{albaran.projectName}</TableCell>
                                 <TableCell className="font-black text-primary">{albaran.totalAmount.toFixed(2)} €</TableCell>
@@ -135,12 +144,22 @@ export default function AlbaransHistoryPage() {
               <CardHeader><CardTitle>Historial de Documents Facturats</CardTitle></CardHeader>
               <CardContent>
                 <Table>
-                    <TableHeader><TableRow><TableHead>Nº Albarà</TableHead><TableHead>Data</TableHead><TableHead>Client</TableHead><TableHead>Total</TableHead><TableHead className="text-right">Accions</TableHead></TableRow></TableHeader>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>Nº Albarà</TableHead>
+                            <TableHead>Data</TableHead>
+                            <TableHead>Tècnic</TableHead>
+                            <TableHead>Client</TableHead>
+                            <TableHead>Total</TableHead>
+                            <TableHead className="text-right">Accions</TableHead>
+                        </TableRow>
+                    </TableHeader>
                     <TableBody>
                         {historyAlbarans.map(albaran => (
                             <TableRow key={albaran.id}>
                                 <TableCell className="font-bold">#{String(albaran.albaranNumber).padStart(4, '0')}</TableCell>
                                 <TableCell>{format(parseISO(albaran.createdAt), 'dd/MM/yyyy')}</TableCell>
+                                <TableCell className="text-xs">{albaran.employeeName || 'N/A'}</TableCell>
                                 <TableCell>{albaran.customerName}</TableCell>
                                 <TableCell>{albaran.totalAmount.toFixed(2)} €</TableCell>
                                 <TableCell className="text-right">

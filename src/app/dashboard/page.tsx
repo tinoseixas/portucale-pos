@@ -1,3 +1,4 @@
+
 'use client'
 
 import { useState, useMemo, useEffect } from 'react'
@@ -56,15 +57,10 @@ export default function DashboardPage() {
   const [isLoadingData, setIsLoadingData] = useState(true);
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
 
-  const [selectedUser, setSelectedUser] = useState<string>('loading');
+  // Default to 'all' to see everyone's work immediately
+  const [selectedUser, setSelectedUser] = useState<string>('all');
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
   const [selectedProject, setSelectedProject] = useState<string>('all');
-
-  useEffect(() => {
-    if (user && selectedUser === 'loading') {
-      setSelectedUser(user.uid);
-    }
-  }, [user, selectedUser]);
 
   useEffect(() => {
     if (isUserLoading || !firestore || !user) {
@@ -101,7 +97,7 @@ export default function DashboardPage() {
 
   const filteredServices = useMemo(() => {
     let filtered = allServices.filter(service => {
-        const userMatch = selectedUser === 'all' || service.employeeId === selectedUser || selectedUser === 'loading';
+        const userMatch = selectedUser === 'all' || service.employeeId === selectedUser;
         const dateMatch = !selectedDate || isSameDay(parseISO(service.arrivalDateTime), selectedDate);
         const projectMatch = selectedProject === 'all' || service.projectName === selectedProject;
         return userMatch && dateMatch && projectMatch;
@@ -171,8 +167,8 @@ export default function DashboardPage() {
     <div className="space-y-8">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Hola, {getEmployeeName(user.uid).split(' ')[0]}</h1>
-          <p className="text-muted-foreground">Aquí tens els teus registres de servei.</p>
+          <h1 className="text-3xl font-bold">Panell de Control</h1>
+          <p className="text-muted-foreground">Gestió global de registres de servei.</p>
         </div>
         <div className="hidden md:flex items-center gap-2">
             <Button asChild className="bg-accent hover:bg-accent/90 text-accent-foreground">
@@ -194,8 +190,8 @@ export default function DashboardPage() {
             <CardHeader>
                 <div className="flex justify-between items-start flex-wrap gap-4">
                     <div>
-                        <CardTitle>{selectedUser === user.uid ? 'Els Meus Registres' : 'Tots els Registres'}</CardTitle>
-                        <CardDescription>Visualitza i gestiona els serveis realitzats.</CardDescription>
+                        <CardTitle>{selectedUser === 'all' ? 'Tots els Registres' : `Registres de ${getEmployeeName(selectedUser)}`}</CardTitle>
+                        <CardDescription>Visualitza i gestiona els serveis de tota l'equip.</CardDescription>
                     </div>
                     {selectedRows.length > 0 && (
                         <AlertDialog>
@@ -256,8 +252,8 @@ export default function DashboardPage() {
                     </SelectContent>
                     </Select>
                     
-                    {(selectedUser !== user.uid || selectedDate || selectedProject !== 'all') && (
-                    <Button variant="ghost" onClick={() => { setSelectedUser(user.uid); setSelectedDate(undefined); setSelectedProject('all'); }}>
+                    {(selectedUser !== 'all' || selectedDate || selectedProject !== 'all') && (
+                    <Button variant="ghost" onClick={() => { setSelectedUser('all'); setSelectedDate(undefined); setSelectedProject('all'); }}>
                         Netejar Filtres
                     </Button>
                     )}
