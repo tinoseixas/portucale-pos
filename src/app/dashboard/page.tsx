@@ -1,13 +1,14 @@
+
 'use client'
 
 import { useState, useMemo, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
-import { PlusCircle, Calendar as CalendarIcon, User, Edit, Trash2, Briefcase } from 'lucide-react'
-import type { ServiceRecord, Employee } from '@/lib/types'
+import { PlusCircle, Calendar as CalendarIcon, User, Edit, Trash2, Briefcase, AlertCircle, ArrowRight } from 'lucide-react'
+import type { ServiceRecord, Employee, Albaran } from '@/lib/types'
 import { useCollection, useUser, useFirestore, useMemoFirebase, deleteDocumentNonBlocking, useDoc } from '@/firebase';
-import { collection, query, orderBy, getDocs, collectionGroup, doc } from 'firebase/firestore';
+import { collection, query, orderBy, getDocs, collectionGroup, doc, where } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton'
 import { Card, CardHeader, CardContent, CardDescription, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
@@ -30,6 +31,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { useToast } from "@/hooks/use-toast"
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 
 const ADMIN_EMAIL = 'tinoseixas@gmail.com';
 
@@ -75,6 +77,14 @@ export default function DashboardPage() {
   const [selectedUser, setSelectedUser] = useState<string>('all');
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
   const [selectedProject, setSelectedProject] = useState<string>('all');
+
+  // Pending albarans query
+  const pendingAlbaransQuery = useMemoFirebase(() => {
+    if (!firestore || !isAdmin) return null;
+    return query(collection(firestore, 'albarans'), where('status', '==', 'pendent'));
+  }, [firestore, isAdmin]);
+  
+  const { data: pendingAlbarans } = useCollection<Albaran>(pendingAlbaransQuery);
 
   useEffect(() => {
     if (isUserLoading || isLoadingProfile || !firestore) return;
@@ -207,6 +217,21 @@ export default function DashboardPage() {
             </Button>
         </div>
       </div>
+
+      {isAdmin && pendingAlbarans && pendingAlbarans.length > 0 && (
+        <Alert variant="destructive" className="bg-destructive/10 border-destructive/20 text-destructive-foreground animate-in fade-in slide-in-from-top-4 duration-500">
+          <AlertCircle className="h-5 w-5" />
+          <AlertTitle className="font-bold">Albarans Pendents de Facturar</AlertTitle>
+          <AlertDescription className="flex items-center justify-between flex-wrap gap-4 mt-2">
+            <span>Tens <strong>{pendingAlbarans.length}</strong> albarà(ns) que encara no han estat convertits en factura.</span>
+            <Button size="sm" variant="destructive" asChild>
+              <Link href="/dashboard/albarans/pending">
+                Veure Llista <ArrowRight className="ml-2 h-4 w-4" />
+              </Link>
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
       
       {isLoadingData ? (
         <div className="space-y-4">

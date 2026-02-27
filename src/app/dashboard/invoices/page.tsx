@@ -43,13 +43,19 @@ function InvoicesPageContent() {
     const employeesQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'employees'), orderBy('firstName', 'asc')) : null, [firestore]);
     const { data: employees, isLoading: isLoadingEmployees } = useCollection<Employee>(employeesQuery);
 
-    // Auto-select customer from URL params
+    // Auto-select customer and albaran from URL params
     useEffect(() => {
         const customerIdParam = searchParams.get('customerId');
+        const albaranIdParam = searchParams.get('albaranId');
+
         if (customerIdParam && customers && selectedCustomerId === 'none') {
             setSelectedCustomerId(customerIdParam);
         }
-    }, [searchParams, customers, selectedCustomerId]);
+
+        if (albaranIdParam && albarans && selectedAlbaranIds.length === 0) {
+            setSelectedAlbaranIds([albaranIdParam]);
+        }
+    }, [searchParams, customers, albarans, selectedCustomerId, selectedAlbaranIds]);
 
     const availableAlbarans = useMemo(() => {
         if (!albarans || selectedCustomerId === 'none') return [];
@@ -69,11 +75,8 @@ function InvoicesPageContent() {
             return;
         }
 
-        toast({ title: `Important dades de ${selectedAlbaranIds.length} albarà(ns)...` });
-        
         const selectedAlbarans = albarans.filter(a => selectedAlbaranIds.includes(a.id));
         if (selectedAlbarans.length === 0) {
-            toast({ variant: 'destructive', title: 'Error', description: "No s'han trobat els albarans seleccionats." });
             return;
         }
 
