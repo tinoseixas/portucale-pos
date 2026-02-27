@@ -25,7 +25,6 @@ export function AdminGate({ children, pageTitle, pageDescription }: AdminGatePro
   }, []);
 
   if (!isClient || isUserLoading) {
-    // Render a loading state on the server and during initial client-side loading
     return (
         <div className="flex items-center justify-center pt-16">
             <Card className="w-full max-w-md">
@@ -44,14 +43,12 @@ export function AdminGate({ children, pageTitle, pageDescription }: AdminGatePro
     );
   }
 
-  // Once loading is complete, check for the user and their email
-  const isAdmin = user && user.email === ADMIN_EMAIL;
+  const isAdmin = user && user.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase();
 
   if (isAdmin) {
     return <>{children}</>;
   }
 
-  // If not admin, show the access denied message
   return (
     <div className="flex items-center justify-center pt-16">
       <Card className="w-full max-w-md text-center">
@@ -61,7 +58,7 @@ export function AdminGate({ children, pageTitle, pageDescription }: AdminGatePro
             </div>
           <CardTitle>Accés Denegat</CardTitle>
           <CardDescription>
-            No tens permisos per accedir a aquesta secció. Si us plau, inicia sessió amb un compte d'administrador.
+            No tens permisos per accedir a aquesta secció. Si us plau, inicia sessió amb um compte d'administrador ({ADMIN_EMAIL}).
           </CardDescription>
         </CardHeader>
         {!user && (

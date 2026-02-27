@@ -53,7 +53,7 @@ export default function DashboardPage() {
   const router = useRouter();
   const { toast } = useToast();
 
-  const isAdmin = useMemo(() => user?.email === ADMIN_EMAIL, [user]);
+  const isAdmin = useMemo(() => user?.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase(), [user]);
   
   const [allServices, setAllServices] = useState<ServiceRecord[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
@@ -99,10 +99,10 @@ export default function DashboardPage() {
 
         } catch (error) {
             console.error("Data fetch failed:", error);
-            if ((error as any)?.code === 'permission-denied' && isAdmin) {
+            if ((error as any)?.code === 'permission-denied') {
                 const contextualError = new FirestorePermissionError({
                     operation: 'list',
-                    path: 'serviceRecords (collectionGroup)',
+                    path: isAdmin ? 'serviceRecords (collectionGroup)' : `employees/${user.uid}/serviceRecords`,
                 });
                 errorEmitter.emit('permission-error', contextualError);
             }
