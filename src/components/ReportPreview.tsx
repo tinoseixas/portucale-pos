@@ -44,14 +44,13 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
     };
 
     return (
-        /* Container fixo de 210mm para simular folha A4 e evitar quebra em telemóvel */
         <div className="w-full overflow-x-auto bg-slate-100 p-4 sm:p-8">
             <div 
                 ref={ref} 
                 className="bg-white p-12 font-sans text-slate-900 printable-area mx-auto shadow-2xl"
                 style={{ width: '210mm', minHeight: '297mm' }}
             >
-                {/* Cabeçalho Horizontal Estilo Desktop */}
+                {/* Capçalera Estil Professional */}
                 <header className="flex justify-between items-start border-b-4 border-slate-900 pb-10 mb-10">
                     <div className="flex gap-8">
                         <div className="flex items-center justify-center w-20 h-20 rounded-2xl bg-primary text-primary-foreground shadow-lg">
@@ -80,7 +79,7 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
                     </div>
                 </header>
 
-                {/* Grelha de Informação em 2 Colunas */}
+                {/* Graella d'Informació */}
                 <div className="grid grid-cols-2 gap-16 mb-12">
                     <section className="bg-slate-50 p-8 rounded-2xl border-2 border-slate-100">
                         <h3 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
@@ -117,7 +116,7 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
                     </section>
                 </div>
                 
-                {/* Tabela de Tarefas - Formato Largo */}
+                {/* Taula de Tasques */}
                 {sortedServices.length > 0 && (
                     <section className="mb-12">
                         <h3 className="text-base font-black text-slate-900 mb-6 flex items-center gap-3">
@@ -162,7 +161,7 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
                     </section>
                 )}
                 
-                {/* Tabela de Preços e Materiais */}
+                {/* Taula de Preus i Materials */}
                 {showPricing && (
                     <section className="mb-12 pt-10 border-t-4 border-slate-100">
                         <h3 className="text-base font-black text-slate-900 mb-6 flex items-center gap-3">
@@ -198,7 +197,7 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
                             </tbody>
                         </table>
 
-                        {/* Caixa de Totais Posicionada à Direita */}
+                        {/* Caixa de Totals */}
                         <div className="flex justify-end mt-10">
                             <div className="w-96 space-y-4 bg-slate-900 text-white p-8 rounded-2xl shadow-xl">
                                 <div className="flex justify-between text-sm text-slate-400 font-bold uppercase tracking-widest">
@@ -218,7 +217,7 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
                     </section>
                 )}
 
-                {/* Assinaturas em Grelha Horizontal (Desktop) */}
+                {/* Signatures */}
                 {services.some(s => s.customerSignatureDataUrl) && (
                     <section className="mt-16 pt-10 border-t-4 border-slate-100">
                         <h3 className="text-xs font-black text-slate-400 uppercase tracking-[0.3em] mb-10 border-b-2 pb-4">Confirmació de Recepció de Treballs</h3>
@@ -242,7 +241,7 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
                     </section>
                 )}
 
-                {/* Galeria de Imagens em Grelha 4 Colunas */}
+                {/* Galeria d'Imatges */}
                 {allMedia.length > 0 && (
                     <section className="mt-16 pt-12 border-t-4 border-slate-100 page-break-before-always">
                         <h3 className="text-lg font-black text-slate-900 mb-10 uppercase tracking-widest flex items-center gap-3">
@@ -267,7 +266,7 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
                     </section>
                 )}
 
-                {/* Rodapé do Documento */}
+                {/* Peu de Pàgina */}
                 <footer className="mt-24 pt-10 border-t-2 border-slate-200 flex justify-between items-end text-slate-400">
                     <div className="text-[11px] space-y-2 font-medium">
                         <p className="font-black text-slate-500 text-xs">TS SERVEIS - Solucions Tècniques i Manteniment</p>

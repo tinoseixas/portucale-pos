@@ -73,8 +73,8 @@ export default function UsersPage() {
     deleteDocumentNonBlocking(employeeDocRef);
     
     toast({
-      title: 'Utilizador Eliminado',
-      description: `O utilizador ${employeeName} foi eliminado com sucesso.`,
+      title: 'Usuari Eliminat',
+      description: `L'usuari ${employeeName} ha estat eliminat correctament.`,
     });
   };
 

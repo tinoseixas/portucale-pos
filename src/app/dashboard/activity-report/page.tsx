@@ -114,26 +114,26 @@ export default function ActivityReportPage() {
   const isLoading = isLoadingEmployees || isLoadingServices || isUserLoading
 
   return (
-    <AdminGate pageTitle="Relatório de Atividade" pageDescription="Análise detalhada das horas trabalhadas.">
+    <AdminGate pageTitle="Informe d'Activitat" pageDescription="Anàlisi detallada de les hores treballades.">
       <div className="space-y-8">
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
                 <LineChart className="h-6 w-6" />
-                Relatório de Atividade de Funcionários
+                Informe d'Activitat dels Treballadors
             </CardTitle>
-            <CardDescription>Filtre por funcionário e intervalo de datas para ver o total de horas trabalhadas.</CardDescription>
+            <CardDescription>Filtra per treballador i interval de dates per veure el total d'hores treballades.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
              <div className="flex flex-col sm:flex-row gap-4 flex-wrap">
                 <div className="flex-1 space-y-2">
-                    <label className="text-sm font-medium flex items-center gap-2"><User className="h-4 w-4" /> Funcionário</label>
+                    <label className="text-sm font-medium flex items-center gap-2"><User className="h-4 w-4" /> Treballador</label>
                     <Select value={selectedEmployeeId} onValueChange={setSelectedEmployeeId} disabled={isLoadingEmployees}>
                       <SelectTrigger>
-                          <SelectValue placeholder="Carregando funcionários..." />
+                          <SelectValue placeholder="Carregant treballadors..." />
                       </SelectTrigger>
                       <SelectContent>
-                          <SelectItem value="all">Todos os Funcionários</SelectItem>
+                          <SelectItem value="all">Tots els Treballadors</SelectItem>
                           {employees?.map(emp => (
                           <SelectItem key={emp.id} value={emp.id}>{emp.firstName} {emp.lastName}</SelectItem>
                           ))}
@@ -141,7 +141,7 @@ export default function ActivityReportPage() {
                     </Select>
                 </div>
                 <div className="flex-1 space-y-2">
-                     <label className="text-sm font-medium flex items-center gap-2"><CalendarIcon className="h-4 w-4" /> Intervalo de Datas</label>
+                     <label className="text-sm font-medium flex items-center gap-2"><CalendarIcon className="h-4 w-4" /> Interval de Dates</label>
                     <Popover>
                         <PopoverTrigger asChild>
                         <Button
@@ -162,7 +162,7 @@ export default function ActivityReportPage() {
                                 format(dateRange.from, "LLL dd, y")
                             )
                             ) : (
-                            <span>Escolha um intervalo</span>
+                            <span>Tria un interval</span>
                             )}
                         </Button>
                         </PopoverTrigger>
@@ -182,7 +182,7 @@ export default function ActivityReportPage() {
                  <div className="flex items-end">
                     <Button variant="ghost" onClick={clearFilters} className="w-full sm:w-auto">
                         <X className="mr-2 h-4 w-4" />
-                        Limpar Filtros
+                        Netejar Filtres
                     </Button>
                 </div>
             </div>
@@ -190,16 +190,16 @@ export default function ActivityReportPage() {
         </Card>
 
         {isLoading ? (
-          <p>A carregar dados do relatório...</p>
+          <p>Carregant dades de l'informe...</p>
         ) : (
           <>
             <Card>
                 <CardHeader>
-                    <CardTitle>Resumo Total</CardTitle>
+                    <CardTitle>Resum Total</CardTitle>
                 </CardHeader>
                 <CardContent>
                     <div className="text-4xl font-bold text-primary">{calculations.total.toFixed(2)}</div>
-                    <p className="text-muted-foreground">horas totais no período selecionado.</p>
+                    <p className="text-muted-foreground">hores totals en el període seleccionat.</p>
                 </CardContent>
             </Card>
 
@@ -207,7 +207,7 @@ export default function ActivityReportPage() {
                 {/* Daily */}
                 <Card className="flex flex-col">
                     <CardHeader>
-                        <CardTitle>Horas por Dia</CardTitle>
+                        <CardTitle>Horas per Dia</CardTitle>
                     </CardHeader>
                     <CardContent className="flex-1 overflow-y-auto">
                        {Object.keys(calculations.daily).length > 0 ? (
@@ -219,33 +219,33 @@ export default function ActivityReportPage() {
                                 </div>
                             ))}
                         </div>
-                       ) : <p className="text-sm text-muted-foreground text-center py-4">Sem dados diários para mostrar.</p>}
+                       ) : <p className="text-sm text-muted-foreground text-center py-4">Sense dades diàries per mostrar.</p>}
                     </CardContent>
                 </Card>
 
                 {/* Weekly */}
                 <Card className="flex flex-col">
                     <CardHeader>
-                        <CardTitle>Horas por Semana</CardTitle>
+                        <CardTitle>Horas per Setmana</CardTitle>
                     </CardHeader>
                      <CardContent className="flex-1 overflow-y-auto">
                        {Object.keys(calculations.weekly).length > 0 ? (
                          <div className="space-y-2">
                             {Object.entries(calculations.weekly).sort(([weekA], [weekB]) => weekA.localeCompare(weekB)).map(([week, minutes]) => (
                                 <div key={week} className="flex justify-between text-sm p-2 rounded-md bg-muted/50">
-                                    <span>Semana {week.split('-W')[1]} de {week.split('-W')[0]}</span>
+                                    <span>Setmana {week.split('-W')[1]} de {week.split('-W')[0]}</span>
                                     <span className="font-semibold">{formatMinutes(minutes)}</span>
                                 </div>
                             ))}
                         </div>
-                       ) : <p className="text-sm text-muted-foreground text-center py-4">Sem dados semanais para mostrar.</p>}
+                       ) : <p className="text-sm text-muted-foreground text-center py-4">Sense dades setmanals per mostrar.</p>}
                     </CardContent>
                 </Card>
                 
                 {/* Monthly */}
                 <Card className="flex flex-col">
                     <CardHeader>
-                        <CardTitle>Horas por Mês</CardTitle>
+                        <CardTitle>Horas per Mes</CardTitle>
                     </CardHeader>
                     <CardContent className="flex-1 overflow-y-auto">
                        {Object.keys(calculations.monthly).length > 0 ? (
@@ -257,7 +257,7 @@ export default function ActivityReportPage() {
                                 </div>
                             ))}
                         </div>
-                       ) : <p className="text-sm text-muted-foreground text-center py-4">Sem dados mensais para mostrar.</p>}
+                       ) : <p className="text-sm text-muted-foreground text-center py-4">Sense dades mensuals per mostrar.</p>}
                     </CardContent>
                 </Card>
             </div>

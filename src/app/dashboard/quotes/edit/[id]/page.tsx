@@ -1,4 +1,3 @@
-
 'use client'
 
 import { useMemo, useRef, useState, useEffect } from 'react'
@@ -102,19 +101,19 @@ export default function EditQuotePage() {
     const handleLoadPeralbaOffer = () => {
         setItems([...PERALBA_ITEMS]);
         setNotes(DEFAULT_NOTES);
-        toast({ title: "Oferta Carregada", description: "Artigos da Casa C adicionados." });
+        toast({ title: "Oferta Carregada", description: "Articles de la Casa C afegits." });
     };
 
     const handleLoadBuildingSummary = () => {
         setItems([...BUILDING_SUMMARY_ITEMS]);
         setNotes(DEFAULT_NOTES);
-        toast({ title: "Resum Carregat", description: "Resumo consolidado adicionado." });
+        toast({ title: "Resum Carregat", description: "Resum consolidat afegit." });
     };
 
     const handleLoadHidrosanitaria = () => {
         setItems([...HIDROSANITARIA_ITEMS]);
         setNotes(HIDROSANITARIA_NOTES);
-        toast({ title: "Proposta Carregada", description: "Instal·lacions hidrosanitàries adicionades." });
+        toast({ title: "Proposta Carregada", description: "Instal·lacions hidrosanitàries afegides." });
     };
 
     const handleImageUploadClick = (index: number) => {
@@ -194,7 +193,7 @@ export default function EditQuotePage() {
             toast({
                 variant: 'destructive',
                 title: 'Error',
-                description: "Verifica os dados numéricos e tenta novamente.",
+                description: "Verifica les dades numèriques i torna-ho a intentar.",
             });
         } finally {
             setIsSaving(false);
@@ -209,7 +208,7 @@ export default function EditQuotePage() {
     }
 
     if (!quote) {
-        return <p>No s'ha trobat o pressupost.</p>
+        return <p>No s'ha trobat el pressupost.</p>
     }
 
     return (
@@ -226,7 +225,7 @@ export default function EditQuotePage() {
                     <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center sm:justify-between gap-4">
                         <div>
                             <CardTitle>Editar Pressupost #{String(quote.quoteNumber).padStart(4, '0')}</CardTitle>
-                            <CardDescription>Modifica os detalhes do orçamento e use os modelos rápidos.</CardDescription>
+                            <CardDescription>Modifica els detalls del pressupost i usa els models ràpids.</CardDescription>
                         </div>
                         <div className="flex gap-2 flex-wrap">
                             <Button variant="outline" onClick={handleLoadHidrosanitaria} className="bg-cyan-500/10 text-cyan-700 hover:bg-cyan-500/20">
@@ -268,12 +267,12 @@ export default function EditQuotePage() {
                         </div>
 
                         <div className="space-y-4 rounded-lg border p-4">
-                           <Label className="text-base font-semibold">Artigos do Pressuposto ({items.length})</Label>
+                           <Label className="text-base font-semibold">Articles del Pressupost ({items.length})</Label>
                            <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2">
                                 {items.map((item, index) => (
                                     <div key={index} className="space-y-2 p-3 rounded-md bg-muted/30 border border-muted-foreground/10">
                                         <Input 
-                                            placeholder="Descripció do artigo"
+                                            placeholder="Descripció de l'article"
                                             value={item.description}
                                             onChange={(e) => handleItemChange(index, 'description', e.target.value)}
                                             className="bg-background"
@@ -326,7 +325,7 @@ export default function EditQuotePage() {
                                 ))}
                            </div>
                            <Button type="button" variant="outline" onClick={addItem} className="w-full border-dashed">
-                               <Plus className="mr-2 h-4 w-4" /> Afegir Artigo Manualmente
+                               <Plus className="mr-2 h-4 w-4" /> Afegir Article Manualment
                            </Button>
                         </div>
                         
