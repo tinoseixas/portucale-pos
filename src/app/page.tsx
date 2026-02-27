@@ -46,7 +46,7 @@ export default function Home() {
       
       const employeeSnap = await getDoc(employeeRef);
 
-      // Sempre forçar admin para o email principal no login
+      // Sempre forçar admin para o email principal no login para garantir permissões
       await setDoc(employeeRef, {
           id: loggedInUser.uid,
           employeeId: employeeSnap.exists() ? (employeeSnap.data().employeeId || loggedInUser.uid.substring(0, 8)) : loggedInUser.uid.substring(0, 8),

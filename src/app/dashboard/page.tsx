@@ -113,13 +113,6 @@ export default function DashboardPage() {
 
         } catch (error) {
             console.error("Data fetch failed:", error);
-            if ((error as any)?.code === 'permission-denied') {
-                const contextualError = new FirestorePermissionError({
-                    operation: 'list',
-                    path: isAdmin ? 'serviceRecords (collectionGroup)' : `employees/${user.uid}/serviceRecords`,
-                });
-                errorEmitter.emit('permission-error', contextualError);
-            }
             setAllServices([]);
             setEmployees([]);
         } finally {
