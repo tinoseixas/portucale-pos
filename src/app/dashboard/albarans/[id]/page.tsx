@@ -1,3 +1,4 @@
+
 'use client'
 
 import { useState, useMemo, useRef, useEffect } from 'react'
@@ -104,18 +105,19 @@ export default function AlbaranDetailPage() {
         if (!reportElement) return;
 
         setIsGenerating(true);
-        toast({ title: 'Generant PDF...', description: 'Això pot trigar un moment.' });
+        toast({ title: 'Generant PDF optimitzat...', description: 'Processant imatges per reduir el pes.' });
 
         try {
             const canvas = await html2canvas(reportElement, {
-                scale: 1.5, // Reduït per millorar la velocitat i mida
+                scale: 1.2, // Reduït per minimitzar pes de fitxer
                 useCORS: true,
                 logging: false,
+                backgroundColor: '#ffffff'
             });
             
-            // Format JPEG amb compressió 0.7 per reduir mida
-            const imgData = canvas.toDataURL('image/jpeg', 0.7);
-            const pdf = new jsPDF('p', 'mm', 'a4');
+            // Compressió JPEG al 60% per fitxers lleugers
+            const imgData = canvas.toDataURL('image/jpeg', 0.6);
+            const pdf = new jsPDF('p', 'mm', 'a4', true); // compress: true
             const pdfWidth = pdf.internal.pageSize.getWidth();
             const pdfHeight = pdf.internal.pageSize.getHeight();
             const canvasWidth = canvas.width;
@@ -127,19 +129,19 @@ export default function AlbaranDetailPage() {
             let heightLeft = imgHeight;
             let position = 0;
 
-            pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
+            pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight, undefined, 'FAST');
             heightLeft -= pdfHeight;
 
             while (heightLeft > 0) {
                 position = heightLeft - imgHeight;
                 pdf.addPage();
-                pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
+                pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight, undefined, 'FAST');
                 heightLeft -= pdfHeight;
             }
             
             pdf.save(`Albara-${String(albaran?.albaranNumber).padStart(4, '0')}.pdf`);
             
-            toast({ title: 'PDF Generat!', description: 'L\'exportació s\'ha completat correctament.' });
+            toast({ title: 'PDF Generat!', description: 'L\'enviament serà molt més ràpid ara.' });
 
         } catch (error) {
             console.error("Error en generar el PDF:", error);
@@ -162,14 +164,8 @@ export default function AlbaranDetailPage() {
 
     const handleDeleteAlbaran = () => {
         if (!albaranDocRef) return;
-        
         deleteDocumentNonBlocking(albaranDocRef);
-
-        toast({
-            title: 'Albarà Eliminat',
-            description: `L'albarà #${albaran?.albaranNumber} ha estat eliminat de l'historial.`,
-        });
-
+        toast({ title: 'Albarà Eliminat', description: `L'albarà #${albaran?.albaranNumber} ha estat esborrat.` });
         router.push('/dashboard/albarans');
     }
     
@@ -194,15 +190,15 @@ export default function AlbaranDetailPage() {
                         <AlertDialog>
                             <AlertDialogTrigger asChild>
                                 <Button variant="destructive">
-                                    <Trash2 className="mr-2 h-4 w-4" /> Eliminar Albarà
+                                    <Trash2 className="mr-2 h-4 w-4" /> Eliminar Document
                                 </Button>
                             </AlertDialogTrigger>
                             <AlertDialogContent>
                                 <AlertDialogHeader>
-                                <AlertDialogTitle>Estàs segur que vols eliminar l'albarà?</AlertDialogTitle>
+                                <AlertDialogTitle>Vols eliminar l'albarà?</AlertDialogTitle>
                                 <AlertDialogDescription>
-                                    Aquesta acció no es pot desfer. S'eliminarà l'albarà <strong>#{albaran.albaranNumber}</strong> de l'historial. 
-                                    Els registres de servei originals no seran afectats.
+                                    Aquesta acció eliminarà l'albarà <strong>#{albaran.albaranNumber}</strong> de l'historial. 
+                                    Els registres de servei originals no es veuran afectats.
                                 </AlertDialogDescription>
                                 </AlertDialogHeader>
                                 <AlertDialogFooter>
@@ -215,19 +211,20 @@ export default function AlbaranDetailPage() {
                         <Button
                             onClick={handleExportPDF}
                             disabled={isGenerating}
+                            className="bg-primary hover:bg-primary/90 shadow-md font-bold"
                         >
                             {isGenerating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileDown className="mr-2 h-4 w-4" />}
-                            Exportar PDF
+                            Exportar PDF Lleuger
                         </Button>
                     </div>
                 </div>
                 
-                <Card>
-                    <CardHeader>
+                <Card className="shadow-2xl border-none">
+                    <CardHeader className="bg-slate-900 text-white rounded-t-lg">
                         <CardTitle>Albarà #{String(albaran.albaranNumber).padStart(4, '0')}</CardTitle>
-                        <CardDescription>Generat per a l'obra "{albaran.projectName}" per al client "{albaran.customerName}".</CardDescription>
+                        <CardDescription className="text-slate-400">Projecte: {albaran.projectName} | Client: {albaran.customerName}</CardDescription>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent className="p-0">
                         <ReportPreview
                             ref={reportRef}
                             customer={customer}
