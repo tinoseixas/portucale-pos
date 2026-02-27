@@ -1,3 +1,4 @@
+
 'use client'
 
 import { useEffect, useState, useMemo, useRef } from 'react'
@@ -8,7 +9,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Clock, FileText, Camera, ArrowLeft, Save, Trash2, Hash, Plus, X, Video, Calendar as CalendarIcon, Info, Briefcase, AlertTriangle, Users, Package, Euro, MapPin, User as UserIcon, ImagePlus } from 'lucide-react'
+import { Clock, FileText, Camera, ArrowLeft, Save, Trash2, Hash, Plus, X, Video, Calendar as CalendarIcon, Info, Briefcase, AlertTriangle, Users, Package, Euro, MapPin, User as UserIcon, ImagePlus, PenTool, CheckCircle } from 'lucide-react'
 import { useToast } from "@/hooks/use-toast"
 import { useFirestore, useUser, useDoc, useMemoFirebase, useCollection } from '@/firebase'
 import { doc, deleteDoc, collection, query, getDocs, collectionGroup, orderBy } from 'firebase/firestore'
@@ -33,6 +34,7 @@ import { format, parseISO, isValid, differenceInMinutes } from 'date-fns'
 import { ca } from 'date-fns/locale'
 import { cn } from '@/lib/utils'
 import { CustomerSelectionDialog } from '@/components/CustomerSelectionDialog'
+import { ServiceConfirmationDialog } from '@/components/ServiceConfirmationDialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 
 type MediaFile = {
@@ -128,8 +130,6 @@ export default function EditServicePage() {
 
   const projectNamesQuery = useMemoFirebase(() => {
       if (!firestore) return null;
-      // This query can be slow, but it's for an auxiliary feature (autocomplete)
-      // It won't block the main functionality.
       return query(collectionGroup(firestore, 'serviceRecords'));
   }, [firestore]);
 
@@ -154,7 +154,10 @@ export default function EditServicePage() {
   const [customerId, setCustomerId] = useState<string>('');
   const [employeeId, setEmployeeId] = useState<string>('');
   const [isCustomerDialogOpen, setIsCustomerDialogOpen] = useState(false)
+  const [isSignatureDialogOpen, setIsSignatureDialogOpen] = useState(false)
   const [serviceHourlyRate, setServiceHourlyRate] = useState<number | ''>('');
+  const [customerSignatureName, setCustomerSignatureName] = useState('');
+  const [customerSignatureDataUrl, setCustomerSignatureDataUrl] = useState('');
 
 
   useEffect(() => {
@@ -185,6 +188,11 @@ export default function EditServicePage() {
       } else {
         setMaterials([{ description: '', quantity: 1, unitPrice: 0 }]);
       }
+      
+      // Set signature data if exists
+      setCustomerSignatureName(service.customerSignatureName || '');
+      setCustomerSignatureDataUrl(service.customerSignatureDataUrl || '');
+
       // Set service hourly rate
       const employee = employees?.find(e => e.id === service.employeeId);
       setServiceHourlyRate(service.serviceHourlyRate ?? employee?.hourlyRate ?? '');
@@ -212,10 +220,6 @@ export default function EditServicePage() {
                 if (file.type.startsWith('image/')) {
                     const compressedDataUrl = await resizeAndCompressImage(file);
                     return { type: 'image' as const, dataUrl: compressedDataUrl };
-                } else if (file.type.startsWith('video/')) {
-                    // Temporarily disabling video upload to avoid size issues
-                    toast({ variant: 'destructive', title: 'Càrrega de vídeo desactivada', description: 'La càrrega de vídeos està temporalment desactivada.' });
-                    return null;
                 }
                 return null;
             });
@@ -227,7 +231,6 @@ export default function EditServicePage() {
             console.error('Error processing files:', error);
             toast({ variant: 'destructive', title: 'Error', description: 'No s\'ha pogut processar un dels fitxers.' });
         } finally {
-            // Reset the input value to allow selecting the same file again
             e.target.value = '';
         }
     }
@@ -291,7 +294,6 @@ export default function EditServicePage() {
         console.error('Error processing material image:', error);
         toast({ variant: 'destructive', title: 'Error', description: "No s'ha pogut processar la imatge." });
       } finally {
-        // Reset the input and index
         e.target.value = '';
         setSelectedMaterialIndex(null);
       }
@@ -316,6 +318,12 @@ export default function EditServicePage() {
   const handleCustomerSelect = (customer: Customer) => {
     setCustomerId(customer.id);
     setIsCustomerDialogOpen(false);
+  };
+
+  const handleSignatureConfirm = (name: string, signatureDataUrl: string) => {
+    setCustomerSignatureName(name);
+    setCustomerSignatureDataUrl(signatureDataUrl);
+    toast({ title: "Signatura guardada!", description: "El client ha confirmat o servei." });
   };
 
 
@@ -360,11 +368,10 @@ export default function EditServicePage() {
       media: media, 
       albarans: filteredAlbarans,
       materials: processedMaterials,
+      customerSignatureName,
+      customerSignatureDataUrl,
       updatedAt: new Date().toISOString(),
     }
-
-    // Remove serviceHourlyRate before updating
-    delete updatedData.serviceHourlyRate;
 
     updateDocumentNonBlocking(serviceDocRef, updatedData)
 
@@ -388,7 +395,7 @@ export default function EditServicePage() {
        toast({
         variant: 'destructive',
         title: 'Error',
-        description: "No s'ha pogut eliminar el servei.",
+        description: "No s'ha pogut eliminar o servei.",
       });
     }
   }
@@ -403,7 +410,7 @@ export default function EditServicePage() {
   }
 
   if (!service) {
-    return <p>No s'ha trobat el servei o no tens permisos per veure'l.</p>
+    return <p>No s'ha trobat o servei o no tens permisos per veure'l.</p>
   }
 
   if (showCamera) {
@@ -422,6 +429,13 @@ export default function EditServicePage() {
           onOpenChange={setIsCustomerDialogOpen}
           customers={customers || []}
           onCustomerSelect={handleCustomerSelect}
+        />
+
+        <ServiceConfirmationDialog
+          open={isSignatureDialogOpen}
+          onOpenChange={setIsSignatureDialogOpen}
+          onConfirm={handleSignatureConfirm}
+          initialName={customerSignatureName || customerName}
         />
         
         <input
@@ -497,6 +511,16 @@ export default function EditServicePage() {
                               ))}
                           </SelectContent>
                       </Select>
+                  </div>
+                  <div className="space-y-2">
+                      <Label htmlFor="serviceHourlyRate" className="flex items-center gap-2"><Euro className="h-4 w-4 text-muted-foreground" /> Preu/Hora</Label>
+                      <Input 
+                        id="serviceHourlyRate" 
+                        type="number" 
+                        step="0.01"
+                        value={serviceHourlyRate} 
+                        onChange={(e) => setServiceHourlyRate(e.target.value === '' ? '' : parseFloat(e.target.value))} 
+                      />
                   </div>
               </div>
 
@@ -648,6 +672,38 @@ export default function EditServicePage() {
                 <p className="text-sm text-muted-foreground mt-2">{media.length} fitxer(s) seleccionat(s).</p>
               </div>
 
+              {/* Signature Section */}
+              <div className="space-y-4 rounded-lg border p-4 bg-muted/20">
+                  <div className="flex items-center justify-between">
+                      <Label className="flex items-center gap-2 text-base font-semibold">
+                        <PenTool className="h-5 w-5 text-muted-foreground" /> 
+                        Confirmació de Recepció
+                      </Label>
+                      {customerSignatureDataUrl && (
+                        <CheckCircle className="h-5 w-5 text-green-500" />
+                      )}
+                  </div>
+                  
+                  {customerSignatureDataUrl ? (
+                    <div className="space-y-2">
+                        <p className="text-sm font-medium">Signat por: <span className="text-primary">{customerSignatureName}</span></p>
+                        <div className="relative h-24 w-48 border rounded bg-white">
+                            <Image src={customerSignatureDataUrl} alt="Signature" fill style={{ objectFit: 'contain' }} />
+                        </div>
+                        <Button type="button" variant="ghost" size="sm" onClick={() => setIsSignatureDialogOpen(true)} className="text-xs">
+                            Canviar Signatura
+                        </Button>
+                    </div>
+                  ) : (
+                    <div className="text-center py-4">
+                        <Button type="button" variant="outline" onClick={() => setIsSignatureDialogOpen(true)}>
+                            <PenTool className="mr-2 h-4 w-4" /> Recollir Signatura Cliente
+                        </Button>
+                        <p className="text-[10px] text-muted-foreground mt-2 uppercase">Necessari per validar o treball en obra</p>
+                    </div>
+                  )}
+              </div>
+
 
               <div className="flex flex-col sm:flex-row justify-between items-center pt-4 gap-4">
                  <AlertDialog>
@@ -661,7 +717,7 @@ export default function EditServicePage() {
                     <AlertDialogHeader>
                       <AlertDialogTitle>Estàs segur?</AlertDialogTitle>
                       <AlertDialogDescription>
-                        Aquesta acció no es pot desfer. Això eliminarà permanentment el registre del servei.
+                        Aquesta acció no es pot desfer. Això eliminarà permanentment o registre do servei.
                       </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>

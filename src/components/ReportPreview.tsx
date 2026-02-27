@@ -1,8 +1,9 @@
+
 'use client'
 import React, { forwardRef, useMemo } from 'react';
 import Image from 'next/image';
 import { Separator } from '@/components/ui/separator';
-import { Calendar as CalendarIcon, Clock, User, Video } from 'lucide-react';
+import { Calendar as CalendarIcon, Clock, User, Video, CheckCircle } from 'lucide-react';
 import type { ServiceRecord, Customer, Employee } from '@/lib/types';
 import { format, differenceInMinutes, parseISO, isValid } from 'date-fns';
 import { ca } from 'date-fns/locale';
@@ -199,6 +200,27 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
               </section>
             )}
 
+            {/* Signature Display in Report */}
+            {services.some(s => s.customerSignatureDataUrl) && (
+                <section style={{ marginTop: '2rem', paddingTop: '1rem', borderTop: '1px solid #eee' }} className="page-break-inside-avoid">
+                    <h3 className="font-bold text-sm text-gray-500 uppercase mb-4">Confirmació de Recepció de Treballs</h3>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2rem' }}>
+                        {services.filter(s => s.customerSignatureDataUrl).map((s, idx) => (
+                            <div key={idx} style={{ border: '1px solid #f0f0f0', padding: '1rem', borderRadius: '0.5rem', minWidth: '200px' }}>
+                                <p style={{ fontSize: '0.75rem', color: '#666', marginBottom: '0.5rem' }}>Data: {format(parseISO(s.arrivalDateTime), 'dd/MM/yyyy')}</p>
+                                <div style={{ position: 'relative', height: '60px', width: '120px', marginBottom: '0.5rem' }}>
+                                    <Image src={s.customerSignatureDataUrl!} alt="Signature" fill style={{ objectFit: 'contain' }} />
+                                </div>
+                                <div style={{ borderTop: '1px solid #ccc', paddingTop: '0.25rem' }}>
+                                    <p style={{ fontSize: '0.875rem', fontWeight: 'bold' }}>{s.customerSignatureName}</p>
+                                    <p style={{ fontSize: '0.7rem', color: '#999' }}>CLIENT / RECEPTOR</p>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </section>
+            )}
+
             {allMedia.length > 0 && (
                 <section style={{ marginTop: '2rem', paddingTop: '1.5rem', borderTop: '1px solid #e5e7eb' }} className="page-break-before-always">
                     <h3 className="font-bold text-lg mb-4">Galeria de Multimèdia</h3>
@@ -228,5 +250,3 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
 })
 
 ReportPreview.displayName = "ReportPreview";
-
-    

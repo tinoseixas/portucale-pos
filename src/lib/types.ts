@@ -22,6 +22,8 @@ export interface ServiceRecord {
   updatedAt?: string;
   createdAt?: string; 
   albaranNumber?: number; // For grouping in invoices
+  customerSignatureName?: string; // Name of the person who signed
+  customerSignatureDataUrl?: string; // Base64 signature image
 }
 
 export interface Employee {

@@ -1,3 +1,4 @@
+
 import type { ServiceRecord, Employee } from '@/lib/types';
 import { parseISO, isValid, differenceInMinutes } from 'date-fns';
 
@@ -11,8 +12,13 @@ export function calculateLaborCost(services: ServiceRecord[], employees: Employe
     return services.reduce((total, service) => {
         const employee = employees.find(e => e.id === service.employeeId);
         
-        // Use employee's default rate. Fallback to hardcoded values if not set.
-        const hourlyRate = employee?.hourlyRate ?? (employee?.email === ADMIN_EMAIL ? ADMIN_HOURLY_RATE : USER_HOURLY_RATE);
+        // Priority:
+        // 1. Service-specific rate
+        // 2. Employee's default rate
+        // 3. Fallback hardcoded values
+        const hourlyRate = service.serviceHourlyRate ?? 
+                          employee?.hourlyRate ?? 
+                          (employee?.email === ADMIN_EMAIL ? ADMIN_HOURLY_RATE : USER_HOURLY_RATE);
         
         if (service.arrivalDateTime && service.departureDateTime) {
             const startDate = parseISO(service.arrivalDateTime);
