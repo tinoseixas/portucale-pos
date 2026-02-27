@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useRouter, useParams, useSearchParams } from 'next/navigation'
 import { useDoc, useUser, useFirestore, useMemoFirebase, deleteDocumentNonBlocking, useCollection } from '@/firebase'
 import { doc, collection, query, getDocs, collectionGroup, where } from 'firebase/firestore'
@@ -57,7 +57,7 @@ export default function InvoiceDetailPage() {
     }, [isUserLoading, user, router])
     
      useEffect(() => {
-        if (!firestore || !invoice?.sourceId) {
+        if (!firestore || !invoice) {
             setIsLoadingData(false);
             return;
         }
@@ -65,27 +65,37 @@ export default function InvoiceDetailPage() {
         const fetchData = async () => {
             setIsLoadingData(true);
             try {
+                // Carregar empleats un cop
                 const employeesSnap = await getDocs(query(collection(firestore, 'employees')));
                 const allEmployees = employeesSnap.docs.map(d => ({ id: d.id, ...d.data() } as Employee));
                 setEmployees(allEmployees);
 
-                const allServicesSnapshot = await getDocs(collectionGroup(firestore, 'serviceRecords'));
-                const allServicesData = allServicesSnapshot.docs.map(d => ({ id: d.id, ...d.data() } as ServiceRecord));
+                // Optimització: Només demanar serveis del client i obra de la factura
+                const optimizedQuery = query(
+                    collectionGroup(firestore, 'serviceRecords'),
+                    where('customerId', '==', invoice.customerId),
+                    where('projectName', '==', invoice.projectName)
+                );
+                
+                const servicesSnapshot = await getDocs(optimizedQuery);
+                const allServicesData = servicesSnapshot.docs.map(d => ({ id: d.id, ...d.data() } as ServiceRecord));
                 
                 if (invoice.sourceType === 'albaran' && invoice.sourceId) {
                     const sourceAlbaranIds = invoice.sourceId.split(',');
-                    const albaransSnapshot = await getDocs(query(collection(firestore, 'albarans'), where('__name__', 'in', sourceAlbaranIds)));
                     
+                    // Obtenir IDs de registres vinculats als albarans font
+                    const albaransSnapshot = await getDocs(query(collection(firestore, 'albarans'), where('__name__', 'in', sourceAlbaranIds)));
                     const serviceRecordIdsFromAlbarans = albaransSnapshot.docs.flatMap(doc => doc.data().serviceRecordIds);
                     
                     const invoiceServices = allServicesData.filter(s => serviceRecordIdsFromAlbarans.includes(s.id));
                     setServices(invoiceServices);
                 } else {
-                    setServices([]);
+                    // Si no hi ha albarans font, mostrem els serveis filtrats per projecte que coincideixin
+                    setServices(allServicesData);
                 }
             } catch (e) {
                 console.error("Error fetching invoice details:", e);
-                toast({ variant: 'destructive', title: 'Error', description: 'No s\'han pogut carregar els detalls dels serveis.' });
+                toast({ variant: 'destructive', title: 'Error', description: 'No s\'han pogut carregar els detalls optimitzats.' });
             } finally {
                 setIsLoadingData(false);
             }
@@ -133,7 +143,6 @@ export default function InvoiceDetailPage() {
             }
 
             pdf.save(`Factura-${String(invoice?.invoiceNumber).padStart(4, '0')}.pdf`);
-
             toast({ title: 'PDF Generat!', description: 'L\'exportació s\'ha completat correctament.' });
 
         } catch (error) {
@@ -180,7 +189,7 @@ export default function InvoiceDetailPage() {
     
 
     if (isLoading) {
-        return <div className="text-center p-8"><Loader2 className="h-8 w-8 animate-spin mx-auto" /> Carregant dades de la factura...</div>
+        return <div className="text-center p-12"><Loader2 className="h-10 w-10 animate-spin mx-auto text-primary" /><p className="mt-4 text-muted-foreground">Carregant dades de la factura...</p></div>
     }
     
     if (!invoice) {
@@ -188,7 +197,7 @@ export default function InvoiceDetailPage() {
     }
 
     return (
-        <AdminGate pageTitle="Detall de la Factura" pageDescription="Aquesta secció està protegida.">
+        <AdminGate pageTitle="Detall de la Factura" pageDescription="Consulta els detalls del document emès.">
             <div className="space-y-8 max-w-5xl mx-auto">
                 <div className="flex justify-between items-center flex-wrap gap-4">
                     <Button variant="ghost" onClick={() => router.push('/dashboard/invoices/history')}>

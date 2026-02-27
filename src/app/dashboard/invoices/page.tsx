@@ -3,14 +3,14 @@
 import { useMemo, useState, useEffect, useCallback, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useCollection, useUser, useFirestore, useMemoFirebase } from '@/firebase'
-import { collection, query, orderBy, doc, runTransaction, setDoc, getDocs, collectionGroup, where, writeBatch } from 'firebase/firestore'
-import type { Customer, Quote, Albaran, Employee, ServiceRecord, Invoice } from '@/lib/types'
+import { collection, query, orderBy, doc, runTransaction, getDocs, collectionGroup, where, writeBatch } from 'firebase/firestore'
+import type { Customer, Albaran, Employee, ServiceRecord, Invoice } from '@/lib/types'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Briefcase, FileDown, Loader2, Users, FileArchive, Save, Receipt, Copy, X } from 'lucide-react'
+import { Briefcase, FileDown, Loader2, Users, FileArchive, Save, AlertCircle } from 'lucide-react'
 import { InvoicePreview } from '@/components/InvoicePreview'
 import { useToast } from '@/hooks/use-toast'
 import { AdminGate } from '@/components/AdminGate'
@@ -58,7 +58,6 @@ function InvoicesPageContent() {
 
     const availableAlbarans = useMemo(() => {
         if (!albarans || selectedCustomerId === 'none') return [];
-        // Només mostrem els que estan PENDENTS per evitar facturar dues vegades el mateix
         return albarans.filter(a => a.customerId === selectedCustomerId && a.status === 'pendent');
     }, [albarans, selectedCustomerId]);
     
@@ -87,7 +86,13 @@ function InvoicesPageContent() {
                 return;
             }
 
-            const allServicesSnapshot = await getDocs(collectionGroup(firestore, 'serviceRecords'));
+            // Optimització: Només demanar els serveis relacionats amb el client seleccionat
+            const optimizedQuery = query(
+                collectionGroup(firestore, 'serviceRecords'),
+                where('customerId', '==', selectedCustomerId)
+            );
+            
+            const allServicesSnapshot = await getDocs(optimizedQuery);
             const allServicesData = allServicesSnapshot.docs.map(d => ({ id: d.id, ...d.data() } as ServiceRecord));
             
             const aggregatedServices = allServiceRecordIds.map(serviceId => {
@@ -107,7 +112,7 @@ function InvoicesPageContent() {
             console.error("Error important serveis:", e);
             toast({ variant: 'destructive', title: 'Error', description: "No s'han pogut carregar els detalls dels serveis." });
         }
-    }, [selectedAlbaranIds, albarans, firestore, employees, toast]);
+    }, [selectedAlbaranIds, albarans, firestore, employees, toast, selectedCustomerId]);
 
     useEffect(() => {
         importAlbarans();
@@ -160,7 +165,6 @@ function InvoicesPageContent() {
             const batch = writeBatch(firestore);
             batch.set(invoiceRef, { ...invoiceData, id: invoiceRef.id });
 
-            // CRÍTIC: Marcar els albarans com a 'facturat' per moure'ls de llista immediatament
             selectedAlbaranIds.forEach(id => {
                 const albaranRef = doc(firestore, 'albarans', id);
                 batch.update(albaranRef, { status: 'facturat' });
@@ -170,7 +174,7 @@ function InvoicesPageContent() {
 
             toast({
                 title: "Factura Generada",
-                description: `L'obra ha estat facturada i l'albarà s'ha mogut a l'historial.`,
+                description: `L'obra ha estat facturada correctament.`,
             });
             
             if (exportAfter) {
@@ -181,11 +185,7 @@ function InvoicesPageContent() {
 
         } catch (error) {
             console.error("Error guardant factura:", error)
-            toast({
-                variant: 'destructive',
-                title: 'Error',
-                description: "No s'ha pogut generar la factura.",
-            });
+            toast({ variant: 'destructive', title: 'Error', description: "No s'ha pogut generar la factura." });
         } finally {
             setIsSaving(false);
         }
@@ -194,7 +194,7 @@ function InvoicesPageContent() {
     const isLoading = isUserLoading || isLoadingCustomers || isLoadingAlbarans || isLoadingEmployees;
 
     if (isLoading) {
-        return <div className="p-12 text-center"><Loader2 className="h-12 w-12 animate-spin mx-auto text-primary" /><p className="mt-4">Carregant dades de facturació...</p></div>
+        return <div className="p-12 text-center"><Loader2 className="h-12 w-12 animate-spin mx-auto text-primary" /><p className="mt-4">Preparant dades de facturació optimitzades...</p></div>
     }
 
     return (
@@ -204,7 +204,7 @@ function InvoicesPageContent() {
                     <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center sm:justify-between gap-4 border-b bg-slate-50/50">
                         <div>
                             <CardTitle className="text-2xl font-bold">Generador de Factures</CardTitle>
-                            <CardDescription>Selecciona un client i un o més albarans per facturar l'obra.</CardDescription>
+                            <CardDescription>Selecciona un client i els albarans pendents.</CardDescription>
                         </div>
                          <Button variant="outline" onClick={() => router.push('/dashboard/invoices/history')} className="font-bold">
                             <FileArchive className="mr-2 h-4 w-4" /> Historial de Factures
@@ -225,9 +225,9 @@ function InvoicesPageContent() {
                                 </Select>
                             </div>
                             <div className="space-y-2">
-                                <Label className="flex items-center gap-2 font-bold"><Briefcase className="h-4 w-4 text-primary" /> Nom de l'Obra (Factura)</Label>
+                                <Label className="flex items-center gap-2 font-bold"><Briefcase className="h-4 w-4 text-primary" /> Nom de l'Obra</Label>
                                 <Input 
-                                    placeholder="Nom del projecte o obra"
+                                    placeholder="Nom del projecte"
                                     value={projectName}
                                     onChange={(e) => setProjectName(e.target.value)}
                                     className="h-12 bg-white"
@@ -237,7 +237,7 @@ function InvoicesPageContent() {
 
                         {selectedCustomerId !== 'none' && (
                             <div className="space-y-3">
-                                <Label className="font-bold">Selecciona els Albarans a incloure:</Label>
+                                <Label className="font-bold">Albarans pendents del client:</Label>
                                 <div className="max-h-60 overflow-y-auto space-y-2 rounded-xl border p-4 bg-slate-50 shadow-inner">
                                     {availableAlbarans.length > 0 ? availableAlbarans.map(albaran => (
                                         <div key={albaran.id} className="flex items-center space-x-3 p-2 bg-white rounded-lg border border-slate-200">
@@ -274,7 +274,7 @@ function InvoicesPageContent() {
                                 htmlFor="apply-iva"
                                 className="text-sm font-bold cursor-pointer select-none"
                             >
-                                Aplicar IGI (4.5%) a la factura
+                                Aplicar IGI (4.5%)
                             </label>
                         </div>
 
@@ -282,7 +282,7 @@ function InvoicesPageContent() {
                         <div className="flex justify-end pt-4 gap-3 flex-wrap">
                              <Button onClick={() => handleSaveInvoice(false)} disabled={isSaving || servicesForInvoice.length === 0} variant="outline" className="h-12 px-6 font-bold">
                                 {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                                Guardar Factura
+                                Desar Factura
                             </Button>
                              <Button onClick={() => handleSaveInvoice(true)} disabled={isSaving || servicesForInvoice.length === 0} className="bg-primary hover:bg-primary/90 h-12 px-8 font-black shadow-lg">
                                 {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileDown className="mr-2 h-4 w-4" />}
@@ -295,7 +295,7 @@ function InvoicesPageContent() {
                 {servicesForInvoice.length > 0 && (
                     <Card className="border-2 border-primary/10 shadow-xl overflow-hidden">
                         <CardHeader className="bg-slate-900 text-white">
-                            <CardTitle className="text-lg">Previsualització del Document Final</CardTitle>
+                            <CardTitle className="text-lg">Previsualització del Document</CardTitle>
                         </CardHeader>
                         <CardContent className="p-0 bg-slate-100">
                            <InvoicePreview
@@ -315,7 +315,7 @@ function InvoicesPageContent() {
 
 export default function InvoicesPage() {
     return (
-        <Suspense fallback={<div className="p-12 text-center"><Loader2 className="h-12 w-12 animate-spin mx-auto" /></div>}>
+        <Suspense fallback={<div className="p-12 text-center"><Loader2 className="h-12 w-12 animate-spin mx-auto text-primary" /></div>}>
             <InvoicesPageContent />
         </Suspense>
     )
