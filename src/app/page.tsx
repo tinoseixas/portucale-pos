@@ -63,7 +63,7 @@ export default function Home() {
        toast({
           variant: "destructive",
           title: "Error d'inici de sessió",
-          description: "Credencials incorrectes o l'usuari no existeix.",
+          description: "Credencials incorrectes ou usuari no trobat.",
         })
     } finally {
       setIsAuthenticating(false);

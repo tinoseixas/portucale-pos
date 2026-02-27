@@ -1,4 +1,3 @@
-
 'use client'
 
 import { useState, useMemo, useEffect } from 'react'
@@ -55,6 +54,7 @@ export default function DashboardPage() {
   const router = useRouter();
   const { toast } = useToast();
 
+  // Buscar perfil do funcionário
   const employeeDocRef = useMemoFirebase(() => {
     if (!user || !firestore) return null;
     return doc(firestore, 'employees', user.uid);
@@ -62,6 +62,7 @@ export default function DashboardPage() {
   
   const { data: currentEmployee, isLoading: isLoadingProfile } = useDoc<Employee>(employeeDocRef);
   
+  // Determinar se é administrador
   const isAdmin = useMemo(() => {
     if (!user) return false;
     const isEmailAdmin = user.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase();
@@ -78,7 +79,7 @@ export default function DashboardPage() {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
   const [selectedProject, setSelectedProject] = useState<string>('all');
 
-  // Pending albarans query
+  // Consulta de albarans pendentes (apenas para admins)
   const pendingAlbaransQuery = useMemoFirebase(() => {
     if (!firestore || !isAdmin) return null;
     return query(collection(firestore, 'albarans'), where('status', '==', 'pendent'));
@@ -86,11 +87,10 @@ export default function DashboardPage() {
   
   const { data: pendingAlbarans } = useCollection<Albaran>(pendingAlbaransQuery);
 
+  // Carregar dados de serviços e funcionários
   useEffect(() => {
-    if (isUserLoading || isLoadingProfile || !firestore) return;
-
-    if (!user) {
-      setIsLoadingData(false);
+    if (isUserLoading || isLoadingProfile || !firestore || !user) {
+      if (!isUserLoading && !user) setIsLoadingData(false);
       return;
     }
     
@@ -113,9 +113,7 @@ export default function DashboardPage() {
             setAllServices(servicesData);
 
         } catch (error) {
-            console.error("Data fetch failed:", error);
-            setAllServices([]);
-            setEmployees([]);
+            console.error("Erro ao carregar dados:", error);
         } finally {
             setIsLoadingData(false);
         }
@@ -158,10 +156,6 @@ export default function DashboardPage() {
 
   }, [allServices, selectedUser, selectedDate, selectedProject, isAdmin]);
   
-  useEffect(() => {
-    setSelectedRows([]);
-  }, [filteredServices]);
-
   const getEmployeeName = (employeeId: string) => {
     const employee = employees.find(e => e.id === employeeId);
     return employee ? `${employee.firstName} ${employee.lastName}` : 'Desconegut';
@@ -198,7 +192,7 @@ export default function DashboardPage() {
   
   if (!user) {
     router.push('/');
-    return <p className="p-4">Redireccionant...</p>;
+    return null;
   }
 
   return (
@@ -219,11 +213,11 @@ export default function DashboardPage() {
       </div>
 
       {isAdmin && pendingAlbarans && pendingAlbarans.length > 0 && (
-        <Alert variant="destructive" className="bg-destructive/10 border-destructive/20 text-destructive-foreground animate-in fade-in slide-in-from-top-4 duration-500">
+        <Alert variant="destructive" className="bg-destructive/10 border-destructive/20 text-destructive-foreground">
           <AlertCircle className="h-5 w-5" />
           <AlertTitle className="font-bold">Albarans Pendents de Facturar</AlertTitle>
           <AlertDescription className="flex items-center justify-between flex-wrap gap-4 mt-2">
-            <span>Tens <strong>{pendingAlbarans.length}</strong> albarà(ns) que encara no han estat convertits en factura.</span>
+            <span>Tens <strong>{pendingAlbarans.length}</strong> albarà(ns) pendents.</span>
             <Button size="sm" variant="destructive" asChild>
               <Link href="/dashboard/albarans/pending">
                 Veure Llista <ArrowRight className="ml-2 h-4 w-4" />
@@ -239,43 +233,28 @@ export default function DashboardPage() {
             <Skeleton className="h-40 w-full" />
         </div>
       ) : (
-        (!filteredServices || filteredServices.length === 0) && (allServices.length === 0) ? (
-          <div className="text-center py-16 border-2 border-dashed rounded-lg">
-              <h2 className="text-xl font-semibold">No hi ha serveis registrats</h2>
-              <p className="text-muted-foreground">Comença afegint el teu primeiro servei do dia.</p>
-              <Button asChild className="mt-4 bg-accent hover:bg-accent/90 text-accent-foreground">
-                  <Link href="/dashboard/new">
-                  <PlusCircle className="mr-2 h-4 w-4" />
-                  Afegeix un Servei
-                  </Link>
-              </Button>
-          </div>
-        ) : (
-            <Card>
+        <Card>
             <CardHeader>
                 <div className="flex justify-between items-start flex-wrap gap-4">
                     <div>
                         <CardTitle>Serveis Registrats</CardTitle>
-                        <CardDescription>Visualitza, filtra i gestiona els registres de servei.</CardDescription>
+                        <CardDescription>Visualitza i filtra els registres de servei.</CardDescription>
                     </div>
                     {isAdmin && selectedRows.length > 0 && (
                         <AlertDialog>
                         <AlertDialogTrigger asChild>
                             <Button variant="destructive">
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Eliminar ({selectedRows.length})
+                            <Trash2 className="mr-2 h-4 w-4" /> Eliminar ({selectedRows.length})
                             </Button>
                         </AlertDialogTrigger>
                         <AlertDialogContent>
                             <AlertDialogHeader>
-                            <AlertDialogTitle>Estàs segur?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                                Aquesta acció eliminarà permanentment {selectedRows.length} registre(s) de servei. Aquesta acció no es pot desfer.
-                            </AlertDialogDescription>
+                            <AlertDialogTitle>Confirmar eliminació</AlertDialogTitle>
+                            <AlertDialogDescription>Aquesta acció eliminará permanentment {selectedRows.length} registres.</AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
                             <AlertDialogCancel>Cancel·lar</AlertDialogCancel>
-                            <AlertDialogAction onClick={handleDeleteSelected} className="bg-destructive hover:bg-destructive/90">Eliminar</AlertDialogAction>
+                            <AlertDialogAction onClick={handleDeleteSelected} className="bg-destructive">Eliminar</AlertDialogAction>
                             </AlertDialogFooter>
                         </AlertDialogContent>
                         </AlertDialog>
@@ -285,8 +264,8 @@ export default function DashboardPage() {
                   <div className="flex flex-col sm:flex-row gap-4 pt-4 flex-wrap">
                       <Select value={selectedUser} onValueChange={setSelectedUser}>
                       <SelectTrigger className="w-full sm:w-[200px]">
-                          <User className="mr-2 h-4 w-4 text-muted-foreground" />
-                          <SelectValue placeholder="Filtrar por usuari" />
+                          <User className="mr-2 h-4 w-4" />
+                          <SelectValue placeholder="Usuari" />
                       </SelectTrigger>
                       <SelectContent>
                           <SelectItem value="all">Tots els Usuaris</SelectItem>
@@ -298,32 +277,20 @@ export default function DashboardPage() {
 
                       <Popover>
                       <PopoverTrigger asChild>
-                          <Button
-                          variant={"outline"}
-                          className={cn(
-                              "w-full sm:w-[240px] justify-start text-left font-normal",
-                              !selectedDate && "text-muted-foreground"
-                          )}
-                          >
+                          <Button variant="outline" className="w-full sm:w-[240px] justify-start text-left font-normal">
                           <CalendarIcon className="mr-2 h-4 w-4" />
                           {selectedDate ? format(selectedDate, "PPP", { locale: ca }) : <span>Filtrar por data</span>}
                           </Button>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0">
-                          <Calendar
-                          mode="single"
-                          selected={selectedDate}
-                          onSelect={setSelectedDate}
-                          initialFocus
-                          locale={ca}
-                          />
+                          <Calendar mode="single" selected={selectedDate} onSelect={setSelectedDate} initialFocus locale={ca} />
                       </PopoverContent>
                       </Popover>
 
                       <Select value={selectedProject} onValueChange={setSelectedProject}>
                       <SelectTrigger className="w-full sm:w-[200px]">
-                          <Briefcase className="mr-2 h-4 w-4 text-muted-foreground" />
-                          <SelectValue placeholder="Filtrar por obra" />
+                          <Briefcase className="mr-2 h-4 w-4" />
+                          <SelectValue placeholder="Obra" />
                       </SelectTrigger>
                       <SelectContent>
                           <SelectItem value="all">Totes les Obres</SelectItem>
@@ -350,10 +317,7 @@ export default function DashboardPage() {
                             <TableHead className="w-[40px] px-2">
                                 <Checkbox
                                     checked={selectedRows.length > 0 && filteredServices.length > 0 && selectedRows.length === filteredServices.length}
-                                    onCheckedChange={(checked) => {
-                                    setSelectedRows(checked ? filteredServices.map(s => s.id) : []);
-                                    }}
-                                    aria-label="Seleccionar totes les files"
+                                    onCheckedChange={(checked) => setSelectedRows(checked ? filteredServices.map(s => s.id) : [])}
                                 />
                             </TableHead>
                         )}
@@ -362,62 +326,45 @@ export default function DashboardPage() {
                         <TableHead>Data</TableHead>
                         <TableHead>Obra</TableHead>
                         <TableHead>Descripció</TableHead>
-                        <TableHead>Última Modificació</TableHead>
                         <TableHead className="text-right">Accions</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {filteredServices && filteredServices.length > 0 ? filteredServices.map(service => (
-                        <TableRow key={service.id} className={isAdmin ? (service as any).rowColor : ''} data-state={selectedRows.includes(service.id) && "selected"}>
+                        {filteredServices.length > 0 ? filteredServices.map(service => (
+                        <TableRow key={service.id} className={isAdmin ? (service as any).rowColor : ''}>
                             {isAdmin && (
                                 <TableCell className="px-2">
                                     <Checkbox
                                         checked={selectedRows.includes(service.id)}
                                         onCheckedChange={(checked) => {
-                                        setSelectedRows(
-                                            checked
-                                            ? [...selectedRows, service.id]
-                                            : selectedRows.filter((id) => id !== service.id)
-                                        );
+                                            setSelectedRows(checked ? [...selectedRows, service.id] : selectedRows.filter(id => id !== service.id));
                                         }}
-                                        aria-label={`Seleccionar fila ${service.id}`}
                                     />
                                 </TableCell>
                             )}
                             <TableCell>
-                            <div 
-                                className="h-full w-1 rounded-full" 
-                                style={{ backgroundColor: getUserColor(service.employeeId) }}
-                            />
+                                <div className="h-full w-1 rounded-full" style={{ backgroundColor: getUserColor(service.employeeId), minHeight: '20px' }} />
                             </TableCell>
                             {isAdmin && <TableCell className="font-medium">{getEmployeeName(service.employeeId)}</TableCell>}
                             <TableCell>{format(parseISO(service.arrivalDateTime), 'dd/MM/yyyy HH:mm')}</TableCell>
                             <TableCell className="max-w-[200px] truncate">{service.projectName}</TableCell>
                             <TableCell className="max-w-[300px] truncate">{service.description}</TableCell>
-                            <TableCell>
-                            {service.updatedAt ? format(parseISO(service.updatedAt), 'dd/MM/yy HH:mm') : '-'}
-                            </TableCell>
                             <TableCell className="text-right">
                             <Button variant="outline" size="sm" asChild>
-                                <Link href={`/dashboard/edit/${service.id}?ownerId=${service.employeeId}`}>
-                                    <Edit className="mr-2 h-4 w-4" /> Detalls
-                                </Link>
+                                <Link href={`/dashboard/edit/${service.id}?ownerId=${service.employeeId}`}>Detalls</Link>
                             </Button>
                             </TableCell>
                         </TableRow>
                         )) : (
                         <TableRow>
-                            <TableCell colSpan={isAdmin ? 8 : 6} className="h-24 text-center">
-                            {isAdmin ? "No s'han trobat serveis per als filtres seleccionats." : "No tens cap servei registrat."}
-                            </TableCell>
+                            <TableCell colSpan={isAdmin ? 7 : 5} className="h-24 text-center text-muted-foreground">No s'han trobat serveis.</TableCell>
                         </TableRow>
                         )}
                     </TableBody>
                     </Table>
                 </div>
             </CardContent>
-            </Card>
-        )
+        </Card>
       )}
     </div>
   );

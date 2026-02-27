@@ -1,8 +1,8 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Permissões globais para utilizadores autenticados.
-    // Esta regra simplificada garante acesso total a qualquer utilizador logado para evitar bloqueios de permissão.
+    // Permissão total para qualquer utilizador autenticado em todas as coleções.
+    // Isto garante que não existam erros de "Missing or insufficient permissions".
     match /{document=**} {
       allow read, write: if request.auth != null;
     }
