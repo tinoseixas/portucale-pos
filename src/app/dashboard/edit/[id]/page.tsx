@@ -11,7 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Clock, FileText, Camera, ArrowLeft, Save, Trash2, Hash, Plus, X, Video, Calendar as CalendarIcon, Info, Briefcase, AlertTriangle, Users, Package, Euro, User as UserIcon, ImagePlus, PenTool, CheckCircle, Loader2 } from 'lucide-react'
 import { useToast } from "@/hooks/use-toast"
 import { useFirestore, useUser, useDoc, useMemoFirebase, useCollection } from '@/firebase'
-import { doc, deleteDoc, collection, query, getDocs, collectionGroup, orderBy, runTransaction, setDoc } from 'firebase/firestore'
+import { doc, deleteDoc, collection, query, getDocs, collectionGroup, orderBy, runTransaction, setDoc, where } from 'firebase/firestore'
 import type { ServiceRecord, Customer, Employee, Albaran } from '@/lib/types'
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates'
 import Image from 'next/image'
@@ -50,7 +50,7 @@ type Material = {
 }
 
 const MAX_IMAGE_WIDTH = 1024;
-const IMAGE_QUALITY = 0.6; // Optimitzat per pes
+const IMAGE_QUALITY = 0.6; 
 
 function resizeAndCompressImage(file: File): Promise<string> {
     return new Promise((resolve, reject) => {
@@ -147,15 +147,6 @@ export default function EditServicePage() {
     }
   }, [service]);
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-        const files = Array.from(e.target.files);
-        toast({ title: 'Processant...' });
-        const newFiles = await Promise.all(files.map(async f => ({ type: 'image' as const, dataUrl: await resizeAndCompressImage(f) })));
-        setMedia(prev => [...prev, ...newFiles]);
-    }
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!firestore || !serviceDocRef || !date || !startTime || !endTime) {
@@ -171,26 +162,13 @@ export default function EditServicePage() {
     const selectedEmployee = employees?.find(e => e.id === employeeId);
     
     try {
-        let finalAlbaranNumber = service?.albaranNumber;
-
-        // Assignar número d'albarà si no en té
-        if (!finalAlbaranNumber) {
-            const counterRef = doc(firestore, "counters", "albarans");
-            finalAlbaranNumber = await runTransaction(firestore, async (transaction) => {
-                const counterDoc = await transaction.get(counterRef);
-                const nextNum = (counterDoc.exists() ? counterDoc.data().lastNumber : 0) + 1;
-                transaction.set(counterRef, { lastNumber: nextNum }, { merge: true });
-                return nextNum;
-            });
-        }
-
         const employeeNameStr = selectedEmployee ? `${selectedEmployee.firstName} ${selectedEmployee.lastName}` : '';
 
         const updatedData: Partial<ServiceRecord> = {
             arrivalDateTime,
             departureDateTime,
             description: description || "Servei finalitzat",
-            projectName,
+            projectName: projectName.trim(),
             pendingTasks,
             customerId,
             customerName: selectedCustomer?.name || '',
@@ -202,7 +180,6 @@ export default function EditServicePage() {
             materials: materials.filter(m => m.description.trim() !== ''),
             customerSignatureName,
             customerSignatureDataUrl,
-            albaranNumber: finalAlbaranNumber,
             status: service?.status || 'pendent',
             updatedAt: new Date().toISOString(),
         };
@@ -210,26 +187,10 @@ export default function EditServicePage() {
         // 1. Actualitzar el registre de servei
         await setDoc(serviceDocRef, updatedData, { merge: true });
 
-        // 2. Crear/Actualitzar l'Albarà 1:1
-        const { totalGeneral } = calculateTotalAmount([ { ...updatedData, id: serviceId } as ServiceRecord ], employees || []);
-        const albaranRef = doc(firestore, 'albarans', serviceId);
-        const albaranData: Albaran = {
-            id: serviceId,
-            albaranNumber: finalAlbaranNumber,
-            createdAt: service?.createdAt || new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-            customerId: customerId,
-            customerName: selectedCustomer?.name || 'N/A',
-            projectName: projectName || 'Sense nom',
-            serviceRecordIds: [serviceId],
-            totalAmount: totalGeneral,
-            status: (service?.status as any) || 'pendent',
-            employeeId: employeeId,
-            employeeName: employeeNameStr,
-        };
-        await setDoc(albaranRef, albaranData);
-
-        toast({ title: "Desat correctament", description: `Albarà #${finalAlbaranNumber} actualitzat.` });
+        // 2. Gestionar l'Albarà Agrupat (no creem un nou número aquí per evitar duplicats per servei)
+        // La sincronització d'albarans consolidarà aquest nou servei en el document d'obra corresponent.
+        
+        toast({ title: "Registre desat", description: `El servei s'ha actualitzat correctament.` });
         router.push('/dashboard');
     } catch (error) {
         console.error(error);
@@ -239,7 +200,7 @@ export default function EditServicePage() {
     }
   }
 
-  if (isUserLoading || isLoading || isSaving) return <div className="p-8 text-center"><Loader2 className="h-8 w-8 animate-spin mx-auto" /><p className="mt-2">Desant dades i generant albarà...</p></div>
+  if (isUserLoading || isLoading || isSaving) return <div className="p-8 text-center"><Loader2 className="h-8 w-8 animate-spin mx-auto" /><p className="mt-2">Desant informació...</p></div>
   if (!service) return <p>No s'ha trobat el servei.</p>
   if (showCamera) return <CameraCapture onCapture={(url, type) => { setMedia(prev => [...prev, { type, dataUrl: url }]); setShowCamera(false); }} onClose={() => setShowCamera(false)} />;
 
@@ -265,8 +226,8 @@ export default function EditServicePage() {
         
         <Card>
           <CardHeader>
-            <CardTitle>Editar Servei {service.albaranNumber ? `#${service.albaranNumber}` : ''}</CardTitle>
-            <CardDescription>Cada servei genera automàticament el seu propi albarà.</CardDescription>
+            <CardTitle>Editar Registre de Servei</CardTitle>
+            <CardDescription>Aquest servei s'agruparà automàticament per obra en la secció d'albarans.</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
@@ -303,8 +264,12 @@ export default function EditServicePage() {
               </div>
 
               <div className="space-y-2">
-                <Label>Nom de l'Obra</Label>
-                <Input placeholder="Ex: Reforma Cuina" value={projectName} onChange={(e) => setProjectName(e.target.value)} />
+                <Label>Nom de l'Obra / Projecte</Label>
+                <div className="relative">
+                    <Briefcase className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input placeholder="Ex: Reforma Cuina" value={projectName} onChange={(e) => setProjectName(e.target.value)} className="pl-10" />
+                </div>
+                <p className="text-[10px] text-muted-foreground italic">Els serveis amb el mateix nom d'obra s'agruparan en un sol albarà.</p>
               </div>
               
               <div className="space-y-2">
@@ -340,7 +305,7 @@ export default function EditServicePage() {
               </div>
 
               <div className="flex justify-between items-center pt-4">
-                <Button type="button" variant="destructive" onClick={async () => { if(confirm('Segur?')) { await deleteDoc(serviceDocRef!); router.push('/dashboard'); } }}><Trash2 className="mr-2 h-4 w-4" /> Eliminar</Button>
+                <Button type="button" variant="destructive" onClick={async () => { if(confirm('Segur que vols eliminar aquest registre?')) { await deleteDoc(serviceDocRef!); router.push('/dashboard'); } }}><Trash2 className="mr-2 h-4 w-4" /> Eliminar Registre</Button>
                 <Button type="submit" className="bg-primary px-8" disabled={isSaving}><Save className="mr-2 h-4 w-4" /> {isSaving ? 'Desant...' : 'Desar Canvis'}</Button>
               </div>
             </form>
