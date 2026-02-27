@@ -1,18 +1,20 @@
+
 'use client'
 
 import { useMemo, useRef, useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useCollection, useUser, useFirestore, useMemoFirebase } from '@/firebase'
-import { collection, query, orderBy, collectionGroup, doc, runTransaction, setDoc } from 'firebase/firestore'
-import type { Customer, ServiceRecord, Employee } from '@/lib/types'
+import { collection, query, orderBy, collectionGroup, doc, runTransaction, setDoc, where } from 'firebase/firestore'
+import type { Customer, ServiceRecord, Employee, Albaran } from '@/lib/types'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Briefcase, FileDown, Loader2, Users } from 'lucide-react'
+import { Briefcase, FileDown, Loader2, Users, AlertTriangle, CheckCircle2 } from 'lucide-react'
 import { ReportPreview } from '@/components/ReportPreview'
 import { useToast } from '@/hooks/use-toast'
 import { AdminGate } from '@/components/AdminGate'
 import { calculateTotalAmount } from '@/lib/calculations'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 
 export default function ReportsPage() {
     const firestore = useFirestore()
@@ -38,12 +40,14 @@ export default function ReportsPage() {
     const employeesQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'employees')) : null, [firestore]);
     const { data: employees, isLoading: isLoadingEmployees } = useCollection<Employee>(employeesQuery);
 
+    const albaransQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'albarans'), where('status', '==', 'pendent')) : null, [firestore]);
+    const { data: pendingAlbarans } = useCollection<Albaran>(albaransQuery);
+
 
     const projectNames = useMemo(() => {
         if (!allServices) return []
         
         let servicesToFilter = allServices;
-        // If a customer is selected, filter projects for that customer
         if (selectedCustomerId !== 'all') {
             servicesToFilter = allServices.filter(s => s.customerId === selectedCustomerId);
         }
@@ -61,16 +65,21 @@ export default function ReportsPage() {
 
     const associatedCustomer = useMemo(() => {
         if (filteredServices.length === 0 || !customers) return undefined;
-        // Find the first service with a customerId and get that customer
         const firstServiceWithCustomer = filteredServices.find(s => s.customerId);
         if (!firstServiceWithCustomer || !firstServiceWithCustomer.customerId) return undefined;
         return customers.find(c => c.id === firstServiceWithCustomer.customerId);
     }, [filteredServices, customers]);
     
+    // Verifica si ja existeix un albarà pendent per a aquesta obra
+    const existingAlbaran = useMemo(() => {
+        if (!pendingAlbarans || selectedProject === 'all') return null;
+        return pendingAlbarans.find(a => a.projectName === selectedProject && a.customerId === selectedCustomerId);
+    }, [pendingAlbarans, selectedProject, selectedCustomerId]);
+    
     
     const handleCustomerChange = (customerId: string) => {
         setSelectedCustomerId(customerId);
-        setSelectedProject('all'); // Reset project when customer changes
+        setSelectedProject('all');
     };
     
     const handleProjectChange = (projectName: string) => {
@@ -104,7 +113,7 @@ export default function ReportsPage() {
             const { totalGeneral } = calculateTotalAmount(filteredServices, employees);
 
             const albaranRef = doc(collection(firestore, "albarans"));
-            await setDoc(albaranRef, {
+            const albaranData: Albaran = {
                 id: albaranRef.id,
                 albaranNumber: newAlbaranNumber,
                 createdAt: new Date().toISOString(),
@@ -114,7 +123,9 @@ export default function ReportsPage() {
                 serviceRecordIds: filteredServices.map(s => s.id),
                 totalAmount: totalGeneral,
                 status: 'pendent',
-            });
+            };
+
+            await setDoc(albaranRef, albaranData);
 
             toast({
                 title: "Albarà Guardat",
@@ -144,17 +155,17 @@ export default function ReportsPage() {
     const isLoading = isUserLoading || isLoadingAllServices || isLoadingCustomers || isLoadingEmployees;
 
     if (isLoading) {
-        return <p>Carregant...</p>
+        return <p className="p-8 text-center">Carregant generador...</p>
     }
 
 
     return (
-        <AdminGate pageTitle="Generador d'Albarans" pageDescription="Aquesta secció està protegida.">
+        <AdminGate pageTitle="Generador d'Albarans" pageDescription="Crea un nou document per consolidar serveis.">
             <div className="space-y-8 max-w-7xl mx-auto">
                 <Card>
                     <CardHeader>
                         <CardTitle>Generador d'Albarans</CardTitle>
-                        <CardDescription>Selecciona un client i una obra per generar un albarà que consolidi tots els seus serveis.</CardDescription>
+                        <CardDescription>Selecciona un client i una obra per consolidar els serveis realitzats en un sol document.</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
                         <div className="flex flex-col sm:flex-row gap-4">
@@ -165,7 +176,7 @@ export default function ReportsPage() {
                                         <SelectValue placeholder="Selecciona un client" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="all">Cap client seleccionat</SelectItem>
+                                        <SelectItem value="all">Tots els clients</SelectItem>
                                         {customers?.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
                                     </SelectContent>
                                 </Select>
@@ -183,17 +194,31 @@ export default function ReportsPage() {
                                 </Select>
                             </div>
                         </div>
+
+                        {existingAlbaran && (
+                            <Alert className="bg-amber-50 border-amber-200">
+                                <AlertTriangle className="h-4 w-4 text-amber-600" />
+                                <AlertTitle className="text-amber-800">Albarà ja existent</AlertTitle>
+                                <AlertDescription className="text-amber-700">
+                                    Ja existeix un albarà pendent (<strong>#{existingAlbaran.albaranNumber}</strong>) per a aquesta obra. 
+                                    Si edites els serveis originals, l'albarà existent s'actualitzarà sol. No cal que en creïs un de nou.
+                                </AlertDescription>
+                            </Alert>
+                        )}
+
                         <div className="flex justify-end pt-4 gap-2 flex-wrap">
                             <Button
                                 onClick={() => handleExport('save')}
                                 disabled={isGenerating || !canGenerate}
+                                variant="outline"
                             >
-                                {isGenerating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileDown className="mr-2 h-4 w-4" />}
-                                Guardar Albarà
+                                {isGenerating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                                Guardar Només
                             </Button>
                             <Button
                                 onClick={() => handleExport('pdf')}
                                 disabled={isGenerating || !canGenerate}
+                                className="bg-primary hover:bg-primary/90"
                             >
                                 {isGenerating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileDown className="mr-2 h-4 w-4" />}
                                 Guardar i Exportar PDF
@@ -205,21 +230,20 @@ export default function ReportsPage() {
                 {canGenerate && (
                     <Card>
                         <CardHeader>
-                            <CardTitle>Previsualització de l'Albarà per a l'Obra: {selectedProject}</CardTitle>
+                            <CardTitle className="flex items-center gap-2">
+                                <CheckCircle2 className="h-5 w-5 text-green-500" />
+                                Previsualització: {selectedProject}
+                            </CardTitle>
                         </CardHeader>
                         <CardContent>
-                            {isLoadingAllServices ? (
-                                <p>Carregant dades de l'albarà...</p>
-                            ) : (
                             <ReportPreview
-                                    customer={associatedCustomer}
-                                    projectName={selectedProject}
-                                    services={filteredServices}
-                                    showPricing={true}
-                                    albaranNumber={-1} // Placeholder number for preview
-                                    employees={employees || []}
-                                />
-                            )}
+                                customer={associatedCustomer}
+                                projectName={selectedProject}
+                                services={filteredServices}
+                                showPricing={true}
+                                albaranNumber={-1} 
+                                employees={employees || []}
+                            />
                         </CardContent>
                     </Card>
                 )}

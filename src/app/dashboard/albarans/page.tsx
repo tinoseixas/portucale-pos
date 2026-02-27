@@ -1,6 +1,7 @@
+
 'use client'
 
-import { useMemo, useEffect, useState } from 'react'
+import { useMemo, useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { useCollection, useUser, useFirestore, useMemoFirebase, deleteDocumentNonBlocking } from '@/firebase'
 import { collection, query, orderBy, doc, getDocs, collectionGroup, writeBatch } from 'firebase/firestore'
@@ -8,7 +9,7 @@ import type { Albaran, ServiceRecord, Employee } from '@/lib/types'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
-import { Eye, FileArchive, Trash2, RefreshCw, Loader2, AlertCircle, CreditCard, ArrowRight, Clock, CheckCircle2 } from 'lucide-react'
+import { Eye, FileArchive, Trash2, RefreshCw, Loader2, CreditCard, ArrowRight, Clock, CheckCircle2, AlertTriangle } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { ca } from 'date-fns/locale'
 import {
@@ -60,6 +61,52 @@ export default function AlbaransHistoryPage() {
     return albarans?.filter(a => a.status === 'facturat') || [];
   }, [albarans]);
 
+  // Funció per actualitzar els totals dels albarans pendents si els serveis han canviat
+  const syncPendingAlbarans = useCallback(async () => {
+    if (!firestore || !pendingAlbarans.length || !employees || isUpdating) return;
+
+    setIsUpdating(true);
+    try {
+      const allServicesSnapshot = await getDocs(collectionGroup(firestore, 'serviceRecords'));
+      const allServicesData = allServicesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ServiceRecord));
+      
+      const batch = writeBatch(firestore);
+      let updatedCount = 0;
+
+      for (const albaran of pendingAlbarans) {
+        const associatedServices = allServicesData.filter(service => albaran.serviceRecordIds.includes(service.id));
+        const { totalGeneral: newTotalAmount } = calculateTotalAmount(associatedServices, employees);
+
+        // Si el total ha canviat (amb marge d'error de decimals), actualitzem el document
+        if (Math.abs(newTotalAmount - albaran.totalAmount) > 0.01) {
+            const albaranRef = doc(firestore, 'albarans', albaran.id);
+            batch.update(albaranRef, { totalAmount: newTotalAmount });
+            updatedCount++;
+        }
+      }
+
+      if (updatedCount > 0) {
+        await batch.commit();
+        toast({
+          title: 'Totals Actualitzats',
+          description: `S'han actualitzat ${updatedCount} albarans pendents amb els canvis dels serveis.`,
+        });
+      }
+    } catch (error) {
+      console.error("Error sincronitzant albarans:", error);
+    } finally {
+      setIsUpdating(false);
+    }
+  }, [firestore, pendingAlbarans, employees, toast, isUpdating]);
+
+  // Sincronització automàtica en carregar
+  useEffect(() => {
+    if (pendingAlbarans.length > 0 && employees) {
+        syncPendingAlbarans();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [employees]); 
+
   const handleDeleteAlbaran = (albaranId: string, albaranNumber: number) => {
     if (!firestore) return;
     const albaranDocRef = doc(firestore, 'albarans', albaranId);
@@ -72,55 +119,11 @@ export default function AlbaransHistoryPage() {
     });
   };
 
-  const handleUpdateAllAlbarans = async () => {
-    if (!firestore || !albarans || !employees) {
-      toast({ variant: 'destructive', title: 'Error', description: 'No s\'han pogut carregar les dades.' });
-      return;
-    }
-
-    setIsUpdating(true);
-    toast({ title: 'Actualitzant totals...', description: 'Aquesta operació pot trigar uns moments.' });
-
-    try {
-      const allServicesSnapshot = await getDocs(collectionGroup(firestore, 'serviceRecords'));
-      const allServicesData = allServicesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ServiceRecord));
-      
-      const batch = writeBatch(firestore);
-      let updatedCount = 0;
-
-      for (const albaran of albarans) {
-        const associatedServices = allServicesData.filter(service => albaran.serviceRecordIds.includes(service.id));
-        const { totalGeneral: newTotalAmount } = calculateTotalAmount(associatedServices, employees);
-
-        if (newTotalAmount.toFixed(2) !== albaran.totalAmount.toFixed(2)) {
-            const albaranRef = doc(firestore, 'albarans', albaran.id);
-            batch.update(albaranRef, { totalAmount: newTotalAmount });
-            updatedCount++;
-        }
-      }
-
-      if (updatedCount > 0) {
-        await batch.commit();
-      }
-
-      toast({
-        title: 'Actualització Completa',
-        description: `${updatedCount} albarà(ns) han estat actualitzats.`,
-      });
-
-    } catch (error) {
-      console.error("Error actualitzant albarans:", error);
-      toast({ variant: 'destructive', title: 'Error', description: 'No s\'ha pogut completar l\'actualització.' });
-    } finally {
-      setIsUpdating(false);
-    }
-  };
-
   if (isUserLoading || isLoadingAlbarans || isLoadingEmployees) {
     return (
       <div className="flex flex-col items-center justify-center p-12 space-y-4">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
-        <p className="text-muted-foreground animate-pulse">Carregant historial d'albarans...</p>
+        <p className="text-muted-foreground animate-pulse">Carregant gestió d'albarans...</p>
       </div>
     )
   }
@@ -134,9 +137,9 @@ export default function AlbaransHistoryPage() {
                 <FileArchive className="h-8 w-8 text-primary" />
                 GESTIÓ D'ALBARANS
             </h1>
-            <Button onClick={handleUpdateAllAlbarans} disabled={isUpdating} variant="outline" size="sm">
+            <Button onClick={syncPendingAlbarans} disabled={isUpdating} variant="outline" size="sm" className="bg-white">
               {isUpdating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
-              Actualitzar Totals
+              Actualitzar Dades
             </Button>
         </div>
 
@@ -163,7 +166,9 @@ export default function AlbaransHistoryPage() {
                 <CardTitle className="text-xl flex items-center gap-2 text-primary">
                     <Clock className="h-5 w-5" /> Documents Pendents
                 </CardTitle>
-                <CardDescription>Documents generats que encara no s'han convertit en factura.</CardDescription>
+                <CardDescription>
+                    Si edites un registre de servei, l'albarà s'actualitzarà automàticament aquí.
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 {pendingAlbarans.length > 0 ? (
@@ -224,8 +229,8 @@ export default function AlbaransHistoryPage() {
           <TabsContent value="historial" className="space-y-4">
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-xl">Historial Complet</CardTitle>
-                <CardDescription>Albarans que ja han estat processats i facturats.</CardDescription>
+                <CardTitle className="text-xl text-slate-700">Historial Complet</CardTitle>
+                <CardDescription>Albarans que ja han estat processats i convertits en factures.</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="overflow-x-auto">
