@@ -81,13 +81,14 @@ export default function AlbaransHistoryPage() {
 
         const groupedByProject: Record<string, ServiceRecord[]> = {};
         pendingServices.forEach(s => {
-            const key = `${s.customerId}_${s.projectName.trim().toLowerCase()}`;
+            const key = `${s.customerId}_${s.projectName.trim().toLowerCase()}`.replace(/[^a-z0-9_]/gi, '_');
             if (!groupedByProject[key]) groupedByProject[key] = [];
             groupedByProject[key].push(s);
         });
 
         const batch = writeBatch(firestore);
         
+        const counterRef = doc(firestore, "counters", "albarans");
         const counterSnap = await getDocs(query(collection(firestore, "counters"), where("__name__", "==", "albarans")));
         let nextNum = !counterSnap.empty ? counterSnap.docs[0].data().lastNumber : 0;
 
@@ -104,9 +105,9 @@ export default function AlbaransHistoryPage() {
             const { totalGeneral } = calculateTotalAmount(projectServices, employees);
             const technicianNames = Array.from(new Set(projectServices.map(s => s.employeeName || 'N/A'))).join(', ');
 
-            const albaranId = `alb_sync_${key}`; 
+            const albaranRef = doc(collection(firestore, 'albarans'));
             const albaranData: Albaran = {
-                id: albaranId,
+                id: albaranRef.id,
                 albaranNumber: nextNum,
                 createdAt: new Date().toISOString(),
                 customerId: firstService.customerId || '',
@@ -118,11 +119,11 @@ export default function AlbaransHistoryPage() {
                 employeeName: technicianNames
             };
 
-            batch.set(doc(firestore, 'albarans', albaranId), albaranData);
+            batch.set(albaranRef, albaranData);
             createdCount++;
         }
 
-        batch.set(doc(firestore, "counters", "albarans"), { lastNumber: nextNum }, { merge: true });
+        batch.set(counterRef, { lastNumber: nextNum }, { merge: true });
         await batch.commit();
 
         toast({ 

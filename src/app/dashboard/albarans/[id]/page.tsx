@@ -65,7 +65,7 @@ export default function AlbaranDetailPage() {
                 }
             }
             
-            // 2. Carregar serveis optimitzats
+            // 2. Carregar serveis optimitzats pel projecte
             if (albaran.serviceRecordIds && albaran.serviceRecordIds.length > 0) {
                 const optimizedQuery = query(
                     collectionGroup(firestore, 'serviceRecords'),
@@ -115,14 +115,20 @@ export default function AlbaranDetailPage() {
 
         try {
             const canvas = await html2canvas(reportElement, {
-                scale: 1.0, // Escala 1:1 per reduir pes dràsticament
+                scale: 1.0, // Escala reduïda per a màxim estalvi de dades
                 useCORS: true,
                 logging: false,
                 backgroundColor: '#ffffff'
             });
             
-            const imgData = canvas.toDataURL('image/jpeg', 0.5); // Qualitat 50% per fitxer ultra-lleuger
-            const pdf = new jsPDF('p', 'mm', 'a4', true);
+            const imgData = canvas.toDataURL('image/jpeg', 0.5); // Qualitat JPEG al 50%
+            const pdf = new jsPDF({
+                orientation: 'p',
+                unit: 'mm',
+                format: 'a4',
+                compress: true
+            });
+            
             const pdfWidth = pdf.internal.pageSize.getWidth();
             const pdfHeight = pdf.internal.pageSize.getHeight();
             const imgWidth = pdfWidth;
@@ -175,7 +181,14 @@ export default function AlbaranDetailPage() {
     }
     
     if (!albaran) {
-        return <div className="p-8 text-center">No s'ha trobat l'albarà demanat.</div>
+        return (
+            <div className="flex flex-col items-center justify-center h-[60vh] p-8 text-center space-y-4">
+                <div className="bg-red-100 p-4 rounded-full"><Briefcase className="h-12 w-12 text-red-600" /></div>
+                <h2 className="text-2xl font-bold">No s'ha trobat l'albarà</h2>
+                <p className="text-muted-foreground max-w-xs">És possible que el document s'hagi esborrat o que l'ID hagi canviat durant la sincronització.</p>
+                <Button onClick={() => router.push('/dashboard/albarans')} variant="outline">Tornar al llistat</Button>
+            </div>
+        )
     }
 
     return (
