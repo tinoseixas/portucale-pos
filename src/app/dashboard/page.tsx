@@ -1,14 +1,13 @@
-
 'use client'
 
 import { useState, useMemo, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
-import { PlusCircle, Calendar as CalendarIcon, User, Edit, Trash2, Briefcase, ArrowRight, AlertTriangle, Receipt } from 'lucide-react'
-import type { ServiceRecord, Employee, Albaran } from '@/lib/types'
-import { useCollection, useUser, useFirestore, useMemoFirebase, errorEmitter, FirestorePermissionError, deleteDocumentNonBlocking, useDoc } from '@/firebase';
-import { collection, query, orderBy, getDocs, collectionGroup, doc, where } from 'firebase/firestore';
+import { PlusCircle, Calendar as CalendarIcon, User, Edit, Trash2, Briefcase } from 'lucide-react'
+import type { ServiceRecord, Employee } from '@/lib/types'
+import { useCollection, useUser, useFirestore, useMemoFirebase, deleteDocumentNonBlocking, useDoc } from '@/firebase';
+import { collection, query, orderBy, getDocs, collectionGroup, doc } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton'
 import { Card, CardHeader, CardContent, CardDescription, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
@@ -76,14 +75,6 @@ export default function DashboardPage() {
   const [selectedUser, setSelectedUser] = useState<string>('all');
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
   const [selectedProject, setSelectedProject] = useState<string>('all');
-
-  // Query for pending albarans - only for admins and once profile is ready
-  const albaransQuery = useMemoFirebase(() => {
-    if (!firestore || !isAdmin || isLoadingProfile) return null;
-    return query(collection(firestore, 'albarans'), where('status', '==', 'pendent'), orderBy('albaranNumber', 'desc'));
-  }, [firestore, isAdmin, isLoadingProfile]);
-
-  const { data: pendingAlbarans } = useCollection<Albaran>(albaransQuery);
 
   useEffect(() => {
     if (isUserLoading || isLoadingProfile || !firestore) return;
@@ -216,61 +207,6 @@ export default function DashboardPage() {
             </Button>
         </div>
       </div>
-
-      {isAdmin && pendingAlbarans && pendingAlbarans.length > 0 && (
-        <Card className="border-l-4 border-amber-500 bg-amber-50/50 shadow-sm overflow-hidden">
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-amber-100 rounded-full">
-                  <AlertTriangle className="h-5 w-5 text-amber-600" />
-                </div>
-                <div>
-                  <CardTitle className="text-lg text-amber-900">Albarans Pendents de Facturar</CardTitle>
-                  <CardDescription className="text-amber-700/80 font-medium">Tens {pendingAlbarans.length} documents acumulats per cobrar.</CardDescription>
-                </div>
-              </div>
-              <Button size="sm" asChild variant="outline" className="border-amber-200 text-amber-700 hover:bg-amber-100">
-                <Link href="/dashboard/invoices">
-                  Facturació General <ArrowRight className="ml-2 h-4 w-4" />
-                </Link>
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="rounded-md border border-amber-200 bg-white overflow-hidden">
-              <Table>
-                <TableHeader className="bg-amber-100/50">
-                  <TableRow className="hover:bg-transparent border-amber-200">
-                    <TableHead className="w-[100px] text-amber-900 font-bold">Nº Albarà</TableHead>
-                    <TableHead className="text-amber-900 font-bold">Client</TableHead>
-                    <TableHead className="text-amber-900 font-bold">Obra / Projecte</TableHead>
-                    <TableHead className="text-right text-amber-900 font-bold">Import</TableHead>
-                    <TableHead className="w-[100px]"></TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {pendingAlbarans.map((albaran) => (
-                    <TableRow key={albaran.id} className="hover:bg-amber-50/50 border-amber-100">
-                      <TableCell className="font-mono text-sm font-bold">#{String(albaran.albaranNumber).padStart(4, '0')}</TableCell>
-                      <TableCell className="font-medium">{albaran.customerName}</TableCell>
-                      <TableCell className="text-muted-foreground italic truncate max-w-[250px]">{albaran.projectName}</TableCell>
-                      <TableCell className="text-right font-bold text-amber-700">{albaran.totalAmount.toFixed(2)} €</TableCell>
-                      <TableCell className="text-right">
-                        <Button size="sm" asChild variant="ghost" className="h-8 text-primary hover:text-primary hover:bg-primary/10">
-                          <Link href={`/dashboard/invoices?customerId=${albaran.customerId}`}>
-                            <Receipt className="mr-2 h-3.5 w-3.5" /> Facturar
-                          </Link>
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          </CardContent>
-        </Card>
-      )}
       
       {isLoadingData ? (
         <div className="space-y-4">
@@ -281,7 +217,7 @@ export default function DashboardPage() {
         (!filteredServices || filteredServices.length === 0) && (allServices.length === 0) ? (
           <div className="text-center py-16 border-2 border-dashed rounded-lg">
               <h2 className="text-xl font-semibold">No hi ha serveis registrats</h2>
-              <p className="text-muted-foreground">Comença afegint el teu primer servei do dia.</p>
+              <p className="text-muted-foreground">Comença afegint el teu primeiro servei do dia.</p>
               <Button asChild className="mt-4 bg-accent hover:bg-accent/90 text-accent-foreground">
                   <Link href="/dashboard/new">
                   <PlusCircle className="mr-2 h-4 w-4" />
