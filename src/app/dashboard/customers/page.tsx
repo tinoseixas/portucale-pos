@@ -1,3 +1,4 @@
+
 'use client'
 
 import { useMemo, useState, useEffect } from 'react'
@@ -144,6 +145,18 @@ export default function CustomersPage() {
 
   const { data: customers, isLoading: isLoadingCustomers } = useCollection<Customer>(customersQuery)
   
+  // LOGICA PARA REMOVER DUPLICADOS VISUAIS
+  const displayCustomers = useMemo(() => {
+    if (!customers) return [];
+    const seen = new Set();
+    return customers.filter(c => {
+      const nameKey = c.name.toLowerCase().trim();
+      if (seen.has(nameKey)) return false;
+      seen.add(nameKey);
+      return true;
+    });
+  }, [customers]);
+
   const handleImportMockData = async () => {
     if (!firestore) return;
     setIsImporting(true);
@@ -157,9 +170,11 @@ export default function CustomersPage() {
       
       let addedCount = 0;
       mockCustomers.forEach(customerData => {
-        if (!existingNames.has(customerData.name.toLowerCase().trim())) {
+        const nameKey = customerData.name.toLowerCase().trim();
+        if (!existingNames.has(nameKey)) {
           const docRef = doc(customersCollection);
-          batch.set(docRef, customerData);
+          batch.set(docRef, { ...customerData, name: customerData.name.trim() });
+          existingNames.add(nameKey); // Evita duplicar dentro do próprio loop
           addedCount++;
         }
       });
@@ -173,7 +188,7 @@ export default function CustomersPage() {
       } else {
         toast({
           title: 'Sense canvis',
-          description: 'Tots os clients ja existeixen a la base de dades.',
+          description: 'Tots els clients ja existeixen a la base de dades.',
         });
       }
     } catch (error) {
@@ -181,7 +196,7 @@ export default function CustomersPage() {
       toast({
         variant: 'destructive',
         title: 'Error en la sincronització',
-        description: 'No s\'han pogut afegir els clients.',
+        description: "No s'han pogut afegir els clients.",
       });
     } finally {
       setIsImporting(false);
@@ -243,7 +258,7 @@ export default function CustomersPage() {
                     </TableRow>
                     </TableHeader>
                     <TableBody>
-                    {customers && customers.length > 0 ? customers.map(customer => (
+                    {displayCustomers.length > 0 ? displayCustomers.map(customer => (
                         <TableRow key={customer.id}>
                         <TableCell>
                             <div className="font-medium flex items-center gap-2">

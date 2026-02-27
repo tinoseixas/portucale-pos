@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect } from 'react';
@@ -11,7 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
-import { doc, setDoc, addDoc, collection } from 'firebase/firestore';
+import { doc, addDoc, collection } from 'firebase/firestore';
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import type { Customer } from '@/lib/types';
 import { Save, ArrowLeft, Building, MapPin, Phone, Mail, Hash } from 'lucide-react';
@@ -94,7 +95,7 @@ export default function EditCustomerPage() {
        updateDocumentNonBlocking(customerDocRef, data);
        toast({
          title: 'Client Actualitzat',
-         description: `Les dades de ${data.name} han estat guardades.`,
+         description: `Les dades de ${data.name} han estat desades.`,
        });
     }
     router.push('/dashboard/customers');
@@ -105,7 +106,7 @@ export default function EditCustomerPage() {
   }
 
   if (!user) {
-    return null; // Redirect is handled by useEffect
+    return null; 
   }
   
   if (!isNew && !customer) {
