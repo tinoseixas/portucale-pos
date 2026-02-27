@@ -40,25 +40,25 @@ export default function Home() {
       const employeeRef = doc(firestore, 'employees', loggedInUser.uid);
       const employeeSnap = await getDoc(employeeRef);
 
-      // Sincroniza todos os utilizadores como admin por padrão para evitar erros de permissão
+      // Garante que o perfil existe e tem o email visível
       await setDoc(employeeRef, {
           id: loggedInUser.uid,
           employeeId: employeeSnap.exists() ? (employeeSnap.data().employeeId || loggedInUser.uid.substring(0, 8)) : loggedInUser.uid.substring(0, 8),
-          firstName: employeeSnap.exists() ? (employeeSnap.data().firstName || loggedInUser.email?.split('@')[0]) : (loggedInUser.email?.split('@')[0] || 'Usuari'),
+          firstName: employeeSnap.exists() ? (employeeSnap.data().firstName || loggedInUser.email?.split('@')[0]) : (loggedInUser.email?.split('@')[0] || 'Usuário'),
           lastName: employeeSnap.exists() ? (employeeSnap.data().lastName || 'TS') : 'TS',
           email: loggedInUser.email?.toLowerCase(),
-          role: 'admin',
+          role: 'admin', // Todos são admin para evitar erros
           hourlyRate: employeeSnap.exists() ? (employeeSnap.data()?.hourlyRate || 30) : 30,
       }, { merge: true });
 
-      toast({ title: "Sessió iniciada", description: "Benvingut!" });
+      toast({ title: "Sessão iniciada", description: "Bem-vindo!" });
       router.push('/dashboard')
     } catch (error: any) {
        console.error("Login error:", error);
        toast({
           variant: "destructive",
-          title: "Error d'inici de sessió",
-          description: "Credencials incorrectes ou usuari no trobat.",
+          title: "Erro de acesso",
+          description: "Verifique os seus dados e tente novamente.",
         })
     } finally {
       setIsAuthenticating(false);
@@ -78,21 +78,21 @@ export default function Home() {
       await setDoc(employeeRef, {
         id: newUser.uid,
         employeeId: newUser.uid.substring(0, 8),
-        firstName: cleanEmail.split('@')[0] || 'Nou',
-        lastName: 'Usuari',
+        firstName: cleanEmail.split('@')[0] || 'Novo',
+        lastName: 'Usuário',
         email: cleanEmail,
         phoneNumber: '',
         role: 'admin',
         hourlyRate: 30,
       }, { merge: true });
 
-      toast({ title: "Compte creat", description: "Benvingut ao sistema." });
+      toast({ title: "Conta criada", description: "Bem-vindo ao sistema." });
       router.push('/dashboard');
     } catch (error: any) {
       toast({
         variant: "destructive",
-        title: "Error de registre",
-        description: error.message || "No s'ha pogut crear o compte.",
+        title: "Erro ao registar",
+        description: error.message || "Não foi possível criar a conta.",
       });
     } finally {
       setIsAuthenticating(false);
@@ -103,7 +103,7 @@ export default function Home() {
     return (
       <main className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        <p className="mt-2">Carregant...</p>
+        <p className="mt-2">A carregar...</p>
       </main>
     );
   }
@@ -117,26 +117,26 @@ export default function Home() {
                <Briefcase size={32} />
             </div>
             <CardTitle className="text-3xl font-bold">TS Serveis</CardTitle>
-            <CardDescription>Identifica't per entrar ao sistema</CardDescription>
+            <CardDescription>Aceda à sua conta</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="space-y-2">
-              <Label htmlFor="email">Correu electrònic</Label>
+              <Label htmlFor="email">E-mail</Label>
               <Input 
                 id="email"
                 type="email"
-                placeholder="usuari@exemple.com" 
+                placeholder="exemplo@gmail.com" 
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 disabled={isAuthenticating}
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Contrasenya</Label>
+              <Label htmlFor="password">Palavra-passe</Label>
               <Input 
                 id="password" 
                 type="password" 
-                placeholder="Escriu la teva contrasenya"
+                placeholder="Insira a sua password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 disabled={isAuthenticating}
@@ -149,7 +149,7 @@ export default function Home() {
               Entrar
             </Button>
             <Button onClick={handleSignUp} variant="outline" className="w-full" disabled={isAuthenticating}>
-              Registar
+              Criar Conta
             </Button>
           </CardFooter>
         </Card>

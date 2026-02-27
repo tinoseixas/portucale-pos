@@ -62,7 +62,7 @@ export default function DashboardPage() {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
   const [selectedProject, setSelectedProject] = useState<string>('all');
 
-  // Consulta de albarans pendentes só dispara quando o user está carregado
+  // Consulta de albarans pendentes - Sem restrições de permissão
   const pendingAlbaransQuery = useMemoFirebase(() => {
     if (!firestore || !user) return null;
     return query(collection(firestore, 'albarans'), where('status', '==', 'pendent'));
@@ -134,7 +134,7 @@ export default function DashboardPage() {
   
   const getEmployeeName = (employeeId: string) => {
     const employee = employees.find(e => e.id === employeeId);
-    return employee ? `${employee.firstName} ${employee.lastName}` : 'Desconegut';
+    return employee ? `${employee.firstName} ${employee.lastName}` : 'Desconhecido';
   };
 
   const handleDeleteSelected = () => {
@@ -149,8 +149,8 @@ export default function DashboardPage() {
     });
 
     toast({
-      title: `${selectedRows.length} servei(s) eliminat(s)`,
-      description: 'Els registres seleccionats han estat eliminats.',
+      title: `${selectedRows.length} registos eliminados`,
+      description: 'Os registos selecionados foram removidos com sucesso.',
     });
 
     setAllServices(allServices.filter(s => !selectedRows.includes(s.id)));
@@ -175,14 +175,14 @@ export default function DashboardPage() {
     <div className="space-y-8">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Resum de Serveis</h1>
-          <p className="text-muted-foreground">Vista general de tots els registres.</p>
+          <h1 className="text-3xl font-bold">Resumo de Serviços</h1>
+          <p className="text-muted-foreground">Painel de controlo central.</p>
         </div>
         <div className="hidden md:flex items-center gap-2">
             <Button asChild className="bg-accent hover:bg-accent/90 text-accent-foreground">
                 <Link href="/dashboard/new">
                     <PlusCircle className="mr-2 h-4 w-4" />
-                    Nou Servei
+                    Novo Serviço
                 </Link>
             </Button>
         </div>
@@ -191,12 +191,12 @@ export default function DashboardPage() {
       {pendingAlbarans && pendingAlbarans.length > 0 && (
         <Alert variant="default" className="bg-primary/5 border-primary/20 text-primary-foreground shadow-sm">
           <Info className="h-5 w-5 text-primary" />
-          <AlertTitle className="font-bold text-primary">Albarans Pendents de Facturar</AlertTitle>
+          <AlertTitle className="font-bold text-primary">Albarãs por Facturar</AlertTitle>
           <AlertDescription className="flex items-center justify-between flex-wrap gap-4 mt-2">
-            <span className="text-muted-foreground">Tens <strong>{pendingAlbarans.length}</strong> albarà(ns) generats que encara no s'han convertit em factura.</span>
+            <span className="text-muted-foreground">Existem <strong>{pendingAlbarans.length}</strong> albarãs prontos para serem convertidos em fatura.</span>
             <Button size="sm" variant="outline" className="border-primary text-primary hover:bg-primary/10" asChild>
               <Link href="/dashboard/albarans/pending">
-                Veure Llista <ArrowRight className="ml-2 h-4 w-4" />
+                Ver Lista <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
             </Button>
           </AlertDescription>
@@ -213,8 +213,8 @@ export default function DashboardPage() {
             <CardHeader>
                 <div className="flex justify-between items-start flex-wrap gap-4">
                     <div>
-                        <CardTitle>Serveis Registrats</CardTitle>
-                        <CardDescription>Visualitza i filtra els registres de servei.</CardDescription>
+                        <CardTitle>Todos os Registos</CardTitle>
+                        <CardDescription>Visualize todos os serviços da equipa sem restrições.</CardDescription>
                     </div>
                     {selectedRows.length > 0 && (
                         <AlertDialog>
@@ -225,11 +225,11 @@ export default function DashboardPage() {
                         </AlertDialogTrigger>
                         <AlertDialogContent>
                             <AlertDialogHeader>
-                            <AlertDialogTitle>Confirmar eliminació</AlertDialogTitle>
-                            <AlertDialogDescription>Aquesta acció eliminará permanentment {selectedRows.length} registres.</AlertDialogDescription>
+                            <AlertDialogTitle>Confirmar eliminação</AlertDialogTitle>
+                            <AlertDialogDescription>Esta ação irá eliminar permanentemente {selectedRows.length} registos.</AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel·lar</AlertDialogCancel>
+                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
                             <AlertDialogAction onClick={handleDeleteSelected} className="bg-destructive">Eliminar</AlertDialogAction>
                             </AlertDialogFooter>
                         </AlertDialogContent>
@@ -240,10 +240,10 @@ export default function DashboardPage() {
                     <Select value={selectedUser} onValueChange={setSelectedUser}>
                     <SelectTrigger className="w-full sm:w-[200px]">
                         <User className="mr-2 h-4 w-4" />
-                        <SelectValue placeholder="Usuari" />
+                        <SelectValue placeholder="Funcionário" />
                     </SelectTrigger>
                     <SelectContent>
-                        <SelectItem value="all">Tots els Usuaris</SelectItem>
+                        <SelectItem value="all">Todos os Técnicos</SelectItem>
                         {employees.map(emp => (
                         <SelectItem key={emp.id} value={emp.id}>{emp.firstName} {emp.lastName}</SelectItem>
                         ))}
@@ -268,7 +268,7 @@ export default function DashboardPage() {
                         <SelectValue placeholder="Obra" />
                     </SelectTrigger>
                     <SelectContent>
-                        <SelectItem value="all">Totes les Obres</SelectItem>
+                        <SelectItem value="all">Todas as Obras</SelectItem>
                         {projectNames.map(name => (
                         <SelectItem key={name} value={name}>{name}</SelectItem>
                         ))}
@@ -277,7 +277,7 @@ export default function DashboardPage() {
                     
                     {(selectedUser !== 'all' || selectedDate || selectedProject !== 'all') && (
                     <Button variant="ghost" onClick={() => { setSelectedUser('all'); setSelectedDate(undefined); setSelectedProject('all'); }}>
-                        Neteja filtres
+                        Limpar Filtros
                     </Button>
                     )}
                 </div>
@@ -294,11 +294,11 @@ export default function DashboardPage() {
                             />
                         </TableHead>
                         <TableHead className="w-[10px]"></TableHead>
-                        <TableHead>Funcionari</TableHead>
+                        <TableHead>Técnico</TableHead>
                         <TableHead>Data</TableHead>
                         <TableHead>Obra</TableHead>
-                        <TableHead>Descripció</TableHead>
-                        <TableHead className="text-right">Accions</TableHead>
+                        <TableHead>Descrição</TableHead>
+                        <TableHead className="text-right">Ações</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -321,13 +321,13 @@ export default function DashboardPage() {
                             <TableCell className="max-w-[300px] truncate">{service.description}</TableCell>
                             <TableCell className="text-right">
                             <Button variant="outline" size="sm" asChild>
-                                <Link href={`/dashboard/edit/${service.id}?ownerId=${service.employeeId}`}>Detalls</Link>
+                                <Link href={`/dashboard/edit/${service.id}?ownerId=${service.employeeId}`}>Detalhes</Link>
                             </Button>
                             </TableCell>
                         </TableRow>
                         )) : (
                         <TableRow>
-                            <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">No s'han trobat serveis.</TableCell>
+                            <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">Nenhum serviço encontrado.</TableCell>
                         </TableRow>
                         )}
                     </TableBody>

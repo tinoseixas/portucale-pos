@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect, type ReactNode } from 'react';
+import { type ReactNode } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ShieldCheck, LogIn } from 'lucide-react';
@@ -14,15 +14,14 @@ interface AdminGateProps {
   pageDescription: string;
 }
 
+/**
+ * Componente simplificado que permite acesso a qualquer utilizador logado.
+ * Removemos todas as restrições de permissões para garantir o funcionamento.
+ */
 export function AdminGate({ children, pageTitle, pageDescription }: AdminGateProps) {
   const { user, isUserLoading } = useUser();
-  const [isClient, setIsClient] = useState(false);
 
-  useEffect(() => {
-    setIsClient(true);
-  }, []);
-
-  if (!isClient || isUserLoading) {
+  if (isUserLoading) {
     return (
         <div className="flex items-center justify-center pt-16">
             <Card className="w-full max-w-md">
@@ -31,7 +30,7 @@ export function AdminGate({ children, pageTitle, pageDescription }: AdminGatePro
                         <ShieldCheck className="h-6 w-6 text-primary animate-pulse" />
                     </div>
                     <CardTitle>{pageTitle}</CardTitle>
-                    <CardDescription>Verificando acesso...</CardDescription>
+                    <CardDescription>A verificar acesso...</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <div className="h-10 w-full bg-muted rounded-md animate-pulse" />
@@ -41,7 +40,7 @@ export function AdminGate({ children, pageTitle, pageDescription }: AdminGatePro
     );
   }
 
-  // Todos os utilizadores autenticados têm acesso total conforme pedido
+  // Se estiver logado, tem acesso a tudo. Sem exceções.
   if (user) {
     return <>{children}</>;
   }
@@ -53,16 +52,16 @@ export function AdminGate({ children, pageTitle, pageDescription }: AdminGatePro
             <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-destructive/10">
                 <ShieldCheck className="h-6 w-6 text-destructive" />
             </div>
-          <CardTitle>Acesso Não Autorizado</CardTitle>
+          <CardTitle>Acesso Restrito</CardTitle>
           <CardDescription>
-            Por favor, inicie sessão para aceder a esta secção.
+            Inicie sessão para aceder a esta funcionalidade.
           </CardDescription>
         </CardHeader>
         <CardContent>
             <Button asChild>
                 <Link href="/">
                     <LogIn className="mr-2 h-4 w-4" />
-                    Ir para Iniciar Sessão
+                    Ir para Login
                 </Link>
             </Button>
         </CardContent>
