@@ -1,3 +1,4 @@
+
 'use client'
 
 import { useState, useMemo, useEffect } from 'react'
@@ -76,7 +77,7 @@ export default function DashboardPage() {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
   const [selectedProject, setSelectedProject] = useState<string>('all');
 
-  // Query for pending albarans - only for admins and when profile is ready to avoid permissions race conditions
+  // Query for pending albarans - only for admins and once profile is ready
   const albaransQuery = useMemoFirebase(() => {
     if (!firestore || !isAdmin || isLoadingProfile) return null;
     return query(collection(firestore, 'albarans'), where('status', '==', 'pendent'), orderBy('albaranNumber', 'desc'));

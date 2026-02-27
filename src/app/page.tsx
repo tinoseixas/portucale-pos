@@ -1,3 +1,4 @@
+
 'use client'
 
 import { useState, useEffect } from 'react'
@@ -52,7 +53,7 @@ export default function Home() {
           firstName: employeeSnap.exists() ? (employeeSnap.data().firstName || loggedInUser.email?.split('@')[0]) : (loggedInUser.email?.split('@')[0] || 'Usuari'),
           lastName: employeeSnap.exists() ? (employeeSnap.data().lastName || 'TS') : 'TS',
           email: loggedInUser.email,
-          role: isInitialAdmin ? 'admin' : (employeeSnap.exists() ? employeeSnap.data()?.role : 'user'),
+          role: isInitialAdmin ? 'admin' : (employeeSnap.exists() ? (employeeSnap.data()?.role || 'user') : 'user'),
           hourlyRate: employeeSnap.exists() ? (employeeSnap.data()?.hourlyRate || (isInitialAdmin ? 30 : 27)) : (isInitialAdmin ? 30 : 27),
       }, { merge: true });
 
