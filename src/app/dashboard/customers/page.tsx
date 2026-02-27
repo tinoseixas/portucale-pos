@@ -1,4 +1,3 @@
-
 'use client'
 
 import { useMemo, useState, useEffect } from 'react'
@@ -24,7 +23,7 @@ import {
 import { useToast } from '@/hooks/use-toast'
 import { AdminGate } from '@/components/AdminGate'
 
-// Dades de client de mostra per importar, agora ordenadas alfabeticamente.
+// Dades de client de mostra per importar, ordenades alfabèticament.
 const mockCustomers: Omit<Customer, 'id'>[] = [
   { name: 'Adiel Serveis', nrt: 'F333016-C', address: 'Cami de engolasters 2', email: '', contact: '' },
   { name: 'ADVOCADA EVA LOPEZ HERRERO', nrt: 'F-216873-R', address: 'C/LES CANALS N°5 1°18', email: '', contact: '' },
@@ -150,7 +149,6 @@ export default function CustomersPage() {
     setIsImporting(true);
 
     try {
-      // 1. Obtenir els clients actuals per comprovar duplicats
       const existingSnap = await getDocs(collection(firestore, 'customers'));
       const existingNames = new Set(existingSnap.docs.map(doc => doc.data().name.toLowerCase().trim()));
 
@@ -159,7 +157,6 @@ export default function CustomersPage() {
       
       let addedCount = 0;
       mockCustomers.forEach(customerData => {
-        // Només afegir si el nom no existeix ja a la base de dades
         if (!existingNames.has(customerData.name.toLowerCase().trim())) {
           const docRef = doc(customersCollection);
           batch.set(docRef, customerData);
@@ -170,21 +167,21 @@ export default function CustomersPage() {
       if (addedCount > 0) {
         await batch.commit();
         toast({
-          title: 'Importació Completa',
+          title: 'Sincronització Completa',
           description: `${addedCount} nous clients han estat afegits sense duplicats.`,
         });
       } else {
         toast({
           title: 'Sense canvis',
-          description: 'Tots els clients de mostra ja existeixen a la teva base de dades.',
+          description: 'Tots os clients ja existeixen a la base de dades.',
         });
       }
     } catch (error) {
       console.error("Error en importar clients:", error);
       toast({
         variant: 'destructive',
-        title: 'Error en la importació',
-        description: 'No s\'han pogut afegir els clients de mostra.',
+        title: 'Error en la sincronització',
+        description: 'No s\'han pogut afegir els clients.',
       });
     } finally {
       setIsImporting(false);
@@ -206,11 +203,11 @@ export default function CustomersPage() {
   const isLoading = isUserLoading || isLoadingCustomers;
 
   if (isLoading) {
-    return <p>Carregant clients...</p>
+    return <p className="p-4">Carregant clients...</p>;
   }
   
   if (!user) {
-     return null; // Redirect is handled by the useEffect hook
+     return null;
   }
 
   return (

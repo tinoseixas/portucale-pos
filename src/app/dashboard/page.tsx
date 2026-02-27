@@ -4,7 +4,7 @@ import { useState, useMemo, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
-import { PlusCircle, List, Calendar as CalendarIcon, User, Edit, Search, Trash2, Briefcase, FileText, ArrowRight, AlertTriangle } from 'lucide-react'
+import { PlusCircle, Calendar as CalendarIcon, User, Edit, Trash2, Briefcase, ArrowRight, AlertTriangle } from 'lucide-react'
 import type { ServiceRecord, Employee, Albaran } from '@/lib/types'
 import { useCollection, useUser, useFirestore, useMemoFirebase, errorEmitter, FirestorePermissionError, deleteDocumentNonBlocking } from '@/firebase';
 import { collection, query, orderBy, getDocs, collectionGroup, doc, where } from 'firebase/firestore';
@@ -14,7 +14,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Calendar } from '@/components/ui/calendar'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { format, parseISO, isSameDay, startOfDay, isToday } from 'date-fns'
+import { format, parseISO, isSameDay, startOfDay } from 'date-fns'
 import { ca } from 'date-fns/locale'
 import { cn } from '@/lib/utils'
 import { Checkbox } from "@/components/ui/checkbox"
@@ -56,24 +56,21 @@ export default function DashboardPage() {
 
   const isAdmin = useMemo(() => user?.email === ADMIN_EMAIL, [user]);
   
-  // State for data
   const [allServices, setAllServices] = useState<ServiceRecord[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [isLoadingData, setIsLoadingData] = useState(true);
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
 
-  // Filters state
   const [selectedUser, setSelectedUser] = useState<string>('all');
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
   const [selectedProject, setSelectedProject] = useState<string>('all');
 
-  // Pending albarans query
   const albaransQuery = useMemoFirebase(() => {
     if (!firestore || !isAdmin) return null;
     return query(collection(firestore, 'albarans'), where('status', '==', 'pendent'));
   }, [firestore, isAdmin]);
 
-  const { data: pendingAlbarans, isLoading: isLoadingAlbarans } = useCollection<Albaran>(albaransQuery);
+  const { data: pendingAlbarans } = useCollection<Albaran>(albaransQuery);
 
   useEffect(() => {
     if (isUserLoading || !firestore) return;
@@ -92,10 +89,8 @@ export default function DashboardPage() {
 
             let servicesQuery;
             if (isAdmin) {
-                // Admin gets all services
                 servicesQuery = query(collectionGroup(firestore, 'serviceRecords'), orderBy('arrivalDateTime', 'desc'));
             } else {
-                // Regular user gets only their own services
                 servicesQuery = query(collection(firestore, `employees/${user.uid}/serviceRecords`), orderBy('arrivalDateTime', 'desc'));
             }
             
@@ -128,7 +123,6 @@ export default function DashboardPage() {
     return [...new Set(names)];
   }, [allServices]);
 
-
   const filteredServices = useMemo(() => {
     if (!allServices) return [];
 
@@ -154,7 +148,7 @@ export default function DashboardPage() {
         return {
             ...service,
             rowColor: dayColors[currentColorIndex],
-        };
+        } as ServiceWithRowColor;
     });
     return colored.reverse();
 
@@ -164,7 +158,7 @@ export default function DashboardPage() {
     setSelectedRows([]);
   }, [filteredServices]);
 
-  const services = filteredServices as ServiceWithRowColor[];
+  const services = filteredServices;
   const isLoading = isLoadingData || isUserLoading;
   
   const getEmployeeName = (employeeId: string) => {
@@ -190,7 +184,7 @@ export default function DashboardPage() {
 
     setAllServices(allServices.filter(s => !selectedRows.includes(s.id)));
     setSelectedRows([]);
-  }
+  };
   
   const renderSkeletons = () => (
     <div className="space-y-4">
@@ -200,12 +194,12 @@ export default function DashboardPage() {
   );
   
   if (isUserLoading) {
-    return <div className="space-y-8">{renderSkeletons()}</div>
+    return <div className="space-y-8 p-4">{renderSkeletons()}</div>;
   }
   
   if (!user) {
     router.push('/');
-    return <p>Redireccionant...</p>;
+    return <p className="p-4">Redireccionant...</p>;
   }
 
   return (
@@ -225,7 +219,6 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Pending Albarans Alert */}
       {isAdmin && pendingAlbarans && pendingAlbarans.length > 0 && (
         <Alert className="bg-amber-50 border-amber-200 text-amber-900 border-l-4">
           <AlertTriangle className="h-5 w-5 text-amber-600" />
@@ -279,7 +272,7 @@ export default function DashboardPage() {
                             <AlertDialogTitle>Estàs segur?</AlertDialogTitle>
                             <AlertDialogDescription>
                                 Aquesta acció eliminarà permanentment {selectedRows.length} registre(s) de servei. Aquesta acció no es pot desfer.
-                            </AlertDescription>
+                            </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
                             <AlertDialogCancel>Cancel·lar</AlertDialogCancel>
@@ -375,7 +368,7 @@ export default function DashboardPage() {
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {services && services.length > 0 ? (services as ServiceWithRowColor[]).map(service => (
+                        {services && services.length > 0 ? services.map(service => (
                         <TableRow key={service.id} className={isAdmin ? service.rowColor : ''} data-state={selectedRows.includes(service.id) && "selected"}>
                             {isAdmin && (
                                 <TableCell className="px-2">
@@ -428,5 +421,5 @@ export default function DashboardPage() {
         )
       )}
     </div>
-  )
+  );
 }
