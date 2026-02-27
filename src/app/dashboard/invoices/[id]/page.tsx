@@ -65,16 +65,13 @@ export default function InvoiceDetailPage() {
         const fetchData = async () => {
             setIsLoadingData(true);
             try {
-                // Fetch all employees first
                 const employeesSnap = await getDocs(query(collection(firestore, 'employees')));
                 const allEmployees = employeesSnap.docs.map(d => ({ id: d.id, ...d.data() } as Employee));
                 setEmployees(allEmployees);
 
-                // Fetch all services
                 const allServicesSnapshot = await getDocs(collectionGroup(firestore, 'serviceRecords'));
                 const allServicesData = allServicesSnapshot.docs.map(d => ({ id: d.id, ...d.data() } as ServiceRecord));
                 
-                // Get the service record IDs from the albarans linked in the invoice
                 if (invoice.sourceType === 'albaran' && invoice.sourceId) {
                     const sourceAlbaranIds = invoice.sourceId.split(',');
                     const albaransSnapshot = await getDocs(query(collection(firestore, 'albarans'), where('__name__', 'in', sourceAlbaranIds)));
@@ -84,7 +81,6 @@ export default function InvoiceDetailPage() {
                     const invoiceServices = allServicesData.filter(s => serviceRecordIdsFromAlbarans.includes(s.id));
                     setServices(invoiceServices);
                 } else {
-                    // Handle quotes or direct invoices if needed
                     setServices([]);
                 }
             } catch (e) {
@@ -108,12 +104,12 @@ export default function InvoiceDetailPage() {
 
         try {
             const canvas = await html2canvas(reportElement, {
-                scale: 2,
+                scale: 1.5,
                 useCORS: true,
                 logging: false,
             });
 
-            const imgData = canvas.toDataURL('image/png');
+            const imgData = canvas.toDataURL('image/jpeg', 0.7);
             const pdf = new jsPDF('p', 'mm', 'a4');
             const pdfWidth = pdf.internal.pageSize.getWidth();
             const pdfHeight = pdf.internal.pageSize.getHeight();
@@ -126,13 +122,13 @@ export default function InvoiceDetailPage() {
             let heightLeft = imgHeight;
             let position = 0;
 
-            pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+            pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
             heightLeft -= pdfHeight;
 
             while (heightLeft > 0) {
                 position = heightLeft - imgHeight;
                 pdf.addPage();
-                pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+                pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
                 heightLeft -= pdfHeight;
             }
 
@@ -164,7 +160,7 @@ export default function InvoiceDetailPage() {
         deleteDocumentNonBlocking(invoiceDocRef);
         toast({
             title: 'Factura Eliminada',
-            description: `La factura #${invoice?.invoiceNumber} ha estat eliminada del historial.`,
+            description: `La factura #${invoice?.invoiceNumber} ha estat eliminada de l'historial.`,
         });
         router.push('/dashboard/invoices/history');
     }
@@ -210,7 +206,7 @@ export default function InvoiceDetailPage() {
                                 <AlertDialogHeader>
                                 <AlertDialogTitle>Estàs segur que vols eliminar la factura?</AlertDialogTitle>
                                 <AlertDialogDescription>
-                                    Aquesta acció no es pot desfer. S'eliminarà la factura <strong>#{invoice.invoiceNumber}</strong> del historial.
+                                    Aquesta acció no es pot desfer. S'eliminarà la factura <strong>#{invoice.invoiceNumber}</strong> de l'historial.
                                 </AlertDialogDescription>
                                 </AlertDialogHeader>
                                 <AlertDialogFooter>
@@ -223,7 +219,7 @@ export default function InvoiceDetailPage() {
                          {invoice.status !== 'pagada' && (
                             <Button variant="outline" onClick={() => router.push(`/dashboard/receipts/new?invoiceId=${invoice.id}`)}>
                                 <CreditCard className="mr-2 h-4 w-4" />
-                                Registar Pagament
+                                Registrar Pagament
                             </Button>
                         )}
 

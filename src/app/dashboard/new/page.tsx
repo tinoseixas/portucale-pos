@@ -39,7 +39,7 @@ export default function NewServicePage() {
 
   const handleStartService = async () => {
     if (!user || !firestore || !currentEmployee) {
-        toast({ variant: "destructive", title: "Error", description: "No s'han pogut carregar les dades de l'usuari. Si us plau, torna a intentar." });
+        toast({ variant: "destructive", title: "Error", description: "No s'han pogut carregar les dades de l'usuari. Si us plau, torna-ho a intentar." });
         return;
     }
     
@@ -66,7 +66,6 @@ export default function NewServicePage() {
             createdAt: now.toISOString(),
         };
         
-        // Service records are always created under the employee they belong to
         const serviceRecordsCollection = collection(firestore, `employees/${currentEmployee.id}/serviceRecords`);
         const docRef = await addDoc(serviceRecordsCollection, serviceRecord);
         
@@ -128,7 +127,7 @@ export default function NewServicePage() {
                 <Label htmlFor="customerId" className="flex items-center gap-2"><Users className="h-4 w-4 text-muted-foreground" /> Client</Label>
                 <Select value={selectedCustomerId} onValueChange={setSelectedCustomerId} disabled={isLoadingCustomers}>
                   <SelectTrigger id="customerId">
-                    <SelectValue placeholder={isLoadingCustomers ? "A carregar clients..." : "Selecciona un client..."} />
+                    <SelectValue placeholder={isLoadingCustomers ? "Carregant clients..." : "Selecciona un client..."} />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">Cap client</SelectItem>

@@ -48,7 +48,6 @@ export default function QuoteDetailPage() {
     }, [firestore, quote?.customerId]);
     const { data: customerData } = useDoc<Customer>(customerDocRef);
     
-    // Auto-export if query param is set
     const shouldExport = searchParams.get('export') === 'true';
 
     useEffect(() => {
@@ -73,12 +72,12 @@ export default function QuoteDetailPage() {
 
         try {
             const canvas = await html2canvas(quoteElement, {
-                scale: 2,
+                scale: 1.5,
                 useCORS: true,
                 logging: false,
             });
 
-            const imgData = canvas.toDataURL('image/png');
+            const imgData = canvas.toDataURL('image/jpeg', 0.7);
             const pdf = new jsPDF('p', 'mm', 'a4');
             const pdfWidth = pdf.internal.pageSize.getWidth();
             const pdfHeight = pdf.internal.pageSize.getHeight();
@@ -91,13 +90,13 @@ export default function QuoteDetailPage() {
             let heightLeft = imgHeight;
             let position = 0;
 
-            pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+            pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
             heightLeft -= pdfHeight;
 
             while (heightLeft > 0) {
                 position = heightLeft - imgHeight;
                 pdf.addPage();
-                pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+                pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
                 heightLeft -= pdfHeight;
             }
 
@@ -107,7 +106,7 @@ export default function QuoteDetailPage() {
 
         } catch (error) {
             console.error("Error en generar el PDF:", error);
-            toast({ variant: 'destructive', title: 'Error', description: "No s'ha pogut generar o PDF." });
+            toast({ variant: 'destructive', title: 'Error', description: "No s'ha pogut generar el PDF." });
         } finally {
             setIsGenerating(false);
         }
@@ -143,7 +142,7 @@ export default function QuoteDetailPage() {
 
             toast({
                 title: "Pressupost Duplicat",
-                description: `Creat nou pressupost #${newQuoteNumber} a partir do #${quote.quoteNumber}.`,
+                description: `Creat nou pressupost #${newQuoteNumber} a partir del #${quote.quoteNumber}.`,
             });
             
             router.push(`/dashboard/quotes/edit/${newQuoteRef.id}`);
@@ -153,7 +152,7 @@ export default function QuoteDetailPage() {
             toast({
                 variant: 'destructive',
                 title: 'Error',
-                description: "No s'ha pogut duplicar o pressupost.",
+                description: "No s'ha pogut duplicar el pressupost.",
             });
         } finally {
             setIsDuplicating(false);
@@ -189,7 +188,7 @@ export default function QuoteDetailPage() {
     }
     
     if (!quote) {
-        return <p>No s'ha trobat o pressupost.</p>
+        return <p>No s'ha trobat el pressupost.</p>
     }
 
     return (
@@ -218,9 +217,9 @@ export default function QuoteDetailPage() {
                             </AlertDialogTrigger>
                             <AlertDialogContent>
                                 <AlertDialogHeader>
-                                <AlertDialogTitle>Estàs segur que vols eliminar o pressupost?</AlertDialogTitle>
+                                <AlertDialogTitle>Estàs segur que vols eliminar el pressupost?</AlertDialogTitle>
                                 <AlertDialogDescription>
-                                    Aquesta acció no es pot desfer. S'eliminarà o pressupost <strong>#{quote.quoteNumber}</strong> de l'historial.
+                                    Aquesta acció no es pot desfer. S'eliminarà el pressupost <strong>#{quote.quoteNumber}</strong> de l'historial.
                                 </AlertDialogDescription>
                                 </AlertDialogHeader>
                                 <AlertDialogFooter>

@@ -1,4 +1,3 @@
-
 'use client'
 
 import { useMemo, useEffect } from 'react'
@@ -45,7 +44,7 @@ export default function PendingAlbaransPage() {
       <div className="space-y-6 max-w-6xl mx-auto">
         <div className="flex items-center justify-between">
           <Button variant="ghost" onClick={() => router.push('/dashboard')} className="-ml-4">
-            <ArrowLeft className="mr-2 h-4 w-4" /> Tornar ao Dashboard
+            <ArrowLeft className="mr-2 h-4 w-4" /> Tornar al Dashboard
           </Button>
         </div>
 
@@ -56,7 +55,7 @@ export default function PendingAlbaransPage() {
             </div>
             <div>
               <CardTitle>Albarans Pendents de Facturar</CardTitle>
-              <CardDescription>Aquests albarans han estat generats però encara não tenen uma factura associada.</CardDescription>
+              <CardDescription>Aquests albarans han estat generats però encara no tenen una factura associada.</CardDescription>
             </div>
           </CardHeader>
           <CardContent>
@@ -91,7 +90,7 @@ export default function PendingAlbaransPage() {
                   )) : (
                     <TableRow>
                       <TableCell colSpan={6} className="h-32 text-center text-muted-foreground">
-                        Não hi ha albarans pendents de facturar. Bona feina!
+                        No hi ha albarans pendents de facturar. Bona feina!
                       </TableCell>
                     </TableRow>
                   )}

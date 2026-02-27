@@ -1,4 +1,3 @@
-
 'use client'
 
 import { useState, useMemo, useEffect } from 'react'
@@ -57,12 +56,10 @@ export default function DashboardPage() {
   const [isLoadingData, setIsLoadingData] = useState(true);
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
 
-  // Inicializamos o filtro com o utilizador atual
   const [selectedUser, setSelectedUser] = useState<string>('loading');
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
   const [selectedProject, setSelectedProject] = useState<string>('all');
 
-  // Sincronizar o filtro inicial com o utilizador logado
   useEffect(() => {
     if (user && selectedUser === 'loading') {
       setSelectedUser(user.uid);
@@ -82,14 +79,13 @@ export default function DashboardPage() {
             const employeesData = employeeSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Employee));
             setEmployees(employeesData);
 
-            // Carregar todos os serviços
             const servicesQuery = query(collectionGroup(firestore, 'serviceRecords'), orderBy('arrivalDateTime', 'desc'));
             const serviceSnapshot = await getDocs(servicesQuery);
             const servicesData = serviceSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ServiceRecord));
             setAllServices(servicesData);
 
         } catch (error) {
-            console.error("Erro ao carregar dados:", error);
+            console.error("Error en carregar dades:", error);
         } finally {
             setIsLoadingData(false);
         }
@@ -100,7 +96,7 @@ export default function DashboardPage() {
   
   const projectNames = useMemo(() => {
     const names = allServices.map(service => service.projectName).filter(Boolean);
-    return [...new Set(names)];
+    return [...new Set(names)].sort((a, b) => a.localeCompare(b));
   }, [allServices]);
 
   const filteredServices = useMemo(() => {
@@ -134,7 +130,7 @@ export default function DashboardPage() {
   
   const getEmployeeName = (employeeId: string) => {
     const employee = employees.find(e => e.id === employeeId);
-    return employee ? `${employee.firstName} ${employee.lastName}` : 'Desconhecido';
+    return employee ? `${employee.firstName} ${employee.lastName}` : 'Desconegut';
   };
 
   const handleDeleteSelected = () => {
@@ -149,8 +145,8 @@ export default function DashboardPage() {
     });
 
     toast({
-      title: `${selectedRows.length} registos eliminados`,
-      description: 'Os registos selecionados foram removidos com sucesso.',
+      title: `${selectedRows.length} registres eliminats`,
+      description: 'Els registres seleccionats s\'han eliminat correctament.',
     });
 
     setAllServices(allServices.filter(s => !selectedRows.includes(s.id)));
@@ -175,14 +171,14 @@ export default function DashboardPage() {
     <div className="space-y-8">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Olá, {getEmployeeName(user.uid).split(' ')[0]}</h1>
-          <p className="text-muted-foreground">Aqui estão os seus registos de serviço.</p>
+          <h1 className="text-3xl font-bold">Hola, {getEmployeeName(user.uid).split(' ')[0]}</h1>
+          <p className="text-muted-foreground">Aquí tens els teus registres de servei.</p>
         </div>
         <div className="hidden md:flex items-center gap-2">
             <Button asChild className="bg-accent hover:bg-accent/90 text-accent-foreground">
                 <Link href="/dashboard/new">
                     <PlusCircle className="mr-2 h-4 w-4" />
-                    Novo Serviço
+                    Nou Servei
                 </Link>
             </Button>
         </div>
@@ -198,8 +194,8 @@ export default function DashboardPage() {
             <CardHeader>
                 <div className="flex justify-between items-start flex-wrap gap-4">
                     <div>
-                        <CardTitle>{selectedUser === user.uid ? 'Meus Registos' : 'Todos os Registos'}</CardTitle>
-                        <CardDescription>Visualize e gira os serviços realizados.</CardDescription>
+                        <CardTitle>{selectedUser === user.uid ? 'Els Meus Registres' : 'Tots els Registres'}</CardTitle>
+                        <CardDescription>Visualitza i gestiona els serveis realitzats.</CardDescription>
                     </div>
                     {selectedRows.length > 0 && (
                         <AlertDialog>
@@ -210,11 +206,11 @@ export default function DashboardPage() {
                         </AlertDialogTrigger>
                         <AlertDialogContent>
                             <AlertDialogHeader>
-                            <AlertDialogTitle>Confirmar eliminação</AlertDialogTitle>
-                            <AlertDialogDescription>Esta ação irá eliminar permanentemente {selectedRows.length} registos.</AlertDialogDescription>
+                            <AlertDialogTitle>Confirmar eliminació</AlertDialogTitle>
+                            <AlertDialogDescription>Aquesta acció eliminarà permanentment {selectedRows.length} registres.</AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
-                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                            <AlertDialogCancel>Cancel·lar</AlertDialogCancel>
                             <AlertDialogAction onClick={handleDeleteSelected} className="bg-destructive">Eliminar</AlertDialogAction>
                             </AlertDialogFooter>
                         </AlertDialogContent>
@@ -225,10 +221,10 @@ export default function DashboardPage() {
                     <Select value={selectedUser} onValueChange={setSelectedUser}>
                     <SelectTrigger className="w-full sm:w-[200px]">
                         <User className="mr-2 h-4 w-4" />
-                        <SelectValue placeholder="Funcionário" />
+                        <SelectValue placeholder="Tècnic" />
                     </SelectTrigger>
                     <SelectContent>
-                        <SelectItem value="all">Todos os Técnicos</SelectItem>
+                        <SelectItem value="all">Tots els Tècnics</SelectItem>
                         {employees.map(emp => (
                         <SelectItem key={emp.id} value={emp.id}>{emp.firstName} {emp.lastName}</SelectItem>
                         ))}
@@ -239,7 +235,7 @@ export default function DashboardPage() {
                     <PopoverTrigger asChild>
                         <Button variant="outline" className="w-full sm:w-[240px] justify-start text-left font-normal">
                         <CalendarIcon className="mr-2 h-4 w-4" />
-                        {selectedDate ? format(selectedDate, "PPP", { locale: ca }) : <span>Filtrar por data</span>}
+                        {selectedDate ? format(selectedDate, "PPP", { locale: ca }) : <span>Filtrar per data</span>}
                         </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0">
@@ -253,7 +249,7 @@ export default function DashboardPage() {
                         <SelectValue placeholder="Obra" />
                     </SelectTrigger>
                     <SelectContent>
-                        <SelectItem value="all">Todas as Obras</SelectItem>
+                        <SelectItem value="all">Totes les Obres</SelectItem>
                         {projectNames.map(name => (
                         <SelectItem key={name} value={name}>{name}</SelectItem>
                         ))}
@@ -262,7 +258,7 @@ export default function DashboardPage() {
                     
                     {(selectedUser !== user.uid || selectedDate || selectedProject !== 'all') && (
                     <Button variant="ghost" onClick={() => { setSelectedUser(user.uid); setSelectedDate(undefined); setSelectedProject('all'); }}>
-                        Limpar Filtros
+                        Netejar Filtres
                     </Button>
                     )}
                 </div>
@@ -279,11 +275,11 @@ export default function DashboardPage() {
                             />
                         </TableHead>
                         <TableHead className="w-[10px]"></TableHead>
-                        <TableHead>Técnico</TableHead>
+                        <TableHead>Tècnic</TableHead>
                         <TableHead>Data</TableHead>
                         <TableHead>Obra</TableHead>
-                        <TableHead>Descrição</TableHead>
-                        <TableHead className="text-right">Ações</TableHead>
+                        <TableHead>Descripció</TableHead>
+                        <TableHead className="text-right">Accions</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -306,13 +302,13 @@ export default function DashboardPage() {
                             <TableCell className="max-w-[300px] truncate">{service.description}</TableCell>
                             <TableCell className="text-right">
                             <Button variant="outline" size="sm" asChild>
-                                <Link href={`/dashboard/edit/${service.id}?ownerId=${service.employeeId}`}>Detalhes</Link>
+                                <Link href={`/dashboard/edit/${service.id}?ownerId=${service.employeeId}`}>Detalls</Link>
                             </Button>
                             </TableCell>
                         </TableRow>
                         )) : (
                         <TableRow>
-                            <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">Nenhum serviço encontrado.</TableCell>
+                            <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">Cap servei trobat.</TableCell>
                         </TableRow>
                         )}
                     </TableBody>

@@ -46,7 +46,6 @@ export default function AlbaranDetailPage() {
     const employeesQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'employees')) : null, [firestore]);
     const { data: employees, isLoading: isLoadingEmployees } = useCollection<Employee>(employeesQuery);
     
-    // Auto-export if query param is set
     const shouldExport = searchParams.get('export') === 'true';
 
     useEffect(() => {
@@ -61,7 +60,6 @@ export default function AlbaranDetailPage() {
 
             setIsLoadingData(true)
             
-            // Fetch Customer
             if (albaran.customerId) {
                 const customerSnap = await getDocs(query(collection(firestore, 'customers'), where('__name__', '==', albaran.customerId)))
                 if (!customerSnap.empty) {
@@ -69,7 +67,6 @@ export default function AlbaranDetailPage() {
                 }
             }
             
-            // Fetch Service Records
             if (albaran.serviceRecordIds && albaran.serviceRecordIds.length > 0) {
                 try {
                     const allServicesSnapshot = await getDocs(collectionGroup(firestore, 'serviceRecords'));
@@ -80,7 +77,6 @@ export default function AlbaranDetailPage() {
                         
                         const serviceData = { id: serviceDoc.id, ...serviceDoc.data() } as ServiceRecord;
                         
-                        // Ensure employeeName is populated
                         if (!serviceData.employeeName) {
                             const employee = employees.find(e => e.id === serviceData.employeeId);
                             if (employee) {
@@ -112,12 +108,13 @@ export default function AlbaranDetailPage() {
 
         try {
             const canvas = await html2canvas(reportElement, {
-                scale: 2, // Augmenta la resolució per a una millor qualitat
+                scale: 1.5, // Reduït per millorar la velocitat i mida
                 useCORS: true,
                 logging: false,
             });
             
-            const imgData = canvas.toDataURL('image/png');
+            // Format JPEG amb compressió 0.7 per reduir mida
+            const imgData = canvas.toDataURL('image/jpeg', 0.7);
             const pdf = new jsPDF('p', 'mm', 'a4');
             const pdfWidth = pdf.internal.pageSize.getWidth();
             const pdfHeight = pdf.internal.pageSize.getHeight();
@@ -130,13 +127,13 @@ export default function AlbaranDetailPage() {
             let heightLeft = imgHeight;
             let position = 0;
 
-            pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+            pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
             heightLeft -= pdfHeight;
 
             while (heightLeft > 0) {
                 position = heightLeft - imgHeight;
                 pdf.addPage();
-                pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+                pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
                 heightLeft -= pdfHeight;
             }
             
@@ -154,11 +151,9 @@ export default function AlbaranDetailPage() {
     
     const isLoading = isUserLoading || isLoadingAlbaran || isLoadingData || isLoadingEmployees;
     
-    // Automatically trigger export if the conditions are met
     useEffect(() => {
         if (shouldExport && !isLoading && !isGenerating && services.length > 0) {
             handleExportPDF();
-            // Optional: remove query param from URL after export
             router.replace(`/dashboard/albarans/${albaranId}`, { scroll: false });
         }
          // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -172,7 +167,7 @@ export default function AlbaranDetailPage() {
 
         toast({
             title: 'Albarà Eliminat',
-            description: `L'albarà #${albaran?.albaranNumber} ha estat eliminat del historial.`,
+            description: `L'albarà #${albaran?.albaranNumber} ha estat eliminat de l'historial.`,
         });
 
         router.push('/dashboard/albarans');
@@ -206,7 +201,7 @@ export default function AlbaranDetailPage() {
                                 <AlertDialogHeader>
                                 <AlertDialogTitle>Estàs segur que vols eliminar l'albarà?</AlertDialogTitle>
                                 <AlertDialogDescription>
-                                    Aquesta acció no es pot desfer. S'eliminarà l'albarà <strong>#{albaran.albaranNumber}</strong> del historial. 
+                                    Aquesta acció no es pot desfer. S'eliminarà l'albarà <strong>#{albaran.albaranNumber}</strong> de l'historial. 
                                     Els registres de servei originals no seran afectats.
                                 </AlertDialogDescription>
                                 </AlertDialogHeader>

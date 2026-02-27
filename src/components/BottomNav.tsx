@@ -13,7 +13,7 @@ export function BottomNav() {
   const navItems = [
     { href: '/dashboard', icon: LayoutDashboard, label: 'Serveis' },
     { href: '/dashboard/new', icon: PlusCircle, label: 'Nou' },
-    { href: '/dashboard/activity-report', icon: LineChart, label: 'Relatórios' },
+    { href: '/dashboard/activity-report', icon: LineChart, label: 'Informes' },
     { href: '/dashboard/quotes', icon: FileSignature, label: 'Pressupostos' },
     { href: '/dashboard/reports', icon: FileText, label: 'Albarans' },
     { href: '/dashboard/invoices/history', icon: Receipt, label: 'Factures' },
@@ -23,12 +23,10 @@ export function BottomNav() {
     { href: '/dashboard/profile', icon: UserIcon, label: 'Perfil' },
   ];
 
-  // Render a placeholder during loading to prevent hydration mismatch
   if (isUserLoading) {
       return (
          <nav className="fixed bottom-0 left-0 right-0 z-40 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 md:hidden">
             <div className="container grid h-16 w-full grid-flow-col auto-cols-fr items-center">
-                {/* Render empty placeholders matching the number of final items to keep layout consistent */}
                 {Array.from({ length: navItems.length }).map((_, i) => <div key={i}></div>)}
             </div>
         </nav>
@@ -36,7 +34,7 @@ export function BottomNav() {
   }
   
   if (!user) {
-    return null; // Don't show nav if not logged in
+    return null;
   }
 
 

@@ -1,4 +1,3 @@
-
 'use client'
 
 import { useEffect, useState, useMemo, useRef } from 'react'
@@ -51,7 +50,7 @@ type Material = {
 
 const MAX_IMAGE_WIDTH = 1024;
 const MAX_IMAGE_HEIGHT = 1024;
-const IMAGE_QUALITY = 0.85; // 85% JPEG quality
+const IMAGE_QUALITY = 0.75; // Reduït per millorar pes
 
 function resizeAndCompressImage(file: File): Promise<string> {
     return new Promise((resolve, reject) => {
@@ -104,11 +103,9 @@ export default function EditServicePage() {
   const materialImageInputRef = useRef<HTMLInputElement>(null);
   const [selectedMaterialIndex, setSelectedMaterialIndex] = useState<number | null>(null);
 
-  // Get the ownerId from the query parameter to build the direct path
   const recordOwnerId = searchParams.get('ownerId');
 
   const serviceDocRef = useMemoFirebase(() => {
-    // Wait until all required IDs are available
     if (!recordOwnerId || !serviceId || !firestore) return null;
     return doc(firestore, `employees/${recordOwnerId}/serviceRecords`, serviceId);
   }, [firestore, recordOwnerId, serviceId]);
@@ -189,16 +186,13 @@ export default function EditServicePage() {
         setMaterials([{ description: '', quantity: 1, unitPrice: 0 }]);
       }
       
-      // Set signature data if exists
       setCustomerSignatureName(service.customerSignatureName || '');
       setCustomerSignatureDataUrl(service.customerSignatureDataUrl || '');
 
-      // Set service hourly rate
       const employee = employees?.find(e => e.id === service.employeeId);
       setServiceHourlyRate(service.serviceHourlyRate ?? employee?.hourlyRate ?? '');
 
     } else if (employees && !service) {
-      // Pre-fill for new service in-progress
       const currentEmployee = employees.find(e => e.id === user?.uid);
       setEmployeeId(user?.uid || '');
       setServiceHourlyRate(currentEmployee?.hourlyRate ?? '');
@@ -323,7 +317,7 @@ export default function EditServicePage() {
   const handleSignatureConfirm = (name: string, signatureDataUrl: string) => {
     setCustomerSignatureName(name);
     setCustomerSignatureDataUrl(signatureDataUrl);
-    toast({ title: "Signatura guardada!", description: "El client ha confirmat o servei." });
+    toast({ title: "Signatura desada!", description: "El client ha confirmat el servei." });
   };
 
 
@@ -395,7 +389,7 @@ export default function EditServicePage() {
        toast({
         variant: 'destructive',
         title: 'Error',
-        description: "No s'ha pogut eliminar o servei.",
+        description: "No s'ha pogut eliminar el servei.",
       });
     }
   }
@@ -410,7 +404,7 @@ export default function EditServicePage() {
   }
 
   if (!service) {
-    return <p>No s'ha trobat o servei o no tens permisos per veure'l.</p>
+    return <p>No s'ha trobat el servei o no tens permisos per veure'l.</p>
   }
 
   if (showCamera) {
@@ -449,7 +443,7 @@ export default function EditServicePage() {
         <Card>
           <CardHeader>
             <CardTitle>Editar Servei #{serviceId.slice(-6)}</CardTitle>
-            <CardDescription>Modifica os detalls do servei realitzat.</CardDescription>
+            <CardDescription>Modifica els detalls del servei realitzat.</CardDescription>
             {service.updatedAt && (
                <p className="text-xs text-muted-foreground pt-2 flex items-center gap-1">
                 <Info className="h-3 w-3" />
@@ -686,7 +680,7 @@ export default function EditServicePage() {
                   
                   {customerSignatureDataUrl ? (
                     <div className="space-y-2">
-                        <p className="text-sm font-medium">Signat por: <span className="text-primary">{customerSignatureName}</span></p>
+                        <p className="text-sm font-medium">Signat per: <span className="text-primary">{customerSignatureName}</span></p>
                         <div className="relative h-24 w-48 border rounded bg-white">
                             <Image src={customerSignatureDataUrl} alt="Signature" fill style={{ objectFit: 'contain' }} />
                         </div>
@@ -697,9 +691,9 @@ export default function EditServicePage() {
                   ) : (
                     <div className="text-center py-4">
                         <Button type="button" variant="outline" onClick={() => setIsSignatureDialogOpen(true)}>
-                            <PenTool className="mr-2 h-4 w-4" /> Recollir Signatura Cliente
+                            <PenTool className="mr-2 h-4 w-4" /> Recollir Signatura Client
                         </Button>
-                        <p className="text-[10px] text-muted-foreground mt-2 uppercase">Necessari per validar o treball en obra</p>
+                        <p className="text-[10px] text-muted-foreground mt-2 uppercase">Necessari per validar el treball en obra</p>
                     </div>
                   )}
               </div>
@@ -717,7 +711,7 @@ export default function EditServicePage() {
                     <AlertDialogHeader>
                       <AlertDialogTitle>Estàs segur?</AlertDialogTitle>
                       <AlertDialogDescription>
-                        Aquesta acció no es pot desfer. Això eliminarà permanentment o registre do servei.
+                        Aquesta acció no es pot desfer. Això eliminarà permanentment el registre del servei.
                       </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>

@@ -1,4 +1,3 @@
-
 'use client'
 
 import { useMemo, useRef, useState, useEffect } from 'react'
@@ -80,21 +79,21 @@ export default function QuotesPage() {
         setItems([...PERALBA_ITEMS]);
         if (!projectName) setProjectName("Oferta Tèrmic Peralba - Habitatges");
         setNotes(DEFAULT_NOTES);
-        toast({ title: "Oferta Carregada", description: "Artigos da Casa C adicionados." });
+        toast({ title: "Oferta Carregada", description: "Articles de la Casa C afegits." });
     };
 
     const handleLoadBuildingSummary = () => {
         setItems([...BUILDING_SUMMARY_ITEMS]);
         setProjectName("Resum General d'Instal·lacions - Edifici");
         setNotes(DEFAULT_NOTES);
-        toast({ title: "Resum Carregat", description: "Resumo de todas as casas e garagem adicionado." });
+        toast({ title: "Resum Carregat", description: "Resum de totes les cases i garatge afegit." });
     };
 
     const handleLoadHidrosanitaria = () => {
         setItems([...HIDROSANITARIA_ITEMS]);
         setProjectName("Instal·lacions Hidrosanitàries - Edifici");
         setNotes(HIDROSANITARIA_NOTES);
-        toast({ title: "Proposta Carregada", description: "Instal·lacions hidrosanitàries adicionades." });
+        toast({ title: "Proposta Carregada", description: "Instal·lacions hidrosanitàries afegides." });
     };
 
     const handleImageUploadClick = (index: number) => {
@@ -178,8 +177,8 @@ export default function QuotesPage() {
             setDocumentNonBlocking(quoteRef, { ...quoteData, id: quoteRef.id }, { merge: false });
 
             toast({
-                title: "Pressupost Guardat",
-                description: `El pressupost #${newQuoteNumber} ha estat guardat a l'historial.`,
+                title: "Pressupost Desat",
+                description: `El pressupost #${newQuoteNumber} ha estat desat a l'historial.`,
             });
             
             if (exportAfter) {
@@ -193,7 +192,7 @@ export default function QuotesPage() {
             toast({
                 variant: 'destructive',
                 title: 'Error',
-                description: "Verifica os dados numéricos e tenta novamente.",
+                description: "Verifica les dades numèriques i torna-ho a intentar.",
             });
         } finally {
             setIsSaving(false);
@@ -221,7 +220,7 @@ export default function QuotesPage() {
                     <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center sm:justify-between gap-4">
                         <div>
                             <CardTitle>Generador de Pressupostos</CardTitle>
-                            <CardDescription>Crea um novo orçamento manualmente ou usa os modelos rápidos abaixo.</CardDescription>
+                            <CardDescription>Crea un nou pressupost manualment o usa els models ràpids a continuació.</CardDescription>
                         </div>
                         <div className="flex gap-2 flex-wrap">
                             <Button variant="outline" onClick={handleLoadHidrosanitaria} className="bg-cyan-500/10 text-cyan-700 hover:bg-cyan-500/20">
@@ -264,7 +263,7 @@ export default function QuotesPage() {
 
                         <div className="space-y-4 rounded-lg border p-4">
                            <div className="flex justify-between items-center border-b pb-2">
-                               <Label className="text-base font-semibold">Artigos do Pressuposto ({items.length})</Label>
+                               <Label className="text-base font-semibold">Articles del Pressupost ({items.length})</Label>
                                <Button type="button" variant="ghost" size="sm" onClick={() => setItems([{ description: '', quantity: 1, unitPrice: 0, discount: 0 }])}>Netejar</Button>
                            </div>
                            <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2">
@@ -273,7 +272,7 @@ export default function QuotesPage() {
                                         <div className="flex gap-2 items-start">
                                             <div className="flex-grow space-y-2">
                                                 <Input 
-                                                    placeholder="Descripció do artigo"
+                                                    placeholder="Descripció de l'article"
                                                     value={item.description}
                                                     onChange={(e) => handleItemChange(index, 'description', e.target.value)}
                                                     className="bg-background"
@@ -328,7 +327,7 @@ export default function QuotesPage() {
                                 ))}
                            </div>
                            <Button type="button" variant="outline" onClick={addItem} className="w-full border-dashed">
-                               <Plus className="mr-2 h-4 w-4" /> Afegir Artigo Manualmente
+                               <Plus className="mr-2 h-4 w-4" /> Afegir Article Manualment
                            </Button>
                         </div>
                         
@@ -366,7 +365,7 @@ export default function QuotesPage() {
                         <div className="flex justify-end pt-4 gap-2 flex-wrap">
                              <Button onClick={() => handleSaveQuote(false)} disabled={isSaving}>
                                 {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                                Guardar Pressupost
+                                Desar Pressupost
                             </Button>
                             <Button
                                 onClick={() => handleSaveQuote(true)}
@@ -374,7 +373,7 @@ export default function QuotesPage() {
                                 className="bg-accent text-accent-foreground hover:bg-accent/90"
                             >
                                 {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileDown className="mr-2 h-4 w-4" />}
-                                Guardar i Exportar PDF
+                                Desar i Exportar PDF
                             </Button>
                         </div>
                     </CardContent>

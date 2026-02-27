@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -45,10 +44,10 @@ export function ServiceConfirmationDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <CheckCircle2 className="h-5 w-5 text-primary" />
-            Confirmació do Servei
+            Confirmació del Servei
           </DialogTitle>
           <DialogDescription>
-            Si us plau, demana ao client que signi per confirmar a recepció do servei.
+            Si us plau, demana al client que signi per confirmar la recepció del servei.
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
@@ -65,7 +64,7 @@ export function ServiceConfirmationDialog({
             />
           </div>
           <div className="grid gap-2">
-            <Label>Signatura do Client</Label>
+            <Label>Signatura del Client</Label>
             <SignaturePad onSave={setSignature} className="mt-1" />
           </div>
         </div>
