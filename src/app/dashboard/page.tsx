@@ -6,7 +6,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { PlusCircle, Calendar as CalendarIcon, User, Edit, Trash2, Briefcase, Info, ArrowRight } from 'lucide-react'
-import type { ServiceRecord, Employee, Albaran } from '@/lib/types'
+import type { ServiceRecord, Employee } from '@/lib/types'
 import { useCollection, useUser, useFirestore, useMemoFirebase, deleteDocumentNonBlocking } from '@/firebase';
 import { collection, query, orderBy, getDocs, collectionGroup, doc, where } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton'
@@ -31,7 +31,6 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { useToast } from "@/hooks/use-toast"
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 
 const userColors = [
   '#3b82f6', '#ef4444', '#10b981', '#f97316', '#8b5cf6', '#ec4899', '#f59e0b', '#14b8a6'
@@ -58,18 +57,10 @@ export default function DashboardPage() {
   const [isLoadingData, setIsLoadingData] = useState(true);
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
 
-  // Inicializamos o filtro com o utilizador atual para que ele veja os SEUS registos primeiro
+  // Inicializamos o filtro com o utilizador atual
   const [selectedUser, setSelectedUser] = useState<string>('loading');
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
   const [selectedProject, setSelectedProject] = useState<string>('all');
-
-  // Consulta de albarans pendentes - Apenas se o utilizador estiver pronto
-  const pendingAlbaransQuery = useMemoFirebase(() => {
-    if (!firestore || !user) return null;
-    return query(collection(firestore, 'albarans'), where('status', '==', 'pendent'));
-  }, [firestore, user]);
-  
-  const { data: pendingAlbarans } = useCollection<Albaran>(pendingAlbaransQuery);
 
   // Sincronizar o filtro inicial com o utilizador logado
   useEffect(() => {
@@ -91,7 +82,7 @@ export default function DashboardPage() {
             const employeesData = employeeSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Employee));
             setEmployees(employeesData);
 
-            // Carregar todos os serviços (a filtragem é feita em memória para permitir mudar entre "meus" e "todos" sem nova consulta)
+            // Carregar todos os serviços
             const servicesQuery = query(collectionGroup(firestore, 'serviceRecords'), orderBy('arrivalDateTime', 'desc'));
             const serviceSnapshot = await getDocs(servicesQuery);
             const servicesData = serviceSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ServiceRecord));
@@ -114,7 +105,6 @@ export default function DashboardPage() {
 
   const filteredServices = useMemo(() => {
     let filtered = allServices.filter(service => {
-        // Se selectedUser for 'all', mostra tudo. Se não, filtra pelo ID.
         const userMatch = selectedUser === 'all' || service.employeeId === selectedUser || selectedUser === 'loading';
         const dateMatch = !selectedDate || isSameDay(parseISO(service.arrivalDateTime), selectedDate);
         const projectMatch = selectedProject === 'all' || service.projectName === selectedProject;
@@ -197,21 +187,6 @@ export default function DashboardPage() {
             </Button>
         </div>
       </div>
-
-      {pendingAlbarans && pendingAlbarans.length > 0 && (
-        <Alert variant="default" className="bg-primary/5 border-primary/20 text-primary-foreground shadow-sm">
-          <Info className="h-5 w-5 text-primary" />
-          <AlertTitle className="font-bold text-primary">Albarãs por Facturar</AlertTitle>
-          <AlertDescription className="flex items-center justify-between flex-wrap gap-4 mt-2">
-            <span className="text-muted-foreground">Existem <strong>{pendingAlbarans.length}</strong> albarãs prontos para serem convertidos em fatura.</span>
-            <Button size="sm" variant="outline" className="border-primary text-primary hover:bg-primary/10" asChild>
-              <Link href="/dashboard/albarans/pending">
-                Ver Lista <ArrowRight className="ml-2 h-4 w-4" />
-              </Link>
-            </Button>
-          </AlertDescription>
-        </Alert>
-      )}
       
       {isLoadingData ? (
         <div className="space-y-4">
