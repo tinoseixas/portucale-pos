@@ -41,10 +41,8 @@ export function AdminGate({ children, pageTitle, pageDescription }: AdminGatePro
     );
   }
 
-  // Todos os utilizadores autenticados têm acesso total
-  const isAdmin = !!user;
-
-  if (isAdmin) {
+  // Todos os utilizadores autenticados têm acesso total conforme pedido
+  if (user) {
     return <>{children}</>;
   }
 
@@ -60,16 +58,14 @@ export function AdminGate({ children, pageTitle, pageDescription }: AdminGatePro
             Por favor, inicie sessão para aceder a esta secção.
           </CardDescription>
         </CardHeader>
-        {!user && (
-             <CardContent>
-                <Button asChild>
-                    <Link href="/">
-                        <LogIn className="mr-2 h-4 w-4" />
-                        Ir para Iniciar Sessão
-                    </Link>
-                </Button>
-            </CardContent>
-        )}
+        <CardContent>
+            <Button asChild>
+                <Link href="/">
+                    <LogIn className="mr-2 h-4 w-4" />
+                    Ir para Iniciar Sessão
+                </Link>
+            </Button>
+        </CardContent>
       </Card>
     </div>
   );

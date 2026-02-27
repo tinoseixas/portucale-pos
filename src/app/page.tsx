@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { User, Lock, Briefcase, Loader2 } from 'lucide-react'
+import { Briefcase, Loader2 } from 'lucide-react'
 import { useToast } from "@/hooks/use-toast"
 import { useAuth, useUser, useFirestore } from '@/firebase'
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth'
@@ -34,19 +34,19 @@ export default function Home() {
     setIsAuthenticating(true);
 
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, password)
+      const userCredential = await signInWithEmailAndPassword(auth, email.toLowerCase().trim(), password)
       const loggedInUser = userCredential.user;
 
       const employeeRef = doc(firestore, 'employees', loggedInUser.uid);
       const employeeSnap = await getDoc(employeeRef);
 
-      // Todos são administradores agora para evitar erros de permissão
+      // Sincroniza todos os utilizadores como admin por padrão para evitar erros de permissão
       await setDoc(employeeRef, {
           id: loggedInUser.uid,
           employeeId: employeeSnap.exists() ? (employeeSnap.data().employeeId || loggedInUser.uid.substring(0, 8)) : loggedInUser.uid.substring(0, 8),
           firstName: employeeSnap.exists() ? (employeeSnap.data().firstName || loggedInUser.email?.split('@')[0]) : (loggedInUser.email?.split('@')[0] || 'Usuari'),
           lastName: employeeSnap.exists() ? (employeeSnap.data().lastName || 'TS') : 'TS',
-          email: loggedInUser.email,
+          email: loggedInUser.email?.toLowerCase(),
           role: 'admin',
           hourlyRate: employeeSnap.exists() ? (employeeSnap.data()?.hourlyRate || 30) : 30,
       }, { merge: true });
@@ -70,16 +70,17 @@ export default function Home() {
     setIsAuthenticating(true);
 
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const cleanEmail = email.toLowerCase().trim();
+      const userCredential = await createUserWithEmailAndPassword(auth, cleanEmail, password);
       const newUser = userCredential.user;
       
       const employeeRef = doc(firestore, 'employees', newUser.uid);
       await setDoc(employeeRef, {
         id: newUser.uid,
         employeeId: newUser.uid.substring(0, 8),
-        firstName: email.split('@')[0] || 'Nou',
+        firstName: cleanEmail.split('@')[0] || 'Nou',
         lastName: 'Usuari',
-        email: newUser.email,
+        email: cleanEmail,
         phoneNumber: '',
         role: 'admin',
         hourlyRate: 30,

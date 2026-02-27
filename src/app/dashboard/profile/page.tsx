@@ -1,6 +1,7 @@
+
 'use client';
 
-import { useEffect, useState, useRef, useMemo } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -107,17 +108,12 @@ export default function ProfilePage() {
     reader.onloadend = () => {
         const dataUrl = reader.result as string;
         try {
-            // Update the avatar URL in the Firestore document only
             updateDocumentNonBlocking(employeeDocRef, { avatar: dataUrl });
-
-            // Update local state to immediately reflect the change
             setAvatarUrl(dataUrl);
-            
             toast({
                 title: 'Foto de perfil actualitzada',
                 description: 'La teva nova foto de perfil ha estat guardada.'
             });
-
         } catch (error) {
             console.error("Error updating profile picture: ", error);
             toast({
@@ -136,7 +132,7 @@ export default function ProfilePage() {
   }
 
   if (!user) {
-    return null; // Redirect is handled by the useEffect hook
+    return null;
   }
   
   const getInitials = (employee?: Employee | null) => {
@@ -161,7 +157,7 @@ export default function ProfilePage() {
         <Card className="shadow-md">
           <CardHeader className="text-center">
             <CardTitle className="text-2xl">El Teu Perfil</CardTitle>
-            <CardDescription>Edita les teves dades personals i la teva foto.</CardDescription>
+            <CardDescription>Edita les teves dades personals i a teva foto.</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
@@ -233,7 +229,7 @@ export default function ProfilePage() {
                 </div>
                 
                 <div className="space-y-2">
-                    <Label htmlFor="hourlyRate" className="flex items-center gap-2"><Euro className="h-4 w-4 text-muted-foreground" /> Preu per Hora (Opcional)</Label>
+                    <Label htmlFor="hourlyRate" className="flex items-center gap-2"><Euro className="h-4 w-4 text-muted-foreground" /> Preu per Hora</Label>
                     <Controller
                         name="hourlyRate"
                         control={control}
@@ -244,11 +240,9 @@ export default function ProfilePage() {
                             {...field} 
                             onChange={e => field.onChange(parseFloat(e.target.value) || 0)}
                             value={field.value || ''}
-                            disabled={!isUserAdmin}
                         />}
                     />
                     {errors.hourlyRate && <p className="text-sm text-destructive">{errors.hourlyRate.message}</p>}
-                    {!isUserAdmin && <p className="text-[10px] text-muted-foreground mt-1">Només els administradors poden modificar aquest camp.</p>}
                 </div>
               </div>
 
