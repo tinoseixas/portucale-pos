@@ -68,24 +68,27 @@ export default function InvoiceDetailPage() {
                 }
             }
 
-            // 3. Carregar Serveis optimitzats
-            const optimizedQuery = query(
-                collectionGroup(firestore, 'serviceRecords'),
-                where('customerId', '==', invoice.customerId),
-                where('projectName', '==', invoice.projectName)
-            );
-            
-            const servicesSnapshot = await getDocs(optimizedQuery);
+            // 3. Carregar Serveis (Mètode robust sense necessitat d'índexs compostos)
+            const servicesSnapshot = await getDocs(collectionGroup(firestore, 'serviceRecords'));
             const allServicesData = servicesSnapshot.docs.map(d => ({ id: d.id, ...d.data() } as ServiceRecord));
             
             if (invoice.sourceId) {
                 const sourceAlbaranIds = invoice.sourceId.split(',');
-                const albaransSnapshot = await getDocs(query(collection(firestore, 'albarans'), where('__name__', 'in', sourceAlbaranIds)));
-                const serviceRecordIdsFromAlbarans = albaransSnapshot.docs.flatMap(doc => doc.data().serviceRecordIds);
+                // Busquem els IDs dels serveis vinculats als albarans font
+                const albaransSnapshot = await getDocs(query(collection(firestore, 'albarans')));
+                const filteredAlbarans = albaransSnapshot.docs
+                    .filter(doc => sourceAlbaranIds.includes(doc.id))
+                    .map(doc => doc.data());
+                
+                const serviceRecordIdsFromAlbarans = filteredAlbarans.flatMap(a => (a as any).serviceRecordIds || []);
                 
                 setServices(allServicesData.filter(s => serviceRecordIdsFromAlbarans.includes(s.id)));
             } else {
-                setServices(allServicesData);
+                // Fallback per dades antigues o facturació directa per obra
+                setServices(allServicesData.filter(s => 
+                    s.customerId === invoice.customerId && 
+                    s.projectName === invoice.projectName
+                ));
             }
             setHasLoaded(true);
         } catch (e) {
@@ -97,10 +100,10 @@ export default function InvoiceDetailPage() {
     }, [invoice, firestore, toast, hasLoaded]);
 
     useEffect(() => {
-        if (invoice) {
+        if (invoice && !hasLoaded) {
             fetchData();
         }
-    }, [invoice, fetchData]);
+    }, [invoice, fetchData, hasLoaded]);
 
 
     const handleExportPDF = async () => {
@@ -108,7 +111,7 @@ export default function InvoiceDetailPage() {
         if (!reportElement) return;
 
         setIsGenerating(true);
-        toast({ title: 'Generant PDF...', description: 'Processant document lleuger per a enviament ràpid.' });
+        toast({ title: 'Generant PDF...', description: 'Processant document lleuger.' });
 
         try {
             const canvas = await html2canvas(reportElement, {
@@ -117,7 +120,7 @@ export default function InvoiceDetailPage() {
                 logging: false,
             });
 
-            const imgData = canvas.toDataURL('image/jpeg', 0.5);
+            const imgData = canvas.toDataURL('image/jpeg', 0.4);
             const pdf = new jsPDF('p', 'mm', 'a4');
             const pdfWidth = pdf.internal.pageSize.getWidth();
             const pdfHeight = pdf.internal.pageSize.getHeight();
@@ -127,22 +130,22 @@ export default function InvoiceDetailPage() {
             let heightLeft = imgHeight;
             let position = 0;
 
-            pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
+            pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight, undefined, 'FAST');
             heightLeft -= pdfHeight;
 
             while (heightLeft > 0) {
                 position = heightLeft - imgHeight;
                 pdf.addPage();
-                pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
+                pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight, undefined, 'FAST');
                 heightLeft -= pdfHeight;
             }
 
             pdf.save(`Factura-${String(invoice?.invoiceNumber).padStart(4, '0')}.pdf`);
-            toast({ title: 'PDF Generat!', description: 'L\'exportació s\'ha completat.' });
+            toast({ title: 'PDF Generat!', description: 'Exportació finalitzada.' });
 
         } catch (error) {
             console.error("Error PDF:", error);
-            toast({ variant: 'destructive', title: 'Error', description: 'No s\'ha pogut crear el fitxer PDF.' });
+            toast({ variant: 'destructive', title: 'Error', description: 'No s\'ha pogut crear el PDF.' });
         } finally {
             setIsGenerating(false);
         }
@@ -176,7 +179,7 @@ export default function InvoiceDetailPage() {
     const isLoading = isUserLoading || isLoadingInvoice || (isLoadingData && !hasLoaded);
 
     if (isLoading) {
-        return <div className="text-center p-12 flex flex-col items-center justify-center h-[60vh]"><Loader2 className="h-12 w-12 animate-spin text-primary" /><p className="mt-4 text-muted-foreground">Carregant factura...</p></div>
+        return <div className="text-center p-12 flex flex-col items-center justify-center h-[60vh]"><Loader2 className="h-12 w-12 animate-spin text-primary" /><p className="mt-4 text-muted-foreground font-medium">Carregant factura...</p></div>
     }
     
     if (!invoice) {
@@ -189,7 +192,7 @@ export default function InvoiceDetailPage() {
                 <div className="flex justify-between items-center flex-wrap gap-4">
                     <Button variant="ghost" onClick={() => router.push('/dashboard/invoices/history')} className="font-bold">
                         <ArrowLeft className="mr-2 h-4 w-4" />
-                        Tornar a l'historial
+                        Historial
                     </Button>
                     <div className="flex items-center gap-2 flex-wrap justify-end">
                         <AlertDialog>
@@ -215,7 +218,7 @@ export default function InvoiceDetailPage() {
                          {invoice.status !== 'pagada' && (
                             <Button variant="outline" onClick={() => router.push(`/dashboard/receipts/new?invoiceId=${invoice.id}`)} className="font-bold">
                                 <CreditCard className="mr-2 h-4 w-4" />
-                                Registrar Pagament
+                                Pagar
                             </Button>
                         )}
 
@@ -225,7 +228,7 @@ export default function InvoiceDetailPage() {
                             className="bg-primary font-bold"
                         >
                             {isGenerating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileDown className="mr-2 h-4 w-4" />}
-                            Exportar PDF Lleuger
+                            PDF LLEUGER
                         </Button>
                     </div>
                 </div>
