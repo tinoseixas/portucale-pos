@@ -1,24 +1,37 @@
 
 'use client'
 
-import { useMemo, useEffect } from 'react'
+import { useMemo, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { useCollection, useUser, useFirestore, useMemoFirebase } from '@/firebase'
-import { collection, query, orderBy } from 'firebase/firestore'
+import { useCollection, useUser, useFirestore, useMemoFirebase, deleteDocumentNonBlocking } from '@/firebase'
+import { collection, query, orderBy, doc } from 'firebase/firestore'
 import type { Albaran } from '@/lib/types'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
-import { Eye, FileArchive, CreditCard, Clock, CheckCircle2, Loader2 } from 'lucide-react'
+import { Eye, FileArchive, CreditCard, Clock, CheckCircle2, Loader2, Trash2 } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { ca } from 'date-fns/locale'
 import { AdminGate } from '@/components/AdminGate'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
+import { useToast } from '@/hooks/use-toast'
 import Link from 'next/link'
 
 export default function AlbaransHistoryPage() {
   const router = useRouter()
+  const { toast } = useToast()
   const { user, isUserLoading } = useUser()
   const firestore = useFirestore()
 
@@ -31,6 +44,16 @@ export default function AlbaransHistoryPage() {
 
   const pendingAlbarans = useMemo(() => albarans?.filter(a => a.status === 'pendent') || [], [albarans]);
   const historyAlbarans = useMemo(() => albarans?.filter(a => a.status === 'facturat') || [], [albarans]);
+
+  const handleDeleteAlbaran = (albaranId: string, albaranNumber: number) => {
+    if (!firestore) return;
+    const albaranRef = doc(firestore, 'albarans', albaranId);
+    deleteDocumentNonBlocking(albaranRef);
+    toast({ 
+        title: 'Albarà Eliminat', 
+        description: `L'albarà #${albaranNumber} ha estat esborrat. El registre de servei no s'ha vist afectat.` 
+    });
+  }
 
   if (isUserLoading || isLoadingAlbarans) return <div className="p-12 text-center"><Loader2 className="h-12 w-12 animate-spin mx-auto text-primary" /><p className="mt-4">Carregant albarans...</p></div>
 
@@ -61,7 +84,7 @@ export default function AlbaransHistoryPage() {
                 <div className="overflow-x-auto">
                     <Table>
                         <TableHeader>
-                            <TableRow><TableHead>Nº Albarà</TableHead><TableHead>Data</TableHead><TableHead>Client</TableHead><TableHead>Obra</TableHead><TableHead>Total</TableHead><TableHead className="text-right">Acció</TableHead></TableRow>
+                            <TableRow><TableHead>Nº Albarà</TableHead><TableHead>Data</TableHead><TableHead>Client</TableHead><TableHead>Obra</TableHead><TableHead>Total</TableHead><TableHead className="text-right">Accions</TableHead></TableRow>
                         </TableHeader>
                         <TableBody>
                         {pendingAlbarans.map(albaran => (
@@ -71,9 +94,32 @@ export default function AlbaransHistoryPage() {
                                 <TableCell className="font-bold">{albaran.customerName}</TableCell>
                                 <TableCell className="italic">{albaran.projectName}</TableCell>
                                 <TableCell className="font-black text-primary">{albaran.totalAmount.toFixed(2)} €</TableCell>
-                                <TableCell className="text-right space-x-2">
-                                    <Button variant="outline" size="sm" asChild><Link href={`/dashboard/albarans/${albaran.id}`}><Eye className="h-4 w-4 mr-1" /> Veure</Link></Button>
-                                    <Button size="sm" asChild className="bg-primary"><Link href={`/dashboard/invoices?customerId=${albaran.customerId}&albaranId=${albaran.id}`}><CreditCard className="mr-2 h-4 w-4" /> Facturar</Link></Button>
+                                <TableCell className="text-right">
+                                    <div className="flex justify-end gap-2">
+                                        <Button variant="outline" size="sm" asChild><Link href={`/dashboard/albarans/${albaran.id}`}><Eye className="h-4 w-4 mr-1" /> Veure</Link></Button>
+                                        <Button size="sm" asChild className="bg-primary"><Link href={`/dashboard/invoices?customerId=${albaran.customerId}&albaranId=${albaran.id}`}><CreditCard className="mr-2 h-4 w-4" /> Facturar</Link></Button>
+                                        
+                                        <AlertDialog>
+                                            <AlertDialogTrigger asChild>
+                                                <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive hover:bg-destructive/10">
+                                                    <Trash2 className="h-4 w-4" />
+                                                </Button>
+                                            </AlertDialogTrigger>
+                                            <AlertDialogContent>
+                                                <AlertDialogHeader>
+                                                    <AlertDialogTitle>Eliminar Albarà?</AlertDialogTitle>
+                                                    <AlertDialogDescription>
+                                                        Aquesta acció eliminarà l'albarà <strong>#{albaran.albaranNumber}</strong>. 
+                                                        El registre de treball original es mantindrà intacte.
+                                                    </AlertDialogDescription>
+                                                </AlertDialogHeader>
+                                                <AlertDialogFooter>
+                                                    <AlertDialogCancel>Cancel·lar</AlertDialogCancel>
+                                                    <AlertDialogAction onClick={() => handleDeleteAlbaran(albaran.id, albaran.albaranNumber)} className="bg-destructive hover:bg-destructive/90">Eliminar</AlertDialogAction>
+                                                </AlertDialogFooter>
+                                            </AlertDialogContent>
+                                        </AlertDialog>
+                                    </div>
                                 </TableCell>
                             </TableRow>
                         ))}
@@ -97,7 +143,32 @@ export default function AlbaransHistoryPage() {
                                 <TableCell>{format(parseISO(albaran.createdAt), 'dd/MM/yyyy')}</TableCell>
                                 <TableCell>{albaran.customerName}</TableCell>
                                 <TableCell>{albaran.totalAmount.toFixed(2)} €</TableCell>
-                                <TableCell className="text-right"><Button variant="outline" size="sm" asChild><Link href={`/dashboard/albarans/${albaran.id}`}><Eye className="h-4 w-4" /></Link></Button></TableCell>
+                                <TableCell className="text-right">
+                                    <div className="flex justify-end gap-2">
+                                        <Button variant="outline" size="sm" asChild><Link href={`/dashboard/albarans/${albaran.id}`}><Eye className="h-4 w-4" /></Link></Button>
+                                        
+                                        <AlertDialog>
+                                            <AlertDialogTrigger asChild>
+                                                <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive hover:bg-destructive/10">
+                                                    <Trash2 className="h-4 w-4" />
+                                                </Button>
+                                            </AlertDialogTrigger>
+                                            <AlertDialogContent>
+                                                <AlertDialogHeader>
+                                                    <AlertDialogTitle>Eliminar Albarà Facturat?</AlertDialogTitle>
+                                                    <AlertDialogDescription>
+                                                        Estàs segur que vols eliminar l'albarà <strong>#{albaran.albaranNumber}</strong>? 
+                                                        Això no eliminarà la factura ni el servei, només aquest registre documental.
+                                                    </AlertDialogDescription>
+                                                </AlertDialogHeader>
+                                                <AlertDialogFooter>
+                                                    <AlertDialogCancel>Cancel·lar</AlertDialogCancel>
+                                                    <AlertDialogAction onClick={() => handleDeleteAlbaran(albaran.id, albaran.albaranNumber)} className="bg-destructive hover:bg-destructive/90">Eliminar</AlertDialogAction>
+                                                </AlertDialogFooter>
+                                            </AlertDialogContent>
+                                        </AlertDialog>
+                                    </div>
+                                </TableCell>
                             </TableRow>
                         ))}
                     </TableBody>
