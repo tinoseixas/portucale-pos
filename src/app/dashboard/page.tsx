@@ -1,10 +1,11 @@
+
 'use client'
 
 import { useState, useMemo, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
-import { PlusCircle, Calendar as CalendarIcon, User, Edit, Trash2, Briefcase, ArrowRight, AlertTriangle } from 'lucide-react'
+import { PlusCircle, Calendar as CalendarIcon, User, Edit, Trash2, Briefcase, ArrowRight, AlertTriangle, Receipt } from 'lucide-react'
 import type { ServiceRecord, Employee, Albaran } from '@/lib/types'
 import { useCollection, useUser, useFirestore, useMemoFirebase, errorEmitter, FirestorePermissionError, deleteDocumentNonBlocking } from '@/firebase';
 import { collection, query, orderBy, getDocs, collectionGroup, doc, where } from 'firebase/firestore';
@@ -31,6 +32,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { useToast } from "@/hooks/use-toast"
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert'
+import { Badge } from '@/components/ui/badge'
 
 const ADMIN_EMAIL = 'tinoseixas@gmail.com';
 
@@ -67,10 +69,10 @@ export default function DashboardPage() {
 
   const albaransQuery = useMemoFirebase(() => {
     if (!firestore || !isAdmin) return null;
-    return query(collection(firestore, 'albarans'), where('status', '==', 'pendent'));
+    return query(collection(firestore, 'albarans'), where('status', '==', 'pendent'), orderBy('albaranNumber', 'desc'));
   }, [firestore, isAdmin]);
 
-  const { data: pendingAlbarans } = useCollection<Albaran>(albaransQuery);
+  const { data: pendingAlbarans, isLoading: isLoadingAlbarans } = useCollection<Albaran>(albaransQuery);
 
   useEffect(() => {
     if (isUserLoading || !firestore) return;
@@ -220,23 +222,58 @@ export default function DashboardPage() {
       </div>
 
       {isAdmin && pendingAlbarans && pendingAlbarans.length > 0 && (
-        <Alert className="bg-amber-50 border-amber-200 text-amber-900 border-l-4">
-          <AlertTriangle className="h-5 w-5 text-amber-600" />
-          <div className="w-full">
-            <AlertTitle className="font-bold flex items-center justify-between">
-              Albarans pendents de facturar
-              <span className="bg-amber-200 text-amber-900 text-[10px] px-2 py-0.5 rounded-full uppercase tracking-wider">Acumulat</span>
-            </AlertTitle>
-            <AlertDescription className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mt-2">
-              <p>Tens <strong>{pendingAlbarans.length}</strong> albarans que encara no han estat convertits em factura.</p>
-              <Button size="sm" asChild className="bg-amber-600 hover:bg-amber-700 text-white shadow-sm">
+        <Card className="border-l-4 border-amber-500 bg-amber-50/50 shadow-sm overflow-hidden">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-amber-100 rounded-full">
+                  <AlertTriangle className="h-5 w-5 text-amber-600" />
+                </div>
+                <div>
+                  <CardTitle className="text-lg text-amber-900">Albarans Pendents de Facturar</CardTitle>
+                  <CardDescription className="text-amber-700/80 font-medium">Tens {pendingAlbarans.length} documents acumulats per cobrar.</CardDescription>
+                </div>
+              </div>
+              <Button size="sm" asChild variant="outline" className="border-amber-200 text-amber-700 hover:bg-amber-100">
                 <Link href="/dashboard/invoices">
-                  Facturar Ara <ArrowRight className="ml-2 h-4 w-4" />
+                  Facturació General <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
               </Button>
-            </AlertDescription>
-          </div>
-        </Alert>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="rounded-md border border-amber-200 bg-white overflow-hidden">
+              <Table>
+                <TableHeader className="bg-amber-100/50">
+                  <TableRow className="hover:bg-transparent border-amber-200">
+                    <TableHead className="w-[100px] text-amber-900 font-bold">Nº Albarà</TableHead>
+                    <TableHead className="text-amber-900 font-bold">Client</TableHead>
+                    <TableHead className="text-amber-900 font-bold">Obra / Projecte</TableHead>
+                    <TableHead className="text-right text-amber-900 font-bold">Import</TableHead>
+                    <TableHead className="w-[100px]"></TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {pendingAlbarans.map((albaran) => (
+                    <TableRow key={albaran.id} className="hover:bg-amber-50/50 border-amber-100">
+                      <TableCell className="font-mono text-sm font-bold">#{String(albaran.albaranNumber).padStart(4, '0')}</TableCell>
+                      <TableCell className="font-medium">{albaran.customerName}</TableCell>
+                      <TableCell className="text-muted-foreground italic truncate max-w-[250px]">{albaran.projectName}</TableCell>
+                      <TableCell className="text-right font-bold text-amber-700">{albaran.totalAmount.toFixed(2)} €</TableCell>
+                      <TableCell className="text-right">
+                        <Button size="sm" asChild variant="ghost" className="h-8 text-primary hover:text-primary hover:bg-primary/10">
+                          <Link href={`/dashboard/invoices?customerId=${albaran.customerId}`}>
+                            <Receipt className="mr-2 h-3.5 w-3.5" /> Facturar
+                          </Link>
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
       )}
       
       {isLoading ? renderSkeletons() : (

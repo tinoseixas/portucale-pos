@@ -1,7 +1,8 @@
+
 'use client'
 
-import { useMemo, useState, useEffect, useCallback } from 'react'
-import { useRouter } from 'next/navigation'
+import { useMemo, useState, useEffect, useCallback, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useCollection, useUser, useFirestore, useMemoFirebase } from '@/firebase'
 import { collection, query, orderBy, doc, runTransaction, setDoc, getDocs, collectionGroup, where, writeBatch } from 'firebase/firestore'
 import type { Customer, Quote, Albaran, Employee, ServiceRecord, Invoice } from '@/lib/types'
@@ -17,11 +18,12 @@ import { AdminGate } from '@/components/AdminGate'
 import { calculateTotalAmount } from '@/lib/calculations'
 import { Checkbox } from '@/components/ui/checkbox'
 
-export default function InvoicesPage() {
+function InvoicesPageContent() {
     const firestore = useFirestore()
     const { user, isUserLoading } = useUser()
     const { toast } = useToast()
     const router = useRouter()
+    const searchParams = useSearchParams()
     
     const [selectedCustomerId, setSelectedCustomerId] = useState<string>('none');
     const [selectedAlbaranIds, setSelectedAlbaranIds] = useState<string[]>([]);
@@ -32,15 +34,22 @@ export default function InvoicesPage() {
     const [servicesForInvoice, setServicesForInvoice] = useState<ServiceRecord[]>([]);
     const [applyIva, setApplyIva] = useState<boolean>(true);
 
-    
     const customersQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'customers'), orderBy('name', 'asc')) : null, [firestore]);
     const { data: customers, isLoading: isLoadingCustomers } = useCollection<Customer>(customersQuery);
 
     const albaransQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'albarans'), orderBy('albaranNumber', 'desc')) : null, [firestore]);
     const { data: albarans, isLoading: isLoadingAlbarans } = useCollection<Albaran>(albaransQuery);
     
-    const employeesQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'employees')) : null, [firestore]);
+    const employeesQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'employees'), orderBy('firstName', 'asc')) : null, [firestore]);
     const { data: employees, isLoading: isLoadingEmployees } = useCollection<Employee>(employeesQuery);
+
+    // Auto-select customer from URL params
+    useEffect(() => {
+        const customerIdParam = searchParams.get('customerId');
+        if (customerIdParam && customers && selectedCustomerId === 'none') {
+            setSelectedCustomerId(customerIdParam);
+        }
+    }, [searchParams, customers, selectedCustomerId]);
 
     const availableAlbarans = useMemo(() => {
         if (!albarans || selectedCustomerId === 'none') return [];
@@ -294,5 +303,13 @@ export default function InvoicesPage() {
                 )}
             </div>
         </AdminGate>
+    )
+}
+
+export default function InvoicesPage() {
+    return (
+        <Suspense fallback={<p>Carregant gerador de factures...</p>}>
+            <InvoicesPageContent />
+        </Suspense>
     )
 }
