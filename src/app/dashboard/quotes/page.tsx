@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { Briefcase, FileDown, Loader2, Users, Plus, Trash2, ImagePlus, Euro, FileArchive, Save, FileText, LayoutList, Droplets, Tag } from 'lucide-react'
+import { Briefcase, FileDown, Loader2, Users, Plus, Trash2, ImagePlus, Euro, FileArchive, Save, FileText, LayoutList, Droplets, Tag, Copy } from 'lucide-react'
 import { QuotePreview } from '@/components/QuotePreview'
 import { useToast } from '@/hooks/use-toast'
 import { AdminGate } from '@/components/AdminGate'
@@ -30,7 +30,7 @@ export default function QuotesPage() {
     const [selectedCustomerId, setSelectedCustomerId] = useState<string>('all');
     const [projectName, setProjectName] = useState<string>('')
     const [isSaving, setIsSaving] = useState(false)
-    const [items, setItems] = useState<QuoteItem[]>([{ description: '', quantity: 1, unitPrice: 0, imageDataUrl: undefined, discount: 0, category: 'General' }]);
+    const [items, setItems] = useState<QuoteItem[]>([{ description: '', quantity: 1, unitPrice: 0, imageDataUrl: undefined, discount: 0, category: 'CASA A - General' }]);
     const [labor, setLabor] = useState({ description: "Mà d'obra", cost: 0 });
     const [notes, setNotes] = useState<string>(DEFAULT_NOTES);
     const [selectedItemIndex, setSelectedItemIndex] = useState<number | null>(null);
@@ -69,12 +69,29 @@ export default function QuotesPage() {
     };
 
     const addItem = () => {
-        const lastCategory = items.length > 0 ? items[items.length - 1].category : 'General';
+        const lastCategory = items.length > 0 ? items[items.length - 1].category : 'CASA A - General';
         setItems([...items, { description: '', quantity: 1, unitPrice: 0, imageDataUrl: undefined, discount: 0, category: lastCategory }]);
     };
 
     const removeItem = (index: number) => {
         setItems(items.filter((_, i) => i !== index));
+    };
+
+    const duplicateForCasaB = () => {
+        if (items.length === 0) return;
+        
+        const newItems = items.map(item => {
+            let newCat = item.category || 'General';
+            if (newCat.toUpperCase().includes('CASA A')) {
+                newCat = newCat.replace(/CASA A/gi, 'CASA B');
+            } else if (!newCat.toUpperCase().includes('CASA B')) {
+                newCat = `CASA B - ${newCat}`;
+            }
+            return { ...item, category: newCat };
+        });
+        
+        setItems([...items, ...newItems]);
+        toast({ title: "Articles Duplicats", description: "S'han afegit els mateixos articles per a la Casa B." });
     };
 
     const handleLoadPeralbaOffer = () => {
@@ -265,9 +282,14 @@ export default function QuotesPage() {
                         </div>
 
                         <div className="space-y-4 rounded-lg border p-4">
-                           <div className="flex justify-between items-center border-b pb-2">
+                           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b pb-2 gap-2">
                                <Label className="text-base font-bold flex items-center gap-2"><LayoutList className="h-4 w-4" /> Articles del Pressupost ({items.length})</Label>
-                               <Button type="button" variant="ghost" size="sm" onClick={() => setItems([{ description: '', quantity: 1, unitPrice: 0, discount: 0, category: 'General' }])}>Netejar Tot</Button>
+                               <div className="flex gap-2">
+                                   <Button type="button" variant="outline" size="sm" onClick={duplicateForCasaB} className="h-8 border-primary text-primary hover:bg-primary/10">
+                                       <Copy className="mr-2 h-3 w-3" /> Duplicar per Casa B
+                                   </Button>
+                                   <Button type="button" variant="ghost" size="sm" onClick={() => setItems([{ description: '', quantity: 1, unitPrice: 0, discount: 0, category: 'CASA A - General' }])} className="h-8">Netejar Tot</Button>
+                               </div>
                            </div>
                            <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2">
                                 {items.map((item, index) => (
@@ -276,7 +298,7 @@ export default function QuotesPage() {
                                             <div className="space-y-1">
                                                 <Label className="text-[10px] uppercase font-bold flex items-center gap-1"><Tag className="h-3 w-3" /> Categoria</Label>
                                                 <Input 
-                                                    placeholder="Ex: Maquinària, Banys, Elèctrica..."
+                                                    placeholder="Ex: CASA A - Maquinària, Banys, Elèctrica..."
                                                     value={item.category}
                                                     onChange={(e) => handleItemChange(index, 'category', e.target.value)}
                                                     className="bg-background h-8 font-bold"
