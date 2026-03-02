@@ -1,3 +1,4 @@
+
 'use client'
 
 import { useMemo, useRef, useState, useEffect } from 'react'
@@ -11,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { Briefcase, FileArchive, Loader2, Users, Plus, Trash2, ImagePlus, Euro, Save, ArrowLeft, FileText, LayoutList, Droplets } from 'lucide-react'
+import { Briefcase, FileArchive, Loader2, Users, Plus, Trash2, ImagePlus, Euro, Save, ArrowLeft, FileText, LayoutList, Droplets, Tag } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { AdminGate } from '@/components/AdminGate'
 import { IVA_RATE } from '@/lib/calculations'
@@ -30,7 +31,7 @@ export default function EditQuotePage() {
     const [selectedCustomerId, setSelectedCustomerId] = useState<string>('');
     const [projectName, setProjectName] = useState<string>('')
     const [isSaving, setIsSaving] = useState(false)
-    const [items, setItems] = useState<QuoteItem[]>([{ description: '', quantity: 1, unitPrice: 0, imageDataUrl: undefined, discount: 0 }]);
+    const [items, setItems] = useState<QuoteItem[]>([{ description: '', quantity: 1, unitPrice: 0, imageDataUrl: undefined, discount: 0, category: 'General' }]);
     const [labor, setLabor] = useState({ description: "Mà d'obra", cost: 0 });
     const [notes, setNotes] = useState<string>(DEFAULT_NOTES);
     const [selectedItemIndex, setSelectedItemIndex] = useState<number | null>(null);
@@ -50,8 +51,9 @@ export default function EditQuotePage() {
                 quantity: Number(item.quantity) || 0,
                 unitPrice: Number(item.unitPrice) || 0,
                 imageDataUrl: item.imageDataUrl || undefined,
-                discount: Number(item.discount) || 0
-            })) || [{ description: '', quantity: 1, unitPrice: 0, imageDataUrl: undefined, discount: 0 }]);
+                discount: Number(item.discount) || 0,
+                category: item.category || 'General'
+            })) || [{ description: '', quantity: 1, unitPrice: 0, imageDataUrl: undefined, discount: 0, category: 'General' }]);
             setLabor({
                 description: quote.labor?.description || "Mà d'obra",
                 cost: Number(quote.labor?.cost) || 0
@@ -75,8 +77,8 @@ export default function EditQuotePage() {
         const newItems = [...items];
         const item = { ...newItems[index] };
         
-        if (field === 'description') {
-            item.description = value as string;
+        if (field === 'description' || field === 'category') {
+            item[field] = value as string;
         } else {
             const numValue = safeNum(value);
             if (field === 'quantity') item.quantity = numValue;
@@ -91,7 +93,8 @@ export default function EditQuotePage() {
     };
 
     const addItem = () => {
-        setItems([...items, { description: '', quantity: 1, unitPrice: 0, imageDataUrl: undefined, discount: 0 }]);
+        const lastCategory = items.length > 0 ? items[items.length - 1].category : 'General';
+        setItems([...items, { description: '', quantity: 1, unitPrice: 0, imageDataUrl: undefined, discount: 0, category: lastCategory }]);
     };
 
     const removeItem = (index: number) => {
@@ -101,19 +104,19 @@ export default function EditQuotePage() {
     const handleLoadPeralbaOffer = () => {
         setItems([...PERALBA_ITEMS]);
         setNotes(DEFAULT_NOTES);
-        toast({ title: "Oferta Carregada", description: "Articles de la Casa C afegits." });
+        toast({ title: "Oferta Carregada", description: "Articles agrupats per categories." });
     };
 
     const handleLoadBuildingSummary = () => {
         setItems([...BUILDING_SUMMARY_ITEMS]);
         setNotes(DEFAULT_NOTES);
-        toast({ title: "Resum Carregat", description: "Resum consolidat afegit." });
+        toast({ title: "Resum Carregat", description: "Zones organitzades correctament." });
     };
 
     const handleLoadHidrosanitaria = () => {
         setItems([...HIDROSANITARIA_ITEMS]);
         setNotes(HIDROSANITARIA_NOTES);
-        toast({ title: "Proposta Carregada", description: "Instal·lacions hidrosanitàries afegides." });
+        toast({ title: "Proposta Carregada", description: "Hidrosanitària configurada." });
     };
 
     const handleImageUploadClick = (index: number) => {
@@ -154,6 +157,7 @@ export default function EditQuotePage() {
                 quantity: safeNum(item.quantity),
                 unitPrice: safeNum(item.unitPrice),
                 discount: safeNum(item.discount),
+                category: item.category || 'General',
                 imageDataUrl: item.imageDataUrl || null
             }));
 
@@ -212,7 +216,7 @@ export default function EditQuotePage() {
     }
 
     return (
-        <AdminGate pageTitle="Editor de Pressupostos" pageDescription="Aquesta secció està protegida.">
+        <AdminGate pageTitle="Editor de Pressupostos" pageDescription="Edició d'articles agrupats per categories.">
             <div className="space-y-8 max-w-5xl mx-auto">
                 <input
                     type="file"
@@ -225,7 +229,7 @@ export default function EditQuotePage() {
                     <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center sm:justify-between gap-4">
                         <div>
                             <CardTitle>Editar Pressupost #{String(quote.quoteNumber).padStart(4, '0')}</CardTitle>
-                            <CardDescription>Modifica els detalls del pressupost i usa els models ràpids.</CardDescription>
+                            <CardDescription>Organitza els articles per categories per a un millor sub-total.</CardDescription>
                         </div>
                         <div className="flex gap-2 flex-wrap">
                             <Button variant="outline" onClick={handleLoadHidrosanitaria} className="bg-cyan-500/10 text-cyan-700 hover:bg-cyan-500/20">
@@ -245,7 +249,7 @@ export default function EditQuotePage() {
                     <CardContent className="space-y-6">
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div className="space-y-2">
-                                <Label className="flex items-center gap-2"><Users className="h-4 w-4" /> Client</Label>
+                                <Label className="flex items-center gap-2 font-bold"><Users className="h-4 w-4" /> Client</Label>
                                 <Select value={selectedCustomerId} onValueChange={setSelectedCustomerId}>
                                     <SelectTrigger>
                                         <SelectValue placeholder="Selecciona un client" />
@@ -257,7 +261,7 @@ export default function EditQuotePage() {
                                 </Select>
                             </div>
                             <div className="space-y-2">
-                                <Label className="flex items-center gap-2"><Briefcase className="h-4 w-4" /> Obra</Label>
+                                <Label className="flex items-center gap-2 font-bold"><Briefcase className="h-4 w-4" /> Obra</Label>
                                 <Input 
                                     placeholder="Nom del projecte o obra"
                                     value={projectName}
@@ -267,70 +271,84 @@ export default function EditQuotePage() {
                         </div>
 
                         <div className="space-y-4 rounded-lg border p-4">
-                           <Label className="text-base font-semibold">Articles del Pressupost ({items.length})</Label>
+                           <Label className="text-base font-bold flex items-center gap-2"><LayoutList className="h-4 w-4" /> Articles del Pressupost ({items.length})</Label>
                            <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2">
                                 {items.map((item, index) => (
-                                    <div key={index} className="space-y-2 p-3 rounded-md bg-muted/30 border border-muted-foreground/10">
-                                        <Input 
-                                            placeholder="Descripció de l'article"
-                                            value={item.description}
-                                            onChange={(e) => handleItemChange(index, 'description', e.target.value)}
-                                            className="bg-background"
-                                        />
+                                    <div key={index} className="space-y-2 p-4 rounded-md bg-muted/30 border border-muted-foreground/10 shadow-sm">
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-2">
+                                            <div className="space-y-1">
+                                                <Label className="text-[10px] uppercase font-bold flex items-center gap-1"><Tag className="h-3 w-3" /> Categoria</Label>
+                                                <Input 
+                                                    placeholder="Ex: Maquinària, Cuina, Planta 1..."
+                                                    value={item.category}
+                                                    onChange={(e) => handleItemChange(index, 'category', e.target.value)}
+                                                    className="bg-background h-8 font-bold"
+                                                />
+                                            </div>
+                                            <div className="space-y-1">
+                                                <Label className="text-[10px] uppercase font-bold">Descripció Article</Label>
+                                                <Input 
+                                                    placeholder="Què s'està pressupostant?"
+                                                    value={item.description}
+                                                    onChange={(e) => handleItemChange(index, 'description', e.target.value)}
+                                                    className="bg-background h-8"
+                                                />
+                                            </div>
+                                        </div>
                                         <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                                             <div className="space-y-1">
-                                                <Label className="text-[10px] uppercase">Quant.</Label>
+                                                <Label className="text-[10px] uppercase text-muted-foreground">Quant.</Label>
                                                 <Input 
                                                     type="number"
                                                     value={item.quantity}
                                                     onChange={(e) => handleItemChange(index, 'quantity', e.target.value)}
-                                                    className="bg-background"
+                                                    className="bg-background h-8"
                                                 />
                                             </div>
                                             <div className="space-y-1">
-                                                <Label className="text-[10px] uppercase">PVP Unit.</Label>
+                                                <Label className="text-[10px] uppercase text-muted-foreground">PVP Unit.</Label>
                                                 <div className="relative">
                                                     <Input
                                                         type="number"
                                                         value={item.unitPrice}
                                                         onChange={(e) => handleItemChange(index, 'unitPrice', e.target.value)}
-                                                        className="pl-7 bg-background"
+                                                        className="pl-7 bg-background h-8"
                                                     />
                                                     <Euro className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
                                                 </div>
                                             </div>
                                             <div className="space-y-1">
-                                                <Label className="text-[10px] uppercase">Dte %</Label>
+                                                <Label className="text-[10px] uppercase text-muted-foreground">Dte %</Label>
                                                 <div className="relative">
                                                     <Input
                                                         type="number"
                                                         value={item.discount !== undefined ? item.discount : 0}
                                                         onChange={(e) => handleItemChange(index, 'discount', e.target.value)}
-                                                        className="pr-7 bg-background"
+                                                        className="pr-7 bg-background h-8"
                                                     />
                                                     <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">%</span>
                                                 </div>
                                             </div>
                                             <div className="flex items-end gap-1">
-                                                <Button type="button" variant="outline" size="icon" onClick={() => handleImageUploadClick(index)} className="h-10 w-10">
+                                                <Button type="button" variant="outline" size="icon" onClick={() => handleImageUploadClick(index)} className="h-8 w-8">
                                                     <ImagePlus className="h-4 w-4" />
                                                 </Button>
-                                                <Button type="button" variant="ghost" size="icon" onClick={() => removeItem(index)} className="h-10 w-10 text-destructive">
+                                                <Button type="button" variant="ghost" size="icon" onClick={() => removeItem(index)} className="h-8 w-8 text-destructive">
                                                     <Trash2 className="h-4 w-4" />
                                                 </Button>
                                             </div>
                                         </div>
-                                        {item.imageDataUrl && <img src={item.imageDataUrl} alt="Preview" className="h-20 w-20 rounded-md object-cover mt-2 border shadow-sm" />}
+                                        {item.imageDataUrl && <img src={item.imageDataUrl} alt="Preview" className="h-16 w-16 rounded-md object-cover mt-2 border shadow-sm" />}
                                     </div>
                                 ))}
                            </div>
-                           <Button type="button" variant="outline" onClick={addItem} className="w-full border-dashed">
-                               <Plus className="mr-2 h-4 w-4" /> Afegir Article Manualment
+                           <Button type="button" variant="outline" onClick={addItem} className="w-full border-dashed py-6 hover:bg-slate-50">
+                               <Plus className="mr-2 h-4 w-4" /> Afegir Article a la Categoria
                            </Button>
                         </div>
                         
                          <div className="space-y-2">
-                            <Label>Mà d'obra</Label>
+                            <Label className="font-bold">Mà d'obra (Global)</Label>
                              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                                  <Input 
                                     placeholder="Descripció (ex: Mà d'obra)"
@@ -351,7 +369,7 @@ export default function EditQuotePage() {
                          </div>
 
                          <div className="space-y-2">
-                            <Label>Condicions de Pagament i Notes</Label>
+                            <Label className="font-bold">Condicions i Notes</Label>
                             <Textarea 
                                 placeholder="Escriu les condicions de pagament..."
                                 value={notes}
@@ -361,9 +379,9 @@ export default function EditQuotePage() {
                          </div>
 
                         <div className="flex justify-end pt-4 gap-2 flex-wrap">
-                             <Button onClick={handleUpdateQuote} disabled={isSaving} className="bg-primary text-primary-foreground">
+                             <Button onClick={handleUpdateQuote} disabled={isSaving} className="bg-primary text-white font-black h-12 px-8 shadow-lg">
                                 {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                                Desar Canvis
+                                DESAR CANVIS I ACTUALITZAR GRUPS
                             </Button>
                         </div>
                     </CardContent>

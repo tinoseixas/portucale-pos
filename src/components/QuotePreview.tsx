@@ -15,6 +15,7 @@ interface QuoteItem {
     unitPrice: number;
     imageDataUrl?: string;
     discount?: number;
+    category?: string;
 }
 
 interface QuotePreviewProps {
@@ -29,18 +30,26 @@ interface QuotePreviewProps {
 // --- Component ---
 export const QuotePreview = forwardRef<HTMLDivElement, QuotePreviewProps>(({ customer, projectName, items, labor, quoteNumber, notes }, ref) => {
 
-    const { materialsSubtotal, totalDiscountAmount } = useMemo(() => {
+    const { groupedItems, materialsSubtotal, totalDiscountAmount } = useMemo(() => {
         let subtotalAccumulator = 0;
         let discountAccumulator = 0;
+        
+        // Grouping items by category
+        const groups = new Map<string, QuoteItem[]>();
         
         items.forEach(item => {
             const itemTotal = item.quantity * item.unitPrice;
             const discountAmount = itemTotal * ((item.discount || 0) / 100);
             subtotalAccumulator += (itemTotal - discountAmount);
             discountAccumulator += discountAmount;
+
+            const cat = item.category || 'General';
+            if (!groups.has(cat)) groups.set(cat, []);
+            groups.get(cat)!.push(item);
         });
         
         return { 
+            groupedItems: groups,
             materialsSubtotal: subtotalAccumulator, 
             totalDiscountAmount: discountAccumulator 
         };
@@ -100,118 +109,117 @@ export const QuotePreview = forwardRef<HTMLDivElement, QuotePreviewProps>(({ cus
             
             <section className="page-break-before-auto">
                 <h3 className="font-bold text-lg mb-4">Detall del Pressupost</h3>
-                <table className="w-full text-sm border-collapse">
-                    <thead className="bg-gray-50">
-                        <tr className="border-b-2 border-gray-300">
-                            <th className="text-left py-2 px-3 font-semibold text-gray-600">DESCRIPCIÓ</th>
-                            <th className="text-right py-2 px-3 font-semibold text-gray-600 w-20">QUANT.</th>
-                            <th className="text-right py-2 px-3 font-semibold text-gray-600 w-24">PVP UNIT.</th>
-                            <th className="text-right py-2 px-3 font-semibold text-gray-600 w-16">DTE %</th>
-                            <th className="text-right py-2 px-3 font-semibold text-gray-600 w-24">TOTAL</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {items.map((item, index) => {
-                            const isHeader = item.unitPrice === 0;
-                            const isEmpty = !item.description && isHeader;
+                
+                {Array.from(groupedItems.entries()).map(([category, catItems], groupIdx) => {
+                    const catSubtotal = catItems.reduce((acc, item) => {
+                        const itemTotal = item.quantity * item.unitPrice;
+                        const discountAmount = itemTotal * ((item.discount || 0) / 100);
+                        return acc + (itemTotal - discountAmount);
+                    }, 0);
 
-                            // Spacer row
-                            if (isEmpty) {
-                                return (
-                                    <tr key={`spacer-${index}`} className="h-4">
-                                        <td colSpan={5} className="py-2 px-3">&nbsp;</td>
+                    return (
+                        <div key={groupIdx} className="mb-8 page-break-inside-avoid">
+                            <h4 className="font-black text-sm text-slate-900 bg-slate-100 px-3 py-2 rounded-t-md border-b-2 border-slate-900 uppercase tracking-widest">{category}</h4>
+                            <table className="w-full text-sm border-collapse mb-2">
+                                <thead className="bg-slate-50/50">
+                                    <tr className="text-xs text-slate-500 uppercase font-bold">
+                                        <th className="text-left py-2 px-3">Descripció</th>
+                                        <th className="text-right py-2 px-3 w-20">Quant.</th>
+                                        <th className="text-right py-2 px-3 w-24">PVP Unit.</th>
+                                        <th className="text-right py-2 px-3 w-16">Dte %</th>
+                                        <th className="text-right py-2 px-3 w-24">Total</th>
                                     </tr>
-                                );
-                            }
+                                </thead>
+                                <tbody>
+                                    {catItems.map((item, index) => {
+                                        const itemTotal = item.quantity * item.unitPrice;
+                                        const discountAmount = itemTotal * ((item.discount || 0) / 100);
+                                        const finalTotal = itemTotal - discountAmount;
+                                        
+                                        return (
+                                            <React.Fragment key={`item-frag-${index}`}>
+                                                <tr className="border-b border-gray-100 hover:bg-gray-50/30 transition-colors">
+                                                    <td className="py-2.5 px-3 text-slate-700">{item.description}</td>
+                                                    <td className="text-right py-2.5 px-3 tabular-nums">{item.quantity.toFixed(2)}</td>
+                                                    <td className="text-right py-2.5 px-3 tabular-nums">{item.unitPrice.toFixed(2)} €</td>
+                                                    <td className="text-right py-2.5 px-3 tabular-nums text-slate-400">{(item.discount || 0)}%</td>
+                                                    <td className="text-right py-2.5 px-3 font-medium tabular-nums">{finalTotal.toFixed(2)} €</td>
+                                                </tr>
+                                                {item.imageDataUrl && (
+                                                    <tr className="border-b border-gray-100 bg-gray-50/20">
+                                                        <td colSpan={5} className="py-3 px-3 text-center">
+                                                            <div className="relative h-32 w-48 mx-auto border rounded overflow-hidden">
+                                                                <Image src={item.imageDataUrl} alt={`Imatge per ${item.description}`} fill className="object-contain" />
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                )}
+                                            </React.Fragment>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
+                            <div className="flex justify-end pr-3">
+                                <p className="text-xs font-bold text-slate-500 uppercase tracking-tighter">
+                                    Subtotal {category}: <span className="ml-2 text-sm text-slate-900 font-black">{catSubtotal.toFixed(2)} €</span>
+                                </p>
+                            </div>
+                        </div>
+                    );
+                })}
 
-                            // Section header
-                            if (isHeader) {
-                                return (
-                                    <tr key={`header-${index}`} className="border-b border-gray-200">
-                                        <td colSpan={5} className="py-2 px-3 font-bold text-gray-800 uppercase bg-gray-50/30">
-                                            {item.description}
-                                        </td>
-                                    </tr>
-                                );
-                            }
-
-                            const itemTotal = item.quantity * item.unitPrice;
-                            const discountAmount = itemTotal * ((item.discount || 0) / 100);
-                            const finalTotal = itemTotal - discountAmount;
-                            
-                            return (
-                                <React.Fragment key={`item-frag-${index}`}>
-                                    <tr className="border-b border-gray-200">
-                                        <td className="py-2 px-3">
-                                            {item.description}
-                                        </td>
-                                        <td className="text-right py-2 px-3 tabular-nums">{item.quantity.toFixed(2)}</td>
-                                        <td className="text-right py-2 px-3 tabular-nums">{item.unitPrice.toFixed(2)} €</td>
-                                        <td className="text-right py-2 px-3 tabular-nums">{(item.discount || 0)}%</td>
-                                        <td className="text-right py-2 px-3 font-medium tabular-nums">{finalTotal.toFixed(2)} €</td>
-                                    </tr>
-                                    {item.imageDataUrl && (
-                                        <tr className="border-b border-gray-200 bg-gray-50">
-                                            <td colSpan={5} className="py-3 px-3 text-center">
-                                                <Image src={item.imageDataUrl} alt={`Imatge per ${item.description}`} width={200} height={200} className="rounded-md object-contain mx-auto" />
-                                            </td>
-                                        </tr>
-                                    )}
-                                </React.Fragment>
-                            );
-                        })}
-                         {labor.cost > 0 && (
-                            <tr className="border-b border-gray-200 font-medium">
-                                <td className="py-2 px-3">{labor.description}</td>
-                                <td className="text-right py-2 px-3 tabular-nums">1.00</td>
-                                <td className="text-right py-2 px-3 tabular-nums">{labor.cost.toFixed(2)} €</td>
-                                <td className="text-right py-2 px-3 tabular-nums">0%</td>
-                                <td className="text-right py-2 px-3 tabular-nums">{labor.cost.toFixed(2)} €</td>
-                            </tr>
-                        )}
-                    </tbody>
-                </table>
-
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', alignItems: 'flex-start', marginTop: '1.5rem' }}>
-                    <div style={{ flex: 1 }}>
-                        {/* Placeholder for notes if needed */}
+                {labor.cost > 0 && (
+                    <div className="mb-8 p-4 bg-slate-50 rounded-lg border border-slate-200">
+                        <div className="flex justify-between items-center">
+                            <div>
+                                <h4 className="font-bold text-sm uppercase text-slate-600">{labor.description}</h4>
+                                <p className="text-xs text-slate-400 italic">Treball tècnic especialitzat</p>
+                            </div>
+                            <span className="text-lg font-black">{labor.cost.toFixed(2)} €</span>
+                        </div>
                     </div>
-                    <div style={{ marginLeft: 'auto', width: '250px' }} className="space-y-2 text-sm">
+                )}
+
+                <div className="flex justify-end mt-10">
+                    <div className="w-80 space-y-3 bg-slate-900 text-white p-6 rounded-2xl shadow-xl">
                         {totalDiscountAmount > 0 && (
-                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                <span className="font-semibold text-gray-700">Total Descontos:</span>
-                                <span className="font-medium tabular-nums text-red-600">-{totalDiscountAmount.toFixed(2)} €</span>
+                            <div className="flex justify-between text-xs text-slate-400 font-bold uppercase">
+                                <span>Total Estalvi</span>
+                                <span className="tabular-nums text-emerald-400">-{totalDiscountAmount.toFixed(2)} €</span>
                             </div>
                         )}
-                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                            <span className="font-semibold text-gray-700">Subtotal:</span>
-                            <span className="font-medium tabular-nums">{subtotal.toFixed(2)} €</span>
+                        <div className="flex justify-between text-xs text-slate-400 font-bold uppercase">
+                            <span>Base Imposable</span>
+                            <span className="tabular-nums">{subtotal.toFixed(2)} €</span>
                         </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                            <span className="font-semibold text-gray-700">IGI ({(IVA_RATE * 100).toFixed(1)}%):</span>
-                            <span className="font-medium tabular-nums">{iva.toFixed(2)} €</span>
+                        <div className="flex justify-between text-xs text-slate-400 font-bold uppercase">
+                            <span>IGI ({(IVA_RATE * 100).toFixed(1)}%)</span>
+                            <span className="tabular-nums">{iva.toFixed(2)} €</span>
                         </div>
-                        <Separator />
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }} className="font-bold text-base">
-                            <span>Total General:</span>
-                            <span className="text-xl">{totalGeneral.toFixed(2)} €</span>
+                        <div className="pt-4 border-t border-slate-700 flex justify-between items-center">
+                            <span className="text-md font-black uppercase tracking-tighter text-primary">Total Pressupost</span>
+                            <span className="text-3xl font-black tabular-nums">{totalGeneral.toFixed(2)} €</span>
                         </div>
                     </div>
                 </div>
             </section>
 
-            <footer className="mt-16 pt-6 border-t text-sm text-gray-600">
-                <div className="bg-gray-100 p-4 rounded-lg border border-gray-300 text-center">
-                    <p className="font-bold text-base text-gray-800 mb-2">Condicions de Pagament i Validesa</p>
-                    <div className="whitespace-pre-line">
-                        <span className="font-semibold">Pagament:</span> {notes || defaultNotes}
+            <footer className="mt-16 pt-8 border-t text-sm text-gray-600">
+                <div className="bg-slate-50 p-6 rounded-xl border border-slate-200 shadow-inner">
+                    <p className="font-black text-xs text-slate-900 uppercase tracking-widest mb-4">Condicions i Validesa</p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-xs leading-relaxed">
+                        <div className="space-y-2">
+                            <p><span className="font-bold text-slate-900 uppercase">Pagament:</span> {notes || defaultNotes}</p>
+                            <p><span className="font-bold text-slate-900 uppercase">Validesa:</span> 15 dies naturals des de la data d'emissió.</p>
+                        </div>
+                        <div className="space-y-2">
+                            <p><span className="font-bold text-slate-900 uppercase">Execució:</span> El termini depèn de la disponibilitat de materials i climatologia.</p>
+                            <p className="italic text-slate-400">Els preus indicats no inclouen possibles imprevistos no descrits en el detall.</p>
+                        </div>
                     </div>
-                    <p className="mt-2"><span className="font-semibold">Termini d'execució:</span> El temps d'execució depèn de diversos factors i, per tant, no podem donar un termini fix.</p>
-                    <p className="mt-2"><span className="font-semibold">Validesa:</span> Aquest pressupost és vàlid durant 15 dies.</p>
                 </div>
-                <div className="text-center text-xs text-gray-500 mt-4">
-                    <p>Gràcies per l'oportunitat de presentar aquest pressupost.</p>
-                    <p>Els preus no inclouen imprevistos.</p>
+                <div className="text-center text-[10px] text-gray-400 mt-8 font-medium uppercase tracking-widest">
+                    <p>TS SERVEIS - Solucions Tècniques i Manteniment</p>
                 </div>
             </footer>
 

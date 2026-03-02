@@ -1,3 +1,4 @@
+
 'use client'
 
 import { useMemo, useRef, useState, useEffect } from 'react'
@@ -11,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { Briefcase, FileDown, Loader2, Users, Plus, Trash2, ImagePlus, Euro, FileArchive, Save, FileText, LayoutList, Droplets } from 'lucide-react'
+import { Briefcase, FileDown, Loader2, Users, Plus, Trash2, ImagePlus, Euro, FileArchive, Save, FileText, LayoutList, Droplets, Tag } from 'lucide-react'
 import { QuotePreview } from '@/components/QuotePreview'
 import { useToast } from '@/hooks/use-toast'
 import { AdminGate } from '@/components/AdminGate'
@@ -29,7 +30,7 @@ export default function QuotesPage() {
     const [selectedCustomerId, setSelectedCustomerId] = useState<string>('all');
     const [projectName, setProjectName] = useState<string>('')
     const [isSaving, setIsSaving] = useState(false)
-    const [items, setItems] = useState<QuoteItem[]>([{ description: '', quantity: 1, unitPrice: 0, imageDataUrl: undefined, discount: 0 }]);
+    const [items, setItems] = useState<QuoteItem[]>([{ description: '', quantity: 1, unitPrice: 0, imageDataUrl: undefined, discount: 0, category: 'General' }]);
     const [labor, setLabor] = useState({ description: "Mà d'obra", cost: 0 });
     const [notes, setNotes] = useState<string>(DEFAULT_NOTES);
     const [selectedItemIndex, setSelectedItemIndex] = useState<number | null>(null);
@@ -52,8 +53,8 @@ export default function QuotesPage() {
         const newItems = [...items];
         const item = { ...newItems[index] };
         
-        if (field === 'description') {
-            item.description = value as string;
+        if (field === 'description' || field === 'category') {
+            item[field] = value as string;
         } else {
             const numValue = safeNum(value);
             if (field === 'quantity') item.quantity = numValue;
@@ -68,7 +69,8 @@ export default function QuotesPage() {
     };
 
     const addItem = () => {
-        setItems([...items, { description: '', quantity: 1, unitPrice: 0, imageDataUrl: undefined, discount: 0 }]);
+        const lastCategory = items.length > 0 ? items[items.length - 1].category : 'General';
+        setItems([...items, { description: '', quantity: 1, unitPrice: 0, imageDataUrl: undefined, discount: 0, category: lastCategory }]);
     };
 
     const removeItem = (index: number) => {
@@ -79,21 +81,21 @@ export default function QuotesPage() {
         setItems([...PERALBA_ITEMS]);
         if (!projectName) setProjectName("Oferta Tèrmic Peralba - Habitatges");
         setNotes(DEFAULT_NOTES);
-        toast({ title: "Oferta Carregada", description: "Articles de la Casa C afegits." });
+        toast({ title: "Oferta Carregada", description: "Articles agrupats per categories." });
     };
 
     const handleLoadBuildingSummary = () => {
         setItems([...BUILDING_SUMMARY_ITEMS]);
         setProjectName("Resum General d'Instal·lacions - Edifici");
         setNotes(DEFAULT_NOTES);
-        toast({ title: "Resum Carregat", description: "Resum de totes les cases i garatge afegit." });
+        toast({ title: "Resum Carregat", description: "Resum consolidat per zones." });
     };
 
     const handleLoadHidrosanitaria = () => {
         setItems([...HIDROSANITARIA_ITEMS]);
         setProjectName("Instal·lacions Hidrosanitàries - Edifici");
         setNotes(HIDROSANITARIA_NOTES);
-        toast({ title: "Proposta Carregada", description: "Instal·lacions hidrosanitàries afegides." });
+        toast({ title: "Proposta Carregada", description: "Hidrosanitària organitzada." });
     };
 
     const handleImageUploadClick = (index: number) => {
@@ -146,6 +148,7 @@ export default function QuotesPage() {
                 quantity: safeNum(item.quantity),
                 unitPrice: safeNum(item.unitPrice),
                 discount: safeNum(item.discount),
+                category: item.category || 'General',
                 imageDataUrl: item.imageDataUrl || null
             }));
 
@@ -207,7 +210,7 @@ export default function QuotesPage() {
     }
 
     return (
-        <AdminGate pageTitle="Generador de Pressupostos" pageDescription="Aquesta secció està protegida.">
+        <AdminGate pageTitle="Generador de Pressupostos" pageDescription="Crea un nou pressupost organitzat per categories.">
             <div className="space-y-8 max-w-5xl mx-auto">
                 <input
                     type="file"
@@ -220,7 +223,7 @@ export default function QuotesPage() {
                     <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center sm:justify-between gap-4">
                         <div>
                             <CardTitle>Generador de Pressupostos</CardTitle>
-                            <CardDescription>Crea un nou pressupost manualment o usa els models ràpids a continuació.</CardDescription>
+                            <CardDescription>Crea un nou pressupost organitzat per categories i sub-totals.</CardDescription>
                         </div>
                         <div className="flex gap-2 flex-wrap">
                             <Button variant="outline" onClick={handleLoadHidrosanitaria} className="bg-cyan-500/10 text-cyan-700 hover:bg-cyan-500/20">
@@ -240,7 +243,7 @@ export default function QuotesPage() {
                     <CardContent className="space-y-6">
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div className="space-y-2">
-                                <Label className="flex items-center gap-2"><Users className="h-4 w-4" /> Client</Label>
+                                <Label className="flex items-center gap-2 font-bold"><Users className="h-4 w-4" /> Client</Label>
                                 <Select value={selectedCustomerId} onValueChange={setSelectedCustomerId}>
                                     <SelectTrigger>
                                         <SelectValue placeholder="Selecciona un client" />
@@ -252,7 +255,7 @@ export default function QuotesPage() {
                                 </Select>
                             </div>
                             <div className="space-y-2">
-                                <Label className="flex items-center gap-2"><Briefcase className="h-4 w-4" /> Obra</Label>
+                                <Label className="flex items-center gap-2 font-bold"><Briefcase className="h-4 w-4" /> Obra</Label>
                                 <Input 
                                     placeholder="Nom del projecte o obra"
                                     value={projectName}
@@ -263,79 +266,89 @@ export default function QuotesPage() {
 
                         <div className="space-y-4 rounded-lg border p-4">
                            <div className="flex justify-between items-center border-b pb-2">
-                               <Label className="text-base font-semibold">Articles del Pressupost ({items.length})</Label>
-                               <Button type="button" variant="ghost" size="sm" onClick={() => setItems([{ description: '', quantity: 1, unitPrice: 0, discount: 0 }])}>Netejar</Button>
+                               <Label className="text-base font-bold flex items-center gap-2"><LayoutList className="h-4 w-4" /> Articles del Pressupost ({items.length})</Label>
+                               <Button type="button" variant="ghost" size="sm" onClick={() => setItems([{ description: '', quantity: 1, unitPrice: 0, discount: 0, category: 'General' }])}>Netejar Tot</Button>
                            </div>
                            <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2">
                                 {items.map((item, index) => (
-                                    <div key={index} className="space-y-2 p-3 rounded-md bg-muted/30 border border-muted-foreground/10">
-                                        <div className="flex gap-2 items-start">
-                                            <div className="flex-grow space-y-2">
+                                    <div key={index} className="space-y-2 p-4 rounded-md bg-muted/30 border border-muted-foreground/10 shadow-sm">
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-2">
+                                            <div className="space-y-1">
+                                                <Label className="text-[10px] uppercase font-bold flex items-center gap-1"><Tag className="h-3 w-3" /> Categoria</Label>
                                                 <Input 
-                                                    placeholder="Descripció de l'article"
+                                                    placeholder="Ex: Maquinària, Banys, Elèctrica..."
+                                                    value={item.category}
+                                                    onChange={(e) => handleItemChange(index, 'category', e.target.value)}
+                                                    className="bg-background h-8 font-bold"
+                                                />
+                                            </div>
+                                            <div className="space-y-1">
+                                                <Label className="text-[10px] uppercase font-bold">Descripció Article</Label>
+                                                <Input 
+                                                    placeholder="Què s'està pressupostant?"
                                                     value={item.description}
                                                     onChange={(e) => handleItemChange(index, 'description', e.target.value)}
-                                                    className="bg-background"
+                                                    className="bg-background h-8"
                                                 />
-                                                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                                                    <div className="space-y-1">
-                                                        <Label className="text-[10px] uppercase text-muted-foreground">Quant.</Label>
-                                                        <Input 
-                                                            type="number"
-                                                            value={item.quantity}
-                                                            onChange={(e) => handleItemChange(index, 'quantity', e.target.value)}
-                                                            className="bg-background"
-                                                        />
-                                                    </div>
-                                                    <div className="space-y-1">
-                                                        <Label className="text-[10px] uppercase text-muted-foreground">PVP Unit.</Label>
-                                                        <div className="relative">
-                                                            <Input
-                                                                type="number"
-                                                                value={item.unitPrice}
-                                                                onChange={(e) => handleItemChange(index, 'unitPrice', e.target.value)}
-                                                                className="pl-7 bg-background"
-                                                            />
-                                                            <Euro className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
-                                                        </div>
-                                                    </div>
-                                                    <div className="space-y-1">
-                                                        <Label className="text-[10px] uppercase text-muted-foreground">Dte %</Label>
-                                                        <div className="relative">
-                                                            <Input
-                                                                type="number"
-                                                                value={item.discount}
-                                                                onChange={(e) => handleItemChange(index, 'discount', e.target.value)}
-                                                                className="pr-7 bg-background"
-                                                            />
-                                                            <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">%</span>
-                                                        </div>
-                                                    </div>
-                                                    <div className="flex items-end gap-1">
-                                                        <Button type="button" variant="outline" size="icon" onClick={() => handleImageUploadClick(index)} className="h-10 w-10">
-                                                            <ImagePlus className="h-4 w-4" />
-                                                        </Button>
-                                                        <Button type="button" variant="ghost" size="icon" onClick={() => removeItem(index)} className="h-10 w-10 text-destructive">
-                                                            <Trash2 className="h-4 w-4" />
-                                                        </Button>
-                                                    </div>
-                                                </div>
                                             </div>
                                         </div>
-                                        {item.imageDataUrl && <img src={item.imageDataUrl} alt="Preview" className="h-20 w-20 rounded-md object-cover mt-2 border shadow-sm" />}
+                                        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                                            <div className="space-y-1">
+                                                <Label className="text-[10px] uppercase text-muted-foreground">Quant.</Label>
+                                                <Input 
+                                                    type="number"
+                                                    value={item.quantity}
+                                                    onChange={(e) => handleItemChange(index, 'quantity', e.target.value)}
+                                                    className="bg-background h-8"
+                                                />
+                                            </div>
+                                            <div className="space-y-1">
+                                                <Label className="text-[10px] uppercase text-muted-foreground">PVP Unit.</Label>
+                                                <div className="relative">
+                                                    <Input
+                                                        type="number"
+                                                        value={item.unitPrice}
+                                                        onChange={(e) => handleItemChange(index, 'unitPrice', e.target.value)}
+                                                        className="pl-7 bg-background h-8"
+                                                    />
+                                                    <Euro className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
+                                                </div>
+                                            </div>
+                                            <div className="space-y-1">
+                                                <Label className="text-[10px] uppercase text-muted-foreground">Dte %</Label>
+                                                <div className="relative">
+                                                    <Input
+                                                        type="number"
+                                                        value={item.discount}
+                                                        onChange={(e) => handleItemChange(index, 'discount', e.target.value)}
+                                                        className="pr-7 bg-background h-8"
+                                                    />
+                                                    <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">%</span>
+                                                </div>
+                                            </div>
+                                            <div className="flex items-end gap-1">
+                                                <Button type="button" variant="outline" size="icon" onClick={() => handleImageUploadClick(index)} className="h-8 w-8">
+                                                    <ImagePlus className="h-4 w-4" />
+                                                </Button>
+                                                <Button type="button" variant="ghost" size="icon" onClick={() => removeItem(index)} className="h-8 w-8 text-destructive">
+                                                    <Trash2 className="h-4 w-4" />
+                                                </Button>
+                                            </div>
+                                        </div>
+                                        {item.imageDataUrl && <img src={item.imageDataUrl} alt="Preview" className="h-16 w-16 rounded-md object-cover mt-2 border shadow-sm" />}
                                     </div>
                                 ))}
                            </div>
-                           <Button type="button" variant="outline" onClick={addItem} className="w-full border-dashed">
-                               <Plus className="mr-2 h-4 w-4" /> Afegir Article Manualment
+                           <Button type="button" variant="outline" onClick={addItem} className="w-full border-dashed py-6 hover:bg-slate-50">
+                               <Plus className="mr-2 h-4 w-4" /> Afegir Article a la Categoria
                            </Button>
                         </div>
                         
                          <div className="space-y-2">
-                            <Label>Mà d'obra</Label>
+                            <Label className="font-bold">Mà d'obra (Global)</Label>
                              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                                  <Input 
-                                    placeholder="Descripció (ex: Mà d'obra)"
+                                    placeholder="Descripció (ex: Mà d'obra general)"
                                     value={labor.description}
                                     onChange={(e) => setLabor({...labor, description: e.target.value})}
                                  />
@@ -353,9 +366,9 @@ export default function QuotesPage() {
                          </div>
 
                          <div className="space-y-2">
-                            <Label>Condicions de Pagament i Notes</Label>
+                            <Label className="font-bold">Condicions i Notes</Label>
                             <Textarea 
-                                placeholder="Escriu les condicions de pagament..."
+                                placeholder="Escriu les condicions de pagament o terminis..."
                                 value={notes}
                                 onChange={(e) => setNotes(e.target.value)}
                                 rows={4}
@@ -363,28 +376,28 @@ export default function QuotesPage() {
                          </div>
 
                         <div className="flex justify-end pt-4 gap-2 flex-wrap">
-                             <Button onClick={() => handleSaveQuote(false)} disabled={isSaving}>
+                             <Button onClick={() => handleSaveQuote(false)} disabled={isSaving} variant="outline" className="font-bold h-12">
                                 {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
                                 Desar Pressupost
                             </Button>
                             <Button
                                 onClick={() => handleSaveQuote(true)}
                                 disabled={isSaving}
-                                className="bg-accent text-accent-foreground hover:bg-accent/90"
+                                className="bg-primary text-white hover:bg-primary/90 font-black h-12 px-8 shadow-lg"
                             >
                                 {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileDown className="mr-2 h-4 w-4" />}
-                                Desar i Exportar PDF
+                                GENERAR PDF ORGANITZAT
                             </Button>
                         </div>
                     </CardContent>
                 </Card>
                 
                 {items.length > 0 && (
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Previsualització del Pressupost</CardTitle>
+                    <Card className="shadow-2xl border-none overflow-hidden">
+                        <CardHeader className="bg-slate-900 text-white">
+                            <CardTitle className="text-lg">Previsualització de l'Estructura</CardTitle>
                         </CardHeader>
-                        <CardContent>
+                        <CardContent className="p-0 bg-slate-100">
                            <QuotePreview
                              customer={associatedCustomer}
                              projectName={projectName}
