@@ -94,6 +94,25 @@ export default function QuotesPage() {
         toast({ title: "Articles Duplicats", description: "S'han afegit els mateixos articles per a la Casa B." });
     };
 
+    const duplicateForCasaC = () => {
+        if (items.length === 0) return;
+        
+        const newItems = items.map(item => {
+            let newCat = item.category || 'General';
+            if (newCat.toUpperCase().includes('CASA A')) {
+                newCat = newCat.replace(/CASA A/gi, 'CASA C');
+            } else if (newCat.toUpperCase().includes('CASA B')) {
+                newCat = newCat.replace(/CASA B/gi, 'CASA C');
+            } else if (!newCat.toUpperCase().includes('CASA C')) {
+                newCat = `CASA C - ${newCat}`;
+            }
+            return { ...item, category: newCat };
+        });
+        
+        setItems([...items, ...newItems]);
+        toast({ title: "Articles Duplicats", description: "S'han afegit els mateixos articles per a la Casa C." });
+    };
+
     const handleLoadPeralbaOffer = () => {
         setItems([...PERALBA_ITEMS]);
         if (!projectName) setProjectName("Oferta Tèrmic Peralba - Habitatges");
@@ -284,11 +303,14 @@ export default function QuotesPage() {
                         <div className="space-y-4 rounded-lg border p-4">
                            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b pb-2 gap-2">
                                <Label className="text-base font-bold flex items-center gap-2"><LayoutList className="h-4 w-4" /> Articles del Pressupost ({items.length})</Label>
-                               <div className="flex gap-2">
+                               <div className="flex gap-2 flex-wrap">
                                    <Button type="button" variant="outline" size="sm" onClick={duplicateForCasaB} className="h-8 border-primary text-primary hover:bg-primary/10">
-                                       <Copy className="mr-2 h-3 w-3" /> Duplicar per Casa B
+                                       <Copy className="mr-2 h-3 w-3" /> Duplicar per B
                                    </Button>
-                                   <Button type="button" variant="ghost" size="sm" onClick={() => setItems([{ description: '', quantity: 1, unitPrice: 0, discount: 0, category: 'CASA A - General' }])} className="h-8">Netejar Tot</Button>
+                                   <Button type="button" variant="outline" size="sm" onClick={duplicateForCasaC} className="h-8 border-primary text-primary hover:bg-primary/10">
+                                       <Copy className="mr-2 h-3 w-3" /> Duplicar per C
+                                   </Button>
+                                   <Button type="button" variant="ghost" size="sm" onClick={() => setItems([{ description: '', quantity: 1, unitPrice: 0, discount: 0, category: 'CASA A - General' }])} className="h-8">Netejar</Button>
                                </div>
                            </div>
                            <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2">
