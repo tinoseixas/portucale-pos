@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState } from 'react';
@@ -9,16 +8,15 @@ interface LogoProps {
 }
 
 /**
- * Componente de Logótipo da TS SERVEIS.
- * Tenta carregar o ficheiro /logo.png (que o utilizador deve carregar para a pasta public).
- * Se o ficheiro não existir ou falhar, mostra uma versão SVG profissional com o slogan correto.
+ * Componente de Logótipo da TS SERVEIS com o slogan atualizado.
+ * Tenta carregar o ficheiro /logo.png da pasta public.
+ * Se falhar, mostra uma versão SVG profissional com o novo slogan em catalão.
  */
 export function Logo({ className, variant = 'dark' }: LogoProps) {
   const [imgError, setImgError] = useState(false);
   const primaryColor = variant === 'dark' ? '#005691' : '#ffffff';
   const accentColor = '#FFD700';
 
-  // Se a imagem carregar corretamente, usamos o ficheiro real enviado pelo utilizador
   if (!imgError) {
     return (
       <img 
@@ -31,7 +29,6 @@ export function Logo({ className, variant = 'dark' }: LogoProps) {
     );
   }
 
-  // Fallback SVG se o ficheiro /logo.png não for encontrado ou der erro
   return (
     <svg 
       viewBox="0 0 450 100" 
@@ -73,7 +70,7 @@ export function Logo({ className, variant = 'dark' }: LogoProps) {
         TS SERVEIS
       </text>
       
-      {/* Slogan Oficial Corrigido */}
+      {/* Novo Slogan em Catalão */}
       <text 
         x="110" 
         y="82" 
@@ -83,7 +80,7 @@ export function Logo({ className, variant = 'dark' }: LogoProps) {
         letterSpacing="1"
         fill={variant === 'dark' ? '#64748b' : '#cbd5e1'}
       >
-        SOLUCIONS TÈCNIQUES I MANTENIMENT
+        CONVERTIM LES TEVES IDEES EN REALITAT
       </text>
     </svg>
   );
