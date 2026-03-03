@@ -1,7 +1,7 @@
 'use server';
 /**
  * @fileOverview Flux de traducció per a descripcions de serveis.
- * Optimitzat per a Genkit 1.x i Gemini 1.5 Flash.
+ * Utilitza Genkit 1.x amb el model Gemini 1.5 Flash.
  */
 
 import { ai } from '@/ai/genkit';
@@ -19,36 +19,38 @@ export type TranslateInput = z.infer<typeof TranslateInputSchema>;
 export type TranslateOutput = z.infer<typeof TranslateOutputSchema>;
 
 /**
- * Definició del prompt de traducció professional.
- */
-const translatePrompt = ai.definePrompt({
-  name: 'translatePrompt',
-  model: 'googleai/gemini-1.5-flash',
-  input: { schema: TranslateInputSchema },
-  output: { schema: TranslateOutputSchema },
-  config: {
-    temperature: 0.3,
-  },
-  prompt: `Act as a professional translator for technical and construction reports.
-  
-  Translate the following text to professional, formal, and concise CATALAN. 
-  Fix any spelling or punctuation errors in the source.
-  Ensure technical terms (e.g. plumbing, electrical, masonry) are translated correctly for an official Andorran work report.
-  
-  TEXT: "{{{text}}}"`,
-});
-
-/**
- * Tradueix un text al català professionalment.
+ * Tradueix un text al català professionalment de forma directa.
  */
 export async function translateToCatalan(input: TranslateInput): Promise<TranslateOutput> {
   if (!input.text || !input.text.trim()) return { translatedText: '' };
   
   try {
-    const { output } = await translatePrompt(input);
-    return output || { translatedText: input.text };
+    const response = await ai.generate({
+      model: 'googleai/gemini-1.5-flash',
+      config: {
+        temperature: 0.1,
+      },
+      output: {
+        schema: TranslateOutputSchema
+      },
+      prompt: `Act as a professional translator for technical and construction reports.
+      
+      TASK:
+      Translate the provided text to professional, formal, and concise CATALAN. 
+      - Fix any spelling or punctuation errors.
+      - Ensure technical terms (plumbing, electrical, masonry) are correct for an official Andorran work report.
+      - If the text is already in Catalan, just fix any typos.
+      
+      TEXT TO TRANSLATE: "${input.text}"`,
+    });
+
+    const result = response.output;
+    if (!result) throw new Error("IA response is empty");
+    
+    return result;
   } catch (error) {
     console.error("Error in translateToCatalan:", error);
+    // En cas d'error, retornem el text original per no perdre dades
     return { translatedText: input.text };
   }
 }

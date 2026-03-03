@@ -47,8 +47,8 @@ type Material = {
     imageDataUrl?: string;
 }
 
-const MAX_IMAGE_WIDTH = 1600; // Resolució ideal per a Gemini OCR
-const IMAGE_QUALITY = 0.85; // Qualitat nítida però optimitzada
+const MAX_IMAGE_WIDTH = 1600; 
+const IMAGE_QUALITY = 0.85;
 
 function resizeAndCompressImage(file: File): Promise<string> {
     return new Promise((resolve, reject) => {
@@ -173,7 +173,8 @@ export default function EditServicePage() {
         }
         toast({ title: 'Text corregit al català' });
     } catch (e) {
-        toast({ variant: 'destructive', title: 'Error en traducció', description: 'No s\'ha pogut connectar amb la IA.' });
+        console.error("IA Translation failed", e);
+        toast({ variant: 'destructive', title: 'Error en traducció', description: 'L\'IA no ha pogut processar el text en aquest moment.' });
     } finally {
         setIsTranslating(false);
     }
@@ -186,7 +187,7 @@ export default function EditServicePage() {
     setIsExtracting(true);
     toast({ 
         title: lineIndex !== null ? 'Analitzant article...' : 'Analitzant tiquet...', 
-        description: 'L\'IA està processant la imatge.' 
+        description: 'L\'IA està llegint la imatge.' 
     });
     
     try {
@@ -209,18 +210,17 @@ export default function EditServicePage() {
                 setMaterials(newMaterials);
                 toast({ title: 'Article actualitzat!' });
             } else {
-                // Filtrem línies buides actuals abans d'afegir les noves
                 const currentFilledMaterials = materials.filter(m => m.description.trim() !== '' || m.unitPrice > 0);
                 const newDetected = res.materials.map(m => ({ ...m, imageDataUrl: dataUrl }));
                 setMaterials([...currentFilledMaterials, ...newDetected]);
                 toast({ title: 'Tiquet processat', description: `S'han afegit ${res.materials.length} articles.` });
             }
         } else {
-            toast({ variant: 'destructive', title: 'No s\'han detectat dades', description: 'Assegura\'t que la foto estigui a prop i ben il·luminada.' });
+            toast({ variant: 'destructive', title: 'No s\'han detectat dades', description: 'L\'IA no ha trobat línies de material. Prova una foto més propera.' });
         }
     } catch (e: any) {
         console.error("OCR Error:", e);
-        toast({ variant: 'destructive', title: 'Error de lectura', description: 'No s\'han pogut extreure les dades de la imatge.' });
+        toast({ variant: 'destructive', title: 'Error de lectura', description: 'No s\'ha pogut connectar amb el servei d\'IA.' });
     } finally {
         setIsExtracting(false);
         if (ocrInputRef.current) ocrInputRef.current.value = '';
@@ -286,7 +286,7 @@ export default function EditServicePage() {
     }
   }
 
-  if (isUserLoading || isLoading || isSaving) return <div className="p-12 text-center h-[80vh] flex flex-col items-center justify-center"><Loader2 className="h-16 w-16 animate-spin mx-auto text-primary" /><p className="mt-6 font-black uppercase tracking-widest text-slate-400 animate-pulse">Preparant el teu espai...</p></div>
+  if (isUserLoading || isLoading || isSaving) return <div className="p-12 text-center h-[80vh] flex flex-col items-center justify-center"><Loader2 className="h-16 w-16 animate-spin mx-auto text-primary" /><p className="mt-6 font-black uppercase tracking-widest text-slate-400 animate-pulse">Processant amb IA...</p></div>
   if (!service) return <div className="p-12 text-center">Registre no trobat. <Button onClick={() => router.push('/dashboard')} variant="link">Tornar</Button></div>
   if (showCamera) return <CameraCapture onCapture={(url, type) => { setMedia(prev => [...prev, { type, dataUrl: url }]); setShowCamera(false); }} onClose={() => setShowCamera(false)} />;
 
@@ -305,7 +305,7 @@ export default function EditServicePage() {
                 className="bg-primary/5 text-primary border-primary/20 hover:bg-primary/10 font-black uppercase text-xs tracking-widest"
             >
                 {isTranslating ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Sparkles className="h-4 w-4 mr-2" />}
-                Corregir Català IA
+                Traduir a Català (IA)
             </Button>
         </div>
         
@@ -328,7 +328,7 @@ export default function EditServicePage() {
             <div className="flex justify-between items-center">
                 <div className="space-y-1">
                     <CardTitle className="text-3xl font-black uppercase tracking-tighter">Informe de Treball</CardTitle>
-                    <CardDescription className="text-slate-400 font-medium">Responsable: {service.employeeName || 'Assignant...'}</CardDescription>
+                    <CardDescription className="text-slate-400 font-medium">Tècnic: {service.employeeName || 'Carregant...'}</CardDescription>
                 </div>
                 <div className="bg-primary/20 p-3 rounded-2xl">
                     <Briefcase className="h-8 w-8 text-primary" />
@@ -370,18 +370,20 @@ export default function EditServicePage() {
                 </Button>
                 <div className="relative">
                     <Briefcase className="absolute left-6 top-1/2 -translate-y-1/2 h-6 w-6 text-slate-400" />
-                    <Input placeholder="Nom del Projecte / Obra" value={projectName} onChange={(e) => setProjectName(e.target.value)} className="pl-16 h-16 rounded-2xl border-2 font-black text-lg bg-slate-50" />
+                    <Input placeholder="Nom de l'Obra" value={projectName} onChange={(e) => setProjectName(e.target.value)} className="pl-16 h-16 rounded-2xl border-2 font-black text-lg bg-slate-50" />
                 </div>
               </div>
               
               <div className="space-y-3">
-                <Label className="font-black text-xs uppercase tracking-[0.2em] text-slate-400">Treballs realitzats</Label>
-                <Textarea placeholder="Descriu què has fet avui..." value={description} onChange={(e) => setDescription(e.target.value)} rows={5} className="rounded-3xl border-2 font-medium text-lg p-6 bg-slate-50 focus:bg-white transition-colors" />
+                <div className="flex justify-between items-center">
+                    <Label className="font-black text-xs uppercase tracking-[0.2em] text-slate-400">Treballs realitzats</Label>
+                </div>
+                <Textarea placeholder="Descriu la teva feina..." value={description} onChange={(e) => setDescription(e.target.value)} rows={5} className="rounded-3xl border-2 font-medium text-lg p-6 bg-slate-50 focus:bg-white transition-colors" />
               </div>
 
               <div className="space-y-3">
                 <Label className="font-black text-xs uppercase tracking-[0.2em] text-amber-600">Tasques pendents</Label>
-                <Textarea placeholder="Hi ha alguna cosa per acabar demà?" value={pendingTasks} onChange={(e) => setPendingTasks(e.target.value)} rows={2} className="border-amber-200 focus-visible:ring-amber-500 bg-amber-50/50 rounded-2xl p-6 font-medium" />
+                <Textarea placeholder="Què falta per fer?" value={pendingTasks} onChange={(e) => setPendingTasks(e.target.value)} rows={2} className="border-amber-200 focus-visible:ring-amber-500 bg-amber-50/50 rounded-2xl p-6 font-medium" />
               </div>
 
               {/* MATERIALS SECTION */}
@@ -392,7 +394,7 @@ export default function EditServicePage() {
                         <input type="file" ref={ocrInputRef} onChange={(e) => handleOCR(e)} accept="image/*" className="hidden" />
                         <Button type="button" variant="outline" size="sm" onClick={() => ocrInputRef.current?.click()} disabled={isExtracting} className="bg-primary text-white hover:bg-primary/90 border-none shadow-lg font-black h-12 px-6 rounded-2xl">
                             {isExtracting && activeLineIndex === null ? <Loader2 className="h-5 w-5 animate-spin mr-2" /> : <ScanLine className="h-5 w-5 mr-2" />}
-                            LLEGIR TIQUET
+                            LLEGIR TIQUET IA
                         </Button>
                     </div>
                   </div>
@@ -420,7 +422,7 @@ export default function EditServicePage() {
                               </div>
                               {m.imageDataUrl && (
                                   <div className="relative h-24 w-full rounded-2xl overflow-hidden border-2 border-slate-100 group">
-                                      <Image src={m.imageDataUrl} alt="Snippet" fill className="object-cover" />
+                                      <Image src={m.imageDataUrl} alt="OCR" fill className="object-cover" />
                                       <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                                           <p className="text-white font-bold text-xs uppercase tracking-widest">Evidència OCR</p>
                                       </div>
@@ -429,7 +431,7 @@ export default function EditServicePage() {
                           </div>
                       ))}
                   </div>
-                  <Button type="button" variant="ghost" size="sm" onClick={() => setMaterials([...materials, { description: '', quantity: 1, unitPrice: 0 }])} className="w-full h-16 border-4 border-dashed border-slate-200 hover:bg-white rounded-3xl font-black text-slate-400 uppercase text-xs tracking-widest transition-all hover:border-primary/20 hover:text-primary">+ AFEGIR ARTICLE MANUALMENT</Button>
+                  <Button type="button" variant="ghost" size="sm" onClick={() => setMaterials([...materials, { description: '', quantity: 1, unitPrice: 0 }])} className="w-full h-16 border-4 border-dashed border-slate-200 hover:bg-white rounded-3xl font-black text-slate-400 uppercase text-xs tracking-widest transition-all hover:border-primary/20 hover:text-primary">+ AFEGIR ARTICLE</Button>
               </div>
 
               {/* MEDIA SECTION */}
