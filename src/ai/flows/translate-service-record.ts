@@ -18,27 +18,52 @@ const TranslateOutputSchema = z.object({
 });
 export type TranslateOutput = z.infer<typeof TranslateOutputSchema>;
 
+// Definim el prompt de forma independent per a millor rendiment i validació
+const translatePrompt = ai.definePrompt({
+  name: 'translatePrompt',
+  input: { schema: TranslateInputSchema },
+  output: { schema: TranslateOutputSchema },
+  prompt: `Ets un assistent administratiu expert en el sector de la construcció, fontaneria i manteniment a Andorra. 
+  
+  La teva tasca és traduir o millorar el següent text al CATALÀ professional. 
+  
+  INSTRUCCIONS:
+  1. Manté la terminologia tècnica correcta (ex: "maneguet", "col·lector", "clau de pas").
+  2. Si el text ja està en català, corregeix l'ortografia i millora la gramàtica per fer-lo més formal.
+  3. No afegeixis informació que no estigui al text original.
+  
+  TEXT ORIGINAL: {{text}}`,
+});
+
+// El flux que embolcalla la crida al prompt
 const translateFlow = ai.defineFlow(
   {
-    name: 'translateToCatalan',
+    name: 'translateToCatalanFlow',
     inputSchema: TranslateInputSchema,
     outputSchema: TranslateOutputSchema,
   },
   async (input) => {
-    const { output } = await ai.generate({
+    const { output } = await translatePrompt(input, {
       model: 'googleai/gemini-1.5-flash',
-      prompt: `Ets un assistent administratiu expert en el sector de la construcció i el manteniment a Andorra. 
-      Tradueix el següent text al CATALÀ professional. 
-      Manté la terminologia tècnica correcta (fontaneria, electricitat, etc.). 
-      Si el text ja està en català, millora'n la gramàtica i l'ortografia per fer-lo més formal.
-      
-      TEXT ORIGINAL: ${input.text}`,
-      output: { schema: TranslateOutputSchema }
+      config: {
+        temperature: 0.3, // Temperatura baixa per a traduccions fidels
+      }
     });
-    return output!;
+    
+    if (!output) {
+      throw new Error('L\'IA no ha pogut generar una traducció vàlida.');
+    }
+    
+    return output;
   }
 );
 
 export async function translateToCatalan(input: TranslateInput): Promise<TranslateOutput> {
-  return translateFlow(input);
+  try {
+    return await translateFlow(input);
+  } catch (error) {
+    console.error("Error en translateFlow:", error);
+    // Fallback: retornem el text original si la traducció falla
+    return { translatedText: input.text };
+  }
 }

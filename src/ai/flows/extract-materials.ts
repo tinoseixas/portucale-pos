@@ -3,8 +3,6 @@
  * @fileOverview Flux d'extracció de materials des d'imatges utilitzant Genkit.
  * 
  * - extractMaterialsFromPhoto: Funció principal que crida al flux d'IA.
- * - ExtractMaterialsInput: Esquema d'entrada amb la foto en base64.
- * - ExtractMaterialsOutput: Llista de materials extrets (descripció, quantitat, preu).
  */
 
 import { ai } from '@/ai/genkit';
@@ -26,25 +24,47 @@ const ExtractMaterialsOutputSchema = z.object({
 });
 export type ExtractMaterialsOutput = z.infer<typeof ExtractMaterialsOutputSchema>;
 
+// Definim el prompt per a l'extracció visual
+const extractMaterialsPrompt = ai.definePrompt({
+  name: 'extractMaterialsPrompt',
+  input: { schema: ExtractMaterialsInputSchema },
+  output: { schema: ExtractMaterialsOutputSchema },
+  prompt: [
+    { media: { url: '{{photoDataUri}}' } },
+    { text: `Extrau tots els materials i articles de mà d'obra d'aquesta imatge de document (tiquet o albarà de compra).
+    
+    INSTRUCCIONS:
+    1. Tradueix totes les descripcions al CATALÀ.
+    2. Identifica clarament la quantitat i el preu unitari.
+    3. Si no trobes el preu, posa 0.
+    4. Ignora dades de l'empresa o dates, només volem la llista d'articles comprats.` }
+  ],
+});
+
 const extractMaterialsFlow = ai.defineFlow(
   {
-    name: 'extractMaterialsFromPhoto',
+    name: 'extractMaterialsFromPhotoFlow',
     inputSchema: ExtractMaterialsInputSchema,
     outputSchema: ExtractMaterialsOutputSchema,
   },
   async (input) => {
-    const { output } = await ai.generate({
+    const { output } = await extractMaterialsPrompt(input, {
       model: 'googleai/gemini-1.5-flash',
-      prompt: [
-        { media: { url: input.photoDataUri } },
-        { text: "Extract all materials and labor items from this document image. Return a JSON list of objects with description, quantity, and unitPrice. IMPORTANT: Translate all descriptions to CATALAN. If a price is not found, use 0." }
-      ],
-      output: { schema: ExtractMaterialsOutputSchema }
     });
-    return output!;
+    
+    if (!output) {
+      return { materials: [] };
+    }
+    
+    return output;
   }
 );
 
 export async function extractMaterialsFromPhoto(input: ExtractMaterialsInput): Promise<ExtractMaterialsOutput> {
-  return extractMaterialsFlow(input);
+  try {
+    return await extractMaterialsFlow(input);
+  } catch (error) {
+    console.error("Error en extractMaterialsFlow:", error);
+    return { materials: [] };
+  }
 }
