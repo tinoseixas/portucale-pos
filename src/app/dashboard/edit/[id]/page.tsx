@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Clock, FileText, Camera, ArrowLeft, Save, Trash2, Plus, X, Video, Calendar as CalendarIcon, Briefcase, Users, Package, Euro, ImagePlus, PenTool, Loader2, Sparkles, Trash, Edit } from 'lucide-react'
+import { Clock, Camera, ArrowLeft, Save, Trash2, Plus, X, Video, Calendar as CalendarIcon, Briefcase, Users, Package, Euro, ImagePlus, PenTool, Loader2, Sparkles, Trash, Edit } from 'lucide-react'
 import { useToast } from "@/hooks/use-toast"
 import { useFirestore, useUser, useDoc, useMemoFirebase, useCollection } from '@/firebase'
 import { doc, deleteDoc, collection, query, orderBy, setDoc } from 'firebase/firestore'
@@ -154,21 +154,25 @@ export default function EditServicePage() {
   }, [service]);
 
   const handleTranslate = async () => {
-    if (!description && !pendingTasks) return;
+    if (!description && !pendingTasks) {
+        toast({ title: "No hi ha text per traduir", description: "Escriu algun detall del treball primer." });
+        return;
+    }
+    
     setIsTranslating(true);
     try {
         if (description) {
             const res = await translateToCatalan({ text: description });
-            setDescription(res.translatedText);
+            if (res && res.translatedText) setDescription(res.translatedText);
         }
         if (pendingTasks) {
             const res = await translateToCatalan({ text: pendingTasks });
-            setPendingTasks(res.translatedText);
+            if (res && res.translatedText) setPendingTasks(res.translatedText);
         }
-        toast({ title: 'Text corregit al català' });
+        toast({ title: 'Text corregit correctament', description: "S'ha passat al català professional." });
     } catch (e) {
         console.error("IA Translation failed", e);
-        toast({ variant: 'destructive', title: 'Error en traducció', description: 'L\'IA no ha pogut processar el text en aquest moment.' });
+        toast({ variant: 'destructive', title: 'Error en la traducció', description: "L'IA no ha pogut processar el text en aquest moment. Verifica la teva connexió." });
     } finally {
         setIsTranslating(false);
     }
@@ -178,8 +182,12 @@ export default function EditServicePage() {
     const files = e.target.files;
     if (!files) return;
     for (let i = 0; i < files.length; i++) {
-        const url = await resizeAndCompressImage(files[i]);
-        setMedia(prev => [...prev, { type: 'image', dataUrl: url }]);
+        try {
+            const url = await resizeAndCompressImage(files[i]);
+            setMedia(prev => [...prev, { type: 'image', dataUrl: url }]);
+        } catch (err) {
+            console.error("Error processing image", err);
+        }
     }
     if (galleryInputRef.current) galleryInputRef.current.value = '';
   }
@@ -187,7 +195,7 @@ export default function EditServicePage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!firestore || !serviceDocRef || !date || !startTime || !endTime) {
-        toast({ variant: 'destructive', title: 'Falten camps', description: 'Emplena la data i l\'hora per desar.' });
+        toast({ variant: 'destructive', title: 'Falten dades', description: 'Si us plau, assegura que la data i l\'hora són correctes.' });
         return;
     }
 
@@ -221,17 +229,17 @@ export default function EditServicePage() {
         };
 
         await setDoc(serviceDocRef, updatedData, { merge: true });
-        toast({ title: "Registre guardat", description: `S'ha actualitzat el registre correctament.` });
+        toast({ title: "Registre guardat", description: `S'ha actualitzat la informació correctament.` });
         router.push('/dashboard');
     } catch (error) {
         console.error("Error saving service:", error);
-        toast({ variant: 'destructive', title: 'Error al desar', description: "No s'ha pogut guardar la informació a la base de dades." });
+        toast({ variant: 'destructive', title: 'Error al desar', description: "No s'ha pogut guardar la informació a Firestore. Comprova la teva connexió." });
     } finally {
         setIsSaving(false);
     }
   }
 
-  if (isUserLoading || isLoading || isSaving) return <div className="p-12 text-center h-[80vh] flex flex-col items-center justify-center"><Loader2 className="h-16 w-16 animate-spin mx-auto text-primary" /><p className="mt-6 font-black uppercase tracking-widest text-slate-400 animate-pulse">Guardant dades...</p></div>
+  if (isUserLoading || isLoading || isSaving) return <div className="p-12 text-center h-[80vh] flex flex-col items-center justify-center"><Loader2 className="h-16 w-16 animate-spin mx-auto text-primary" /><p className="mt-6 font-black uppercase tracking-widest text-slate-400 animate-pulse">Processant dades...</p></div>
   if (!service) return <div className="p-12 text-center">Registre no trobat. <Button onClick={() => router.push('/dashboard')} variant="link">Tornar</Button></div>
   if (showCamera) return <CameraCapture onCapture={(url, type) => { setMedia(prev => [...prev, { type, dataUrl: url }]); setShowCamera(false); }} onClose={() => setShowCamera(false)} />;
 
@@ -240,17 +248,6 @@ export default function EditServicePage() {
         <div className="flex items-center justify-between">
             <Button variant="ghost" onClick={() => router.back()} className="font-bold">
                 <ArrowLeft className="mr-2 h-4 w-4" /> Enrere
-            </Button>
-            <Button 
-                type="button" 
-                variant="outline" 
-                size="sm" 
-                onClick={handleTranslate} 
-                disabled={isTranslating}
-                className="bg-primary/5 text-primary border-primary/20 hover:bg-primary/10 font-black uppercase text-xs tracking-widest"
-            >
-                {isTranslating ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Sparkles className="h-4 w-4 mr-2" />}
-                Traduir a Català (IA)
             </Button>
         </div>
         
@@ -309,61 +306,78 @@ export default function EditServicePage() {
 
               <div className="space-y-4">
                 <Label className="font-black text-xs uppercase tracking-[0.2em] text-slate-400">Ubicació i Client</Label>
-                <Button type="button" variant="outline" onClick={() => setIsCustomerDialogOpen(true)} className="h-16 w-full justify-start px-6 rounded-2xl border-2 font-black text-lg bg-slate-50 overflow-hidden text-slate-700">
+                <Button type="button" variant="outline" onClick={() => setIsCustomerDialogOpen(true)} className="h-16 w-full justify-start px-6 rounded-2xl border-2 font-black text-lg bg-slate-50 overflow-hidden text-slate-700 text-left">
                     <Users className="mr-4 h-6 w-6 text-primary shrink-0" />
                     <span className="truncate">{customers?.find(c => c.id === customerId)?.name || 'Selecciona un client'}</span>
                 </Button>
                 <div className="relative">
                     <Briefcase className="absolute left-6 top-1/2 -translate-y-1/2 h-6 w-6 text-slate-400" />
-                    <Input placeholder="Nom de l'Obra" value={projectName} onChange={(e) => setProjectName(e.target.value)} className="pl-16 h-16 rounded-2xl border-2 font-black text-lg bg-slate-50" />
+                    <Input placeholder="Nom de l'Obra / Projecte" value={projectName} onChange={(e) => setProjectName(e.target.value)} className="pl-16 h-16 rounded-2xl border-2 font-black text-lg bg-slate-50" />
                 </div>
               </div>
               
               <div className="space-y-3">
-                <div className="flex justify-between items-center">
+                <div className="flex justify-between items-end mb-2">
                     <Label className="font-black text-xs uppercase tracking-[0.2em] text-slate-400">Treballs realitzats</Label>
+                    <Button 
+                        type="button" 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={handleTranslate} 
+                        disabled={isTranslating}
+                        className="bg-primary/5 text-primary border-primary/20 hover:bg-primary/10 font-black uppercase text-[10px] tracking-widest h-8 px-4 rounded-xl"
+                    >
+                        {isTranslating ? <Loader2 className="h-3 w-3 animate-spin mr-2" /> : <Sparkles className="h-3 w-3 mr-2" />}
+                        Traduir a Català (IA)
+                    </Button>
                 </div>
                 <Textarea placeholder="Descriu la teva feina..." value={description} onChange={(e) => setDescription(e.target.value)} rows={5} className="rounded-3xl border-2 font-medium text-lg p-6 bg-slate-50 focus:bg-white transition-colors" />
               </div>
 
               <div className="space-y-3">
-                <Label className="font-black text-xs uppercase tracking-[0.2em] text-amber-600">Tasques pendents</Label>
-                <Textarea placeholder="Què falta per fer?" value={pendingTasks} onChange={(e) => setPendingTasks(e.target.value)} rows={2} className="border-amber-200 focus-visible:ring-amber-500 bg-amber-50/50 rounded-2xl p-6 font-medium" />
+                <Label className="font-black text-xs uppercase tracking-[0.2em] text-amber-600">Tasques pendents per un altre dia</Label>
+                <Textarea placeholder="Què falta per acabar en aquest projecte?" value={pendingTasks} onChange={(e) => setPendingTasks(e.target.value)} rows={2} className="border-amber-200 focus-visible:ring-amber-500 bg-amber-50/50 rounded-2xl p-6 font-medium" />
               </div>
 
               {/* MATERIALS SECTION */}
               <div className="space-y-6 rounded-[2.5rem] border-2 border-slate-100 p-8 bg-slate-50/50 shadow-inner">
                   <div className="flex justify-between items-center">
-                    <Label className="font-black text-slate-900 flex items-center gap-3 uppercase tracking-tighter text-xl"><Package className="h-6 w-6 text-primary" /> Materials</Label>
+                    <Label className="font-black text-slate-900 flex items-center gap-3 uppercase tracking-tighter text-xl"><Package className="h-6 w-6 text-primary" /> Materials Utilitzats</Label>
                   </div>
                   
                   <div className="space-y-4">
                       {materials.map((m, i) => (
                           <div key={i} className="bg-white p-6 rounded-3xl border-2 shadow-sm space-y-4 transition-all hover:border-primary/40">
                               <div className="flex gap-3">
-                                <Input placeholder="Descripció article" value={m.description} onChange={(e) => { const nm = [...materials]; nm[i].description = e.target.value; setMaterials(nm); }} className="border-none shadow-none font-black text-lg h-12 px-0 focus-visible:ring-0" />
+                                <Input placeholder="Descripció de l'article" value={m.description} onChange={(e) => { const nm = [...materials]; nm[i].description = e.target.value; setMaterials(nm); }} className="border-none shadow-none font-black text-lg h-12 px-0 focus-visible:ring-0" />
                                 <Button type="button" variant="ghost" size="icon" onClick={() => setMaterials(materials.filter((_, idx) => idx !== i))} className="text-red-400 h-12 w-12 hover:bg-red-50 rounded-2xl shrink-0"><Trash className="h-6 w-6" /></Button>
                               </div>
-                              <div className="grid grid-cols-2 gap-6">
-                                <div className="relative">
-                                    <Input type="number" placeholder="Quant." value={m.quantity} onChange={(e) => { const nm = [...materials]; nm[i].quantity = Number(e.target.value); setMaterials(nm); }} className="h-14 pl-6 rounded-2xl bg-slate-50 border-none font-black text-lg" />
-                                    <span className="absolute right-6 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 uppercase font-black">uts.</span>
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                                <div className="space-y-2">
+                                    <Label className="text-[10px] uppercase font-black text-slate-400 tracking-widest pl-2">Quantitat</Label>
+                                    <div className="relative">
+                                        <Input type="number" placeholder="0" value={m.quantity} onChange={(e) => { const nm = [...materials]; nm[i].quantity = Number(e.target.value); setMaterials(nm); }} className="h-16 pl-6 rounded-2xl bg-slate-50 border-none font-black text-xl" />
+                                        <span className="absolute right-6 top-1/2 -translate-y-1/2 text-xs text-slate-400 uppercase font-black">uts.</span>
+                                    </div>
                                 </div>
-                                <div className="relative">
-                                    <Input type="number" placeholder="Preu" value={m.unitPrice} onChange={(e) => { const nm = [...materials]; nm[i].unitPrice = Number(e.target.value); setMaterials(nm); }} className="h-14 pl-6 rounded-2xl bg-slate-50 border-none font-black text-lg" />
-                                    <Euro className="absolute right-6 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+                                <div className="space-y-2">
+                                    <Label className="text-[10px] uppercase font-black text-slate-400 tracking-widest pl-2">Preu Unitari</Label>
+                                    <div className="relative">
+                                        <Input type="number" placeholder="0.00" value={m.unitPrice} onChange={(e) => { const nm = [...materials]; nm[i].unitPrice = Number(e.target.value); setMaterials(nm); }} className="h-16 pl-6 rounded-2xl bg-slate-50 border-none font-black text-xl" />
+                                        <Euro className="absolute right-6 top-1/2 -translate-y-1/2 h-6 w-6 text-slate-400" />
+                                    </div>
                                 </div>
                               </div>
                           </div>
                       ))}
                   </div>
-                  <Button type="button" variant="ghost" size="sm" onClick={() => setMaterials([...materials, { description: '', quantity: 1, unitPrice: 0 }])} className="w-full h-16 border-4 border-dashed border-slate-200 hover:bg-white rounded-3xl font-black text-slate-400 uppercase text-xs tracking-widest transition-all hover:border-primary/20 hover:text-primary">+ AFEGIR ARTICLE</Button>
+                  <Button type="button" variant="ghost" size="sm" onClick={() => setMaterials([...materials, { description: '', quantity: 1, unitPrice: 0 }])} className="w-full h-16 border-4 border-dashed border-slate-200 hover:bg-white rounded-3xl font-black text-slate-400 uppercase text-xs tracking-widest transition-all hover:border-primary/20 hover:text-primary">+ AFEGIR UN ALTRE ARTICLE</Button>
               </div>
 
               {/* MEDIA SECTION */}
               <div className="space-y-6">
                   <div className="flex justify-between items-center">
-                    <Label className="font-black text-slate-900 flex items-center gap-3 uppercase tracking-tighter text-xl"><Camera className="h-6 w-6 text-primary" /> Galeria</Label>
+                    <Label className="font-black text-slate-900 flex items-center gap-3 uppercase tracking-tighter text-xl"><Camera className="h-6 w-6 text-primary" /> Galeria de l'Obra</Label>
                     <div className="flex gap-2">
                         <input type="file" ref={galleryInputRef} onChange={handleGalleryUpload} accept="image/*" multiple className="hidden" />
                         <Button type="button" variant="outline" size="sm" onClick={() => setShowCamera(true)} className="font-black h-12 rounded-2xl px-6 border-2"><Camera className="h-5 w-5 mr-3" /> Càmera</Button>
@@ -382,7 +396,7 @@ export default function EditServicePage() {
 
               {/* SIGNATURE SECTION */}
               <div className="space-y-4 rounded-[2.5rem] border-4 border-primary/5 p-8 bg-primary/5 shadow-inner">
-                  <Label className="font-black flex items-center gap-3 text-primary uppercase tracking-tighter text-xl"><PenTool className="h-6 w-6" /> Firma del Client</Label>
+                  <Label className="font-black flex items-center gap-3 text-primary uppercase tracking-tighter text-xl"><PenTool className="h-6 w-6" /> Firma de Conformitat</Label>
                   {customerSignatureDataUrl ? (
                     <div className="flex items-center justify-between bg-white p-6 rounded-3xl border-2 shadow-lg">
                         <div className="space-y-1">
@@ -394,7 +408,7 @@ export default function EditServicePage() {
                     </div>
                   ) : (
                     <Button type="button" variant="outline" onClick={() => setIsSignatureDialogOpen(true)} className="w-full h-24 border-dashed border-4 border-primary/20 text-primary font-black hover:bg-white hover:border-primary/40 transition-all uppercase tracking-widest shadow-sm rounded-3xl text-sm">
-                        <PenTool className="mr-4 h-8 w-8" /> Recollir Signatura Ara
+                        <PenTool className="mr-4 h-8 w-8" /> Recollir Signatura del Client
                     </Button>
                   )}
               </div>
