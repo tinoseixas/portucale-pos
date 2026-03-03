@@ -2,7 +2,7 @@
 /**
  * @fileOverview Flux d'extracció de materials mitjançant IA (OCR).
  * 
- * Millorat per ser més resilient a imatges de tiquets i albarans.
+ * Optimitzat per a Genkit 1.x i Gemini 1.5 Flash.
  */
 
 import { ai } from '@/ai/genkit';
@@ -28,17 +28,18 @@ const extractMaterialsPrompt = ai.definePrompt({
   name: 'extractMaterialsPrompt',
   input: { schema: ExtractMaterialsInputSchema },
   output: { schema: ExtractMaterialsOutputSchema },
-  prompt: `Actua com un sistema d'extracció de dades OCR d'alt rendiment. 
+  prompt: `You are an expert OCR and data extraction system for construction receipts.
     
-    Analitza aquesta imatge de tiquet o albarà de compra: {{media url=photoDataUri}}
+    Analyze this document image: {{media url=photoDataUri}}
     
-    TASCA:
-    1. Identifica tots els materials, subministraments o articles comprats.
-    2. Per a cada article, extreu la descripció, la quantitat i el preu unitari.
-    3. Tradueix les descripcions al CATALÀ tècnic professional.
-    4. Si només veus un total per línia, calcula el preu unitari (Total / Quantitat).
-    5. Ignora capçaleres del comerç o dades bancàries.
-    6. Retorna la llista d'articles en el format JSON especificat.`,
+    TASK:
+    1. Identify all items, materials, or services purchased.
+    2. For each item, extract the description, quantity, and unit price.
+    3. Translate all descriptions into professional technical CATALAN.
+    4. If only a total per line is found, calculate: unitPrice = total / quantity.
+    5. Return the list of items in the specified JSON format.
+    
+    IMPORTANT: Be extremely precise with numbers. If the text is slightly blurry, try your best to interpret the characters based on the context of a construction supply store.`,
 });
 
 const extractMaterialsFlow = ai.defineFlow(
@@ -52,7 +53,7 @@ const extractMaterialsFlow = ai.defineFlow(
       const { output } = await extractMaterialsPrompt(input, {
         model: 'googleai/gemini-1.5-flash',
         config: {
-          temperature: 0.2, // Una mica més de flexibilitat per detectar dades difícils
+          temperature: 0.1, // Més determinista per a dades numèriques
         }
       });
       
@@ -63,7 +64,6 @@ const extractMaterialsFlow = ai.defineFlow(
       return output;
     } catch (error) {
       console.error("Error en extractMaterialsFlow:", error);
-      // Retornem un resultat buit en lloc de llançar un error per permetre al frontend gestionar-ho millor
       return { materials: [] };
     }
   }
