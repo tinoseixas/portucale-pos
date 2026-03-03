@@ -1,3 +1,4 @@
+
 'use client'
 
 import { useState, useRef, useEffect, useCallback } from 'react'
@@ -7,7 +8,9 @@ import { doc, collection, query, getDocs, collectionGroup, where, getDoc } from 
 import type { Customer, Invoice, ServiceRecord, Employee } from '@/lib/types'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { FileDown, Loader2, ArrowLeft, Trash2, CreditCard } from 'lucide-react'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { FileDown, Loader2, ArrowLeft, Trash2, CreditCard, Mail, Send, AlertCircle } from 'lucide-react'
 import { InvoicePreview } from '@/components/InvoicePreview'
 import {
   AlertDialog,
@@ -20,11 +23,21 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
 import { useToast } from '@/hooks/use-toast'
 import { AdminGate } from '@/components/AdminGate'
 import { Badge } from '@/components/ui/badge'
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
+import { sendDocumentEmail } from '@/ai/flows/send-email'
 
 export default function InvoiceDetailPage() {
     const firestore = useFirestore()
@@ -42,12 +55,21 @@ export default function InvoiceDetailPage() {
     const [isLoadingData, setIsLoadingData] = useState(false);
     const [hasLoaded, setHasLoaded] = useState(false);
 
+    // Email states
+    const [isEmailDialogOpen, setIsEmailDialogOpen] = useState(false)
+    const [recipientEmail, setRecipientEmail] = useState('')
+    const [isSendingEmail, setIsSendingEmail] = useState(false)
+
     const invoiceDocRef = useMemoFirebase(() => firestore && invoiceId ? doc(firestore, 'invoices', invoiceId) : null, [firestore, invoiceId])
     const { data: invoice, isLoading: isLoadingInvoice } = useDoc<Invoice>(invoiceDocRef)
     
     const [customer, setCustomer] = useState<Customer | undefined>();
 
     const shouldExport = searchParams.get('export') === 'true';
+
+    useEffect(() => {
+        if (customer?.email) setRecipientEmail(customer.email);
+    }, [customer]);
 
     const fetchData = useCallback(async () => {
         if (!firestore || !invoice || hasLoaded) return;
@@ -64,17 +86,18 @@ export default function InvoiceDetailPage() {
             if (invoice.customerId) {
                 const customerSnap = await getDoc(doc(firestore, 'customers', invoice.customerId));
                 if (customerSnap.exists()) {
-                    setCustomer({ id: customerSnap.id, ...customerSnap.data() } as Customer);
+                    const cData = { id: customerSnap.id, ...customerSnap.data() } as Customer;
+                    setCustomer(cData);
+                    if (cData.email) setRecipientEmail(cData.email);
                 }
             }
 
-            // 3. Carregar Serveis (Mètode robust sense necessitat d'índexs compostos)
+            // 3. Carregar Serveis
             const servicesSnapshot = await getDocs(collectionGroup(firestore, 'serviceRecords'));
             const allServicesData = servicesSnapshot.docs.map(d => ({ id: d.id, ...d.data() } as ServiceRecord));
             
             if (invoice.sourceId) {
                 const sourceAlbaranIds = invoice.sourceId.split(',');
-                // Busquem els IDs dels serveis vinculats als albarans font
                 const albaransSnapshot = await getDocs(query(collection(firestore, 'albarans')));
                 const filteredAlbarans = albaransSnapshot.docs
                     .filter(doc => sourceAlbaranIds.includes(doc.id))
@@ -84,7 +107,6 @@ export default function InvoiceDetailPage() {
                 
                 setServices(allServicesData.filter(s => serviceRecordIdsFromAlbarans.includes(s.id)));
             } else {
-                // Fallback per dades antigues o facturació directa per obra
                 setServices(allServicesData.filter(s => 
                     s.customerId === invoice.customerId && 
                     s.projectName === invoice.projectName
@@ -106,48 +128,102 @@ export default function InvoiceDetailPage() {
     }, [invoice, fetchData, hasLoaded]);
 
 
-    const handleExportPDF = async () => {
+    const generatePDF = async () => {
         const reportElement = reportRef.current;
-        if (!reportElement) return;
+        if (!reportElement) return null;
 
+        const canvas = await html2canvas(reportElement, {
+            scale: 1.0,
+            useCORS: true,
+            logging: false,
+        });
+
+        const imgData = canvas.toDataURL('image/jpeg', 0.4);
+        const pdf = new jsPDF('p', 'mm', 'a4');
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfHeight = pdf.internal.pageSize.getHeight();
+        const imgWidth = pdfWidth;
+        const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+        let heightLeft = imgHeight;
+        let position = 0;
+
+        pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight, undefined, 'FAST');
+        heightLeft -= pdfHeight;
+
+        while (heightLeft > 0) {
+            position = heightLeft - imgHeight;
+            pdf.addPage();
+            pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight, undefined, 'FAST');
+            heightLeft -= pdfHeight;
+        }
+
+        return pdf;
+    };
+
+    const handleExportPDF = async () => {
         setIsGenerating(true);
         toast({ title: 'Generant PDF...', description: 'Processant document lleuger.' });
 
         try {
-            const canvas = await html2canvas(reportElement, {
-                scale: 1.0,
-                useCORS: true,
-                logging: false,
-            });
-
-            const imgData = canvas.toDataURL('image/jpeg', 0.4);
-            const pdf = new jsPDF('p', 'mm', 'a4');
-            const pdfWidth = pdf.internal.pageSize.getWidth();
-            const pdfHeight = pdf.internal.pageSize.getHeight();
-            const imgWidth = pdfWidth;
-            const imgHeight = (canvas.height * imgWidth) / canvas.width;
-
-            let heightLeft = imgHeight;
-            let position = 0;
-
-            pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight, undefined, 'FAST');
-            heightLeft -= pdfHeight;
-
-            while (heightLeft > 0) {
-                position = heightLeft - imgHeight;
-                pdf.addPage();
-                pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight, undefined, 'FAST');
-                heightLeft -= pdfHeight;
+            const pdf = await generatePDF();
+            if (pdf) {
+                pdf.save(`Factura-${String(invoice?.invoiceNumber).padStart(4, '0')}.pdf`);
+                toast({ title: 'PDF Generat!', description: 'Exportació finalitzada.' });
             }
-
-            pdf.save(`Factura-${String(invoice?.invoiceNumber).padStart(4, '0')}.pdf`);
-            toast({ title: 'PDF Generat!', description: 'Exportació finalitzada.' });
-
         } catch (error) {
             console.error("Error PDF:", error);
             toast({ variant: 'destructive', title: 'Error', description: 'No s\'ha pogut crear el PDF.' });
         } finally {
             setIsGenerating(false);
+        }
+    };
+
+    const handleSendEmail = async () => {
+        if (!recipientEmail.trim() || !recipientEmail.includes('@')) {
+            toast({ variant: 'destructive', title: 'Correu invàlid', description: 'Escriu una adreça vàlida.' });
+            return;
+        }
+
+        setIsSendingEmail(true);
+        toast({ title: 'Enviant correu...', description: 'Generant factura i processant enviament.' });
+
+        try {
+            const pdf = await generatePDF();
+            if (!pdf) throw new Error("No s'ha pogut generar el PDF");
+
+            const pdfBase64 = pdf.output('datauristring');
+            
+            const result = await sendDocumentEmail({
+                to: recipientEmail.trim(),
+                subject: `Factura TS Serveis: #${String(invoice?.invoiceNumber).padStart(4, '0')}`,
+                html: `
+                    <div style="font-family: sans-serif; color: #333;">
+                        <h2>Bon dia,</h2>
+                        <p>Adjuntem la factura corresponent als serveis prestats a l'obra: <strong>${invoice?.projectName}</strong>.</p>
+                        <p>L'import total de la factura és de <strong>${invoice?.totalAmount.toFixed(2)} €</strong>.</p>
+                        <p>Gràcies per la seva confiança.</p>
+                        <br/>
+                        <p><strong>TS Serveis</strong><br/>Solucions Tècniques i Manteniment</p>
+                    </div>
+                `,
+                attachments: [{
+                    filename: `Factura-${String(invoice?.invoiceNumber).padStart(4, '0')}.pdf`,
+                    content: pdfBase64
+                }]
+            });
+
+            if (result.success) {
+                toast({ title: 'Correu enviat!', description: `La factura s'ha enviat a ${recipientEmail}.` });
+                setIsEmailDialogOpen(false);
+            } else {
+                toast({ variant: 'destructive', title: 'Error', description: result.error });
+            }
+        } catch (error) {
+            console.error("Error enviant email:", error);
+            toast({ variant: 'destructive', title: 'Error', description: "No s'ha pogut enviar el correu." });
+        } finally {
+            setIsSendingEmail(false);
         }
     };
     
@@ -195,6 +271,42 @@ export default function InvoiceDetailPage() {
                         Historial
                     </Button>
                     <div className="flex items-center gap-2 flex-wrap justify-end">
+                        <Dialog open={isEmailDialogOpen} onOpenChange={setIsEmailDialogOpen}>
+                            <DialogTrigger asChild>
+                                <Button variant="outline" className="font-bold border-primary text-primary hover:bg-primary/5">
+                                    <Mail className="mr-2 h-4 w-4" /> Correu
+                                </Button>
+                            </DialogTrigger>
+                            <DialogContent>
+                                <DialogHeader>
+                                    <DialogTitle>Enviar Factura per Correu</DialogTitle>
+                                    <DialogDescription>S'enviarà el document PDF adjunt a l'adreça indicada.</DialogDescription>
+                                </DialogHeader>
+                                <div className="py-4 space-y-4">
+                                    <div className="space-y-2">
+                                        <Label>Adreça del client</Label>
+                                        <Input 
+                                            type="email" 
+                                            placeholder="correu@client.com" 
+                                            value={recipientEmail} 
+                                            onChange={(e) => setRecipientEmail(e.target.value)} 
+                                        />
+                                    </div>
+                                </div>
+                                <DialogFooter>
+                                    <Button variant="outline" onClick={() => setIsEmailDialogOpen(false)}>Cancel·lar</Button>
+                                    <Button 
+                                        onClick={handleSendEmail} 
+                                        disabled={isSendingEmail} 
+                                        className="bg-primary font-bold"
+                                    >
+                                        {isSendingEmail ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
+                                        Enviar Factura
+                                    </Button>
+                                </DialogFooter>
+                            </DialogContent>
+                        </Dialog>
+
                         <AlertDialog>
                             <AlertDialogTrigger asChild>
                                 <Button variant="destructive" className="font-bold">

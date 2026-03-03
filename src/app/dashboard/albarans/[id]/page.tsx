@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { FileDown, Loader2, ArrowLeft, Trash2, Briefcase, CreditCard, AlertCircle, Edit, Save, ListChecks, ArrowRight, Archive, ArchiveRestore } from 'lucide-react'
+import { FileDown, Loader2, ArrowLeft, Trash2, Briefcase, CreditCard, AlertCircle, Edit, Save, ListChecks, ArrowRight, Archive, ArchiveRestore, Mail, Send } from 'lucide-react'
 import { ReportPreview } from '@/components/ReportPreview'
 import {
   AlertDialog,
@@ -38,6 +38,7 @@ import { Badge } from '@/components/ui/badge'
 import Link from 'next/link'
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
+import { sendDocumentEmail } from '@/ai/flows/send-email'
 
 export default function AlbaranDetailPage() {
     const firestore = useFirestore()
@@ -58,6 +59,11 @@ export default function AlbaranDetailPage() {
     const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
     const [editProjectName, setEditProjectName] = useState('')
 
+    // Email states
+    const [isEmailDialogOpen, setIsEmailDialogOpen] = useState(false)
+    const [recipientEmail, setRecipientEmail] = useState('')
+    const [isSendingEmail, setIsSendingEmail] = useState(false)
+
     const albaranDocRef = useMemoFirebase(() => firestore && albaranId ? doc(firestore, 'albarans', albaranId) : null, [firestore, albaranId])
     const { data: albaran, isLoading: isLoadingAlbaran } = useDoc<Albaran>(albaranDocRef)
 
@@ -69,8 +75,10 @@ export default function AlbaranDetailPage() {
     useEffect(() => {
         if (albaran) {
             setEditProjectName(albaran.projectName);
+            // Default recipient email from customer
+            if (customer?.email) setRecipientEmail(customer.email);
         }
-    }, [albaran]);
+    }, [albaran, customer]);
 
     const fetchData = useCallback(async () => {
         if (!firestore || !albaran || !employees || hasLoaded) return
@@ -82,11 +90,13 @@ export default function AlbaranDetailPage() {
             if (albaran.customerId) {
                 const customerSnap = await getDoc(doc(firestore, 'customers', albaran.customerId));
                 if (customerSnap.exists()) {
-                    setCustomer({ id: customerSnap.id, ...customerSnap.data() } as Customer)
+                    const cData = { id: customerSnap.id, ...customerSnap.data() } as Customer;
+                    setCustomer(cData)
+                    if (cData.email) setRecipientEmail(cData.email);
                 }
             }
             
-            // 2. Carregar serveis (Mètode robust)
+            // 2. Carregar serveis
             if (albaran.serviceRecordIds && albaran.serviceRecordIds.length > 0) {
                 const servicesSnapshot = await getDocs(collectionGroup(firestore, 'serviceRecords'));
                 
@@ -121,55 +131,108 @@ export default function AlbaranDetailPage() {
     }, [albaran, employees, fetchData, hasLoaded]);
 
 
-    const handleExportPDF = async () => {
+    const generatePDF = async () => {
         const reportElement = reportRef.current;
-        if (!reportElement) return;
+        if (!reportElement) return null;
 
+        const canvas = await html2canvas(reportElement, {
+            scale: 1.5,
+            useCORS: true,
+            logging: false,
+            backgroundColor: '#ffffff'
+        });
+        
+        const imgData = canvas.toDataURL('image/jpeg', 0.6); 
+        const pdf = new jsPDF({
+            orientation: 'p',
+            unit: 'mm',
+            format: 'a4',
+            compress: true
+        });
+        
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfHeight = pdf.internal.pageSize.getHeight();
+        const imgWidth = pdfWidth;
+        const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+        let heightLeft = imgHeight;
+        let position = 0;
+
+        pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight, undefined, 'FAST');
+        heightLeft -= pdfHeight;
+
+        while (heightLeft > 0) {
+            position = heightLeft - imgHeight;
+            pdf.addPage();
+            pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight, undefined, 'FAST');
+            heightLeft -= pdfHeight;
+        }
+        
+        return pdf;
+    };
+
+    const handleExportPDF = async () => {
         setIsGenerating(true);
         toast({ title: 'Generant PDF...', description: 'Processant document.' });
 
         try {
-            const canvas = await html2canvas(reportElement, {
-                scale: 1.5,
-                useCORS: true,
-                logging: false,
-                backgroundColor: '#ffffff'
-            });
-            
-            const imgData = canvas.toDataURL('image/jpeg', 0.6); 
-            const pdf = new jsPDF({
-                orientation: 'p',
-                unit: 'mm',
-                format: 'a4',
-                compress: true
-            });
-            
-            const pdfWidth = pdf.internal.pageSize.getWidth();
-            const pdfHeight = pdf.internal.pageSize.getHeight();
-            const imgWidth = pdfWidth;
-            const imgHeight = (canvas.height * imgWidth) / canvas.width;
-
-            let heightLeft = imgHeight;
-            let position = 0;
-
-            pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight, undefined, 'FAST');
-            heightLeft -= pdfHeight;
-
-            while (heightLeft > 0) {
-                position = heightLeft - imgHeight;
-                pdf.addPage();
-                pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight, undefined, 'FAST');
-                heightLeft -= pdfHeight;
+            const pdf = await generatePDF();
+            if (pdf) {
+                pdf.save(`Albara-${albaran?.projectName.replace(/\s+/g, '-')}.pdf`);
+                toast({ title: 'PDF Generat!', description: 'Document exportat correctament.' });
             }
-            
-            pdf.save(`Albara-${albaran?.projectName.replace(/\s+/g, '-')}.pdf`);
-            toast({ title: 'PDF Generat!', description: 'Document exportat correctament.' });
-
         } catch (error) {
             console.error("Error PDF:", error);
             toast({ variant: 'destructive', title: 'Error', description: 'No s\'ha pogut crear el PDF.' });
         } finally {
             setIsGenerating(false);
+        }
+    };
+
+    const handleSendEmail = async () => {
+        if (!recipientEmail.trim() || !recipientEmail.includes('@')) {
+            toast({ variant: 'destructive', title: 'Correu invàlid', description: 'Escriu una adreça de correu vàlida.' });
+            return;
+        }
+
+        setIsSendingEmail(true);
+        toast({ title: 'Enviant correu...', description: 'Generant adjunt i processant enviament.' });
+
+        try {
+            const pdf = await generatePDF();
+            if (!pdf) throw new Error("No s'ha pogut generar el PDF");
+
+            const pdfBase64 = pdf.output('datauristring');
+            
+            const result = await sendDocumentEmail({
+                to: recipientEmail.trim(),
+                subject: `Albarà TS Serveis: ${albaran?.projectName}`,
+                html: `
+                    <div style="font-family: sans-serif; color: #333;">
+                        <h2>Bon dia,</h2>
+                        <p>Adjuntem l'albarà corresponent als treballs realitzats a l'obra: <strong>${albaran?.projectName}</strong>.</p>
+                        <p>Gràcies per la seva confiança.</p>
+                        <br/>
+                        <p><strong>TS Serveis</strong><br/>Solucions Tècniques i Manteniment</p>
+                    </div>
+                `,
+                attachments: [{
+                    filename: `Albara-${String(albaran?.albaranNumber).padStart(4, '0')}.pdf`,
+                    content: pdfBase64
+                }]
+            });
+
+            if (result.success) {
+                toast({ title: 'Correu enviat!', description: `L'albarà s'ha enviat a ${recipientEmail}.` });
+                setIsEmailDialogOpen(false);
+            } else {
+                toast({ variant: 'destructive', title: 'Error d\'enviament', description: result.error });
+            }
+        } catch (error) {
+            console.error("Error enviant email:", error);
+            toast({ variant: 'destructive', title: 'Error', description: "No s'ha pogut enviar el correu." });
+        } finally {
+            setIsSendingEmail(false);
         }
     };
     
@@ -245,6 +308,47 @@ export default function AlbaranDetailPage() {
                                 <DialogFooter>
                                     <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>Cancel·lar</Button>
                                     <Button onClick={handleUpdateAlbaran} className="bg-primary font-bold">Desar Canvis</Button>
+                                </DialogFooter>
+                            </DialogContent>
+                        </Dialog>
+
+                        {/* Email Dialog */}
+                        <Dialog open={isEmailDialogOpen} onOpenChange={setIsEmailDialogOpen}>
+                            <DialogTrigger asChild>
+                                <Button variant="outline" className="font-bold border-primary text-primary hover:bg-primary/5">
+                                    <Mail className="mr-2 h-4 w-4" /> Enviar Correu
+                                </Button>
+                            </DialogTrigger>
+                            <DialogContent>
+                                <DialogHeader>
+                                    <DialogTitle>Enviar Albarà per Correu</DialogTitle>
+                                    <DialogDescription>S'enviarà un correu amb el PDF adjunt al client.</DialogDescription>
+                                </DialogHeader>
+                                <div className="py-4 space-y-4">
+                                    <div className="space-y-2">
+                                        <Label>Adreça del destinatari</Label>
+                                        <Input 
+                                            type="email" 
+                                            placeholder="correu@client.com" 
+                                            value={recipientEmail} 
+                                            onChange={(e) => setRecipientEmail(e.target.value)} 
+                                        />
+                                    </div>
+                                    <div className="bg-slate-50 p-3 rounded-lg text-xs text-muted-foreground flex gap-2">
+                                        <AlertCircle className="h-4 w-4 shrink-0" />
+                                        <p>Assegura't que l'adreça és correcta. El PDF es generarà automàticament.</p>
+                                    </div>
+                                </div>
+                                <DialogFooter>
+                                    <Button variant="outline" onClick={() => setIsEmailDialogOpen(false)}>Cancel·lar</Button>
+                                    <Button 
+                                        onClick={handleSendEmail} 
+                                        disabled={isSendingEmail} 
+                                        className="bg-primary font-bold"
+                                    >
+                                        {isSendingEmail ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
+                                        Enviar Ara
+                                    </Button>
                                 </DialogFooter>
                             </DialogContent>
                         </Dialog>
