@@ -1,8 +1,7 @@
+
 'use server';
 /**
  * @fileOverview Flux de traducció intel·ligent per a descripcions de serveis tècnics.
- * 
- * - translateToCatalan: Funció per traduir textos tècnics al català professional.
  */
 
 import { ai } from '@/ai/genkit';
@@ -18,24 +17,23 @@ const TranslateOutputSchema = z.object({
 });
 export type TranslateOutput = z.infer<typeof TranslateOutputSchema>;
 
-// Definim el prompt de forma independent per a millor rendiment i validació
 const translatePrompt = ai.definePrompt({
   name: 'translatePrompt',
   input: { schema: TranslateInputSchema },
   output: { schema: TranslateOutputSchema },
-  prompt: `Ets un assistent administratiu expert en el sector de la construcció, fontaneria i manteniment a Andorra. 
+  prompt: `Ets un assistent administratiu expert en el sector de la construcció i manteniment a Andorra. 
   
-  La teva tasca és traduir o millorar el següent text al CATALÀ professional. 
+  Tradueix o millora el següent text al CATALÀ professional:
+  
+  TEXT: "{{text}}"
   
   INSTRUCCIONS:
-  1. Manté la terminologia tècnica correcta (ex: "maneguet", "col·lector", "clau de pas").
-  2. Si el text ja està en català, corregeix l'ortografia i millora la gramàtica per fer-lo més formal.
-  3. No afegeixis informació que no estigui al text original.
-  
-  TEXT ORIGINAL: {{text}}`,
+  1. Utilitza terminologia tècnica correcta.
+  2. Corregeix l'ortografia i millora la formalitat.
+  3. No afegeixis informació extra.
+  4. Si el text ja és correcte, mantén-lo però millora la puntuació si cal.`,
 });
 
-// El flux que embolcalla la crida al prompt
 const translateFlow = ai.defineFlow(
   {
     name: 'translateToCatalanFlow',
@@ -43,27 +41,24 @@ const translateFlow = ai.defineFlow(
     outputSchema: TranslateOutputSchema,
   },
   async (input) => {
-    const { output } = await translatePrompt(input, {
-      model: 'googleai/gemini-1.5-flash',
-      config: {
-        temperature: 0.3, // Temperatura baixa per a traduccions fidels
-      }
-    });
+    if (!input.text.trim()) return { translatedText: '' };
     
-    if (!output) {
-      throw new Error('L\'IA no ha pogut generar una traducció vàlida.');
+    try {
+      const { output } = await translatePrompt(input, {
+        model: 'googleai/gemini-1.5-flash',
+        config: {
+          temperature: 0.2,
+        }
+      });
+      
+      return output || { translatedText: input.text };
+    } catch (error) {
+      console.error("Error en translateFlow:", error);
+      return { translatedText: input.text };
     }
-    
-    return output;
   }
 );
 
 export async function translateToCatalan(input: TranslateInput): Promise<TranslateOutput> {
-  try {
-    return await translateFlow(input);
-  } catch (error) {
-    console.error("Error en translateFlow:", error);
-    // Fallback: retornem el text original si la traducció falla
-    return { translatedText: input.text };
-  }
+  return await translateFlow(input);
 }

@@ -1,21 +1,22 @@
+
 'use server';
 /**
  * @fileOverview Flux d'extracció de materials mitjançant IA (OCR).
  * 
- * Optimitzat per a Genkit 1.x i Gemini 1.5 Flash.
+ * Optimitzat per a Genkit 1.x i Gemini 1.5 Flash amb alta precisió.
  */
 
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 
 const ExtractMaterialsInputSchema = z.object({
-  photoDataUri: z.string().describe("Data URI de la imatge del document."),
+  photoDataUri: z.string().describe("Data URI de la imatge del document en base64."),
 });
 export type ExtractMaterialsInput = z.infer<typeof ExtractMaterialsInputSchema>;
 
 const MaterialSchema = z.object({
-  description: z.string().describe('Descripció de l\'article en CATALÀ.'),
-  quantity: z.number().describe('Quantitat (número).'),
+  description: z.string().describe('Descripció tècnica de l\'article en CATALÀ.'),
+  quantity: z.number().describe('Quantitat numèrica.'),
   unitPrice: z.number().describe('Preu unitari sense impostos.'),
 });
 
@@ -28,18 +29,18 @@ const extractMaterialsPrompt = ai.definePrompt({
   name: 'extractMaterialsPrompt',
   input: { schema: ExtractMaterialsInputSchema },
   output: { schema: ExtractMaterialsOutputSchema },
-  prompt: `You are an expert OCR and data extraction system for construction receipts.
+  prompt: `Ets un sistema OCR d'alta precisió especialitzat en tiquets i albarans de materials de construcció.
     
-    Analyze this document image: {{media url=photoDataUri}}
+    Analitza aquesta imatge: {{media url=photoDataUri}}
     
-    TASK:
-    1. Identify all items, materials, or services purchased.
-    2. For each item, extract the description, quantity, and unit price.
-    3. Translate all descriptions into professional technical CATALAN.
-    4. If only a total per line is found, calculate: unitPrice = total / quantity.
-    5. Return the list of items in the specified JSON format.
+    TASCA:
+    1. Identifica tots els articles, materials o serveis comprats.
+    2. Per a cada element, extrau la descripció, la quantitat i el preu unitari.
+    3. TRADUEIX totes les descripcions al CATALÀ tècnic professional si estan en una altra llengua.
+    4. Si només apareix el total de la línia, calcula: preuUnitari = total / quantitat.
+    5. No incloguis subtotals ni impostos com a articles.
     
-    IMPORTANT: Be extremely precise with numbers. If the text is slightly blurry, try your best to interpret the characters based on the context of a construction supply store.`,
+    IMPORTANT: Sigues extremadament precís amb els números. Si el text és borrós, intenta interpretar-lo segons el context d'una botiga de subministraments industrials.`,
 });
 
 const extractMaterialsFlow = ai.defineFlow(
@@ -53,15 +54,11 @@ const extractMaterialsFlow = ai.defineFlow(
       const { output } = await extractMaterialsPrompt(input, {
         model: 'googleai/gemini-1.5-flash',
         config: {
-          temperature: 0.1, // Més determinista per a dades numèriques
+          temperature: 0.1,
         }
       });
       
-      if (!output || !output.materials) {
-        return { materials: [] };
-      }
-      
-      return output;
+      return output || { materials: [] };
     } catch (error) {
       console.error("Error en extractMaterialsFlow:", error);
       return { materials: [] };

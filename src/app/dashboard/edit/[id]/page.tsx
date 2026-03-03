@@ -1,3 +1,4 @@
+
 'use client'
 
 import { useEffect, useState, useMemo, useRef } from 'react'
@@ -47,8 +48,8 @@ type Material = {
     imageDataUrl?: string;
 }
 
-const MAX_IMAGE_WIDTH = 1600; // Optimitzat per a Gemini 1.5 Flash
-const IMAGE_QUALITY = 0.8; // Balanç entre claredat i pes de fitxer
+const MAX_IMAGE_WIDTH = 2048; // Augmentat per a màxima nitidesa OCR
+const IMAGE_QUALITY = 0.9; // Augmentat per a millor lectura de números
 
 function resizeAndCompressImage(file: File): Promise<string> {
     return new Promise((resolve, reject) => {
@@ -181,7 +182,7 @@ export default function EditServicePage() {
     if (!file) return;
     
     setIsExtracting(true);
-    toast({ title: 'Analitzant document...', description: 'L\'IA està processant les dades.' });
+    toast({ title: 'Analitzant document...', description: 'L\'IA està llegint els detalls amb alta resolució.' });
     
     try {
         const dataUrl = await resizeAndCompressImage(file);
@@ -198,13 +199,13 @@ export default function EditServicePage() {
             
             toast({ 
                 title: 'Lectura completada', 
-                description: `S'han trobat ${res.materials.length} articles.` 
+                description: `S'han trobat ${res.materials.length} articles correctament.` 
             });
         } else {
             toast({ 
                 variant: 'destructive',
-                title: 'No s\'han trobat articles', 
-                description: "L'IA no ha pogut extreure dades clares. Prova de fer la foto més a prop i amb més llum." 
+                title: 'No s\'han detectat articles', 
+                description: "Prova de fer la foto més a prop i amb millor llum. L'IA necessita veure bé els preus i descripcions." 
             });
         }
     } catch (e: any) {
@@ -212,7 +213,7 @@ export default function EditServicePage() {
         toast({ 
             variant: 'destructive', 
             title: 'Error de processament', 
-            description: 'No s\'ha pogut analitzar la imatge. Revisa la connexió.' 
+            description: 'El fitxer podria ser massa gran o hi ha hagut un problema de connexió.' 
         });
     } finally {
         setIsExtracting(false);
