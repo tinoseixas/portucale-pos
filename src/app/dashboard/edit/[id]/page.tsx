@@ -7,11 +7,11 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Clock, FileText, Camera, ArrowLeft, Save, Trash2, Hash, Plus, X, Video, Calendar as CalendarIcon, Info, Briefcase, AlertTriangle, Users, Package, Euro, User as UserIcon, ImagePlus, PenTool, CheckCircle, Loader2, Sparkles, ScanLine, Trash, Scan } from 'lucide-react'
+import { Clock, FileText, Camera, ArrowLeft, Save, Trash2, Plus, X, Video, Calendar as CalendarIcon, Briefcase, Users, Package, Euro, ImagePlus, PenTool, Loader2, Sparkles, Trash } from 'lucide-react'
 import { useToast } from "@/hooks/use-toast"
 import { useFirestore, useUser, useDoc, useMemoFirebase, useCollection } from '@/firebase'
-import { doc, deleteDoc, collection, query, getDocs, collectionGroup, orderBy, runTransaction, setDoc, where } from 'firebase/firestore'
-import type { ServiceRecord, Customer, Employee, Albaran } from '@/lib/types'
+import { doc, deleteDoc, collection, query, orderBy, setDoc } from 'firebase/firestore'
+import type { ServiceRecord, Customer, Employee } from '@/lib/types'
 import Image from 'next/image'
 import {
   AlertDialog,
@@ -29,11 +29,9 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar'
 import { format, parseISO, isValid } from 'date-fns'
 import { ca } from 'date-fns/locale'
-import { cn } from '@/lib/utils'
 import { CustomerSelectionDialog } from '@/components/CustomerSelectionDialog'
 import { ServiceConfirmationDialog } from '@/components/ServiceConfirmationDialog'
 import { translateToCatalan } from '@/ai/flows/translate-service-record'
-import { extractMaterialsFromPhoto } from '@/ai/flows/extract-materials'
 
 type MediaFile = {
   type: 'image' | 'video';
@@ -47,8 +45,8 @@ type Material = {
     imageDataUrl?: string;
 }
 
-const MAX_IMAGE_WIDTH = 1600; 
-const IMAGE_QUALITY = 0.85;
+const MAX_IMAGE_WIDTH = 1200; 
+const IMAGE_QUALITY = 0.7;
 
 function resizeAndCompressImage(file: File): Promise<string> {
     return new Promise((resolve, reject) => {
@@ -84,13 +82,9 @@ export default function EditServicePage() {
   const firestore = useFirestore()
   const serviceId = params.id as string
   const galleryInputRef = useRef<HTMLInputElement>(null);
-  const ocrInputRef = useRef<HTMLInputElement>(null);
-  const lineOcrInputRef = useRef<HTMLInputElement>(null);
   
   const [isSaving, setIsSaving] = useState(false);
   const [isTranslating, setIsTranslating] = useState(false);
-  const [isExtracting, setIsExtracting] = useState(false);
-  const [activeLineIndex, setActiveLineIndex] = useState<number | null>(null);
 
   const recordOwnerId = searchParams.get('ownerId');
 
@@ -180,55 +174,6 @@ export default function EditServicePage() {
     }
   }
 
-  const handleOCR = async (e: React.ChangeEvent<HTMLInputElement>, lineIndex: number | null = null) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    
-    setIsExtracting(true);
-    toast({ 
-        title: lineIndex !== null ? 'Analitzant article...' : 'Analitzant tiquet...', 
-        description: 'L\'IA està llegint la imatge.' 
-    });
-    
-    try {
-        const dataUrl = await resizeAndCompressImage(file);
-        const res = await extractMaterialsFromPhoto({ 
-            photoDataUri: dataUrl,
-            isSingleItem: lineIndex !== null
-        });
-        
-        if (res.materials && res.materials.length > 0) {
-            if (lineIndex !== null) {
-                const newMaterials = [...materials];
-                const item = res.materials[0];
-                newMaterials[lineIndex] = {
-                    description: item.description,
-                    quantity: item.quantity,
-                    unitPrice: item.unitPrice,
-                    imageDataUrl: dataUrl
-                };
-                setMaterials(newMaterials);
-                toast({ title: 'Article actualitzat!' });
-            } else {
-                const currentFilledMaterials = materials.filter(m => m.description.trim() !== '' || m.unitPrice > 0);
-                const newDetected = res.materials.map(m => ({ ...m, imageDataUrl: dataUrl }));
-                setMaterials([...currentFilledMaterials, ...newDetected]);
-                toast({ title: 'Tiquet processat', description: `S'han afegit ${res.materials.length} articles.` });
-            }
-        } else {
-            toast({ variant: 'destructive', title: 'No s\'han detectat dades', description: 'L\'IA no ha trobat línies de material. Prova una foto més propera.' });
-        }
-    } catch (e: any) {
-        console.error("OCR Error:", e);
-        toast({ variant: 'destructive', title: 'Error de lectura', description: 'No s\'ha pogut connectar amb el servei d\'IA.' });
-    } finally {
-        setIsExtracting(false);
-        if (ocrInputRef.current) ocrInputRef.current.value = '';
-        if (lineOcrInputRef.current) lineOcrInputRef.current.value = '';
-        setActiveLineIndex(null);
-    }
-  }
-
   const handleGalleryUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files) return;
@@ -247,30 +192,30 @@ export default function EditServicePage() {
     }
 
     setIsSaving(true);
-    const selectedDateStr = format(date, 'yyyy-MM-dd')
-    const arrivalDateTime = new Date(`${selectedDateStr}T${startTime}`).toISOString();
-    const departureDateTime = new Date(`${selectedDateStr}T${endTime}`).toISOString();
-    const selectedCustomer = customers?.find(c => c.id === customerId);
-    const selectedEmployee = employees?.find(e => e.id === employeeId);
     
     try {
-        const employeeNameStr = selectedEmployee ? `${selectedEmployee.firstName} ${selectedEmployee.lastName}` : (service.employeeName || '');
+        const selectedDateStr = format(date, 'yyyy-MM-dd')
+        const arrivalDateTime = new Date(`${selectedDateStr}T${startTime}`).toISOString();
+        const departureDateTime = new Date(`${selectedDateStr}T${endTime}`).toISOString();
+        const selectedCustomer = customers?.find(c => c.id === customerId);
+        const selectedEmployee = employees?.find(e => e.id === employeeId);
+        const employeeNameStr = selectedEmployee ? `${selectedEmployee.firstName} ${selectedEmployee.lastName}` : (service?.employeeName || '');
 
         const updatedData: Partial<ServiceRecord> = {
             arrivalDateTime,
             departureDateTime,
             description: description || "Servei realitzat",
-            projectName: projectName.trim(),
-            pendingTasks,
-            customerId,
-            customerName: selectedCustomer?.name || (service.customerName || ''),
-            employeeId: employeeId,
+            projectName: (projectName || '').trim(),
+            pendingTasks: pendingTasks || '',
+            customerId: customerId || '',
+            customerName: selectedCustomer?.name || (service?.customerName || ''),
+            employeeId: employeeId || service?.employeeId || '',
             employeeName: employeeNameStr,
-            serviceHourlyRate: Number(serviceHourlyRate) || undefined,
-            media,
+            serviceHourlyRate: typeof serviceHourlyRate === 'number' ? serviceHourlyRate : (service?.serviceHourlyRate || 0),
+            media: media || [],
             materials: materials.filter(m => m.description.trim() !== ''),
-            customerSignatureName,
-            customerSignatureDataUrl,
+            customerSignatureName: customerSignatureName || '',
+            customerSignatureDataUrl: customerSignatureDataUrl || '',
             status: service?.status || 'pendent',
             updatedAt: new Date().toISOString(),
         };
@@ -279,14 +224,14 @@ export default function EditServicePage() {
         toast({ title: "Registre guardat", description: `S'ha actualitzat el registre correctament.` });
         router.push('/dashboard');
     } catch (error) {
-        console.error(error);
-        toast({ variant: 'destructive', title: 'Error al desar' });
+        console.error("Error saving service:", error);
+        toast({ variant: 'destructive', title: 'Error al desar', description: "No s'ha pogut guardar la informació a la base de dades." });
     } finally {
         setIsSaving(false);
     }
   }
 
-  if (isUserLoading || isLoading || isSaving) return <div className="p-12 text-center h-[80vh] flex flex-col items-center justify-center"><Loader2 className="h-16 w-16 animate-spin mx-auto text-primary" /><p className="mt-6 font-black uppercase tracking-widest text-slate-400 animate-pulse">Processant amb IA...</p></div>
+  if (isUserLoading || isLoading || isSaving) return <div className="p-12 text-center h-[80vh] flex flex-col items-center justify-center"><Loader2 className="h-16 w-16 animate-spin mx-auto text-primary" /><p className="mt-6 font-black uppercase tracking-widest text-slate-400 animate-pulse">Guardant dades...</p></div>
   if (!service) return <div className="p-12 text-center">Registre no trobat. <Button onClick={() => router.push('/dashboard')} variant="link">Tornar</Button></div>
   if (showCamera) return <CameraCapture onCapture={(url, type) => { setMedia(prev => [...prev, { type, dataUrl: url }]); setShowCamera(false); }} onClose={() => setShowCamera(false)} />;
 
@@ -390,24 +335,13 @@ export default function EditServicePage() {
               <div className="space-y-6 rounded-[2.5rem] border-2 border-slate-100 p-8 bg-slate-50/50 shadow-inner">
                   <div className="flex justify-between items-center">
                     <Label className="font-black text-slate-900 flex items-center gap-3 uppercase tracking-tighter text-xl"><Package className="h-6 w-6 text-primary" /> Materials</Label>
-                    <div className="flex gap-2">
-                        <input type="file" ref={ocrInputRef} onChange={(e) => handleOCR(e)} accept="image/*" className="hidden" />
-                        <Button type="button" variant="outline" size="sm" onClick={() => ocrInputRef.current?.click()} disabled={isExtracting} className="bg-primary text-white hover:bg-primary/90 border-none shadow-lg font-black h-12 px-6 rounded-2xl">
-                            {isExtracting && activeLineIndex === null ? <Loader2 className="h-5 w-5 animate-spin mr-2" /> : <ScanLine className="h-5 w-5 mr-2" />}
-                            LLEGIR TIQUET IA
-                        </Button>
-                    </div>
                   </div>
                   
                   <div className="space-y-4">
-                      <input type="file" ref={lineOcrInputRef} onChange={(e) => handleOCR(e, activeLineIndex)} accept="image/*" className="hidden" />
                       {materials.map((m, i) => (
                           <div key={i} className="bg-white p-6 rounded-3xl border-2 shadow-sm space-y-4 transition-all hover:border-primary/40">
                               <div className="flex gap-3">
                                 <Input placeholder="Descripció article" value={m.description} onChange={(e) => { const nm = [...materials]; nm[i].description = e.target.value; setMaterials(nm); }} className="border-none shadow-none font-black text-lg h-12 px-0 focus-visible:ring-0" />
-                                <Button type="button" variant="ghost" size="icon" onClick={() => { setActiveLineIndex(i); lineOcrInputRef.current?.click(); }} className="h-12 w-12 text-cyan-600 hover:bg-cyan-50 rounded-2xl shrink-0">
-                                    {isExtracting && activeLineIndex === i ? <Loader2 className="h-6 w-6 animate-spin" /> : <Scan className="h-6 w-6" />}
-                                </Button>
                                 <Button type="button" variant="ghost" size="icon" onClick={() => setMaterials(materials.filter((_, idx) => idx !== i))} className="text-red-400 h-12 w-12 hover:bg-red-50 rounded-2xl shrink-0"><Trash className="h-6 w-6" /></Button>
                               </div>
                               <div className="grid grid-cols-2 gap-6">
@@ -420,14 +354,6 @@ export default function EditServicePage() {
                                     <Euro className="absolute right-6 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
                                 </div>
                               </div>
-                              {m.imageDataUrl && (
-                                  <div className="relative h-24 w-full rounded-2xl overflow-hidden border-2 border-slate-100 group">
-                                      <Image src={m.imageDataUrl} alt="OCR" fill className="object-cover" />
-                                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                          <p className="text-white font-bold text-xs uppercase tracking-widest">Evidència OCR</p>
-                                      </div>
-                                  </div>
-                              )}
                           </div>
                       ))}
                   </div>
