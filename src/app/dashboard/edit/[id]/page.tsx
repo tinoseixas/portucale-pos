@@ -47,8 +47,8 @@ type Material = {
     imageDataUrl?: string;
 }
 
-const MAX_IMAGE_WIDTH = 1024;
-const IMAGE_QUALITY = 0.6; 
+const MAX_IMAGE_WIDTH = 1600; // Augmentat per a millor OCR
+const IMAGE_QUALITY = 0.7; 
 
 function resizeAndCompressImage(file: File): Promise<string> {
     return new Promise((resolve, reject) => {
@@ -104,7 +104,6 @@ export default function EditServicePage() {
   const employeesQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'employees')) : null, [firestore]);
   const { data: employees } = useCollection<Employee>(employeesQuery);
 
-  // Filtre per evitar duplicats en la selecció
   const uniqueCustomers = useMemo(() => {
     if (!customers) return [];
     const seen = new Set();
@@ -180,19 +179,39 @@ export default function EditServicePage() {
   const handleOCR = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    
     setIsExtracting(true);
-    toast({ title: 'Llegint document amb IA...' });
+    toast({ title: 'Processant imatge...', description: 'Llegint contingut amb IA.' });
+    
     try {
         const dataUrl = await resizeAndCompressImage(file);
         const res = await extractMaterialsFromPhoto({ photoDataUri: dataUrl });
-        if (res.materials.length > 0) {
-            // Remove empty initial line if any
-            const currentMaterials = materials.filter(m => m.description.trim() !== '' || m.unitPrice > 0);
-            setMaterials([...currentMaterials, ...res.materials.map(m => ({ ...m, imageDataUrl: dataUrl }))]);
-            toast({ title: `S'han extret ${res.materials.length} articles` });
+        
+        if (res.materials && res.materials.length > 0) {
+            // Netegem línies buides actuals
+            const currentFilledMaterials = materials.filter(m => m.description.trim() !== '' || m.unitPrice > 0);
+            
+            // Afegim els nous materials extrets
+            setMaterials([...currentFilledMaterials, ...res.materials.map(m => ({ ...m, imageDataUrl: dataUrl }))]);
+            
+            toast({ 
+                title: 'Lectura completada', 
+                description: `S'han afegit ${res.materials.length} articles nous.` 
+            });
+        } else {
+            toast({ 
+                variant: 'destructive',
+                title: 'No s\'han trobat dades', 
+                description: "L'IA no ha pogut identificar articles clarament. Prova amb una altra foto." 
+            });
         }
-    } catch (e) {
-        toast({ variant: 'destructive', title: 'No s\'ha pogut llegir la foto' });
+    } catch (e: any) {
+        console.error("OCR Error:", e);
+        toast({ 
+            variant: 'destructive', 
+            title: 'Error de lectura', 
+            description: e.message || 'No s\'ha pogut processar la foto.' 
+        });
     } finally {
         setIsExtracting(false);
         if (ocrInputRef.current) ocrInputRef.current.value = '';

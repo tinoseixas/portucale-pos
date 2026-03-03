@@ -1,6 +1,6 @@
 'use server';
 /**
- * @fileOverview Flux d'extracció de materials des d'imatges utilitzant Genkit.
+ * @fileOverview Flux d'extracció de materials des d'imatges utilitzant Genkit 1.x.
  * 
  * - extractMaterialsFromPhoto: Funció principal que crida al flux d'IA.
  */
@@ -24,21 +24,20 @@ const ExtractMaterialsOutputSchema = z.object({
 });
 export type ExtractMaterialsOutput = z.infer<typeof ExtractMaterialsOutputSchema>;
 
-// Definim el prompt per a l'extracció visual
+// Definim el prompt utilitzant la sintaxi Handlebars per a mitjans
 const extractMaterialsPrompt = ai.definePrompt({
   name: 'extractMaterialsPrompt',
   input: { schema: ExtractMaterialsInputSchema },
   output: { schema: ExtractMaterialsOutputSchema },
-  prompt: [
-    { media: { url: '{{photoDataUri}}' } },
-    { text: `Extrau tots els materials i articles de mà d'obra d'aquesta imatge de document (tiquet o albarà de compra).
+  prompt: `Extrau tots els materials, articles i conceptes de mà d'obra d'aquesta imatge de document (tiquet o albarà de compra).
     
-    INSTRUCCIONS:
-    1. Tradueix totes les descripcions al CATALÀ.
-    2. Identifica clarament la quantitat i el preu unitari.
-    3. Si no trobes el preu, posa 0.
-    4. Ignora dades de l'empresa o dates, només volem la llista d'articles comprats.` }
-  ],
+    INSTRUCCIONS CRÍTIQUES:
+    1. Tradueix totes les descripcions al CATALÀ professional.
+    2. Identifica la quantitat (quantity) i el preu unitari (unitPrice).
+    3. Si no hi ha preu unitari però hi ha un total per línia, calcula el preu unitari dividint el total per la quantitat.
+    4. Si un valor no és clar, posa 0.
+    5. Retorna NOMÉS la llista d'articles comprats en el format JSON especificat.
+    6. Imatge adjunta: {{media url=photoDataUri}}`,
 });
 
 const extractMaterialsFlow = ai.defineFlow(
@@ -48,23 +47,26 @@ const extractMaterialsFlow = ai.defineFlow(
     outputSchema: ExtractMaterialsOutputSchema,
   },
   async (input) => {
-    const { output } = await extractMaterialsPrompt(input, {
-      model: 'googleai/gemini-1.5-flash',
-    });
-    
-    if (!output) {
-      return { materials: [] };
+    try {
+      const { output } = await extractMaterialsPrompt(input, {
+        model: 'googleai/gemini-1.5-flash',
+        config: {
+          temperature: 0.1, // Temperatura molt baixa per a dades estructurades
+        }
+      });
+      
+      if (!output || !output.materials) {
+        return { materials: [] };
+      }
+      
+      return output;
+    } catch (error) {
+      console.error("Error en extractMaterialsFlow:", error);
+      throw new Error("No s'ha pogut processar la imatge. Verifica que sigui nítida.");
     }
-    
-    return output;
   }
 );
 
 export async function extractMaterialsFromPhoto(input: ExtractMaterialsInput): Promise<ExtractMaterialsOutput> {
-  try {
-    return await extractMaterialsFlow(input);
-  } catch (error) {
-    console.error("Error en extractMaterialsFlow:", error);
-    return { materials: [] };
-  }
+  return await extractMaterialsFlow(input);
 }
