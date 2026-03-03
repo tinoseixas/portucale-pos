@@ -4,11 +4,13 @@ import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useCollection, useUser, useFirestore, useMemoFirebase, deleteDocumentNonBlocking } from '@/firebase'
 import { collection, query, orderBy, doc, getDocs, collectionGroup, writeBatch, where } from 'firebase/firestore'
-import type { Albaran, ServiceRecord, Employee } from '@/lib/types'
+import type { Albaran, ServiceRecord, Employee, Customer } from '@/lib/types'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
-import { Eye, FileArchive, CreditCard, Clock, CheckCircle2, Loader2, Trash2, Users, RefreshCw, Briefcase, AlertCircle } from 'lucide-react'
+import { Input } from '@/components/ui/input'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Eye, FileArchive, CreditCard, Clock, CheckCircle2, Loader2, Trash2, Users, RefreshCw, Briefcase, AlertCircle, Search, Filter, X } from 'lucide-react'
 import { AdminGate } from '@/components/AdminGate'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -32,6 +34,10 @@ export default function AlbaransHistoryPage() {
   const { isUserLoading } = useUser()
   const firestore = useFirestore()
   const [isSyncing, setIsSyncing] = useState(false)
+  
+  // Filtres
+  const [filterCustomer, setFilterCustomer] = useState<string>('all')
+  const [searchProject, setSearchProject] = useState<string>('')
 
   const albaransQuery = useMemoFirebase(() => {
     if (!firestore) return null
@@ -40,8 +46,23 @@ export default function AlbaransHistoryPage() {
 
   const { data: albarans, isLoading: isLoadingAlbarans } = useCollection<Albaran>(albaransQuery)
 
-  const pendingAlbarans = useMemo(() => albarans?.filter(a => a.status === 'pendent') || [], [albarans]);
-  const historyAlbarans = useMemo(() => albarans?.filter(a => a.status === 'facturat') || [], [albarans]);
+  const customersQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return query(collection(firestore, 'customers'), orderBy('name', 'asc'));
+  }, [firestore]);
+  const { data: customers } = useCollection<Customer>(customersQuery);
+
+  const filteredAlbarans = useMemo(() => {
+    if (!albarans) return []
+    return albarans.filter(a => {
+      const customerMatch = filterCustomer === 'all' || a.customerId === filterCustomer
+      const projectMatch = !searchProject || a.projectName.toLowerCase().includes(searchProject.toLowerCase())
+      return customerMatch && projectMatch
+    })
+  }, [albarans, filterCustomer, searchProject])
+
+  const pendingAlbarans = useMemo(() => filteredAlbarans.filter(a => a.status === 'pendent'), [filteredAlbarans]);
+  const historyAlbarans = useMemo(() => filteredAlbarans.filter(a => a.status === 'facturat'), [filteredAlbarans]);
 
   const handleDeleteAlbaran = (albaranId: string, albaranNumber: number) => {
     if (!firestore) return;
@@ -65,7 +86,7 @@ export default function AlbaransHistoryPage() {
         const servicesSnap = await getDocs(collectionGroup(firestore, 'serviceRecords'));
         const allServices = servicesSnap.docs.map(d => ({ id: d.id, ...d.data() } as ServiceRecord));
         
-        const invoicedServiceIds = new Set(historyAlbarans.flatMap(a => a.serviceRecordIds));
+        const invoicedServiceIds = new Set(albarans?.filter(a => a.status === 'facturat').flatMap(a => a.serviceRecordIds) || []);
         
         const pendingServices = allServices.filter(s => 
             !invoicedServiceIds.has(s.id) && 
@@ -73,7 +94,7 @@ export default function AlbaransHistoryPage() {
             s.customerId && s.projectName
         );
 
-        if (pendingServices.length === 0 && pendingAlbarans.length === 0) {
+        if (pendingServices.length === 0 && albarans?.filter(a => a.status === 'pendent').length === 0) {
             toast({ title: 'Sense canvis', description: 'No hi ha nous serveis per agrupar.' });
             setIsSyncing(false);
             return;
@@ -92,7 +113,7 @@ export default function AlbaransHistoryPage() {
         const counterSnap = await getDocs(query(collection(firestore, "counters"), where("__name__", "==", "albarans")));
         let nextNum = !counterSnap.empty ? counterSnap.docs[0].data().lastNumber : 0;
 
-        pendingAlbarans.forEach(a => {
+        albarans?.filter(a => a.status === 'pendent').forEach(a => {
             batch.delete(doc(firestore, 'albarans', a.id));
         });
 
@@ -138,6 +159,11 @@ export default function AlbaransHistoryPage() {
     }
   };
 
+  const clearFilters = () => {
+    setFilterCustomer('all')
+    setSearchProject('')
+  }
+
   if (isUserLoading || isLoadingAlbarans) return <div className="p-12 text-center"><Loader2 className="h-12 w-12 animate-spin mx-auto text-primary" /><p className="mt-4">Carregant historial d'albarans...</p></div>
 
   return (
@@ -152,6 +178,43 @@ export default function AlbaransHistoryPage() {
                 Actualitzar Albarans de l'Equip
             </Button>
         </div>
+
+        {/* Panell de Filtres */}
+        <Card className="bg-slate-50 border-none shadow-inner">
+            <CardContent className="p-4">
+                <div className="flex flex-col md:flex-row gap-4 items-end">
+                    <div className="flex-1 space-y-2">
+                        <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest flex items-center gap-2"><Users className="h-3 w-3" /> Filtrar per Client</label>
+                        <Select value={filterCustomer} onValueChange={setFilterCustomer}>
+                            <SelectTrigger className="bg-white border-2">
+                                <SelectValue placeholder="Tots els clients" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">Tots els clients</SelectItem>
+                                {customers?.map(c => (
+                                    <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <div className="flex-1 space-y-2">
+                        <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest flex items-center gap-2"><Search className="h-3 w-3" /> Cerca per Obra</label>
+                        <div className="relative">
+                            <Briefcase className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                            <Input 
+                                placeholder="Nom del projecte..." 
+                                value={searchProject}
+                                onChange={(e) => setSearchProject(e.target.value)}
+                                className="pl-10 bg-white border-2"
+                            />
+                        </div>
+                    </div>
+                    <Button variant="ghost" onClick={clearFilters} size="sm" className="font-bold text-slate-500">
+                        <X className="h-4 w-4 mr-1" /> Netejar
+                    </Button>
+                </div>
+            </CardContent>
+        </Card>
 
         <Tabs defaultValue="pendents" className="w-full">
           <TabsList className="grid w-full grid-cols-2 max-w-md mb-6 bg-slate-100 p-1">
@@ -240,8 +303,8 @@ export default function AlbaransHistoryPage() {
                                 <TableCell colSpan={6} className="h-48 text-center">
                                     <div className="flex flex-col items-center justify-center text-muted-foreground space-y-2">
                                         <AlertCircle className="h-8 w-8 opacity-20" />
-                                        <p className="italic">No hi ha albarans pendents de facturar.</p>
-                                        <p className="text-xs">Prem el botó "Actualitzar" per consolidar els serveis recents.</p>
+                                        <p className="italic">No s'han trobat albarans pendents amb aquests filtres.</p>
+                                        <p className="text-xs">Prova de netejar els filtres o prem "Actualitzar".</p>
                                     </div>
                                 </TableCell>
                             </TableRow>
@@ -308,7 +371,7 @@ export default function AlbaransHistoryPage() {
                             ))}
                             {historyAlbarans.length === 0 && (
                                 <TableRow>
-                                    <TableCell colSpan={5} className="h-32 text-center text-muted-foreground italic">Encara no s'ha facturat cap albarà d'obra.</TableCell>
+                                    <TableCell colSpan={5} className="h-32 text-center text-muted-foreground italic">No s'han trobat albarans facturats amb aquests filtres.</TableCell>
                                 </TableRow>
                             )}
                         </TableBody>

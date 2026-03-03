@@ -2,12 +2,14 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useRouter, useParams, useSearchParams } from 'next/navigation'
-import { useDoc, useUser, useFirestore, useMemoFirebase, deleteDocumentNonBlocking, useCollection } from '@/firebase'
+import { useDoc, useUser, useFirestore, useMemoFirebase, deleteDocumentNonBlocking, useCollection, updateDocumentNonBlocking } from '@/firebase'
 import { collection, query, getDocs, doc, collectionGroup, getDoc } from 'firebase/firestore'
 import type { Customer, ServiceRecord, Albaran, Employee } from '@/lib/types'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { FileDown, Loader2, ArrowLeft, Trash2, Briefcase, CreditCard, AlertCircle } from 'lucide-react'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { FileDown, Loader2, ArrowLeft, Trash2, Briefcase, CreditCard, AlertCircle, Edit, Save, ListChecks, ArrowRight } from 'lucide-react'
 import { ReportPreview } from '@/components/ReportPreview'
 import {
   AlertDialog,
@@ -20,6 +22,15 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
 import { useToast } from '@/hooks/use-toast'
 import { AdminGate } from '@/components/AdminGate'
 import { Badge } from '@/components/ui/badge'
@@ -42,6 +53,9 @@ export default function AlbaranDetailPage() {
     const [customer, setCustomer] = useState<Customer | undefined>()
     const [isLoadingData, setIsLoadingData] = useState(false)
     const [hasLoaded, setHasLoaded] = useState(false)
+    
+    const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
+    const [editProjectName, setEditProjectName] = useState('')
 
     const albaranDocRef = useMemoFirebase(() => firestore && albaranId ? doc(firestore, 'albarans', albaranId) : null, [firestore, albaranId])
     const { data: albaran, isLoading: isLoadingAlbaran } = useDoc<Albaran>(albaranDocRef)
@@ -50,6 +64,12 @@ export default function AlbaranDetailPage() {
     const { data: employees } = useCollection<Employee>(employeesQuery);
     
     const shouldExport = searchParams.get('export') === 'true';
+
+    useEffect(() => {
+        if (albaran) {
+            setEditProjectName(albaran.projectName);
+        }
+    }, [albaran]);
 
     const fetchData = useCallback(async () => {
         if (!firestore || !albaran || !employees || hasLoaded) return
@@ -65,9 +85,8 @@ export default function AlbaranDetailPage() {
                 }
             }
             
-            // 2. Carregar serveis (Mètode robust sense necessitat d'índexs compostos)
+            // 2. Carregar serveis (Mètode robust)
             if (albaran.serviceRecordIds && albaran.serviceRecordIds.length > 0) {
-                // Fem una consulta simple de collectionGroup que no requereix índexs manuals
                 const servicesSnapshot = await getDocs(collectionGroup(firestore, 'serviceRecords'));
                 
                 const fetchedServices = servicesSnapshot.docs
@@ -106,18 +125,17 @@ export default function AlbaranDetailPage() {
         if (!reportElement) return;
 
         setIsGenerating(true);
-        toast({ title: 'Generant PDF Lleuger...', description: 'Optimitzant per a enviament ràpid.' });
+        toast({ title: 'Generant PDF...', description: 'Processant document.' });
 
         try {
             const canvas = await html2canvas(reportElement, {
-                scale: 1.0, // Escala 1:1 per estalviar memòria i pes
+                scale: 1.5,
                 useCORS: true,
                 logging: false,
                 backgroundColor: '#ffffff'
             });
             
-            // Qualitat al 40% per a un fitxer realment petit
-            const imgData = canvas.toDataURL('image/jpeg', 0.4); 
+            const imgData = canvas.toDataURL('image/jpeg', 0.6); 
             const pdf = new jsPDF({
                 orientation: 'p',
                 unit: 'mm',
@@ -144,7 +162,7 @@ export default function AlbaranDetailPage() {
             }
             
             pdf.save(`Albara-${albaran?.projectName.replace(/\s+/g, '-')}.pdf`);
-            toast({ title: 'PDF Generat!', description: 'Document llest per WhatsApp.' });
+            toast({ title: 'PDF Generat!', description: 'Document exportat correctament.' });
 
         } catch (error) {
             console.error("Error PDF:", error);
@@ -154,14 +172,12 @@ export default function AlbaranDetailPage() {
         }
     };
     
-    useEffect(() => {
-        if (shouldExport && hasLoaded && !isLoadingData && !isGenerating && services.length > 0) {
-            handleExportPDF();
-            router.replace(`/dashboard/albarans/${albaranId}`, { scroll: false });
-        }
-         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [shouldExport, hasLoaded, isLoadingData, isGenerating, services.length, albaranId, router]);
-
+    const handleUpdateAlbaran = () => {
+        if (!albaranDocRef || !editProjectName.trim()) return;
+        updateDocumentNonBlocking(albaranDocRef, { projectName: editProjectName.trim() });
+        setIsEditDialogOpen(false);
+        toast({ title: 'Albarà actualitzat', description: 'El nom del projecte s\'ha canviat.' });
+    };
 
     const handleDeleteAlbaran = () => {
         if (!albaranDocRef) return;
@@ -173,7 +189,7 @@ export default function AlbaranDetailPage() {
     const isLoading = isUserLoading || isLoadingAlbaran || (isLoadingData && !hasLoaded);
 
     if (isLoading) {
-        return <div className="text-center p-12 flex flex-col items-center justify-center h-[60vh]"><Loader2 className="h-12 w-12 animate-spin text-primary" /><p className="mt-4 text-muted-foreground font-medium">Carregant detalls optimitzats...</p></div>
+        return <div className="text-center p-12 flex flex-col items-center justify-center h-[60vh]"><Loader2 className="h-12 w-12 animate-spin text-primary" /><p className="mt-4 text-muted-foreground font-medium">Carregant dades...</p></div>
     }
     
     if (!albaran) {
@@ -181,7 +197,6 @@ export default function AlbaranDetailPage() {
             <div className="flex flex-col items-center justify-center h-[60vh] p-8 text-center space-y-4">
                 <div className="bg-red-100 p-4 rounded-full"><AlertCircle className="h-12 w-12 text-red-600" /></div>
                 <h2 className="text-2xl font-bold">No s'ha trobat l'albarà</h2>
-                <p className="text-muted-foreground max-w-xs">És possible que el document s'hagi esborrat o hi hagi hagut un error de sincronització.</p>
                 <Button onClick={() => router.push('/dashboard/albarans')} variant="outline">Tornar al llistat</Button>
             </div>
         )
@@ -196,6 +211,28 @@ export default function AlbaranDetailPage() {
                         Enrere
                     </Button>
                     <div className="flex items-center gap-2 flex-wrap justify-end">
+                        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+                            <DialogTrigger asChild>
+                                <Button variant="outline" className="font-bold">
+                                    <Edit className="mr-2 h-4 w-4" /> Editar Títol
+                                </Button>
+                            </DialogTrigger>
+                            <DialogContent>
+                                <DialogHeader>
+                                    <DialogTitle>Editar Nom del Projecte</DialogTitle>
+                                    <DialogDescription>Aquest nom apareixerà a la capçalera de l'albarà imprès.</DialogDescription>
+                                </DialogHeader>
+                                <div className="py-4 space-y-2">
+                                    <Label>Nom de l'Obra / Projecte</Label>
+                                    <Input value={editProjectName} onChange={(e) => setEditProjectName(e.target.value)} />
+                                </div>
+                                <DialogFooter>
+                                    <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>Cancel·lar</Button>
+                                    <Button onClick={handleUpdateAlbaran} className="bg-primary font-bold">Desar Canvis</Button>
+                                </DialogFooter>
+                            </DialogContent>
+                        </Dialog>
+
                         {albaran.status === 'pendent' && (
                             <Button asChild className="bg-green-600 hover:bg-green-700 shadow-md font-bold">
                                 <Link href={`/dashboard/invoices?customerId=${albaran.customerId}&albaranId=${albaran.id}`}>
@@ -231,11 +268,37 @@ export default function AlbaranDetailPage() {
                             className="bg-slate-900 hover:bg-slate-800 text-white font-bold"
                         >
                             {isGenerating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileDown className="mr-2 h-4 w-4" />}
-                            PDF LLEUGER
+                            EXPORTAR PDF
                         </Button>
                     </div>
                 </div>
                 
+                {/* Gestió de Serveis */}
+                <Card className="border-2 border-primary/10 shadow-sm bg-slate-50/50">
+                    <CardHeader className="py-4">
+                        <CardTitle className="text-sm font-black uppercase tracking-widest text-slate-500 flex items-center gap-2">
+                            <ListChecks className="h-4 w-4" /> Serveis inclosos en aquest albarà
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent className="px-4 pb-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                            {services.map(s => (
+                                <div key={s.id} className="bg-white p-3 rounded-xl border-2 flex justify-between items-center group hover:border-primary transition-all">
+                                    <div className="min-w-0">
+                                        <p className="text-xs font-black truncate">{s.description}</p>
+                                        <p className="text-[10px] text-slate-400 font-bold">{s.employeeName}</p>
+                                    </div>
+                                    <Button variant="ghost" size="icon" asChild className="h-8 w-8 text-primary group-hover:bg-primary/10">
+                                        <Link href={`/dashboard/edit/${s.id}?ownerId=${s.employeeId}`}>
+                                            <ArrowRight className="h-4 w-4" />
+                                        </Link>
+                                    </Button>
+                                </div>
+                            ))}
+                        </div>
+                    </CardContent>
+                </Card>
+
                 <Card className="shadow-2xl border-none">
                     <CardHeader className="bg-slate-900 text-white rounded-t-lg">
                         <div className="flex justify-between items-start">
@@ -264,7 +327,7 @@ export default function AlbaranDetailPage() {
                             />
                         ) : (
                             <div className="p-12 text-center text-muted-foreground italic">
-                                No s'han pogut carregar les línies de servei. Prova d'actualitzar l'albarà des de la llista general.
+                                No s'han pogut carregar les línies de servei.
                             </div>
                         )}
                     </CardContent>
