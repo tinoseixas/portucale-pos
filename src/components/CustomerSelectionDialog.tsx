@@ -28,11 +28,20 @@ export function CustomerSelectionDialog({
 }: CustomerSelectionDialogProps) {
   const [searchTerm, setSearchTerm] = useState('');
 
-  const filteredCustomers = useMemo(() => {
-    if (!searchTerm) {
-      return customers;
-    }
-    return customers.filter(customer =>
+  const uniqueAndFilteredCustomers = useMemo(() => {
+    if (!customers) return [];
+    
+    const seen = new Set();
+    const unique = customers.filter(c => {
+      const nameKey = c.name.toLowerCase().trim();
+      if (seen.has(nameKey)) return false;
+      seen.add(nameKey);
+      return true;
+    });
+
+    if (!searchTerm) return unique;
+
+    return unique.filter(customer =>
       customer.name.toLowerCase().includes(searchTerm.toLowerCase())
     );
   }, [customers, searchTerm]);
@@ -55,7 +64,7 @@ export function CustomerSelectionDialog({
           />
           <ScrollArea className="h-72">
             <div className="space-y-2">
-              {filteredCustomers.map((customer) => (
+              {uniqueAndFilteredCustomers.map((customer) => (
                 <button
                   key={customer.id}
                   onClick={() => onCustomerSelect(customer)}
@@ -68,6 +77,9 @@ export function CustomerSelectionDialog({
                   </div>
                 </button>
               ))}
+              {uniqueAndFilteredCustomers.length === 0 && (
+                <p className="text-center text-muted-foreground py-8">No s'han trobat clients.</p>
+              )}
             </div>
           </ScrollArea>
         </div>

@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { LogIn, MapPin, Users, Loader2 } from 'lucide-react'
 import { useToast } from "@/hooks/use-toast"
-import { useFirestore, useUser, useDoc, useCollection, useMemoFirebase } from '@/firebase'
+import { useUser, useFirestore, useDoc, useCollection, useMemoFirebase } from '@/firebase'
 import { addDoc, collection, doc, query, orderBy } from 'firebase/firestore'
 import type { Employee, Customer, ServiceRecord } from '@/lib/types'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -35,6 +35,18 @@ export default function NewServicePage() {
   }, [firestore, user]);
 
   const { data: customers, isLoading: isLoadingCustomers } = useCollection<Customer>(customersQuery);
+
+  // Filtrem duplicats per nom per a la interfície
+  const uniqueCustomers = useMemo(() => {
+    if (!customers) return [];
+    const seen = new Set();
+    return customers.filter(c => {
+      const nameKey = c.name.toLowerCase().trim();
+      if (seen.has(nameKey)) return false;
+      seen.add(nameKey);
+      return true;
+    });
+  }, [customers]);
 
 
   const handleStartService = async () => {
@@ -131,7 +143,7 @@ export default function NewServicePage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">Cap client</SelectItem>
-                    {customers?.map(c => (
+                    {uniqueCustomers?.map(c => (
                       <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
                     ))}
                   </SelectContent>

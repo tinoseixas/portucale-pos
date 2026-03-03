@@ -104,6 +104,18 @@ export default function EditServicePage() {
   const employeesQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'employees')) : null, [firestore]);
   const { data: employees } = useCollection<Employee>(employeesQuery);
 
+  // Filtre per evitar duplicats en la selecció
+  const uniqueCustomers = useMemo(() => {
+    if (!customers) return [];
+    const seen = new Set();
+    return customers.filter(c => {
+      const nameKey = c.name.toLowerCase().trim();
+      if (seen.has(nameKey)) return false;
+      seen.add(nameKey);
+      return true;
+    });
+  }, [customers]);
+
   const [date, setDate] = useState<Date | undefined>()
   const [startTime, setStartTime] = useState('')
   const [endTime, setEndTime] = useState('')
@@ -257,7 +269,7 @@ export default function EditServicePage() {
         <CustomerSelectionDialog
           open={isCustomerDialogOpen}
           onOpenChange={setIsCustomerDialogOpen}
-          customers={customers || []}
+          customers={uniqueCustomers}
           onCustomerSelect={(c) => { setCustomerId(c.id); setIsCustomerDialogOpen(false); }}
         />
 
