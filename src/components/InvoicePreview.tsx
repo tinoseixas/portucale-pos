@@ -1,7 +1,5 @@
-
 'use client'
 import React, { forwardRef, useMemo } from 'react';
-import { Separator } from '@/components/ui/separator';
 import type { Customer, ServiceRecord, Employee } from '@/lib/types';
 import { format, differenceInMinutes, parseISO, isValid } from 'date-fns';
 import { ca } from 'date-fns/locale';
@@ -17,9 +15,14 @@ interface InvoicePreviewProps {
   applyIva?: boolean;
 }
 
-export const InvoicePreview = forwardRef<HTMLDivElement, InvoicePreviewProps>(({ customer, projectName, invoiceNumber, services, employees, applyIva = true }, ref) => {
+export const InvoicePreview = forwardRef<HTMLDivElement, InvoicePreviewProps>((props, ref) => {
+    const { customer, projectName, invoiceNumber, services, employees, applyIva = true } = props;
     
-    const { subtotal, iva, totalGeneral } = useMemo(() => calculateTotalAmount(services, employees, applyIva), [services, employees, applyIva]);
+    const totals = useMemo(() => {
+        return calculateTotalAmount(services, employees, applyIva);
+    }, [services, employees, applyIva]);
+    
+    const { subtotal, iva, totalGeneral } = totals;
     
     const getEmployeeName = (employeeId?: string) => {
         if (!employeeId || !employees) return 'Tècnic no assignat';
@@ -28,9 +31,10 @@ export const InvoicePreview = forwardRef<HTMLDivElement, InvoicePreviewProps>(({
     };
 
     const groupedByAlbaran = useMemo(() => {
-        const grouped: { [key: number]: { services: ServiceRecord[], items: NonNullable<ServiceRecord['materials']> } } = {};
+        const grouped: { [key: number]: { services: ServiceRecord[], items: any[] } } = {};
+        const safeServices = services || [];
         
-        (services || []).forEach(service => {
+        safeServices.forEach(service => {
             const albaranNum = service.albaranNumber || 0;
             if (!grouped[albaranNum]) {
                 grouped[albaranNum] = { services: [], items: [] };
@@ -66,8 +70,8 @@ export const InvoicePreview = forwardRef<HTMLDivElement, InvoicePreviewProps>(({
                 </div>
             </header>
 
-            <section style={{ display: 'flex', justifyContent: 'space-between', gap: '2rem', marginTop: '2rem', marginBottom: '2rem' }}>
-                <div style={{ flex: 1 }}>
+            <section className="flex justify-between gap-8 my-8">
+                <div className="flex-1">
                     <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-2">DADES DEL CLIENT</h3>
                     {customer ? (
                         <div className="space-y-1 text-base">
@@ -76,11 +80,11 @@ export const InvoicePreview = forwardRef<HTMLDivElement, InvoicePreviewProps>(({
                              <p className="text-gray-600">NIF: {customer.nrt || '-'}</p>
                              <p className="text-gray-600">{customer.email || ''}</p>
                         </div>
-                    ) : <p className="text-gray-600">No especificat</p>}
+                    ) : <p className="text-gray-600 italic">No especificat</p>}
                 </div>
-                 <div style={{ flex: 1, textAlign: 'right' }}>
+                 <div className="flex-1 text-right">
                     <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-2">PROJECTE / OBRA</h3>
-                    <p className="font-black text-xl text-primary">{projectName || 'No especificada'}</p>
+                    <p className="font-black text-xl text-primary uppercase">{projectName || 'No especificada'}</p>
                  </div>
             </section>
             
@@ -97,10 +101,10 @@ export const InvoicePreview = forwardRef<HTMLDivElement, InvoicePreviewProps>(({
                              <table className="w-full text-xs mb-4">
                                 <thead className="bg-slate-50">
                                     <tr className="border-b-2 border-gray-300">
-                                        <th className="text-left py-2 px-3 font-bold text-gray-600">DATA</th>
-                                        <th className="text-left py-2 px-3 font-bold text-gray-600">TÈCNIC</th>
-                                        <th className="text-left py-2 px-3 font-bold text-gray-600">DESCRIPCIÓ</th>
-                                        <th className="text-right py-2 px-3 font-bold text-gray-600">HORES</th>
+                                        <th className="text-left py-2 px-3 font-bold text-gray-600 uppercase">Data</th>
+                                        <th className="text-left py-2 px-3 font-bold text-gray-600 uppercase">Tècnic</th>
+                                        <th className="text-left py-2 px-3 font-bold text-gray-600 uppercase">Descripció</th>
+                                        <th className="text-right py-2 px-3 font-bold text-gray-600 uppercase">Hores</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -114,7 +118,7 @@ export const InvoicePreview = forwardRef<HTMLDivElement, InvoicePreviewProps>(({
                                                 <td className="py-2 px-3 align-top whitespace-nowrap font-medium text-gray-500">{format(arrival, 'dd/MM/yy')}</td>
                                                 <td className="py-2 px-3 align-top font-bold">{service.employeeName || getEmployeeName(service.employeeId)}</td>
                                                 <td className="py-2 px-3 align-top text-gray-700">{service.description}</td>
-                                                <td className="py-2 px-3 align-top text-right font-bold">{hours} h</td>
+                                                <td className="py-2 px-3 align-top text-right font-bold tabular-nums">{hours} h</td>
                                             </tr>
                                         )
                                     })}
@@ -126,24 +130,22 @@ export const InvoicePreview = forwardRef<HTMLDivElement, InvoicePreviewProps>(({
                         <table className="w-full text-xs">
                             <thead className="bg-slate-50">
                                 <tr className="border-b-2 border-gray-300">
-                                    <th className="text-left py-2 px-3 font-bold text-gray-600">MATERIAL</th>
-                                    <th className="text-right py-2 px-3 font-bold text-gray-600 w-20">QT.</th>
-                                    <th className="text-right py-2 px-3 font-bold text-gray-600 w-24">PVP</th>
-                                    <th className="text-right py-2 px-3 font-bold text-gray-600 w-24">TOTAL</th>
+                                    <th className="text-left py-2 px-3 font-bold text-gray-600 uppercase">Material</th>
+                                    <th className="text-right py-2 px-3 font-bold text-gray-600 w-20 uppercase">Qt.</th>
+                                    <th className="text-right py-2 px-3 font-bold text-gray-600 w-24 uppercase">PVP</th>
+                                    <th className="text-right py-2 px-3 font-bold text-gray-600 w-24 uppercase">Total</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {albaranItems.map((item, index) => {
                                     const itemTotal = item.quantity * item.unitPrice;
                                     return (
-                                    <React.Fragment key={`item-frag-${index}`}>
-                                        <tr className="border-b border-gray-100">
+                                        <tr key={`item-${index}`} className="border-b border-gray-100">
                                             <td className="py-2 px-3 font-medium">{item.description}</td>
                                             <td className="text-right py-2 px-3 tabular-nums">{item.quantity.toFixed(2)}</td>
                                             <td className="text-right py-2 px-3 tabular-nums">{item.unitPrice.toFixed(2)} €</td>
                                             <td className="text-right py-2 px-3 font-bold tabular-nums text-gray-900">{itemTotal.toFixed(2)} €</td>
                                         </tr>
-                                    </React.Fragment>
                                 )})}
                             </tbody>
                         </table>
@@ -169,7 +171,7 @@ export const InvoicePreview = forwardRef<HTMLDivElement, InvoicePreviewProps>(({
                         </div>
                     </div>
                 </div>
-            </header>
+            </section>
 
              <footer className="mt-24 pt-8 border-t text-center text-[10px] text-gray-400 uppercase tracking-widest font-bold">
                 <p>TS SERVEIS - Solucions Tècniques i Manteniment</p>
@@ -178,6 +180,6 @@ export const InvoicePreview = forwardRef<HTMLDivElement, InvoicePreviewProps>(({
 
         </div>
     )
-})
+}))
 
 InvoicePreview.displayName = "InvoicePreview";

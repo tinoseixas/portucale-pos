@@ -8,9 +8,9 @@ interface LogoProps {
 }
 
 /**
- * Componente de Logótipo da TS SERVEIS com o slogan atualizado.
+ * Componente de Logótipo da TS SERVEIS com o slogan oficial em catalão.
  * Tenta carregar o ficheiro /logo.png da pasta public.
- * Se falhar, mostra uma versão SVG profissional com o novo slogan em catalão.
+ * Se falhar, mostra uma versão SVG profissional com o novo slogan.
  */
 export function Logo({ className, variant = 'dark' }: LogoProps) {
   const [imgError, setImgError] = useState(false);
@@ -70,7 +70,7 @@ export function Logo({ className, variant = 'dark' }: LogoProps) {
         TS SERVEIS
       </text>
       
-      {/* Novo Slogan em Catalão */}
+      {/* Slogan em Catalão solicitado pelo usuário */}
       <text 
         x="110" 
         y="82" 
