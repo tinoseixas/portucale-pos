@@ -1,8 +1,8 @@
-
 'use server';
 /**
  * @fileOverview Servei d'enviament de correus electrònics.
  * Utilitza Resend per garantir l'entrega dels documents PDF.
+ * Permet configurar el remitent mitjançant variables d'entorn.
  */
 
 import { Resend } from 'resend';
@@ -24,11 +24,14 @@ export async function sendDocumentEmail({ to, subject, html, attachments }: Send
   }
 
   try {
-    // Inicialitzem Resend dins de la funció per evitar errors de compilació
     const resend = new Resend(process.env.RESEND_API_KEY);
+    
+    // El remitent es configura a .env. Si no hi és, utilitzem el mode de proves de Resend.
+    // Un cop verifiquis el teu domini a Resend, posa la teva adreça a RESEND_FROM_EMAIL.
+    const fromAddress = process.env.RESEND_FROM_EMAIL || 'TS Serveis <onboarding@resend.dev>';
 
     const { data, error } = await resend.emails.send({
-      from: 'TS Serveis <onboarding@resend.dev>',
+      from: fromAddress,
       to: [to],
       subject: subject,
       html: html,
