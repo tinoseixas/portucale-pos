@@ -1,8 +1,7 @@
 'use server';
 /**
- * @fileOverview Serviço de envio de e-mails.
- * Utiliza o Resend para garantir a entrega de documentos PDF.
- * Configurado para usar o e-mail da empresa do usuário: eg.ad.tecnica@gmail.com
+ * @fileOverview Serviço de envio de e-mails via Resend.
+ * Configurado para usar a Single Sender Verification com o e-mail eg.ad.tecnica@gmail.com.
  */
 
 import { Resend } from 'resend';
@@ -18,18 +17,18 @@ interface SendEmailParams {
  * Envia um e-mail com arquivos anexos (base64).
  */
 export async function sendDocumentEmail({ to, subject, html, attachments }: SendEmailParams) {
-  if (!process.env.RESEND_API_KEY) {
+  const apiKey = process.env.RESEND_API_KEY;
+  const fromAddress = process.env.RESEND_FROM_EMAIL || 'TS Serveis <eg.ad.tecnica@gmail.com>';
+
+  if (!apiKey) {
     console.error('RESEND_API_KEY não configurada no arquivo .env');
     return { success: false, error: 'Configuração de e-mail pendente (API Key)' };
   }
 
   try {
-    const resend = new Resend(process.env.RESEND_API_KEY);
+    const resend = new Resend(apiKey);
     
-    // O remetente padrão é o e-mail da sua empresa.
-    // IMPORTANTE: Este e-mail deve ser verificado no painel do Resend (Single Sender Verification).
-    const fromAddress = process.env.RESEND_FROM_EMAIL || 'TS Serveis <eg.ad.tecnica@gmail.com>';
-
+    // O envio só funcionará se o e-mail eg.ad.tecnica@gmail.com estiver verificado no painel do Resend
     const { data, error } = await resend.emails.send({
       from: fromAddress,
       to: [to],
