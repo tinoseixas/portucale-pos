@@ -2,11 +2,12 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import Image from 'next/image'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Briefcase, Loader2, Lock, Mail } from 'lucide-react'
+import { Loader2, Lock, Mail } from 'lucide-react'
 import { useToast } from "@/hooks/use-toast"
 import { useAuth, useUser, useFirestore } from '@/firebase'
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth'
@@ -101,7 +102,7 @@ export default function Home() {
     return (
       <main className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        <p className="mt-2 text-muted-foreground">Preparant el teu espai de treball...</p>
+        <p className="mt-2 text-muted-foreground font-black uppercase tracking-widest animate-pulse">Iniciant TS Serveis...</p>
       </main>
     );
   }
@@ -109,20 +110,26 @@ export default function Home() {
   return (
     <main className="flex min-h-screen flex-col items-center justify-center bg-slate-50 p-4">
       <div className="w-full max-w-md">
-        <Card className="shadow-2xl border-none">
-          <CardHeader className="text-center space-y-4">
-            <div className="mx-auto bg-primary text-primary-foreground p-4 rounded-2xl w-fit shadow-lg">
-               <Briefcase size={40} />
+        <div className="flex justify-center mb-8">
+            <div className="relative h-24 w-64">
+                <Image 
+                    src="/logo.png" 
+                    alt="TS Serveis" 
+                    fill 
+                    style={{ objectFit: 'contain' }}
+                    priority
+                />
             </div>
-            <div>
-                <CardTitle className="text-4xl font-black tracking-tight text-slate-900">TS SERVEIS</CardTitle>
-                <CardDescription className="text-base">Gestió de Serveis i Facturació</CardDescription>
-            </div>
+        </div>
+        <Card className="shadow-2xl border-none overflow-hidden rounded-3xl bg-white/80 backdrop-blur-md">
+          <CardHeader className="text-center space-y-2 bg-slate-900 text-white p-8">
+            <CardTitle className="text-3xl font-black tracking-tight uppercase">Portal Corporatiu</CardTitle>
+            <CardDescription className="text-slate-400 font-medium">Gestió Integral de Serveis i Facturació</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-6 pt-4">
+          <CardContent className="space-y-6 pt-10 px-8">
             <div className="space-y-2">
-              <Label htmlFor="email" className="flex items-center gap-2">
-                <Mail className="h-4 w-4 text-muted-foreground" /> Correu electrònic
+              <Label htmlFor="email" className="flex items-center gap-2 font-black uppercase text-[10px] text-slate-400 tracking-widest">
+                <Mail className="h-3 w-3" /> Correu electrònic
               </Label>
               <Input 
                 id="email"
@@ -131,12 +138,12 @@ export default function Home() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 disabled={isAuthenticating}
-                className="h-12"
+                className="h-14 rounded-2xl border-2 focus:border-primary font-bold"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password" className="flex items-center gap-2">
-                <Lock className="h-4 w-4 text-muted-foreground" /> Contrasenya
+              <Label htmlFor="password" className="flex items-center gap-2 font-black uppercase text-[10px] text-slate-400 tracking-widest">
+                <Lock className="h-3 w-3" /> Contrasenya
               </Label>
               <Input 
                 id="password" 
@@ -145,29 +152,29 @@ export default function Home() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 disabled={isAuthenticating}
-                className="h-12"
+                className="h-14 rounded-2xl border-2 focus:border-primary font-bold"
               />
             </div>
           </CardContent>
-          <CardFooter className="flex flex-col gap-3 pb-8">
-            <Button onClick={handleSignIn} className="w-full h-12 text-lg font-bold shadow-md" disabled={isAuthenticating}>
-              {isAuthenticating ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : null}
+          <CardFooter className="flex flex-col gap-4 pb-10 px-8">
+            <Button onClick={handleSignIn} className="w-full h-16 text-lg font-black uppercase tracking-tight shadow-xl bg-primary hover:bg-primary/90 rounded-2xl" disabled={isAuthenticating}>
+              {isAuthenticating ? <Loader2 className="mr-3 h-6 w-6 animate-spin" /> : null}
               Entrar al Sistema
             </Button>
-            <div className="relative w-full py-4">
+            <div className="relative w-full py-2">
                 <div className="absolute inset-0 flex items-center">
-                    <span className="w-full border-t border-slate-200"></span>
+                    <span className="w-full border-t border-slate-100"></span>
                 </div>
-                <div className="relative flex justify-center text-xs uppercase">
-                    <span className="bg-white px-2 text-muted-foreground">Primer accés?</span>
+                <div className="relative flex justify-center text-[10px] uppercase font-black tracking-widest">
+                    <span className="bg-white px-4 text-slate-300 italic">Accés restringit a l'equip</span>
                 </div>
             </div>
-            <Button onClick={handleSignUp} variant="outline" className="w-full h-12 border-2" disabled={isAuthenticating}>
-              Registrar Nou Compte
+            <Button onClick={handleSignUp} variant="outline" className="w-full h-14 border-2 font-bold rounded-2xl text-slate-500 hover:bg-slate-50" disabled={isAuthenticating}>
+              Sol·licitar nou compte
             </Button>
           </CardFooter>
         </Card>
-        <p className="text-center mt-8 text-xs text-slate-400 uppercase tracking-widest">TS Serveis © 2024</p>
+        <p className="text-center mt-10 text-[10px] text-slate-400 uppercase font-black tracking-[0.4em]">TS Serveis © 2024</p>
       </div>
     </main>
   )

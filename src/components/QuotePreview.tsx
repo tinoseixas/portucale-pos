@@ -1,4 +1,3 @@
-
 'use client'
 import React, { forwardRef, useMemo } from 'react';
 import Image from 'next/image';
@@ -27,14 +26,11 @@ interface QuotePreviewProps {
   notes?: string;
 }
 
-// --- Component ---
 export const QuotePreview = forwardRef<HTMLDivElement, QuotePreviewProps>(({ customer, projectName, items, labor, quoteNumber, notes }, ref) => {
 
     const { groupedItems, materialsSubtotal, totalDiscountAmount } = useMemo(() => {
         let subtotalAccumulator = 0;
         let discountAccumulator = 0;
-        
-        // Grouping items by category
         const groups = new Map<string, QuoteItem[]>();
         
         items.forEach(item => {
@@ -59,56 +55,51 @@ export const QuotePreview = forwardRef<HTMLDivElement, QuotePreviewProps>(({ cus
     const iva = subtotal * IVA_RATE;
     const totalGeneral = subtotal + iva;
 
-    const defaultNotes = "40% per iniciar el treball i la resta es pagarà mensualment a combinar.";
-
     return (
-        <div ref={ref} className="bg-white p-8 font-sans text-gray-900 printable-area">
-            {/* Header */}
-            <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '2px solid #111827', paddingBottom: '1.5rem' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                     <div className="flex items-center justify-center w-12 h-12 rounded-lg bg-primary text-primary-foreground">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7">
-                            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
-                        </svg>
+        <div ref={ref} className="bg-white p-12 font-sans text-gray-900 printable-area mx-auto" style={{ width: '210mm' }}>
+            <header className="flex justify-between items-center border-b-4 border-slate-900 pb-10 mb-10">
+                <div className="flex flex-col gap-4">
+                    <div className="relative h-24 w-64">
+                        <Image 
+                            src="/logo.png" 
+                            alt="TS Serveis" 
+                            fill 
+                            style={{ objectFit: 'contain', objectPosition: 'left' }}
+                        />
                     </div>
                     <div className="text-sm text-gray-600">
-                        <h2 className="font-bold text-xl text-gray-900">TS Serveis</h2>
-                        <p>NRT: F352231c</p>
-                        <p>Avinguda Francois Mitterrand 64, local 6</p>
+                        <p className="font-bold text-gray-900">NRT: F352231c</p>
+                        <p>Av. Francois Mitterrand 64, local 6</p>
                         <p>AD200 Encamp, Andorra</p>
-                        <p>Tel: 376 396 048</p>
-                        <p>Email: eg.ad.tecnica@gmail.com</p>
+                        <p>Tel: 376 396 048 | eg.ad.tecnica@gmail.com</p>
                     </div>
                 </div>
-                <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                    <h1 className="text-3xl font-bold text-gray-900">Pressupost</h1>
-                     {quoteNumber && quoteNumber > 0 && <p className="text-md text-gray-700 font-semibold">Nº: {String(quoteNumber).padStart(4, '0')}</p>}
-                    <p className="text-sm text-gray-600">Data: {format(new Date(), 'dd MMMM yyyy', { locale: ca })}</p>
+                <div className="text-right">
+                    <h1 className="text-5xl font-black text-gray-900 mb-2 uppercase tracking-tighter">Pressupost</h1>
+                     {quoteNumber && quoteNumber > 0 && <p className="text-2xl text-primary font-black mt-2">Nº: {String(quoteNumber).padStart(4, '0')}</p>}
+                    <p className="text-lg text-gray-500 font-bold">{format(new Date(), 'dd MMMM yyyy', { locale: ca })}</p>
                 </div>
             </header>
 
-            {/* Client and Project Info */}
-            <section style={{ display: 'flex', justifyContent: 'space-between', gap: '2rem', marginTop: '2rem', marginBottom: '2rem' }}>
-                <div style={{ flex: 1 }}>
-                    <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">CLIENT</h3>
+            <section className="grid grid-cols-2 gap-16 mb-12">
+                <div className="bg-slate-50 p-8 rounded-2xl border-2 border-slate-100">
+                    <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4">CLIENT</h3>
                     {customer ? (
-                        <div className="space-y-1 text-base">
-                             <p className="font-bold">{customer.name}</p>
-                             <p className="text-gray-600">{customer.address || ''}</p>
-                             <p className="text-gray-600">{customer.nrt || 'NRT no especificat'}</p>
-                             <p className="text-gray-600">{customer.email || ''}</p>
-                             <p className="text-gray-600">{customer.contact || ''}</p>
+                        <div className="space-y-2">
+                             <p className="font-black text-2xl">{customer.name}</p>
+                             <p className="text-slate-600 text-lg">{customer.address || ''}</p>
+                             <p className="text-slate-600">NIF: {customer.nrt || '-'}</p>
                         </div>
-                    ) : <p className="text-gray-600">No especificat</p>}
+                    ) : <p className="text-gray-600 italic">No especificat</p>}
                 </div>
-                 <div style={{ flex: 1, textAlign: 'right' }}>
-                    <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">OBRA</h3>
-                    <p className="font-bold text-base">{projectName || 'No especificada'}</p>
+                 <div className="text-right">
+                    <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4">PROJECTE / OBRA</h3>
+                    <p className="font-black text-3xl text-primary uppercase tracking-tight leading-tight">{projectName || 'No especificada'}</p>
                  </div>
             </section>
             
             <section className="page-break-before-auto">
-                <h3 className="font-bold text-lg mb-4">Detall del Pressupost</h3>
+                <h3 className="font-black text-xl mb-8 border-b-4 border-slate-900 pb-2 uppercase">Detall del Pressupost</h3>
                 
                 {Array.from(groupedItems.entries()).map(([category, catItems], groupIdx) => {
                     const catSubtotal = catItems.reduce((acc, item) => {
@@ -118,16 +109,15 @@ export const QuotePreview = forwardRef<HTMLDivElement, QuotePreviewProps>(({ cus
                     }, 0);
 
                     return (
-                        <div key={groupIdx} className="mb-8 page-break-inside-avoid">
-                            <h4 className="font-black text-sm text-slate-900 bg-slate-100 px-3 py-2 rounded-t-md border-b-2 border-slate-900 uppercase tracking-widest">{category}</h4>
-                            <table className="w-full text-sm border-collapse mb-2">
-                                <thead className="bg-slate-50/50">
-                                    <tr className="text-xs text-slate-500 uppercase font-bold">
-                                        <th className="text-left py-2 px-3">Descripció</th>
-                                        <th className="text-right py-2 px-3 w-20">Quant.</th>
-                                        <th className="text-right py-2 px-3 w-24">PVP Unit.</th>
-                                        <th className="text-right py-2 px-3 w-16">Dte %</th>
-                                        <th className="text-right py-2 px-3 w-24">Total</th>
+                        <div key={groupIdx} className="mb-10 page-break-inside-avoid">
+                            <h4 className="font-black text-sm text-white bg-slate-900 px-4 py-2 rounded-t-lg uppercase tracking-widest">{category}</h4>
+                            <table className="w-full text-sm border-collapse mb-2 border-2 border-slate-900">
+                                <thead className="bg-slate-50">
+                                    <tr className="text-xs text-slate-600 uppercase font-black border-b-2 border-slate-900">
+                                        <th className="text-left py-3 px-4">Descripció</th>
+                                        <th className="text-right py-3 px-4 w-24">Quantitat</th>
+                                        <th className="text-right py-3 px-4 w-32">Preu Unit.</th>
+                                        <th className="text-right py-3 px-4 w-32">Total</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -135,94 +125,61 @@ export const QuotePreview = forwardRef<HTMLDivElement, QuotePreviewProps>(({ cus
                                         const itemTotal = item.quantity * item.unitPrice;
                                         const discountAmount = itemTotal * ((item.discount || 0) / 100);
                                         const finalTotal = itemTotal - discountAmount;
-                                        
                                         return (
-                                            <React.Fragment key={`item-frag-${index}`}>
-                                                <tr className="border-b border-gray-100 hover:bg-gray-50/30 transition-colors">
-                                                    <td className="py-2.5 px-3 text-slate-700">{item.description}</td>
-                                                    <td className="text-right py-2.5 px-3 tabular-nums">{item.quantity.toFixed(2)}</td>
-                                                    <td className="text-right py-2.5 px-3 tabular-nums">{item.unitPrice.toFixed(2)} €</td>
-                                                    <td className="text-right py-2.5 px-3 tabular-nums text-slate-400">{(item.discount || 0)}%</td>
-                                                    <td className="text-right py-2.5 px-3 font-medium tabular-nums">{finalTotal.toFixed(2)} €</td>
-                                                </tr>
-                                                {item.imageDataUrl && (
-                                                    <tr className="border-b border-gray-100 bg-gray-50/20">
-                                                        <td colSpan={5} className="py-3 px-3 text-center">
-                                                            <div className="relative h-32 w-48 mx-auto border rounded overflow-hidden">
-                                                                <Image src={item.imageDataUrl} alt={`Imatge per ${item.description}`} fill className="object-contain" />
-                                                            </div>
-                                                        </td>
-                                                    </tr>
-                                                )}
-                                            </React.Fragment>
+                                            <tr key={index} className="border-b border-slate-200">
+                                                <td className="py-3 px-4 font-medium">{item.description}</td>
+                                                <td className="text-right py-3 px-4 font-bold text-slate-500">{item.quantity.toFixed(2)}</td>
+                                                <td className="text-right py-3 px-4 font-bold text-slate-500">{item.unitPrice.toFixed(2)} €</td>
+                                                <td className="text-right py-3 px-4 font-black tabular-nums">{finalTotal.toFixed(2)} €</td>
+                                            </tr>
                                         );
                                     })}
                                 </tbody>
                             </table>
-                            <div className="flex justify-end pr-3">
-                                <p className="text-xs font-bold text-slate-500 uppercase tracking-tighter">
-                                    Subtotal {category}: <span className="ml-2 text-sm text-slate-900 font-black">{catSubtotal.toFixed(2)} €</span>
-                                </p>
+                            <div className="flex justify-end pr-4">
+                                <p className="text-xs font-black text-slate-400 uppercase">Subtotal {category}: <span className="ml-2 text-lg text-slate-900">{catSubtotal.toFixed(2)} €</span></p>
                             </div>
                         </div>
                     );
                 })}
 
                 {labor.cost > 0 && (
-                    <div className="mb-8 p-4 bg-slate-50 rounded-lg border border-slate-200">
-                        <div className="flex justify-between items-center">
-                            <div>
-                                <h4 className="font-bold text-sm uppercase text-slate-600">{labor.description}</h4>
-                                <p className="text-xs text-slate-400 italic">Treball tècnic especialitzat</p>
-                            </div>
-                            <span className="text-lg font-black">{labor.cost.toFixed(2)} €</span>
+                    <div className="mb-10 p-6 bg-slate-900 text-white rounded-2xl flex justify-between items-center shadow-lg">
+                        <div>
+                            <h4 className="font-black text-lg uppercase tracking-tight">{labor.description}</h4>
+                            <p className="text-sm text-slate-400 italic">Inclou muntatge, transport i posta en marxa.</p>
                         </div>
+                        <span className="text-3xl font-black tabular-nums text-primary">{labor.cost.toFixed(2)} €</span>
                     </div>
                 )}
 
-                <div className="flex justify-end mt-10">
-                    <div className="w-80 space-y-3 bg-slate-900 text-white p-6 rounded-2xl shadow-xl">
-                        {totalDiscountAmount > 0 && (
-                            <div className="flex justify-between text-xs text-slate-400 font-bold uppercase">
-                                <span>Total Estalvi</span>
-                                <span className="tabular-nums text-emerald-400">-{totalDiscountAmount.toFixed(2)} €</span>
-                            </div>
-                        )}
-                        <div className="flex justify-between text-xs text-slate-400 font-bold uppercase">
+                <div className="flex justify-end mt-12">
+                    <div className="w-96 space-y-4 bg-slate-900 text-white p-8 rounded-3xl shadow-2xl border-4 border-primary/20">
+                        <div className="flex justify-between text-sm text-slate-400 font-bold uppercase tracking-widest">
                             <span>Base Imposable</span>
                             <span className="tabular-nums">{subtotal.toFixed(2)} €</span>
                         </div>
-                        <div className="flex justify-between text-xs text-slate-400 font-bold uppercase">
-                            <span>IGI ({(IVA_RATE * 100).toFixed(1)}%)</span>
+                        <div className="flex justify-between text-sm text-slate-400 font-bold uppercase tracking-widest">
+                            <span>IGI (4.5%)</span>
                             <span className="tabular-nums">{iva.toFixed(2)} €</span>
                         </div>
-                        <div className="pt-4 border-t border-slate-700 flex justify-between items-center">
-                            <span className="text-md font-black uppercase tracking-tighter text-primary">Total Pressupost</span>
-                            <span className="text-3xl font-black tabular-nums">{totalGeneral.toFixed(2)} €</span>
+                        <div className="pt-6 border-t border-slate-700 flex justify-between items-center">
+                            <span className="text-xl font-black uppercase tracking-tighter text-primary">Total Pressupost</span>
+                            <span className="text-4xl font-black tabular-nums">{totalGeneral.toFixed(2)} €</span>
                         </div>
                     </div>
                 </div>
             </section>
 
-            <footer className="mt-16 pt-8 border-t text-sm text-gray-600">
-                <div className="bg-slate-50 p-6 rounded-xl border border-slate-200 shadow-inner">
-                    <p className="font-black text-xs text-slate-900 uppercase tracking-widest mb-4">Condicions i Validesa</p>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-xs leading-relaxed">
-                        <div className="space-y-2">
-                            <p><span className="font-bold text-slate-900 uppercase">Pagament:</span> {notes || defaultNotes}</p>
-                            <p><span className="font-bold text-slate-900 uppercase">Validesa:</span> 15 dies naturals des de la data d'emissió.</p>
-                        </div>
-                        <div className="space-y-2">
-                            <p><span className="font-bold text-slate-900 uppercase">Execució:</span> El termini depèn de la disponibilitat de materials i climatologia.</p>
-                            <p className="italic text-slate-400">Els preus indicats no inclouen possibles imprevistos no descrits en el detall.</p>
-                        </div>
-                    </div>
+            <footer className="mt-24 pt-10 border-t-2 border-slate-200">
+                <div className="bg-slate-50 p-8 rounded-2xl border-2 border-slate-100">
+                    <p className="font-black text-xs text-slate-900 uppercase tracking-[0.2em] mb-4">Condicions de Pagament i Execució</p>
+                    <p className="text-sm text-slate-600 leading-relaxed italic">{notes}</p>
                 </div>
-                <div className="text-center text-[10px] text-gray-400 mt-8 font-medium uppercase tracking-widest">
+                <div className="text-center text-[10px] text-slate-400 mt-12 font-black uppercase tracking-[0.3em]">
                     <p>TS SERVEIS - Solucions Tècniques i Manteniment</p>
                 </div>
             </footer>
-
         </div>
     )
 })

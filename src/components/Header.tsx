@@ -1,6 +1,7 @@
 'use client'
 
-import Link from 'next/link'
+import Link from 'next/navigation'
+import Image from 'next/image'
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Button } from '@/components/ui/button'
@@ -41,19 +42,18 @@ export function Header() {
   return (
     <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 items-center justify-between">
-        <Link href="/dashboard" className="flex items-center gap-2">
-          <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary text-primary-foreground">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
-              <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
-            </svg>
+        <a href="/dashboard" className="flex items-center gap-3">
+          <div className="relative h-10 w-32 md:w-40">
+            <Image 
+              src="/logo.png" 
+              alt="TS Serveis Logo" 
+              fill 
+              style={{ objectFit: 'contain' }}
+              priority
+            />
           </div>
-          <div className="flex flex-col items-start">
-            <span className="font-bold text-lg">TS Serveis</span>
-            <span className="text-xs text-muted-foreground leading-tight">convertim les teves idees en realitat</span>
-          </div>
-        </Link>
+        </a>
         
-        {/* Only render the user section once loading is complete */}
         {isUserLoading ? (
             <div className="flex items-center gap-4">
                 <div className="h-8 w-24 rounded-md bg-muted animate-pulse" />
@@ -61,60 +61,49 @@ export function Header() {
             </div>
         ) : user && (
           <div className="flex items-center gap-4">
-             <div className="hidden sm:flex items-center gap-2 flex-wrap justify-end">
-                {employee?.firstName && (
-                    <span className="text-sm font-medium">
-                    Bona feina, {employee.firstName}!
-                    </span>
-                )}
-                <>
-                    <Button variant="outline" size="sm" onClick={() => router.push('/dashboard/activity-report')}>
-                        <LineChart className="mr-2 h-4 w-4" />
-                        Relatórios
-                    </Button>
-                    <Button variant="outline" size="sm" onClick={() => router.push('/dashboard/invoices/history')}>
-                        <Receipt className="mr-2 h-4 w-4" />
-                        Factures
-                    </Button>
-                    <Button variant="outline" size="sm" onClick={() => router.push('/dashboard/quotes')}>
-                        <FileSignature className="mr-2 h-4 w-4" />
-                        Pressupostos
-                    </Button>
-                    <Button variant="outline" size="sm" onClick={() => router.push('/dashboard/reports')}>
-                        <FileText className="mr-2 h-4 w-4" />
-                        Albarans
-                    </Button>
-                     <Button variant="outline" size="sm" onClick={() => router.push('/dashboard/albarans')}>
-                        <FileArchive className="mr-2 h-4 w-4" />
-                        Historial Albarans
-                    </Button>
-                    <Button variant="outline" size="sm" onClick={() => router.push('/dashboard/customers')}>
-                        <Building className="mr-2 h-4 w-4" />
-                        Gestionar Clients
-                    </Button>
-                    <Button variant="outline" size="sm" onClick={() => router.push('/dashboard/users')}>
-                        <Users className="mr-2 h-4 w-4" />
-                        Gestionar Usuaris
-                    </Button>
-                </>
+             <div className="hidden lg:flex items-center gap-2 flex-wrap justify-end">
+                <Button variant="ghost" size="sm" onClick={() => router.push('/dashboard/activity-report')} className="font-bold">
+                    <LineChart className="mr-2 h-4 w-4" />
+                    Informes
+                </Button>
+                <Button variant="ghost" size="sm" onClick={() => router.push('/dashboard/invoices/history')} className="font-bold">
+                    <Receipt className="mr-2 h-4 w-4" />
+                    Factures
+                </Button>
+                <Button variant="ghost" size="sm" onClick={() => router.push('/dashboard/quotes/history')} className="font-bold">
+                    <FileSignature className="mr-2 h-4 w-4" />
+                    Pressupostos
+                </Button>
+                <Button variant="ghost" size="sm" onClick={() => router.push('/dashboard/albarans')} className="font-bold">
+                    <FileArchive className="mr-2 h-4 w-4" />
+                    Albarans
+                </Button>
+                <Button variant="ghost" size="sm" onClick={() => router.push('/dashboard/customers')} className="font-bold">
+                    <Building className="mr-2 h-4 w-4" />
+                    Clients
+                </Button>
               </div>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                 <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-                    <Avatar className="h-8 w-8">
+                 <Button variant="ghost" className="relative h-10 w-10 rounded-full border-2 border-primary/20">
+                    <Avatar className="h-full w-full">
                       <AvatarImage src={employee?.avatar ?? user.photoURL ?? undefined} alt={user.email ?? 'User'} />
                       <AvatarFallback>{getInitials(user.email, employee)}</AvatarFallback>
                     </Avatar>
                  </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuLabel>{employee?.firstName ? `${employee.firstName} ${employee.lastName}`: user.email}</DropdownMenuLabel>
+                <DropdownMenuLabel className="font-black">{employee?.firstName ? `${employee.firstName} ${employee.lastName}`: user.email}</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => router.push('/dashboard/profile')}>
                     <UserIcon className="mr-2 h-4 w-4" />
                     <span>Perfil</span>
                 </DropdownMenuItem>
-                 <DropdownMenuItem onClick={handleLogout}>
+                <DropdownMenuItem className="lg:hidden" onClick={() => router.push('/dashboard/users')}>
+                    <Users className="mr-2 h-4 w-4" />
+                    <span>Gestió Usuaris</span>
+                </DropdownMenuItem>
+                 <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:bg-destructive focus:text-destructive-foreground">
                     <LogOut className="mr-2 h-4 w-4" />
                     <span>Tanca la sessió</span>
                 </DropdownMenuItem>

@@ -50,18 +50,20 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
                 className="bg-white p-12 font-sans text-slate-900 printable-area mx-auto shadow-2xl"
                 style={{ width: '210mm', minHeight: '297mm' }}
             >
-                {/* Capçalera Estil Professional */}
-                <header className="flex justify-between items-start border-b-4 border-slate-900 pb-10 mb-10">
-                    <div className="flex gap-8">
-                        <div className="flex items-center justify-center w-20 h-20 rounded-2xl bg-primary text-primary-foreground shadow-lg">
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-12 h-12">
-                                <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
-                            </svg>
+                {/* Capçalera amb Logo TS Serveis */}
+                <header className="flex justify-between items-center border-b-4 border-slate-900 pb-10 mb-10">
+                    <div className="flex flex-col gap-4">
+                        <div className="relative h-24 w-64">
+                            <Image 
+                                src="/logo.png" 
+                                alt="TS Serveis" 
+                                fill 
+                                style={{ objectFit: 'contain', objectPosition: 'left' }}
+                            />
                         </div>
                         <div className="space-y-1">
-                            <h2 className="font-black text-3xl text-slate-900 uppercase tracking-tighter">TS Serveis</h2>
                             <p className="font-bold text-slate-600 text-lg">NRT: F352231c</p>
-                            <div className="pt-3 text-slate-500 text-sm leading-relaxed">
+                            <div className="text-slate-500 text-sm leading-relaxed">
                                 <p>Av. Francois Mitterrand 64, local 6</p>
                                 <p>AD200 Encamp, Andorra</p>
                                 <p className="font-semibold text-slate-700">Tel: (+376) 396 048 | eg.ad.tecnica@gmail.com</p>
@@ -79,7 +81,7 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
                     </div>
                 </header>
 
-                {/* Graella d'Informació */}
+                {/* Resto do documento... */}
                 <div className="grid grid-cols-2 gap-16 mb-12">
                     <section className="bg-slate-50 p-8 rounded-2xl border-2 border-slate-100">
                         <h3 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
@@ -116,7 +118,6 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
                     </section>
                 </div>
                 
-                {/* Taula de Tasques */}
                 {sortedServices.length > 0 && (
                     <section className="mb-12">
                         <h3 className="text-base font-black text-slate-900 mb-6 flex items-center gap-3">
@@ -161,7 +162,6 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
                     </section>
                 )}
                 
-                {/* Taula de Preus i Materials */}
                 {showPricing && allMaterials.length > 0 && (
                     <section className="mb-12 pt-10 border-t-4 border-slate-100">
                         <h3 className="text-base font-black text-slate-900 mb-6 flex items-center gap-3">
@@ -200,7 +200,6 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
                             </tbody>
                         </table>
 
-                        {/* Caixa de Totals */}
                         <div className="flex justify-end mt-10">
                             <div className="w-96 space-y-4 bg-slate-900 text-white p-8 rounded-2xl shadow-xl">
                                 <div className="flex justify-between text-sm text-slate-400 font-bold uppercase tracking-widest">
@@ -220,7 +219,6 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
                     </section>
                 )}
 
-                {/* Signatures */}
                 {services.some(s => s.customerSignatureDataUrl) && (
                     <section className="mt-16 pt-10 border-t-4 border-slate-100">
                         <h3 className="text-xs font-black text-slate-400 uppercase tracking-[0.3em] mb-10 border-b-2 pb-4">Confirmació de Recepció de Treballs</h3>
@@ -244,7 +242,6 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
                     </section>
                 )}
 
-                {/* Galeria d'Imatges */}
                 {allMedia.length > 0 && (
                     <section className="mt-16 pt-12 border-t-4 border-slate-100 page-break-before-always">
                         <h3 className="text-lg font-black text-slate-900 mb-10 uppercase tracking-widest flex items-center gap-3">
@@ -269,10 +266,9 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
                     </section>
                 )}
 
-                {/* Peu de Pàgina */}
                 <footer className="mt-24 pt-10 border-t-2 border-slate-200 flex justify-between items-end text-slate-400">
                     <div className="text-[11px] space-y-2 font-medium">
-                        <p className="font-black text-slate-500 text-xs">TS SERVEIS - Solucions Tècniques i Manteniment</p>
+                        <p className="font-black text-slate-500 text-xs uppercase tracking-tighter">TS SERVEIS - Solucions Tècniques i Manteniment</p>
                         <p>Aquest document certifica la realització dels treballs descrits.</p>
                         <p className="italic">Sense validesa fiscal fins a l'emissió de la factura corresponent.</p>
                     </div>
@@ -280,7 +276,7 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
                         <p className="text-xs font-black text-slate-900 uppercase tracking-widest mb-3">Gràcies per la seva confiança</p>
                         <div className="flex gap-2 justify-end">
                             <span className="w-3 h-3 rounded-full bg-primary"></span>
-                            <span className="w-3 h-3 rounded-full bg-slate-200"></span>
+                            <span className="w-3 h-3 rounded-full bg-accent"></span>
                             <span className="w-3 h-3 rounded-full bg-slate-300"></span>
                         </div>
                     </div>

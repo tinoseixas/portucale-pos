@@ -2,7 +2,7 @@
 import React, { forwardRef, useMemo } from 'react';
 import Image from 'next/image';
 import { Separator } from '@/components/ui/separator';
-import type { Customer, InvoiceItem, ServiceRecord, Employee } from '@/lib/types';
+import type { Customer, ServiceRecord, Employee } from '@/lib/types';
 import { format, differenceInMinutes, parseISO, isValid } from 'date-fns';
 import { ca } from 'date-fns/locale';
 import { calculateTotalAmount } from '@/lib/calculations';
@@ -16,7 +16,6 @@ interface InvoicePreviewProps {
   applyIva?: boolean;
 }
 
-// --- Component ---
 export const InvoicePreview = forwardRef<HTMLDivElement, InvoicePreviewProps>(({ customer, projectName, invoiceNumber, services, employees, applyIva = true }, ref) => {
     
     const { subtotal, iva, totalGeneral } = useMemo(() => calculateTotalAmount(services, employees, applyIva), [services, employees, applyIva]);
@@ -47,68 +46,68 @@ export const InvoicePreview = forwardRef<HTMLDivElement, InvoicePreviewProps>(({
     }, [services]);
 
     return (
-        <div ref={ref} className="bg-white p-8 font-sans text-gray-900 printable-area">
-            {/* Header */}
-            <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '2px solid #111827', paddingBottom: '1.5rem' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                     <div className="flex items-center justify-center w-12 h-12 rounded-lg bg-primary text-primary-foreground">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7">
-                            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
-                        </svg>
+        <div ref={ref} className="bg-white p-12 font-sans text-gray-900 printable-area mx-auto" style={{ width: '210mm' }}>
+            {/* Header com Logotipo TS Serveis */}
+            <header className="flex justify-between items-center border-b-2 border-slate-900 pb-8 mb-8">
+                <div className="flex flex-col gap-4">
+                    <div className="relative h-20 w-56">
+                        <Image 
+                            src="/logo.png" 
+                            alt="TS Serveis" 
+                            fill 
+                            style={{ objectFit: 'contain', objectPosition: 'left' }}
+                        />
                     </div>
                     <div className="text-sm text-gray-600">
-                        <h2 className="font-bold text-xl text-gray-900">TS Serveis</h2>
-                        <p>NRT: F352231c</p>
-                        <p>Avinguda Francois Mitterrand 64, local 6</p>
+                        <p className="font-bold text-gray-900">NRT: F352231c</p>
+                        <p>Av. Francois Mitterrand 64, local 6</p>
                         <p>AD200 Encamp, Andorra</p>
-                        <p>Tel: 376 396 048</p>
-                        <p>Email: eg.ad.tecnica@gmail.com</p>
+                        <p>Tel: 376 396 048 | eg.ad.tecnica@gmail.com</p>
                     </div>
                 </div>
-                <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                    <h1 className="text-3xl font-bold text-gray-900">Factura</h1>
-                     {invoiceNumber && invoiceNumber > 0 && <p className="text-md text-gray-700 font-semibold">Nº: {String(invoiceNumber).padStart(4, '0')}</p>}
-                    <p className="text-sm text-gray-600">Data: {format(new Date(), 'dd MMMM yyyy', { locale: ca })}</p>
+                <div className="text-right">
+                    <h1 className="text-4xl font-black text-gray-900 uppercase tracking-tighter">Factura</h1>
+                     {invoiceNumber && invoiceNumber > 0 && <p className="text-xl text-primary font-black mt-2">Nº: {String(invoiceNumber).padStart(4, '0')}</p>}
+                    <p className="text-sm text-gray-500 mt-1">Data: {format(new Date(), 'dd MMMM yyyy', { locale: ca })}</p>
                 </div>
             </header>
 
-            {/* Client and Project Info */}
+            {/* Resto da fatura... */}
             <section style={{ display: 'flex', justifyContent: 'space-between', gap: '2rem', marginTop: '2rem', marginBottom: '2rem' }}>
                 <div style={{ flex: 1 }}>
-                    <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">CLIENT</h3>
+                    <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-2">DADES DEL CLIENT</h3>
                     {customer ? (
                         <div className="space-y-1 text-base">
-                             <p className="font-bold">{customer.name}</p>
+                             <p className="font-black text-xl">{customer.name}</p>
                              <p className="text-gray-600">{customer.address || ''}</p>
-                             <p className="text-gray-600">{customer.nrt || 'NRT no especificat'}</p>
+                             <p className="text-gray-600">NIF: {customer.nrt || '-'}</p>
                              <p className="text-gray-600">{customer.email || ''}</p>
-                             <p className="text-gray-600">{customer.contact || ''}</p>
                         </div>
                     ) : <p className="text-gray-600">No especificat</p>}
                 </div>
                  <div style={{ flex: 1, textAlign: 'right' }}>
-                    <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">OBRA</h3>
-                    <p className="font-bold text-base">{projectName || 'No especificada'}</p>
+                    <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-2">PROJECTE / OBRA</h3>
+                    <p className="font-black text-xl text-primary">{projectName || 'No especificada'}</p>
                  </div>
             </section>
             
             <section className="page-break-before-auto">
-                <h3 className="font-bold text-lg mb-4">Detall de la Factura</h3>
+                <h3 className="font-black text-lg mb-4 border-b-2 pb-2 uppercase tracking-tight">Detall de Treballs i Materials</h3>
                 
                 {groupedByAlbaran.map(([albaranNum, { services: albaranServices, items: albaranItems }]) => (
-                    <div key={albaranNum} className="mb-6 page-break-inside-avoid">
+                    <div key={albaranNum} className="mb-8 page-break-inside-avoid">
                         {Number(albaranNum) > 0 && (
-                            <h4 className="font-bold text-md mb-2 bg-gray-100 p-2 rounded-md">Detalls de l'Albarà #{String(albaranNum).padStart(4, '0')}</h4>
+                            <h4 className="font-bold text-sm mb-3 bg-slate-100 p-2 rounded border-l-4 border-primary">Albarà de Referència #{String(albaranNum).padStart(4, '0')}</h4>
                         )}
                         
                         {albaranServices.length > 0 && (
-                             <table className="w-full text-sm mb-4">
-                                <thead className="bg-gray-50">
+                             <table className="w-full text-xs mb-4">
+                                <thead className="bg-slate-50">
                                     <tr className="border-b-2 border-gray-300">
-                                        <th className="text-left py-2 px-3 font-semibold text-gray-600">DATA</th>
-                                        <th className="text-left py-2 px-3 font-semibold text-gray-600">TÈCNIC</th>
-                                        <th className="text-left py-2 px-3 font-semibold text-gray-600">DESCRIPCIÓ TASCA</th>
-                                        <th className="text-right py-2 px-3 font-semibold text-gray-600">HORES</th>
+                                        <th className="text-left py-2 px-3 font-bold text-gray-600">DATA</th>
+                                        <th className="text-left py-2 px-3 font-bold text-gray-600">TÈCNIC</th>
+                                        <th className="text-left py-2 px-3 font-bold text-gray-600">DESCRIPCIÓ</th>
+                                        <th className="text-right py-2 px-3 font-bold text-gray-600">HORES</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -118,11 +117,11 @@ export const InvoicePreview = forwardRef<HTMLDivElement, InvoicePreviewProps>(({
                                         const minutes = (isValid(arrival) && isValid(departure) && departure > arrival) ? differenceInMinutes(departure, arrival) : 0;
                                         const hours = minutes > 0 ? (minutes / 60).toFixed(2) : '0.00';
                                         return (
-                                            <tr key={service.id} className="border-b border-gray-200">
-                                                <td className="py-2 px-3 align-top whitespace-nowrap">{format(arrival, 'dd/MM/yy')}</td>
-                                                <td className="py-2 px-3 align-top">{service.employeeName || getEmployeeName(service.employeeId)}</td>
-                                                <td className="py-2 px-3 align-top">{service.description}</td>
-                                                <td className="py-2 px-3 align-top text-right tabular-nums">{hours}</td>
+                                            <tr key={service.id} className="border-b border-gray-100">
+                                                <td className="py-2 px-3 align-top whitespace-nowrap font-medium text-gray-500">{format(arrival, 'dd/MM/yy')}</td>
+                                                <td className="py-2 px-3 align-top font-bold">{service.employeeName || getEmployeeName(service.employeeId)}</td>
+                                                <td className="py-2 px-3 align-top text-gray-700">{service.description}</td>
+                                                <td className="py-2 px-3 align-top text-right font-bold">{hours} h</td>
                                             </tr>
                                         )
                                     })}
@@ -131,13 +130,13 @@ export const InvoicePreview = forwardRef<HTMLDivElement, InvoicePreviewProps>(({
                         )}
                         
                         {albaranItems.length > 0 && (
-                        <table className="w-full text-sm">
-                            <thead className="bg-gray-50">
+                        <table className="w-full text-xs">
+                            <thead className="bg-slate-50">
                                 <tr className="border-b-2 border-gray-300">
-                                    <th className="text-left py-2 px-3 font-semibold text-gray-600">DESCRIPCIÓ MATERIAL</th>
-                                    <th className="text-right py-2 px-3 font-semibold text-gray-600 w-24">QUANT.</th>
-                                    <th className="text-right py-2 px-3 font-semibold text-gray-600 w-24">PREU/UNIT.</th>
-                                    <th className="text-right py-2 px-3 font-semibold text-gray-600 w-24">TOTAL</th>
+                                    <th className="text-left py-2 px-3 font-bold text-gray-600">MATERIAL</th>
+                                    <th className="text-right py-2 px-3 font-bold text-gray-600 w-20">QT.</th>
+                                    <th className="text-right py-2 px-3 font-bold text-gray-600 w-24">PVP</th>
+                                    <th className="text-right py-2 px-3 font-bold text-gray-600 w-24">TOTAL</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -145,21 +144,12 @@ export const InvoicePreview = forwardRef<HTMLDivElement, InvoicePreviewProps>(({
                                     const itemTotal = item.quantity * item.unitPrice;
                                     return (
                                     <React.Fragment key={`item-frag-${index}`}>
-                                        <tr className="border-b border-gray-200">
-                                            <td className="py-2 px-3">
-                                                {item.description}
-                                            </td>
+                                        <tr className="border-b border-gray-100">
+                                            <td className="py-2 px-3 font-medium">{item.description}</td>
                                             <td className="text-right py-2 px-3 tabular-nums">{item.quantity.toFixed(2)}</td>
                                             <td className="text-right py-2 px-3 tabular-nums">{item.unitPrice.toFixed(2)} €</td>
-                                            <td className="text-right py-2 px-3 font-medium tabular-nums">{itemTotal.toFixed(2)} €</td>
+                                            <td className="text-right py-2 px-3 font-bold tabular-nums text-gray-900">{itemTotal.toFixed(2)} €</td>
                                         </tr>
-                                        {item.imageDataUrl && (
-                                            <tr className="border-b border-gray-200 bg-gray-50">
-                                                <td colSpan={4} className="py-3 px-3 text-center">
-                                                    <Image src={item.imageDataUrl} alt={`Imatge per ${item.description}`} width={200} height={200} className="rounded-md object-contain mx-auto" />
-                                                </td>
-                                            </tr>
-                                        )}
                                     </React.Fragment>
                                 )})}
                             </tbody>
@@ -168,33 +158,29 @@ export const InvoicePreview = forwardRef<HTMLDivElement, InvoicePreviewProps>(({
                     </div>
                 ))}
                 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', alignItems: 'flex-start', marginTop: '1.5rem' }}>
-                    <div style={{ flex: 1 }}>
-                        {/* Placeholder for notes if needed */}
-                    </div>
-                    <div style={{ marginLeft: 'auto', width: '250px' }} className="space-y-2 text-sm">
-                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                            <span className="font-semibold text-gray-700">Subtotal:</span>
-                            <span className="font-medium tabular-nums">{subtotal.toFixed(2)} €</span>
+                <div className="flex justify-end mt-10">
+                    <div className="w-80 space-y-3 bg-slate-900 text-white p-8 rounded-2xl shadow-xl">
+                        <div className="flex justify-between text-sm font-bold uppercase tracking-wider text-slate-400">
+                            <span>Subtotal:</span>
+                            <span className="tabular-nums">{subtotal.toFixed(2)} €</span>
                         </div>
                         {applyIva && (
-                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                <span className="font-semibold text-gray-700">IGI ({String(calculateTotalAmount([], []).iva).slice(2, 4)}%):</span>
-                                <span className="font-medium tabular-nums">{iva.toFixed(2)} €</span>
+                            <div className="flex justify-between text-sm font-bold uppercase tracking-wider text-slate-400">
+                                <span>IGI (4.5%):</span>
+                                <span className="tabular-nums">{iva.toFixed(2)} €</span>
                             </div>
                         )}
-                        <Separator />
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }} className="font-bold text-base">
-                            <span>Total General:</span>
-                            <span className="text-xl">{totalGeneral.toFixed(2)} €</span>
+                        <div className="pt-4 border-t border-slate-700 flex justify-between items-center">
+                            <span className="text-lg font-black uppercase tracking-tighter">Total Factura</span>
+                            <span className="text-3xl font-black tabular-nums text-primary">{totalGeneral.toFixed(2)} €</span>
                         </div>
                     </div>
                 </div>
             </section>
 
-             <footer className="mt-16 pt-6 border-t text-center text-xs text-gray-500">
-                <p>Gràcies per la seva confiança.</p>
-                <p>Aquest document és una factura simplificada.</p>
+             <footer className="mt-24 pt-8 border-t text-center text-[10px] text-gray-400 uppercase tracking-widest font-bold">
+                <p>TS SERVEIS - Solucions Tècniques i Manteniment</p>
+                <p className="mt-2">Gràcies per la seva confiança.</p>
             </footer>
 
         </div>
