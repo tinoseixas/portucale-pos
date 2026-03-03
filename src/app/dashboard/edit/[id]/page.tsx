@@ -47,8 +47,8 @@ type Material = {
     imageDataUrl?: string;
 }
 
-const MAX_IMAGE_WIDTH = 1600; // Augmentat per a millor OCR
-const IMAGE_QUALITY = 0.7; 
+const MAX_IMAGE_WIDTH = 2000; // Augmentat per a OCR d'alta definició
+const IMAGE_QUALITY = 0.9; // Més qualitat per a millor lectura de números
 
 function resizeAndCompressImage(file: File): Promise<string> {
     return new Promise((resolve, reject) => {
@@ -181,36 +181,33 @@ export default function EditServicePage() {
     if (!file) return;
     
     setIsExtracting(true);
-    toast({ title: 'Processant imatge...', description: 'Llegint contingut amb IA.' });
+    toast({ title: 'Processant imatge...', description: 'Llegint contingut amb alta definició.' });
     
     try {
         const dataUrl = await resizeAndCompressImage(file);
         const res = await extractMaterialsFromPhoto({ photoDataUri: dataUrl });
         
         if (res.materials && res.materials.length > 0) {
-            // Netegem línies buides actuals
             const currentFilledMaterials = materials.filter(m => m.description.trim() !== '' || m.unitPrice > 0);
-            
-            // Afegim els nous materials extrets
             setMaterials([...currentFilledMaterials, ...res.materials.map(m => ({ ...m, imageDataUrl: dataUrl }))]);
             
             toast({ 
                 title: 'Lectura completada', 
-                description: `S'han afegit ${res.materials.length} articles nous.` 
+                description: `S'han afegit ${res.materials.length} articles trobats.` 
             });
         } else {
             toast({ 
                 variant: 'destructive',
-                title: 'No s\'han trobat dades', 
-                description: "L'IA no ha pogut identificar articles clarament. Prova amb una altra foto." 
+                title: 'No s\'han detectat dades', 
+                description: "Prova de fer la foto de més a prop o amb més llum. L'IA no ha pogut llegir els camps clarament." 
             });
         }
     } catch (e: any) {
         console.error("OCR Error:", e);
         toast({ 
             variant: 'destructive', 
-            title: 'Error de lectura', 
-            description: e.message || 'No s\'ha pogut processar la foto.' 
+            title: 'Error de processament', 
+            description: 'No s\'ha pogut analitzar el document. Intenta-ho de nou.' 
         });
     } finally {
         setIsExtracting(false);

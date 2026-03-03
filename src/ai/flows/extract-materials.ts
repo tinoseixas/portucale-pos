@@ -1,21 +1,21 @@
 'use server';
 /**
- * @fileOverview Flux d'extracció de materials des d'imatges utilitzant Genkit 1.x.
+ * @fileOverview Flux d'extracció de materials mitjançant IA (OCR).
  * 
- * - extractMaterialsFromPhoto: Funció principal que crida al flux d'IA.
+ * Millorat per ser més resilient a imatges de tiquets i albarans.
  */
 
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 
 const ExtractMaterialsInputSchema = z.object({
-  photoDataUri: z.string().describe("Data URI de la foto de l'albarà o tiquet. Format: 'data:<mimetype>;base64,<encoded_data>'."),
+  photoDataUri: z.string().describe("Data URI de la imatge del document."),
 });
 export type ExtractMaterialsInput = z.infer<typeof ExtractMaterialsInputSchema>;
 
 const MaterialSchema = z.object({
-  description: z.string().describe('Descripció detallada del material en CATALÀ.'),
-  quantity: z.number().describe('Quantitat numèrica utilitzada.'),
+  description: z.string().describe('Descripció de l\'article en CATALÀ.'),
+  quantity: z.number().describe('Quantitat (número).'),
   unitPrice: z.number().describe('Preu unitari sense impostos.'),
 });
 
@@ -24,20 +24,21 @@ const ExtractMaterialsOutputSchema = z.object({
 });
 export type ExtractMaterialsOutput = z.infer<typeof ExtractMaterialsOutputSchema>;
 
-// Definim el prompt utilitzant la sintaxi Handlebars per a mitjans
 const extractMaterialsPrompt = ai.definePrompt({
   name: 'extractMaterialsPrompt',
   input: { schema: ExtractMaterialsInputSchema },
   output: { schema: ExtractMaterialsOutputSchema },
-  prompt: `Extrau tots els materials, articles i conceptes de mà d'obra d'aquesta imatge de document (tiquet o albarà de compra).
+  prompt: `Actua com un sistema d'extracció de dades OCR d'alt rendiment. 
     
-    INSTRUCCIONS CRÍTIQUES:
-    1. Tradueix totes les descripcions al CATALÀ professional.
-    2. Identifica la quantitat (quantity) i el preu unitari (unitPrice).
-    3. Si no hi ha preu unitari però hi ha un total per línia, calcula el preu unitari dividint el total per la quantitat.
-    4. Si un valor no és clar, posa 0.
-    5. Retorna NOMÉS la llista d'articles comprats en el format JSON especificat.
-    6. Imatge adjunta: {{media url=photoDataUri}}`,
+    Analitza aquesta imatge de tiquet o albarà de compra: {{media url=photoDataUri}}
+    
+    TASCA:
+    1. Identifica tots els materials, subministraments o articles comprats.
+    2. Per a cada article, extreu la descripció, la quantitat i el preu unitari.
+    3. Tradueix les descripcions al CATALÀ tècnic professional.
+    4. Si només veus un total per línia, calcula el preu unitari (Total / Quantitat).
+    5. Ignora capçaleres del comerç o dades bancàries.
+    6. Retorna la llista d'articles en el format JSON especificat.`,
 });
 
 const extractMaterialsFlow = ai.defineFlow(
@@ -51,7 +52,7 @@ const extractMaterialsFlow = ai.defineFlow(
       const { output } = await extractMaterialsPrompt(input, {
         model: 'googleai/gemini-1.5-flash',
         config: {
-          temperature: 0.1, // Temperatura molt baixa per a dades estructurades
+          temperature: 0.2, // Una mica més de flexibilitat per detectar dades difícils
         }
       });
       
@@ -62,7 +63,8 @@ const extractMaterialsFlow = ai.defineFlow(
       return output;
     } catch (error) {
       console.error("Error en extractMaterialsFlow:", error);
-      throw new Error("No s'ha pogut processar la imatge. Verifica que sigui nítida.");
+      // Retornem un resultat buit en lloc de llançar un error per permetre al frontend gestionar-ho millor
+      return { materials: [] };
     }
   }
 );
