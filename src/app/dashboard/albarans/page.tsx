@@ -1,8 +1,9 @@
+
 'use client'
 
 import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { useCollection, useUser, useFirestore, useMemoFirebase, deleteDocumentNonBlocking } from '@/firebase'
+import { useCollection, useUser, useFirestore, useMemoFirebase, deleteDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase'
 import { collection, query, orderBy, doc, getDocs, collectionGroup, writeBatch, where } from 'firebase/firestore'
 import type { Albaran, ServiceRecord, Employee, Customer } from '@/lib/types'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -10,7 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Eye, FileArchive, CreditCard, Clock, CheckCircle2, Loader2, Trash2, Users, RefreshCw, Briefcase, AlertCircle, Search, Filter, X } from 'lucide-react'
+import { Eye, FileArchive, CreditCard, Clock, CheckCircle2, Loader2, Trash2, Users, RefreshCw, Briefcase, AlertCircle, Search, Filter, X, Archive, Edit } from 'lucide-react'
 import { AdminGate } from '@/components/AdminGate'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -63,6 +64,7 @@ export default function AlbaransHistoryPage() {
 
   const pendingAlbarans = useMemo(() => filteredAlbarans.filter(a => a.status === 'pendent'), [filteredAlbarans]);
   const historyAlbarans = useMemo(() => filteredAlbarans.filter(a => a.status === 'facturat'), [filteredAlbarans]);
+  const archivedAlbarans = useMemo(() => filteredAlbarans.filter(a => a.status === 'arxivat'), [filteredAlbarans]);
 
   const handleDeleteAlbaran = (albaranId: string, albaranNumber: number) => {
     if (!firestore) return;
@@ -72,6 +74,13 @@ export default function AlbaransHistoryPage() {
         title: 'Document esborrat', 
         description: `L'albarà #${albaranNumber} s'ha eliminat de la llista.` 
     });
+  }
+
+  const handleArchiveAlbaran = (albaranId: string) => {
+    if (!firestore) return;
+    const albaranRef = doc(firestore, 'albarans', albaranId);
+    updateDocumentNonBlocking(albaranRef, { status: 'arxivat' });
+    toast({ title: 'Albarà arxivat', description: 'El document s\'ha mogut a la pestanya d\'arxiu.' });
   }
 
   const handleSyncAlbarans = async () => {
@@ -86,10 +95,14 @@ export default function AlbaransHistoryPage() {
         const servicesSnap = await getDocs(collectionGroup(firestore, 'serviceRecords'));
         const allServices = servicesSnap.docs.map(d => ({ id: d.id, ...d.data() } as ServiceRecord));
         
-        const invoicedServiceIds = new Set(albarans?.filter(a => a.status === 'facturat').flatMap(a => a.serviceRecordIds) || []);
+        // Excloem serveis que ja estan en albarans FACTURATS o ARXIVATS
+        const handledServiceIds = new Set(
+            albarans?.filter(a => a.status === 'facturat' || a.status === 'arxivat')
+                     .flatMap(a => a.serviceRecordIds) || []
+        );
         
         const pendingServices = allServices.filter(s => 
-            !invoicedServiceIds.has(s.id) && 
+            !handledServiceIds.has(s.id) && 
             s.description !== "Servei en curs..." &&
             s.customerId && s.projectName
         );
@@ -113,6 +126,7 @@ export default function AlbaransHistoryPage() {
         const counterSnap = await getDocs(query(collection(firestore, "counters"), where("__name__", "==", "albarans")));
         let nextNum = !counterSnap.empty ? counterSnap.docs[0].data().lastNumber : 0;
 
+        // Esborrem només els pendents actuals per regenerar-los amb les noves dades
         albarans?.filter(a => a.status === 'pendent').forEach(a => {
             batch.delete(doc(firestore, 'albarans', a.id));
         });
@@ -217,12 +231,15 @@ export default function AlbaransHistoryPage() {
         </Card>
 
         <Tabs defaultValue="pendents" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 max-w-md mb-6 bg-slate-100 p-1">
+          <TabsList className="grid w-full grid-cols-3 max-w-lg mb-6 bg-slate-100 p-1">
             <TabsTrigger value="pendents" className="font-bold gap-2 data-[state=active]:bg-white">
                 <Clock className="h-4 w-4" /> Pendents {pendingAlbarans.length > 0 && <Badge variant="destructive" className="ml-1">{pendingAlbarans.length}</Badge>}
             </TabsTrigger>
             <TabsTrigger value="historial" className="font-bold gap-2 data-[state=active]:bg-white">
                 <CheckCircle2 className="h-4 w-4" /> Facturats
+            </TabsTrigger>
+            <TabsTrigger value="arxivats" className="font-bold gap-2 data-[state=active]:bg-white">
+                <Archive className="h-4 w-4" /> Arxivats
             </TabsTrigger>
           </TabsList>
 
@@ -264,10 +281,13 @@ export default function AlbaransHistoryPage() {
                                 <TableCell className="font-black text-lg text-slate-900">{albaran.totalAmount.toFixed(2)} €</TableCell>
                                 <TableCell className="text-right">
                                     <div className="flex justify-end gap-2">
-                                        <Button variant="outline" size="sm" asChild className="h-8 font-bold">
+                                        <Button variant="outline" size="icon" asChild className="h-8 w-8 font-bold border-primary text-primary hover:bg-primary/10" title="Editar">
                                             <Link href={`/dashboard/albarans/${albaran.id}`}>
-                                                <Eye className="h-4 w-4 mr-1" /> Veure
+                                                <Edit className="h-4 w-4" />
                                             </Link>
+                                        </Button>
+                                        <Button variant="outline" size="icon" onClick={() => handleArchiveAlbaran(albaran.id)} className="h-8 w-8 font-bold text-slate-500" title="Arxivar">
+                                            <Archive className="h-4 w-4" />
                                         </Button>
                                         <Button size="sm" asChild className="bg-primary hover:bg-primary/90 h-8 shadow-sm font-bold">
                                             <Link href={`/dashboard/invoices?customerId=${albaran.customerId}&albaranId=${albaran.id}`}>
@@ -372,6 +392,55 @@ export default function AlbaransHistoryPage() {
                             {historyAlbarans.length === 0 && (
                                 <TableRow>
                                     <TableCell colSpan={5} className="h-32 text-center text-muted-foreground italic">No s'han trobat albarans facturats amb aquests filtres.</TableCell>
+                                </TableRow>
+                            )}
+                        </TableBody>
+                    </Table>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="arxivats">
+            <Card className="shadow-sm border-slate-200">
+              <CardHeader className="bg-slate-50">
+                <CardTitle className="flex items-center gap-2 text-slate-600">Albarans arxivats</CardTitle>
+                <CardDescription>Documents que no s'han facturat i s'han tret del llistat actiu.</CardDescription>
+              </CardHeader>
+              <CardContent className="pt-6">
+                <div className="overflow-x-auto">
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Nº Albarà</TableHead>
+                                <TableHead>Obra</TableHead>
+                                <TableHead>Client</TableHead>
+                                <TableHead>Total</TableHead>
+                                <TableHead className="text-right">Accions</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {archivedAlbarans.map(albaran => (
+                                <TableRow key={albaran.id} className="opacity-60 bg-slate-50/50">
+                                    <TableCell className="font-bold">#{String(albaran.albaranNumber).padStart(4, '0')}</TableCell>
+                                    <TableCell>{albaran.projectName}</TableCell>
+                                    <TableCell>{albaran.customerName}</TableCell>
+                                    <TableCell>{albaran.totalAmount.toFixed(2)} €</TableCell>
+                                    <TableCell className="text-right">
+                                        <div className="flex justify-end gap-2">
+                                            <Button variant="outline" size="sm" onClick={() => updateDocumentNonBlocking(doc(firestore!, 'albarans', albaran.id), { status: 'pendent' })} className="h-8 font-bold">
+                                                Recuperar
+                                            </Button>
+                                            <Button variant="ghost" size="icon" onClick={() => handleDeleteAlbaran(albaran.id, albaran.albaranNumber)} className="h-8 w-8 text-destructive">
+                                                <Trash2 className="h-4 w-4" />
+                                            </Button>
+                                        </div>
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                            {archivedAlbarans.length === 0 && (
+                                <TableRow>
+                                    <TableCell colSpan={5} className="h-32 text-center text-muted-foreground italic">No hi ha albarans arxivats.</TableCell>
                                 </TableRow>
                             )}
                         </TableBody>

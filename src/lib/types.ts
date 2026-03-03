@@ -58,7 +58,7 @@ export interface Albaran {
   projectName: string;
   serviceRecordIds: string[];
   totalAmount: number;
-  status: 'pendent' | 'facturat';
+  status: 'pendent' | 'facturat' | 'arxivat';
   updatedAt?: string;
   employeeId?: string;
   employeeName?: string;

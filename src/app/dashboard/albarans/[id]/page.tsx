@@ -1,3 +1,4 @@
+
 'use client'
 
 import { useState, useRef, useEffect, useCallback } from 'react'
@@ -9,7 +10,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { FileDown, Loader2, ArrowLeft, Trash2, Briefcase, CreditCard, AlertCircle, Edit, Save, ListChecks, ArrowRight } from 'lucide-react'
+import { FileDown, Loader2, ArrowLeft, Trash2, Briefcase, CreditCard, AlertCircle, Edit, Save, ListChecks, ArrowRight, Archive, ArchiveRestore } from 'lucide-react'
 import { ReportPreview } from '@/components/ReportPreview'
 import {
   AlertDialog,
@@ -179,6 +180,13 @@ export default function AlbaranDetailPage() {
         toast({ title: 'Albarà actualitzat', description: 'El nom del projecte s\'ha canviat.' });
     };
 
+    const toggleArchive = () => {
+        if (!albaranDocRef || !albaran) return;
+        const newStatus = albaran.status === 'arxivat' ? 'pendent' : 'arxivat';
+        updateDocumentNonBlocking(albaranDocRef, { status: newStatus });
+        toast({ title: newStatus === 'arxivat' ? 'Albarà arxivat' : 'Albarà recuperat' });
+    }
+
     const handleDeleteAlbaran = () => {
         if (!albaranDocRef) return;
         deleteDocumentNonBlocking(albaranDocRef);
@@ -200,6 +208,14 @@ export default function AlbaranDetailPage() {
                 <Button onClick={() => router.push('/dashboard/albarans')} variant="outline">Tornar al llistat</Button>
             </div>
         )
+    }
+
+    const getStatusBadge = () => {
+        switch (albaran.status) {
+            case 'facturat': return <Badge variant="default" className="uppercase bg-green-600">FACTURAT</Badge>;
+            case 'arxivat': return <Badge variant="outline" className="uppercase border-slate-400 text-slate-500 bg-slate-100">ARXIVAT</Badge>;
+            default: return <Badge variant="destructive" className="uppercase">PENDENT</Badge>;
+        }
     }
 
     return (
@@ -234,11 +250,22 @@ export default function AlbaranDetailPage() {
                         </Dialog>
 
                         {albaran.status === 'pendent' && (
-                            <Button asChild className="bg-green-600 hover:bg-green-700 shadow-md font-bold">
-                                <Link href={`/dashboard/invoices?customerId=${albaran.customerId}&albaranId=${albaran.id}`}>
-                                    <CreditCard className="mr-2 h-4 w-4" />
-                                    Facturar
-                                </Link>
+                            <>
+                                <Button asChild className="bg-green-600 hover:bg-green-700 shadow-md font-bold">
+                                    <Link href={`/dashboard/invoices?customerId=${albaran.customerId}&albaranId=${albaran.id}`}>
+                                        <CreditCard className="mr-2 h-4 w-4" />
+                                        Facturar
+                                    </Link>
+                                </Button>
+                                <Button variant="outline" onClick={toggleArchive} className="font-bold text-slate-600">
+                                    <Archive className="mr-2 h-4 w-4" /> Arxivar
+                                </Button>
+                            </>
+                        )}
+
+                        {albaran.status === 'arxivat' && (
+                            <Button variant="outline" onClick={toggleArchive} className="font-bold text-primary">
+                                <ArchiveRestore className="mr-2 h-4 w-4" /> Restaurar
                             </Button>
                         )}
 
@@ -309,9 +336,9 @@ export default function AlbaranDetailPage() {
                                 </CardTitle>
                                 <CardDescription className="text-slate-400">Projecte: {albaran.projectName}</CardDescription>
                             </div>
-                            <Badge variant={albaran.status === 'facturat' ? 'default' : 'destructive'} className="uppercase">
-                                {albaran.status}
-                            </Badge>
+                            <div className="flex flex-col items-end gap-2">
+                                {getStatusBadge()}
+                            </div>
                         </div>
                     </CardHeader>
                     <CardContent className="p-0">

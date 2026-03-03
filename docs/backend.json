@@ -243,8 +243,8 @@
         },
         "status": {
             "type": "string",
-            "enum": ["pendent", "facturat"],
-            "description": "The status of the albarà, indicating if it has been invoiced."
+            "enum": ["pendent", "facturat", "arxivat"],
+            "description": "The status of the albarà, indicating if it has been invoiced or archived."
         }
       },
       "required": ["id", "albaranNumber", "createdAt", "projectName", "serviceRecordIds", "totalAmount", "status"]
