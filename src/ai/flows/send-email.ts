@@ -7,9 +7,6 @@
 
 import { Resend } from 'resend';
 
-// Nota: El client haurà de configurar RESEND_API_KEY a les seves variables d'entorn (.env)
-const resend = new Resend(process.env.RESEND_API_KEY);
-
 interface SendEmailParams {
   to: string;
   subject: string;
@@ -27,14 +24,17 @@ export async function sendDocumentEmail({ to, subject, html, attachments }: Send
   }
 
   try {
+    // Inicialitzem Resend dins de la funció per evitar errors de compilació
+    const resend = new Resend(process.env.RESEND_API_KEY);
+
     const { data, error } = await resend.emails.send({
-      from: 'TS Serveis <onboarding@resend.dev>', // Nota: Resend permet enviar des del domini propi si es verifica.
+      from: 'TS Serveis <onboarding@resend.dev>',
       to: [to],
       subject: subject,
       html: html,
       attachments: attachments?.map(a => ({
         filename: a.filename,
-        content: a.content.split(',')[1], // Netegem el prefix data:application/pdf;base64,
+        content: a.content.includes('base64,') ? a.content.split('base64,')[1] : a.content,
       })),
     });
 
