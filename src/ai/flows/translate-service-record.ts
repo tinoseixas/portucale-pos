@@ -5,7 +5,7 @@
  */
 
 import { ai } from '@/ai/genkit';
-import { z } from 'genkit';
+import { z } from 'zod';
 
 const TranslateInputSchema = z.object({
   text: z.string().describe('The technical text to translate.')
@@ -25,15 +25,11 @@ const translatePrompt = ai.definePrompt({
   name: 'translatePrompt',
   input: { schema: TranslateInputSchema },
   output: { schema: TranslateOutputSchema },
-  prompt: `Act as a professional technical translator for the construction and maintenance sector in Andorra. 
+  prompt: `Translate the following construction/maintenance work description to professional, concise CATALAN. 
   
-  Translate the following service description or technical note to professional CATALAN. 
-  - Fix any spelling and punctuation errors.
-  - Keep the tone professional and concise.
-  - Preserve any numbers, measurements, or technical codes.
+  Fix spelling, punctuation, and maintain a professional tone suitable for an official report.
   
-  TEXT TO TRANSLATE: 
-  "{{{text}}}"`,
+  TEXT: "{{{text}}}"`,
 });
 
 /**
@@ -46,7 +42,7 @@ export async function translateToCatalan(input: TranslateInput): Promise<Transla
     const { output } = await translatePrompt(input);
     return output || { translatedText: input.text };
   } catch (error) {
-    console.error("Error en translateToCatalan:", error);
+    console.error("Error in translateToCatalan:", error);
     return { translatedText: input.text };
   }
 }
