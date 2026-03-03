@@ -1,8 +1,8 @@
 'use server';
 /**
- * @fileOverview Servei d'enviament de correus electrònics.
- * Utilitza Resend per garantir l'entrega dels documents PDF.
- * Permet configurar el remitent mitjançant variables d'entorn.
+ * @fileOverview Serviço de envio de e-mails.
+ * Utiliza o Resend para garantir a entrega de documentos PDF.
+ * Configurado para usar o e-mail da empresa do usuário: eg.ad.tecnica@gmail.com
  */
 
 import { Resend } from 'resend';
@@ -15,20 +15,20 @@ interface SendEmailParams {
 }
 
 /**
- * Envia un correu electrònic amb fitxers adjunts (base64).
+ * Envia um e-mail com arquivos anexos (base64).
  */
 export async function sendDocumentEmail({ to, subject, html, attachments }: SendEmailParams) {
   if (!process.env.RESEND_API_KEY) {
-    console.error('RESEND_API_KEY no està configurada.');
-    return { success: false, error: 'Configuració de correu pendent (.env)' };
+    console.error('RESEND_API_KEY não configurada no arquivo .env');
+    return { success: false, error: 'Configuração de e-mail pendente (API Key)' };
   }
 
   try {
     const resend = new Resend(process.env.RESEND_API_KEY);
     
-    // El remitent es configura a .env. Si no hi és, utilitzem el mode de proves de Resend.
-    // Un cop verifiquis el teu domini a Resend, posa la teva adreça a RESEND_FROM_EMAIL.
-    const fromAddress = process.env.RESEND_FROM_EMAIL || 'TS Serveis <onboarding@resend.dev>';
+    // O remetente padrão é o e-mail da sua empresa.
+    // IMPORTANTE: Este e-mail deve ser verificado no painel do Resend (Single Sender Verification).
+    const fromAddress = process.env.RESEND_FROM_EMAIL || 'TS Serveis <eg.ad.tecnica@gmail.com>';
 
     const { data, error } = await resend.emails.send({
       from: fromAddress,
@@ -42,13 +42,13 @@ export async function sendDocumentEmail({ to, subject, html, attachments }: Send
     });
 
     if (error) {
-      console.error('Error enviant correu:', error);
+      console.error('Erro ao enviar e-mail via Resend:', error);
       return { success: false, error: error.message };
     }
 
     return { success: true, data };
   } catch (err: any) {
-    console.error('Excepció enviant correu:', err);
-    return { success: false, error: err.message || 'Error desconegut' };
+    console.error('Exceção ao enviar e-mail:', err);
+    return { success: false, error: err.message || 'Erro desconhecido no servidor de e-mail' };
   }
 }
