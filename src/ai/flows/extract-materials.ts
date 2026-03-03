@@ -1,7 +1,7 @@
 'use server';
 /**
  * @fileOverview Flux d'extracció de materials mitjançant IA (OCR).
- * Optimitzat per a Genkit 1.x i Gemini 1.5 Flash.
+ * Optimitzat per a Genkit 1.x i Gemini 1.5 Flash amb suport multimodal.
  */
 
 import { ai } from '@/ai/genkit';
@@ -27,30 +27,33 @@ export type ExtractMaterialsOutput = z.infer<typeof ExtractMaterialsOutputSchema
 
 /**
  * Definició del prompt per a l'extracció de dades de tiquets.
+ * Utilitza Gemini 1.5 Flash per a una millor visió artificial.
  */
 const extractMaterialsPrompt = ai.definePrompt({
   name: 'extractMaterialsPrompt',
+  model: 'googleai/gemini-1.5-flash',
   input: { schema: ExtractMaterialsInputSchema },
   output: { schema: ExtractMaterialsOutputSchema },
-  prompt: `Act as an expert OCR assistant for construction and technical services. 
+  config: {
+    temperature: 0.1, // Mínima variabilitat per a dades numèriques
+  },
+  prompt: `You are an expert OCR assistant for construction supply receipts. 
   
+  TASK:
   {{#if isSingleItem}}
-  Focus ONLY on the most prominent item in this image. Extract its technical description, quantity, and unit price.
+  Focus ONLY on the most prominent single item or line shown in this image. Extract its technical description, quantity, and unit price.
   {{else}}
-  Extract all technical line items from this receipt image. 
+  Extract all individual technical line items from this receipt image. Ignore totals, tax info, and store headers.
   {{/if}}
   
-  For each item:
-  - description: Translate the technical name to professional CATALAN.
-  - quantity: The number of units.
-  - unitPrice: The price per unit. If you only see the line total, calculate unitPrice = total / quantity.
+  EXTRACTION RULES:
+  - description: Translate the technical name to professional CATALAN (e.g., "Tub multicapa", "Colze 90", "Aixeta").
+  - quantity: The number of units. If not clearly visible, assume 1.
+  - unitPrice: The price per unit before any line discounts. If only total is visible, calculate unitPrice = total / quantity.
   
-  Rules:
-  - Output MUST be valid JSON matching the schema.
-  - Descriptions must be in CATALAN.
-  - Ignore totals, taxes (IGI/IVA), and shop headers.
+  The output MUST be a valid JSON object with a "materials" array.
   
-  Image: {{media url=photoDataUri}}`,
+  Image to analyze: {{media url=photoDataUri}}`,
 });
 
 /**
@@ -59,7 +62,10 @@ const extractMaterialsPrompt = ai.definePrompt({
 export async function extractMaterialsFromPhoto(input: ExtractMaterialsInput): Promise<ExtractMaterialsOutput> {
   try {
     const { output } = await extractMaterialsPrompt(input);
-    return output || { materials: [] };
+    if (!output || !output.materials) {
+        return { materials: [] };
+    }
+    return output;
   } catch (error) {
     console.error("Error in extractMaterialsFromPhoto:", error);
     return { materials: [] };

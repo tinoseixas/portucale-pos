@@ -47,8 +47,8 @@ type Material = {
     imageDataUrl?: string;
 }
 
-const MAX_IMAGE_WIDTH = 2000; // Resolució alta per a OCR
-const IMAGE_QUALITY = 0.9; // Qualitat màxima per a IA
+const MAX_IMAGE_WIDTH = 1600; // Resolució ideal per a Gemini OCR
+const IMAGE_QUALITY = 0.85; // Qualitat nítida però optimitzada
 
 function resizeAndCompressImage(file: File): Promise<string> {
     return new Promise((resolve, reject) => {
@@ -173,7 +173,7 @@ export default function EditServicePage() {
         }
         toast({ title: 'Text corregit al català' });
     } catch (e) {
-        toast({ variant: 'destructive', title: 'Error en traducció' });
+        toast({ variant: 'destructive', title: 'Error en traducció', description: 'No s\'ha pogut connectar amb la IA.' });
     } finally {
         setIsTranslating(false);
     }
@@ -184,7 +184,10 @@ export default function EditServicePage() {
     if (!file) return;
     
     setIsExtracting(true);
-    toast({ title: lineIndex !== null ? 'Escanejant línia...' : 'Processant tiquet...', description: 'L\'IA està llegint les dades.' });
+    toast({ 
+        title: lineIndex !== null ? 'Analitzant article...' : 'Analitzant tiquet...', 
+        description: 'L\'IA està processant la imatge.' 
+    });
     
     try {
         const dataUrl = await resizeAndCompressImage(file);
@@ -195,7 +198,6 @@ export default function EditServicePage() {
         
         if (res.materials && res.materials.length > 0) {
             if (lineIndex !== null) {
-                // Actualitzar una línia específica
                 const newMaterials = [...materials];
                 const item = res.materials[0];
                 newMaterials[lineIndex] = {
@@ -205,20 +207,20 @@ export default function EditServicePage() {
                     imageDataUrl: dataUrl
                 };
                 setMaterials(newMaterials);
-                toast({ title: 'Línia actualitzada!' });
+                toast({ title: 'Article actualitzat!' });
             } else {
-                // Afegir nous materials detectats
+                // Filtrem línies buides actuals abans d'afegir les noves
                 const currentFilledMaterials = materials.filter(m => m.description.trim() !== '' || m.unitPrice > 0);
                 const newDetected = res.materials.map(m => ({ ...m, imageDataUrl: dataUrl }));
                 setMaterials([...currentFilledMaterials, ...newDetected]);
                 toast({ title: 'Tiquet processat', description: `S'han afegit ${res.materials.length} articles.` });
             }
         } else {
-            toast({ variant: 'destructive', title: 'No s\'han detectat dades', description: 'Prova de fer la foto amb més llum i més a prop.' });
+            toast({ variant: 'destructive', title: 'No s\'han detectat dades', description: 'Assegura\'t que la foto estigui a prop i ben il·luminada.' });
         }
     } catch (e: any) {
         console.error("OCR Error:", e);
-        toast({ variant: 'destructive', title: 'Error de l\'IA', description: 'No s\'ha pogut processar la imatge.' });
+        toast({ variant: 'destructive', title: 'Error de lectura', description: 'No s\'han pogut extreure les dades de la imatge.' });
     } finally {
         setIsExtracting(false);
         if (ocrInputRef.current) ocrInputRef.current.value = '';
@@ -240,7 +242,7 @@ export default function EditServicePage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!firestore || !serviceDocRef || !date || !startTime || !endTime) {
-        toast({ variant: 'destructive', title: 'Camps obligatoris buits' });
+        toast({ variant: 'destructive', title: 'Falten camps', description: 'Emplena la data i l\'hora per desar.' });
         return;
     }
 
@@ -252,7 +254,7 @@ export default function EditServicePage() {
     const selectedEmployee = employees?.find(e => e.id === employeeId);
     
     try {
-        const employeeNameStr = selectedEmployee ? `${selectedEmployee.firstName} ${selectedEmployee.lastName}` : '';
+        const employeeNameStr = selectedEmployee ? `${selectedEmployee.firstName} ${selectedEmployee.lastName}` : (service.employeeName || '');
 
         const updatedData: Partial<ServiceRecord> = {
             arrivalDateTime,
@@ -261,7 +263,7 @@ export default function EditServicePage() {
             projectName: projectName.trim(),
             pendingTasks,
             customerId,
-            customerName: selectedCustomer?.name || '',
+            customerName: selectedCustomer?.name || (service.customerName || ''),
             employeeId: employeeId,
             employeeName: employeeNameStr,
             serviceHourlyRate: Number(serviceHourlyRate) || undefined,
@@ -284,15 +286,28 @@ export default function EditServicePage() {
     }
   }
 
-  if (isUserLoading || isLoading || isSaving) return <div className="p-12 text-center"><Loader2 className="h-12 w-12 animate-spin mx-auto text-primary" /><p className="mt-4 font-black uppercase tracking-widest text-slate-400">Processant dades...</p></div>
-  if (!service) return <p>Registre no trobat.</p>
+  if (isUserLoading || isLoading || isSaving) return <div className="p-12 text-center h-[80vh] flex flex-col items-center justify-center"><Loader2 className="h-16 w-16 animate-spin mx-auto text-primary" /><p className="mt-6 font-black uppercase tracking-widest text-slate-400 animate-pulse">Preparant el teu espai...</p></div>
+  if (!service) return <div className="p-12 text-center">Registre no trobat. <Button onClick={() => router.push('/dashboard')} variant="link">Tornar</Button></div>
   if (showCamera) return <CameraCapture onCapture={(url, type) => { setMedia(prev => [...prev, { type, dataUrl: url }]); setShowCamera(false); }} onClose={() => setShowCamera(false)} />;
 
   return (
       <div className="max-w-2xl mx-auto space-y-8 pb-24 px-4">
-        <Button variant="ghost" onClick={() => router.back()} className="mb-2 -ml-4 font-bold">
-          <ArrowLeft className="mr-2 h-4 w-4" /> Tornar
-        </Button>
+        <div className="flex items-center justify-between">
+            <Button variant="ghost" onClick={() => router.back()} className="font-bold">
+                <ArrowLeft className="mr-2 h-4 w-4" /> Enrere
+            </Button>
+            <Button 
+                type="button" 
+                variant="outline" 
+                size="sm" 
+                onClick={handleTranslate} 
+                disabled={isTranslating}
+                className="bg-primary/5 text-primary border-primary/20 hover:bg-primary/10 font-black uppercase text-xs tracking-widest"
+            >
+                {isTranslating ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Sparkles className="h-4 w-4 mr-2" />}
+                Corregir Català IA
+            </Button>
+        </div>
         
         <CustomerSelectionDialog
           open={isCustomerDialogOpen}
@@ -308,35 +323,27 @@ export default function EditServicePage() {
           initialName={customerSignatureName || customers?.find(c => c.id === customerId)?.name || ''}
         />
         
-        <Card className="border-none shadow-2xl rounded-3xl overflow-hidden">
-          <CardHeader className="bg-slate-900 text-white p-6">
+        <Card className="border-none shadow-2xl rounded-3xl overflow-hidden bg-white">
+          <CardHeader className="bg-slate-900 text-white p-8">
             <div className="flex justify-between items-center">
-                <div>
-                    <CardTitle className="text-2xl font-black uppercase tracking-tighter">Detall del Servei</CardTitle>
-                    <CardDescription className="text-slate-400">Técnico: {service.employeeName || 'No assignat'}</CardDescription>
+                <div className="space-y-1">
+                    <CardTitle className="text-3xl font-black uppercase tracking-tighter">Informe de Treball</CardTitle>
+                    <CardDescription className="text-slate-400 font-medium">Responsable: {service.employeeName || 'Assignant...'}</CardDescription>
                 </div>
-                <Button 
-                    type="button" 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={handleTranslate} 
-                    disabled={isTranslating}
-                    className="bg-white/10 text-white border-white/20 hover:bg-white/20 font-bold"
-                >
-                    {isTranslating ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Sparkles className="h-4 w-4 mr-2 text-yellow-400" />}
-                    Traduir IA
-                </Button>
+                <div className="bg-primary/20 p-3 rounded-2xl">
+                    <Briefcase className="h-8 w-8 text-primary" />
+                </div>
             </div>
           </CardHeader>
-          <CardContent className="pt-8 space-y-8">
-            <form onSubmit={handleSubmit} className="space-y-8">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                    <Label className="font-black text-xs uppercase tracking-widest text-slate-500">Data del Treball</Label>
+          <CardContent className="pt-10 space-y-10">
+            <form onSubmit={handleSubmit} className="space-y-10">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
+                <div className="space-y-3">
+                    <Label className="font-black text-xs uppercase tracking-[0.2em] text-slate-400">Data de l'activitat</Label>
                     <Popover>
                         <PopoverTrigger asChild>
-                        <Button variant="outline" className="w-full justify-start text-left font-bold h-14 rounded-xl border-2">
-                            <CalendarIcon className="mr-2 h-5 w-5 text-primary" />
+                        <Button variant="outline" className="w-full justify-start text-left font-bold h-16 rounded-2xl border-2 hover:border-primary transition-colors bg-slate-50">
+                            <CalendarIcon className="mr-3 h-6 w-6 text-primary" />
                             {date ? format(date, "PPP", { locale: ca }) : <span>Tria data</span>}
                         </Button>
                         </PopoverTrigger>
@@ -344,49 +351,47 @@ export default function EditServicePage() {
                     </Popover>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                        <Label className="font-black text-xs uppercase tracking-widest text-slate-500">Entrada</Label>
-                        <Input type="time" required value={startTime} onChange={(e) => setStartTime(e.target.value)} className="h-14 rounded-xl border-2 font-bold text-lg" />
+                    <div className="space-y-3">
+                        <Label className="font-black text-xs uppercase tracking-[0.2em] text-slate-400">Arribada</Label>
+                        <Input type="time" required value={startTime} onChange={(e) => setStartTime(e.target.value)} className="h-16 rounded-2xl border-2 font-black text-xl text-center bg-slate-50" />
                     </div>
-                    <div className="space-y-2">
-                        <Label className="font-black text-xs uppercase tracking-widest text-slate-500">Sortida</Label>
-                        <Input type="time" required value={endTime} onChange={(e) => setEndTime(e.target.value)} className="h-14 rounded-xl border-2 font-bold text-lg" />
+                    <div className="space-y-3">
+                        <Label className="font-black text-xs uppercase tracking-[0.2em] text-slate-400">Sortida</Label>
+                        <Input type="time" required value={endTime} onChange={(e) => setEndTime(e.target.value)} className="h-16 rounded-2xl border-2 font-black text-xl text-center bg-slate-50" />
                     </div>
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <Label className="font-black text-xs uppercase tracking-widest text-slate-500">Client i Obra</Label>
-                <div className="flex gap-2">
-                    <Button type="button" variant="outline" onClick={() => setIsCustomerDialogOpen(true)} className="h-14 flex-grow justify-start px-4 rounded-xl border-2 font-bold text-left overflow-hidden">
-                        <Users className="mr-2 h-5 w-5 text-primary shrink-0" />
-                        <span className="truncate">{customers?.find(c => c.id === customerId)?.name || 'Seleccionar Client'}</span>
-                    </Button>
-                </div>
-                <div className="relative mt-2">
-                    <Briefcase className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
-                    <Input placeholder="Nom de l'Obra / Projecte" value={projectName} onChange={(e) => setProjectName(e.target.value)} className="pl-12 h-14 rounded-xl border-2 font-bold" />
+              <div className="space-y-4">
+                <Label className="font-black text-xs uppercase tracking-[0.2em] text-slate-400">Ubicació i Client</Label>
+                <Button type="button" variant="outline" onClick={() => setIsCustomerDialogOpen(true)} className="h-16 w-full justify-start px-6 rounded-2xl border-2 font-black text-lg bg-slate-50 overflow-hidden text-slate-700">
+                    <Users className="mr-4 h-6 w-6 text-primary shrink-0" />
+                    <span className="truncate">{customers?.find(c => c.id === customerId)?.name || 'Selecciona un client'}</span>
+                </Button>
+                <div className="relative">
+                    <Briefcase className="absolute left-6 top-1/2 -translate-y-1/2 h-6 w-6 text-slate-400" />
+                    <Input placeholder="Nom del Projecte / Obra" value={projectName} onChange={(e) => setProjectName(e.target.value)} className="pl-16 h-16 rounded-2xl border-2 font-black text-lg bg-slate-50" />
                 </div>
               </div>
               
-              <div className="space-y-2">
-                <Label className="font-black text-xs uppercase tracking-widest text-slate-500">Descripció de la feina</Label>
-                <Textarea placeholder="Què has fet avui?" value={description} onChange={(e) => setDescription(e.target.value)} rows={4} className="rounded-2xl border-2 font-medium text-base p-4" />
+              <div className="space-y-3">
+                <Label className="font-black text-xs uppercase tracking-[0.2em] text-slate-400">Treballs realitzats</Label>
+                <Textarea placeholder="Descriu què has fet avui..." value={description} onChange={(e) => setDescription(e.target.value)} rows={5} className="rounded-3xl border-2 font-medium text-lg p-6 bg-slate-50 focus:bg-white transition-colors" />
               </div>
 
-              <div className="space-y-2">
-                <Label className="font-black text-xs uppercase tracking-widest text-amber-600">Tasques Pendents</Label>
-                <Textarea placeholder="Alguna cosa pendent per demà?" value={pendingTasks} onChange={(e) => setPendingTasks(e.target.value)} rows={2} className="border-amber-200 focus-visible:ring-amber-500 bg-amber-50/30 rounded-2xl p-4 font-medium" />
+              <div className="space-y-3">
+                <Label className="font-black text-xs uppercase tracking-[0.2em] text-amber-600">Tasques pendents</Label>
+                <Textarea placeholder="Hi ha alguna cosa per acabar demà?" value={pendingTasks} onChange={(e) => setPendingTasks(e.target.value)} rows={2} className="border-amber-200 focus-visible:ring-amber-500 bg-amber-50/50 rounded-2xl p-6 font-medium" />
               </div>
 
               {/* MATERIALS SECTION */}
-              <div className="space-y-4 rounded-3xl border-2 border-slate-100 p-6 bg-slate-50 shadow-inner">
-                  <div className="flex justify-between items-center mb-2">
-                    <Label className="font-black text-slate-900 flex items-center gap-2 uppercase tracking-tighter text-lg"><Package className="h-5 w-5 text-primary" /> Materials i Despeses</Label>
+              <div className="space-y-6 rounded-[2.5rem] border-2 border-slate-100 p-8 bg-slate-50/50 shadow-inner">
+                  <div className="flex justify-between items-center">
+                    <Label className="font-black text-slate-900 flex items-center gap-3 uppercase tracking-tighter text-xl"><Package className="h-6 w-6 text-primary" /> Materials</Label>
                     <div className="flex gap-2">
                         <input type="file" ref={ocrInputRef} onChange={(e) => handleOCR(e)} accept="image/*" className="hidden" />
-                        <Button type="button" variant="outline" size="sm" onClick={() => ocrInputRef.current?.click()} disabled={isExtracting} className="bg-primary text-white hover:bg-primary/90 border-none shadow-lg font-black h-10 px-4 rounded-xl">
-                            {isExtracting && activeLineIndex === null ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <ScanLine className="h-4 w-4 mr-2" />}
+                        <Button type="button" variant="outline" size="sm" onClick={() => ocrInputRef.current?.click()} disabled={isExtracting} className="bg-primary text-white hover:bg-primary/90 border-none shadow-lg font-black h-12 px-6 rounded-2xl">
+                            {isExtracting && activeLineIndex === null ? <Loader2 className="h-5 w-5 animate-spin mr-2" /> : <ScanLine className="h-5 w-5 mr-2" />}
                             LLEGIR TIQUET
                         </Button>
                     </div>
@@ -395,85 +400,92 @@ export default function EditServicePage() {
                   <div className="space-y-4">
                       <input type="file" ref={lineOcrInputRef} onChange={(e) => handleOCR(e, activeLineIndex)} accept="image/*" className="hidden" />
                       {materials.map((m, i) => (
-                          <div key={i} className="bg-white p-4 rounded-2xl border-2 shadow-sm space-y-3 transition-all hover:border-primary/40 group">
-                              <div className="flex gap-2">
-                                <Input placeholder="Descripció article" value={m.description} onChange={(e) => { const nm = [...materials]; nm[i].description = e.target.value; setMaterials(nm); }} className="border-none shadow-none font-bold text-base h-10 px-0 focus-visible:ring-0" />
-                                <Button type="button" variant="ghost" size="icon" onClick={() => { setActiveLineIndex(i); lineOcrInputRef.current?.click(); }} className="h-10 w-10 text-cyan-600 hover:bg-cyan-50 rounded-xl">
-                                    {isExtracting && activeLineIndex === i ? <Loader2 className="h-5 w-5 animate-spin" /> : <Scan className="h-5 w-5" />}
+                          <div key={i} className="bg-white p-6 rounded-3xl border-2 shadow-sm space-y-4 transition-all hover:border-primary/40">
+                              <div className="flex gap-3">
+                                <Input placeholder="Descripció article" value={m.description} onChange={(e) => { const nm = [...materials]; nm[i].description = e.target.value; setMaterials(nm); }} className="border-none shadow-none font-black text-lg h-12 px-0 focus-visible:ring-0" />
+                                <Button type="button" variant="ghost" size="icon" onClick={() => { setActiveLineIndex(i); lineOcrInputRef.current?.click(); }} className="h-12 w-12 text-cyan-600 hover:bg-cyan-50 rounded-2xl shrink-0">
+                                    {isExtracting && activeLineIndex === i ? <Loader2 className="h-6 w-6 animate-spin" /> : <Scan className="h-6 w-6" />}
                                 </Button>
-                                <Button type="button" variant="ghost" size="icon" onClick={() => setMaterials(materials.filter((_, idx) => idx !== i))} className="text-red-400 h-10 w-10 hover:bg-red-50 rounded-xl"><Trash className="h-5 w-5" /></Button>
+                                <Button type="button" variant="ghost" size="icon" onClick={() => setMaterials(materials.filter((_, idx) => idx !== i))} className="text-red-400 h-12 w-12 hover:bg-red-50 rounded-2xl shrink-0"><Trash className="h-6 w-6" /></Button>
                               </div>
-                              <div className="flex gap-4">
-                                <div className="relative flex-1">
-                                    <Input type="number" placeholder="Quant." value={m.quantity} onChange={(e) => { const nm = [...materials]; nm[i].quantity = Number(e.target.value); setMaterials(nm); }} className="h-12 pl-4 rounded-xl bg-slate-50 border-none font-bold" />
-                                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 uppercase font-black">uts.</span>
+                              <div className="grid grid-cols-2 gap-6">
+                                <div className="relative">
+                                    <Input type="number" placeholder="Quant." value={m.quantity} onChange={(e) => { const nm = [...materials]; nm[i].quantity = Number(e.target.value); setMaterials(nm); }} className="h-14 pl-6 rounded-2xl bg-slate-50 border-none font-black text-lg" />
+                                    <span className="absolute right-6 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 uppercase font-black">uts.</span>
                                 </div>
-                                <div className="relative flex-1">
-                                    <Input type="number" placeholder="Preu" value={m.unitPrice} onChange={(e) => { const nm = [...materials]; nm[i].unitPrice = Number(e.target.value); setMaterials(nm); }} className="h-12 pl-4 rounded-xl bg-slate-50 border-none font-bold" />
-                                    <Euro className="absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                                <div className="relative">
+                                    <Input type="number" placeholder="Preu" value={m.unitPrice} onChange={(e) => { const nm = [...materials]; nm[i].unitPrice = Number(e.target.value); setMaterials(nm); }} className="h-14 pl-6 rounded-2xl bg-slate-50 border-none font-black text-lg" />
+                                    <Euro className="absolute right-6 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
                                 </div>
                               </div>
-                              {m.imageDataUrl && <div className="relative h-12 w-20 rounded-lg overflow-hidden border mt-1"><Image src={m.imageDataUrl} alt="Snippet" fill className="object-cover" /></div>}
+                              {m.imageDataUrl && (
+                                  <div className="relative h-24 w-full rounded-2xl overflow-hidden border-2 border-slate-100 group">
+                                      <Image src={m.imageDataUrl} alt="Snippet" fill className="object-cover" />
+                                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                          <p className="text-white font-bold text-xs uppercase tracking-widest">Evidència OCR</p>
+                                      </div>
+                                  </div>
+                              )}
                           </div>
                       ))}
                   </div>
-                  <Button type="button" variant="ghost" size="sm" onClick={() => setMaterials([...materials, { description: '', quantity: 1, unitPrice: 0 }])} className="w-full h-12 border-2 border-dashed border-slate-300 hover:bg-white rounded-2xl font-black text-slate-400 uppercase text-xs">+ AFEGIR ARTICLE</Button>
+                  <Button type="button" variant="ghost" size="sm" onClick={() => setMaterials([...materials, { description: '', quantity: 1, unitPrice: 0 }])} className="w-full h-16 border-4 border-dashed border-slate-200 hover:bg-white rounded-3xl font-black text-slate-400 uppercase text-xs tracking-widest transition-all hover:border-primary/20 hover:text-primary">+ AFEGIR ARTICLE MANUALMENT</Button>
               </div>
 
               {/* MEDIA SECTION */}
-              <div className="space-y-4 rounded-3xl border-2 border-slate-100 p-6 bg-white shadow-sm">
+              <div className="space-y-6">
                   <div className="flex justify-between items-center">
-                    <Label className="font-black text-slate-900 flex items-center gap-2 uppercase tracking-tighter text-lg"><Camera className="h-5 w-5 text-primary" /> Galeria Fotos</Label>
+                    <Label className="font-black text-slate-900 flex items-center gap-3 uppercase tracking-tighter text-xl"><Camera className="h-6 w-6 text-primary" /> Galeria</Label>
                     <div className="flex gap-2">
                         <input type="file" ref={galleryInputRef} onChange={handleGalleryUpload} accept="image/*" multiple className="hidden" />
-                        <Button type="button" variant="outline" size="sm" onClick={() => setShowCamera(true)} className="font-bold h-10 rounded-xl px-4 border-2"><Camera className="h-4 w-4 mr-2" /> Càmera</Button>
-                        <Button type="button" variant="outline" size="sm" onClick={() => galleryInputRef.current?.click()} className="font-bold h-10 rounded-xl px-4 border-2"><ImagePlus className="h-4 w-4 mr-2" /> Galeria</Button>
+                        <Button type="button" variant="outline" size="sm" onClick={() => setShowCamera(true)} className="font-black h-12 rounded-2xl px-6 border-2"><Camera className="h-5 w-5 mr-3" /> Càmera</Button>
+                        <Button type="button" variant="outline" size="sm" onClick={() => galleryInputRef.current?.click()} className="font-black h-12 rounded-2xl px-6 border-2"><ImagePlus className="h-5 w-5 mr-3" /> Arxius</Button>
                     </div>
                   </div>
                   <div className="grid grid-cols-3 sm:grid-cols-4 gap-4">
                       {media.map((m, i) => (
-                          <div key={i} className="relative aspect-square rounded-2xl overflow-hidden border-2 border-slate-100 group shadow-md">
+                          <div key={i} className="relative aspect-square rounded-[2rem] overflow-hidden border-4 border-white shadow-xl group transition-transform hover:scale-105">
                               {m.type === 'image' ? <Image src={m.dataUrl} alt={`Foto ${i}`} fill className="object-cover" /> : <div className="w-full h-full bg-slate-900 flex items-center justify-center"><Video className="text-white" /></div>}
-                              <button type="button" onClick={() => setMedia(media.filter((_, idx) => idx !== i))} className="absolute top-2 right-2 bg-red-600 text-white rounded-full p-1.5 opacity-0 group-hover:opacity-100 transition-opacity shadow-xl"><X className="h-4 w-4" /></button>
+                              <button type="button" onClick={() => setMedia(media.filter((_, idx) => idx !== i))} className="absolute top-3 right-3 bg-red-600 text-white rounded-full p-2 opacity-0 group-hover:opacity-100 transition-opacity shadow-2xl z-10"><X className="h-4 w-4" /></button>
                           </div>
                       ))}
                   </div>
               </div>
 
               {/* SIGNATURE SECTION */}
-              <div className="space-y-4 rounded-3xl border-2 border-primary/10 p-6 bg-primary/5">
-                  <Label className="font-black flex items-center gap-2 text-primary uppercase tracking-tighter text-lg"><PenTool className="h-5 w-5" /> Signatura del Client</Label>
+              <div className="space-y-4 rounded-[2.5rem] border-4 border-primary/5 p-8 bg-primary/5 shadow-inner">
+                  <Label className="font-black flex items-center gap-3 text-primary uppercase tracking-tighter text-xl"><PenTool className="h-6 w-6" /> Firma del Client</Label>
                   {customerSignatureDataUrl ? (
-                    <div className="flex items-center justify-between bg-white p-5 rounded-2xl border-2 shadow-sm">
-                        <div>
-                            <p className="text-[10px] text-slate-400 uppercase font-black tracking-widest mb-1">Confirmat per:</p>
-                            <p className="font-black text-slate-900 text-lg">{customerSignatureName}</p>
+                    <div className="flex items-center justify-between bg-white p-6 rounded-3xl border-2 shadow-lg">
+                        <div className="space-y-1">
+                            <p className="text-[10px] text-slate-400 uppercase font-black tracking-[0.2em]">Confirmat per:</p>
+                            <p className="font-black text-slate-900 text-xl">{customerSignatureName}</p>
                         </div>
-                        <div className="relative h-20 w-32 border-l-2 pl-4"><Image src={customerSignatureDataUrl} alt="Signature" fill style={{ objectFit: 'contain' }} /></div>
-                        <Button type="button" variant="ghost" size="icon" onClick={() => setIsSignatureDialogOpen(true)} className="text-primary hover:bg-primary/5 rounded-xl"><Edit className="h-5 w-5" /></Button>
+                        <div className="relative h-24 w-40"><Image src={customerSignatureDataUrl} alt="Signature" fill style={{ objectFit: 'contain' }} /></div>
+                        <Button type="button" variant="ghost" size="icon" onClick={() => setIsSignatureDialogOpen(true)} className="text-primary hover:bg-primary/5 rounded-2xl h-12 w-12"><Edit className="h-6 w-6" /></Button>
                     </div>
                   ) : (
-                    <Button type="button" variant="outline" onClick={() => setIsSignatureDialogOpen(true)} className="w-full h-20 border-dashed border-2 border-primary/40 text-primary font-black hover:bg-primary/10 transition-all uppercase tracking-widest shadow-sm rounded-2xl">
-                        <PenTool className="mr-3 h-7 w-7" /> Recollir Signatura Ara
+                    <Button type="button" variant="outline" onClick={() => setIsSignatureDialogOpen(true)} className="w-full h-24 border-dashed border-4 border-primary/20 text-primary font-black hover:bg-white hover:border-primary/40 transition-all uppercase tracking-widest shadow-sm rounded-3xl text-sm">
+                        <PenTool className="mr-4 h-8 w-8" /> Recollir Signatura Ara
                     </Button>
                   )}
               </div>
 
-              <div className="flex flex-col sm:flex-row justify-between items-center pt-10 border-t gap-4">
+              <div className="flex flex-col sm:flex-row justify-between items-center pt-12 border-t-2 border-slate-100 gap-6">
                 <AlertDialog>
                     <AlertDialogTrigger asChild>
-                        <Button type="button" variant="ghost" className="text-red-500 font-bold h-14 w-full sm:w-auto hover:bg-red-50 rounded-2xl"><Trash2 className="mr-2 h-5 w-5" /> Eliminar Registre</Button>
+                        <Button type="button" variant="ghost" className="text-red-500 font-bold h-16 w-full sm:w-auto hover:bg-red-50 rounded-2xl px-8 transition-colors"><Trash2 className="mr-3 h-6 w-6" /> Eliminar Registre</Button>
                     </AlertDialogTrigger>
-                    <AlertDialogContent className="rounded-3xl">
-                        <AlertDialogHeader><AlertDialogTitle>Segur que vols eliminar?</AlertDialogTitle><AlertDialogDescription>Aquesta acció esborrarà el registre de servei de forma permanent.</AlertDialogDescription></AlertDialogHeader>
-                        <AlertDialogFooter>
-                            <AlertDialogCancel className="rounded-xl">Enrere</AlertDialogCancel>
-                            <AlertDialogAction onClick={async () => { await deleteDoc(serviceDocRef!); router.push('/dashboard'); }} className="bg-red-600 rounded-xl">Eliminar definitivament</AlertDialogAction>
+                    <AlertDialogContent className="rounded-[2.5rem] p-10">
+                        <AlertDialogHeader><AlertDialogTitle className="text-2xl font-black uppercase">Segur que vols eliminar?</AlertDialogTitle><AlertDialogDescription className="text-lg">Aquesta acció és irreversible i s'esborraran totes les dades i fotos adjuntes.</AlertDialogDescription></AlertDialogHeader>
+                        <AlertDialogFooter className="pt-6">
+                            <AlertDialogCancel className="rounded-2xl h-14 font-bold border-2">M'ho he pensat millor</AlertDialogCancel>
+                            <AlertDialogAction onClick={async () => { await deleteDoc(serviceDocRef!); router.push('/dashboard'); }} className="bg-red-600 rounded-2xl h-14 font-black uppercase tracking-widest">Eliminar definitivament</AlertDialogAction>
                         </AlertDialogFooter>
                     </AlertDialogContent>
                 </AlertDialog>
-                <Button type="submit" className="bg-primary px-16 h-16 text-xl font-black shadow-2xl uppercase tracking-tighter hover:scale-[1.03] transition-all rounded-2xl w-full sm:w-auto" disabled={isSaving}>
-                    {isSaving ? <Loader2 className="mr-3 h-7 w-7 animate-spin" /> : <Save className="mr-3 h-7 w-7" />}
+                <Button type="submit" className="bg-primary px-20 h-20 text-2xl font-black shadow-[0_20px_50px_rgba(59,130,246,0.3)] uppercase tracking-tighter hover:scale-[1.02] active:scale-[0.98] transition-all rounded-3xl w-full sm:w-auto" disabled={isSaving}>
+                    {isSaving ? <Loader2 className="mr-4 h-8 w-8 animate-spin" /> : <Save className="mr-4 h-8 w-8" />}
                     GUARDAR TREBALL
                 </Button>
               </div>

@@ -1,7 +1,7 @@
 'use server';
 /**
  * @fileOverview Flux de traducció per a descripcions de serveis.
- * Optimitzat per a Genkit 1.x.
+ * Optimitzat per a Genkit 1.x i Gemini 1.5 Flash.
  */
 
 import { ai } from '@/ai/genkit';
@@ -23,11 +23,17 @@ export type TranslateOutput = z.infer<typeof TranslateOutputSchema>;
  */
 const translatePrompt = ai.definePrompt({
   name: 'translatePrompt',
+  model: 'googleai/gemini-1.5-flash',
   input: { schema: TranslateInputSchema },
   output: { schema: TranslateOutputSchema },
-  prompt: `Translate the following construction/maintenance work description to professional, concise CATALAN. 
+  config: {
+    temperature: 0.3,
+  },
+  prompt: `Act as a professional translator for technical and construction reports.
   
-  Fix spelling, punctuation, and maintain a professional tone suitable for an official report.
+  Translate the following text to professional, formal, and concise CATALAN. 
+  Fix any spelling or punctuation errors in the source.
+  Ensure technical terms (e.g. plumbing, electrical, masonry) are translated correctly for an official Andorran work report.
   
   TEXT: "{{{text}}}"`,
 });
@@ -36,7 +42,7 @@ const translatePrompt = ai.definePrompt({
  * Tradueix un text al català professionalment.
  */
 export async function translateToCatalan(input: TranslateInput): Promise<TranslateOutput> {
-  if (!input.text.trim()) return { translatedText: '' };
+  if (!input.text || !input.text.trim()) return { translatedText: '' };
   
   try {
     const { output } = await translatePrompt(input);
