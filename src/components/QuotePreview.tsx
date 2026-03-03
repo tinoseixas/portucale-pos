@@ -1,10 +1,10 @@
+
 'use client'
 import React, { forwardRef, useMemo } from 'react';
-import Image from 'next/image';
-import { Separator } from '@/components/ui/separator';
 import type { Customer } from '@/lib/types';
 import { format } from 'date-fns';
 import { ca } from 'date-fns/locale';
+import { Logo } from '@/components/Logo';
 
 const IVA_RATE = 0.045; // 4.5% IGI for Andorra
 
@@ -28,16 +28,14 @@ interface QuotePreviewProps {
 
 export const QuotePreview = forwardRef<HTMLDivElement, QuotePreviewProps>(({ customer, projectName, items, labor, quoteNumber, notes }, ref) => {
 
-    const { groupedItems, materialsSubtotal, totalDiscountAmount } = useMemo(() => {
+    const { groupedItems, materialsSubtotal } = useMemo(() => {
         let subtotalAccumulator = 0;
-        let discountAccumulator = 0;
         const groups = new Map<string, QuoteItem[]>();
         
         items.forEach(item => {
             const itemTotal = item.quantity * item.unitPrice;
             const discountAmount = itemTotal * ((item.discount || 0) / 100);
             subtotalAccumulator += (itemTotal - discountAmount);
-            discountAccumulator += discountAmount;
 
             const cat = item.category || 'General';
             if (!groups.has(cat)) groups.set(cat, []);
@@ -46,8 +44,7 @@ export const QuotePreview = forwardRef<HTMLDivElement, QuotePreviewProps>(({ cus
         
         return { 
             groupedItems: groups,
-            materialsSubtotal: subtotalAccumulator, 
-            totalDiscountAmount: discountAccumulator 
+            materialsSubtotal: subtotalAccumulator
         };
     }, [items]);
 
@@ -59,14 +56,7 @@ export const QuotePreview = forwardRef<HTMLDivElement, QuotePreviewProps>(({ cus
         <div ref={ref} className="bg-white p-12 font-sans text-gray-900 printable-area mx-auto" style={{ width: '210mm' }}>
             <header className="flex justify-between items-center border-b-4 border-slate-900 pb-10 mb-10">
                 <div className="flex flex-col gap-4">
-                    <div className="relative h-24 w-64">
-                        <Image 
-                            src="/logo.png" 
-                            alt="TS Serveis" 
-                            fill 
-                            style={{ objectFit: 'contain', objectPosition: 'left' }}
-                        />
-                    </div>
+                    <Logo className="h-24 w-auto" />
                     <div className="text-sm text-gray-600">
                         <p className="font-bold text-gray-900">NRT: F352231c</p>
                         <p>Av. Francois Mitterrand 64, local 6</p>

@@ -1,11 +1,12 @@
+
 'use client'
 import React, { forwardRef, useMemo } from 'react';
-import Image from 'next/image';
 import { Separator } from '@/components/ui/separator';
 import type { Customer, ServiceRecord, Employee } from '@/lib/types';
 import { format, differenceInMinutes, parseISO, isValid } from 'date-fns';
 import { ca } from 'date-fns/locale';
 import { calculateTotalAmount } from '@/lib/calculations';
+import { Logo } from '@/components/Logo';
 
 interface InvoicePreviewProps {
   customer: Customer | undefined;
@@ -50,14 +51,7 @@ export const InvoicePreview = forwardRef<HTMLDivElement, InvoicePreviewProps>(({
             {/* Header com Logotipo TS Serveis */}
             <header className="flex justify-between items-center border-b-2 border-slate-900 pb-8 mb-8">
                 <div className="flex flex-col gap-4">
-                    <div className="relative h-20 w-56">
-                        <Image 
-                            src="/logo.png" 
-                            alt="TS Serveis" 
-                            fill 
-                            style={{ objectFit: 'contain', objectPosition: 'left' }}
-                        />
-                    </div>
+                    <Logo className="h-20 w-auto" />
                     <div className="text-sm text-gray-600">
                         <p className="font-bold text-gray-900">NRT: F352231c</p>
                         <p>Av. Francois Mitterrand 64, local 6</p>
@@ -72,7 +66,6 @@ export const InvoicePreview = forwardRef<HTMLDivElement, InvoicePreviewProps>(({
                 </div>
             </header>
 
-            {/* Resto da fatura... */}
             <section style={{ display: 'flex', justifyContent: 'space-between', gap: '2rem', marginTop: '2rem', marginBottom: '2rem' }}>
                 <div style={{ flex: 1 }}>
                     <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-2">DADES DEL CLIENT</h3>
@@ -176,7 +169,7 @@ export const InvoicePreview = forwardRef<HTMLDivElement, InvoicePreviewProps>(({
                         </div>
                     </div>
                 </div>
-            </section>
+            </header>
 
              <footer className="mt-24 pt-8 border-t text-center text-[10px] text-gray-400 uppercase tracking-widest font-bold">
                 <p>TS SERVEIS - Solucions Tècniques i Manteniment</p>

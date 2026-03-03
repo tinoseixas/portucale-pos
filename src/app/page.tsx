@@ -1,8 +1,8 @@
+
 'use client'
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import Image from 'next/image'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -12,6 +12,7 @@ import { useToast } from "@/hooks/use-toast"
 import { useAuth, useUser, useFirestore } from '@/firebase'
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth'
 import { doc, setDoc, getDoc } from 'firebase/firestore'
+import { Logo } from '@/components/Logo'
 
 export default function Home() {
   const router = useRouter()
@@ -110,16 +111,8 @@ export default function Home() {
   return (
     <main className="flex min-h-screen flex-col items-center justify-center bg-slate-50 p-4">
       <div className="w-full max-w-md">
-        <div className="flex justify-center mb-8">
-            <div className="relative h-24 w-64">
-                <Image 
-                    src="/logo.png" 
-                    alt="TS Serveis" 
-                    fill 
-                    style={{ objectFit: 'contain' }}
-                    priority
-                />
-            </div>
+        <div className="flex justify-center mb-10">
+            <Logo className="h-24 w-auto" />
         </div>
         <Card className="shadow-2xl border-none overflow-hidden rounded-3xl bg-white/80 backdrop-blur-md">
           <CardHeader className="text-center space-y-2 bg-slate-900 text-white p-8">

@@ -1,16 +1,17 @@
+
 'use client'
 
-import Link from 'next/navigation'
-import Image from 'next/image'
+import Link from 'next/link'
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Button } from '@/components/ui/button'
-import { LogOut, User as UserIcon, Users, Building, FileText, FileArchive, FileSignature, Receipt, LineChart } from 'lucide-react'
+import { LogOut, User as UserIcon, Users, Building, FileArchive, FileSignature, Receipt, LineChart } from 'lucide-react'
 import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase'
 import { signOut } from 'firebase/auth'
 import { useRouter } from 'next/navigation'
 import type { Employee } from '@/lib/types'
 import { doc } from 'firebase/firestore'
+import { Logo } from '@/components/Logo'
 
 
 export function Header() {
@@ -42,17 +43,9 @@ export function Header() {
   return (
     <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 items-center justify-between">
-        <a href="/dashboard" className="flex items-center gap-3">
-          <div className="relative h-10 w-32 md:w-40">
-            <Image 
-              src="/logo.png" 
-              alt="TS Serveis Logo" 
-              fill 
-              style={{ objectFit: 'contain' }}
-              priority
-            />
-          </div>
-        </a>
+        <Link href="/dashboard" className="flex items-center gap-3">
+          <Logo className="h-10 w-auto" />
+        </Link>
         
         {isUserLoading ? (
             <div className="flex items-center gap-4">

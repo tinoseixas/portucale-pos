@@ -1,12 +1,13 @@
+
 'use client'
 import React, { forwardRef, useMemo } from 'react';
 import Image from 'next/image';
-import { Separator } from '@/components/ui/separator';
 import { Calendar as CalendarIcon, Clock, User, CheckCircle, Package } from 'lucide-react';
 import type { ServiceRecord, Customer, Employee } from '@/lib/types';
 import { format, differenceInMinutes, parseISO, isValid } from 'date-fns';
 import { ca } from 'date-fns/locale';
 import { calculateTotalAmount, IVA_RATE } from '@/lib/calculations';
+import { Logo } from '@/components/Logo';
 
 interface ReportPreviewProps {
   customer: Customer | undefined;
@@ -24,7 +25,7 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
         return [...services].sort((a,b) => parseISO(a.arrivalDateTime).getTime() - parseISO(b.arrivalDateTime).getTime());
     }, [services]);
     
-    const { subtotal, iva, totalGeneral, totalHours, materialsSubtotal, laborCost } = calculateTotalAmount(sortedServices, employees);
+    const { subtotal, iva, totalGeneral, totalHours, laborCost } = calculateTotalAmount(sortedServices, employees);
     const totalTimeFormatted = `${Math.floor(totalHours)}h ${Math.round((totalHours % 1) * 60)}m`;
 
     const allMaterials = useMemo(() => {
@@ -53,14 +54,7 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
                 {/* Capçalera amb Logo TS Serveis */}
                 <header className="flex justify-between items-center border-b-4 border-slate-900 pb-10 mb-10">
                     <div className="flex flex-col gap-4">
-                        <div className="relative h-24 w-64">
-                            <Image 
-                                src="/logo.png" 
-                                alt="TS Serveis" 
-                                fill 
-                                style={{ objectFit: 'contain', objectPosition: 'left' }}
-                            />
-                        </div>
+                        <Logo className="h-24 w-auto" />
                         <div className="space-y-1">
                             <p className="font-bold text-slate-600 text-lg">NRT: F352231c</p>
                             <div className="text-slate-500 text-sm leading-relaxed">
@@ -81,7 +75,6 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
                     </div>
                 </header>
 
-                {/* Resto do documento... */}
                 <div className="grid grid-cols-2 gap-16 mb-12">
                     <section className="bg-slate-50 p-8 rounded-2xl border-2 border-slate-100">
                         <h3 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
