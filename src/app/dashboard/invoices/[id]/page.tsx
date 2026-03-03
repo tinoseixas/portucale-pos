@@ -4,7 +4,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useRouter, useParams, useSearchParams } from 'next/navigation'
 import { useDoc, useUser, useFirestore, useMemoFirebase, deleteDocumentNonBlocking, useCollection } from '@/firebase'
-import { doc, collection, query, getDocs, collectionGroup, where, getDoc } from 'firebase/firestore'
+import { doc, collection, query, getDocs, collectionGroup, where, getDoc, updateDoc } from 'firebase/firestore'
 import type { Customer, Invoice, ServiceRecord, Employee } from '@/lib/types'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -163,7 +163,7 @@ export default function InvoiceDetailPage() {
 
     const handleExportPDF = async () => {
         setIsGenerating(true);
-        toast({ title: 'Generant PDF...', description: 'Processant document lleuger.' });
+        toast({ title: 'Generant PDF...', description: 'Processant document.' });
 
         try {
             const pdf = await generatePDF();
@@ -181,16 +181,16 @@ export default function InvoiceDetailPage() {
 
     const handleSendEmail = async () => {
         if (!recipientEmail.trim() || !recipientEmail.includes('@')) {
-            toast({ variant: 'destructive', title: 'Correu invàlid', description: 'Escriu una adreça vàlida.' });
+            toast({ variant: 'destructive', title: 'E-mail inválido', description: 'Por favor, insira um endereço de e-mail válido.' });
             return;
         }
 
         setIsSendingEmail(true);
-        toast({ title: 'Enviant correu...', description: 'Generant factura i processant enviament.' });
+        toast({ title: 'Enviando e-mail...', description: 'Gerando fatura e processando envio.' });
 
         try {
             const pdf = await generatePDF();
-            if (!pdf) throw new Error("No s'ha pogut generar el PDF");
+            if (!pdf) throw new Error("Não foi possível gerar o PDF");
 
             const pdfBase64 = pdf.output('datauristring');
             
@@ -214,14 +214,22 @@ export default function InvoiceDetailPage() {
             });
 
             if (result.success) {
-                toast({ title: 'Correu enviat!', description: `La factura s'ha enviat a ${recipientEmail}.` });
+                // Actualitzar e-mail a la fitxa de client si era buit
+                if (customer && !customer.email && firestore) {
+                    const customerRef = doc(firestore, 'customers', customer.id);
+                    await updateDoc(customerRef, { email: recipientEmail.trim() });
+                    setCustomer({ ...customer, email: recipientEmail.trim() });
+                    toast({ title: 'E-mail guardado', description: 'O e-mail foi atualizado na ficha do cliente.' });
+                }
+
+                toast({ title: 'E-mail enviado!', description: `A fatura foi enviada para ${recipientEmail}.` });
                 setIsEmailDialogOpen(false);
             } else {
-                toast({ variant: 'destructive', title: 'Error', description: result.error });
+                toast({ variant: 'destructive', title: 'Erro no envio', description: result.error });
             }
         } catch (error) {
             console.error("Error enviant email:", error);
-            toast({ variant: 'destructive', title: 'Error', description: "No s'ha pogut enviar el correu." });
+            toast({ variant: 'destructive', title: 'Erro', description: "Não foi possível enviar o e-mail." });
         } finally {
             setIsSendingEmail(false);
         }
@@ -279,22 +287,25 @@ export default function InvoiceDetailPage() {
                             </DialogTrigger>
                             <DialogContent>
                                 <DialogHeader>
-                                    <DialogTitle>Enviar Factura per Correu</DialogTitle>
-                                    <DialogDescription>S'enviarà el document PDF adjunt a l'adreça indicada.</DialogDescription>
+                                    <DialogTitle>Enviar Factura por E-mail</DialogTitle>
+                                    <DialogDescription>O PDF será gerado e enviado automaticamente para o cliente.</DialogDescription>
                                 </DialogHeader>
                                 <div className="py-4 space-y-4">
                                     <div className="space-y-2">
-                                        <Label>Adreça del client</Label>
+                                        <Label>E-mail do destinatário</Label>
                                         <Input 
                                             type="email" 
-                                            placeholder="correu@client.com" 
+                                            placeholder="cliente@exemplo.com" 
                                             value={recipientEmail} 
                                             onChange={(e) => setRecipientEmail(e.target.value)} 
                                         />
+                                        {!customer?.email && (
+                                            <p className="text-[10px] text-amber-600 font-bold">Nota: Este cliente não possui e-mail cadastrado. O endereço inserido será salvo na ficha do cliente.</p>
+                                        )}
                                     </div>
                                 </div>
                                 <DialogFooter>
-                                    <Button variant="outline" onClick={() => setIsEmailDialogOpen(false)}>Cancel·lar</Button>
+                                    <Button variant="outline" onClick={() => setIsEmailDialogOpen(false)}>Cancelar</Button>
                                     <Button 
                                         onClick={handleSendEmail} 
                                         disabled={isSendingEmail} 

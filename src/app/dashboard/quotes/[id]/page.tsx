@@ -1,13 +1,16 @@
+
 'use client'
 
 import { useState, useMemo, useRef, useEffect } from 'react'
 import { useRouter, useParams, useSearchParams } from 'next/navigation'
 import { useDoc, useUser, useFirestore, useMemoFirebase, deleteDocumentNonBlocking, useCollection } from '@/firebase'
-import { collection, query, doc, runTransaction, setDoc } from 'firebase/firestore'
+import { collection, query, doc, runTransaction, setDoc, updateDoc } from 'firebase/firestore'
 import type { Customer, Quote as QuoteType } from '@/lib/types'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { FileDown, Loader2, ArrowLeft, Trash2, Copy } from 'lucide-react'
+import { FileDown, Loader2, ArrowLeft, Trash2, Copy, Mail, Send, AlertCircle } from 'lucide-react'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { QuotePreview } from '@/components/QuotePreview'
 import {
   AlertDialog,
@@ -20,10 +23,20 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
 import { useToast } from '@/hooks/use-toast'
 import { AdminGate } from '@/components/AdminGate'
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
+import { sendDocumentEmail } from '@/ai/flows/send-email'
 
 export default function QuoteDetailPage() {
     const firestore = useFirestore()
@@ -38,6 +51,11 @@ export default function QuoteDetailPage() {
     const [isDuplicating, setIsDuplicating] = useState(false)
     const quotePreviewRef = useRef<HTMLDivElement>(null)
     const [customer, setCustomer] = useState<Customer | undefined>()
+
+    // Email states
+    const [isEmailDialogOpen, setIsEmailDialogOpen] = useState(false)
+    const [recipientEmail, setRecipientEmail] = useState('')
+    const [isSendingEmail, setIsSendingEmail] = useState(false)
 
     const quoteDocRef = useMemoFirebase(() => firestore && quoteId ? doc(firestore, 'quotes', quoteId) : null, [firestore, quoteId])
     const { data: quote, isLoading: isLoadingQuote } = useDoc<QuoteType>(quoteDocRef)
@@ -59,56 +77,117 @@ export default function QuoteDetailPage() {
     useEffect(() => {
         if (customerData) {
             setCustomer(customerData);
+            if (customerData.email) setRecipientEmail(customerData.email);
         }
     }, [customerData]);
 
 
-    const handleExportPDF = async () => {
+    const generatePDF = async () => {
         const quoteElement = quotePreviewRef.current;
-        if (!quoteElement) return;
+        if (!quoteElement) return null;
 
-        setIsGenerating(true);
-        toast({ title: 'Generant PDF...', description: 'Això pot trigar un moment.' });
+        const canvas = await html2canvas(quoteElement, {
+            scale: 1.5,
+            useCORS: true,
+            logging: false,
+        });
 
-        try {
-            const canvas = await html2canvas(quoteElement, {
-                scale: 1.5,
-                useCORS: true,
-                logging: false,
-            });
+        const imgData = canvas.toDataURL('image/jpeg', 0.7);
+        const pdf = new jsPDF('p', 'mm', 'a4');
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfHeight = pdf.internal.pageSize.getHeight();
+        const canvasWidth = canvas.width;
+        const canvasHeight = canvas.height;
+        const ratio = canvasWidth / canvasHeight;
+        const imgWidth = pdfWidth;
+        const imgHeight = imgWidth / ratio;
 
-            const imgData = canvas.toDataURL('image/jpeg', 0.7);
-            const pdf = new jsPDF('p', 'mm', 'a4');
-            const pdfWidth = pdf.internal.pageSize.getWidth();
-            const pdfHeight = pdf.internal.pageSize.getHeight();
-            const canvasWidth = canvas.width;
-            const canvasHeight = canvas.height;
-            const ratio = canvasWidth / canvasHeight;
-            const imgWidth = pdfWidth;
-            const imgHeight = imgWidth / ratio;
+        let heightLeft = imgHeight;
+        let position = 0;
 
-            let heightLeft = imgHeight;
-            let position = 0;
+        pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
+        heightLeft -= pdfHeight;
 
+        while (heightLeft > 0) {
+            position = heightLeft - imgHeight;
+            pdf.addPage();
             pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
             heightLeft -= pdfHeight;
+        }
 
-            while (heightLeft > 0) {
-                position = heightLeft - imgHeight;
-                pdf.addPage();
-                pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
-                heightLeft -= pdfHeight;
+        return pdf;
+    }
+
+    const handleExportPDF = async () => {
+        setIsGenerating(true);
+        toast({ title: 'Gerando PDF...', description: 'Isso pode demorar um momento.' });
+
+        try {
+            const pdf = await generatePDF();
+            if (pdf) {
+                pdf.save(`Pressupost-${String(quote?.quoteNumber).padStart(4, '0')}.pdf`);
+                toast({ title: 'PDF Gerado!', description: "A exportação foi concluída com sucesso." });
             }
-
-            pdf.save(`Pressupost-${String(quote?.quoteNumber).padStart(4, '0')}.pdf`);
-
-            toast({ title: 'PDF Generat!', description: "L'exportació s'ha completat correctament." });
-
         } catch (error) {
             console.error("Error en generar el PDF:", error);
-            toast({ variant: 'destructive', title: 'Error', description: "No s'ha pogut generar el PDF." });
+            toast({ variant: 'destructive', title: 'Erro', description: "Não foi possível gerar o PDF." });
         } finally {
             setIsGenerating(false);
+        }
+    };
+
+    const handleSendEmail = async () => {
+        if (!recipientEmail.trim() || !recipientEmail.includes('@')) {
+            toast({ variant: 'destructive', title: 'E-mail inválido', description: 'Por favor, insira um endereço de e-mail válido.' });
+            return;
+        }
+
+        setIsSendingEmail(true);
+        toast({ title: 'Enviando e-mail...', description: 'Gerando anexo e processando envio.' });
+
+        try {
+            const pdf = await generatePDF();
+            if (!pdf) throw new Error("Não foi possível gerar o PDF");
+
+            const pdfBase64 = pdf.output('datauristring');
+            
+            const result = await sendDocumentEmail({
+                to: recipientEmail.trim(),
+                subject: `Orçamento TS Serveis: ${quote?.projectName}`,
+                html: `
+                    <div style="font-family: sans-serif; color: #333;">
+                        <h2>Bom dia,</h2>
+                        <p>Anexamos o orçamento correspondente à obra: <strong>${quote?.projectName}</strong>.</p>
+                        <p>Ficamos à disposição para qualquer dúvida.</p>
+                        <br/>
+                        <p><strong>TS Serveis</strong><br/>Solucions Tècniques i Manteniment</p>
+                    </div>
+                `,
+                attachments: [{
+                    filename: `Orcament-${String(quote?.quoteNumber).padStart(4, '0')}.pdf`,
+                    content: pdfBase64
+                }]
+            });
+
+            if (result.success) {
+                // Actualitzar e-mail a la fitxa de client si era buit
+                if (customer && !customer.email && firestore) {
+                    const customerRef = doc(firestore, 'customers', customer.id);
+                    await updateDoc(customerRef, { email: recipientEmail.trim() });
+                    setCustomer({ ...customer, email: recipientEmail.trim() });
+                    toast({ title: 'E-mail guardado', description: 'O e-mail foi atualizado na ficha do cliente.' });
+                }
+
+                toast({ title: 'E-mail enviado!', description: `O orçamento foi enviado para ${recipientEmail}.` });
+                setIsEmailDialogOpen(false);
+            } else {
+                toast({ variant: 'destructive', title: 'Erro no envio', description: result.error });
+            }
+        } catch (error) {
+            console.error("Error enviant email:", error);
+            toast({ variant: 'destructive', title: 'Erro', description: "Não foi possível enviar o e-mail." });
+        } finally {
+            setIsSendingEmail(false);
         }
     };
     
@@ -208,6 +287,46 @@ export default function QuoteDetailPage() {
                             {isDuplicating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Copy className="mr-2 h-4 w-4" />}
                             Duplicar
                         </Button>
+
+                        {/* Email Dialog */}
+                        <Dialog open={isEmailDialogOpen} onOpenChange={setIsEmailDialogOpen}>
+                            <DialogTrigger asChild>
+                                <Button variant="outline" className="font-bold border-primary text-primary hover:bg-primary/5">
+                                    <Mail className="mr-2 h-4 w-4" /> Correu
+                                </Button>
+                            </DialogTrigger>
+                            <DialogContent>
+                                <DialogHeader>
+                                    <DialogTitle>Enviar Orçamento por E-mail</DialogTitle>
+                                    <DialogDescription>O PDF será enviado como anexo para o cliente.</DialogDescription>
+                                </DialogHeader>
+                                <div className="py-4 space-y-4">
+                                    <div className="space-y-2">
+                                        <Label>E-mail do destinatário</Label>
+                                        <Input 
+                                            type="email" 
+                                            placeholder="cliente@exemplo.com" 
+                                            value={recipientEmail} 
+                                            onChange={(e) => setRecipientEmail(e.target.value)} 
+                                        />
+                                        {!customer?.email && (
+                                            <p className="text-[10px] text-amber-600 font-bold">Nota: Este cliente não possui e-mail cadastrado. O endereço inserido será salvo na ficha do cliente.</p>
+                                        )}
+                                    </div>
+                                </div>
+                                <DialogFooter>
+                                    <Button variant="outline" onClick={() => setIsEmailDialogOpen(false)}>Cancelar</Button>
+                                    <Button 
+                                        onClick={handleSendEmail} 
+                                        disabled={isSendingEmail} 
+                                        className="bg-primary font-bold"
+                                    >
+                                        {isSendingEmail ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
+                                        Enviar Orçamento
+                                    </Button>
+                                </DialogFooter>
+                            </DialogContent>
+                        </Dialog>
 
                         <AlertDialog>
                             <AlertDialogTrigger asChild>

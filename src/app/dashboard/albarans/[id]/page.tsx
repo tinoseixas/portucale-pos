@@ -4,13 +4,13 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useRouter, useParams, useSearchParams } from 'next/navigation'
 import { useDoc, useUser, useFirestore, useMemoFirebase, deleteDocumentNonBlocking, useCollection, updateDocumentNonBlocking } from '@/firebase'
-import { collection, query, getDocs, doc, collectionGroup, getDoc } from 'firebase/firestore'
+import { collection, query, getDocs, doc, collectionGroup, getDoc, updateDoc } from 'firebase/firestore'
 import type { Customer, ServiceRecord, Albaran, Employee } from '@/lib/types'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { FileDown, Loader2, ArrowLeft, Trash2, Briefcase, CreditCard, AlertCircle, Edit, Save, ListChecks, ArrowRight, Archive, ArchiveRestore, Mail, Send } from 'lucide-react'
+import { FileDown, Loader2, ArrowLeft, Trash2, Briefcase, CreditCard, AlertCircle, Edit, Mail, Send, ListChecks, ArrowRight, Archive, ArchiveRestore } from 'lucide-react'
 import { ReportPreview } from '@/components/ReportPreview'
 import {
   AlertDialog,
@@ -75,10 +75,8 @@ export default function AlbaranDetailPage() {
     useEffect(() => {
         if (albaran) {
             setEditProjectName(albaran.projectName);
-            // Default recipient email from customer
-            if (customer?.email) setRecipientEmail(customer.email);
         }
-    }, [albaran, customer]);
+    }, [albaran]);
 
     const fetchData = useCallback(async () => {
         if (!firestore || !albaran || !employees || hasLoaded) return
@@ -191,16 +189,16 @@ export default function AlbaranDetailPage() {
 
     const handleSendEmail = async () => {
         if (!recipientEmail.trim() || !recipientEmail.includes('@')) {
-            toast({ variant: 'destructive', title: 'Correu invàlid', description: 'Escriu una adreça de correu vàlida.' });
+            toast({ variant: 'destructive', title: 'E-mail inválido', description: 'Por favor, insira um endereço de e-mail válido.' });
             return;
         }
 
         setIsSendingEmail(true);
-        toast({ title: 'Enviant correu...', description: 'Generant adjunt i processant enviament.' });
+        toast({ title: 'Enviando e-mail...', description: 'Gerando anexo e processando envio.' });
 
         try {
             const pdf = await generatePDF();
-            if (!pdf) throw new Error("No s'ha pogut generar el PDF");
+            if (!pdf) throw new Error("Não foi possível gerar o PDF");
 
             const pdfBase64 = pdf.output('datauristring');
             
@@ -223,14 +221,22 @@ export default function AlbaranDetailPage() {
             });
 
             if (result.success) {
-                toast({ title: 'Correu enviat!', description: `L'albarà s'ha enviat a ${recipientEmail}.` });
+                // Actualitzar e-mail a la fitxa de client si era buit
+                if (customer && !customer.email && firestore) {
+                    const customerRef = doc(firestore, 'customers', customer.id);
+                    await updateDoc(customerRef, { email: recipientEmail.trim() });
+                    setCustomer({ ...customer, email: recipientEmail.trim() });
+                    toast({ title: 'E-mail guardado', description: 'O e-mail foi atualizado na ficha do cliente.' });
+                }
+
+                toast({ title: 'E-mail enviado!', description: `O alvará foi enviado para ${recipientEmail}.` });
                 setIsEmailDialogOpen(false);
             } else {
-                toast({ variant: 'destructive', title: 'Error d\'enviament', description: result.error });
+                toast({ variant: 'destructive', title: 'Erro no envio', description: result.error });
             }
         } catch (error) {
             console.error("Error enviant email:", error);
-            toast({ variant: 'destructive', title: 'Error', description: "No s'ha pogut enviar el correu." });
+            toast({ variant: 'destructive', title: 'Erro', description: "Não foi possível enviar o e-mail." });
         } finally {
             setIsSendingEmail(false);
         }
@@ -321,33 +327,36 @@ export default function AlbaranDetailPage() {
                             </DialogTrigger>
                             <DialogContent>
                                 <DialogHeader>
-                                    <DialogTitle>Enviar Albarà per Correu</DialogTitle>
-                                    <DialogDescription>S'enviarà un correu amb el PDF adjunt al client.</DialogDescription>
+                                    <DialogTitle>Enviar Albarà por E-mail</DialogTitle>
+                                    <DialogDescription>O PDF será gerado e enviado automaticamente para o cliente.</DialogDescription>
                                 </DialogHeader>
                                 <div className="py-4 space-y-4">
                                     <div className="space-y-2">
-                                        <Label>Adreça del destinatari</Label>
+                                        <Label>E-mail do destinatário</Label>
                                         <Input 
                                             type="email" 
-                                            placeholder="correu@client.com" 
+                                            placeholder="cliente@exemplo.com" 
                                             value={recipientEmail} 
                                             onChange={(e) => setRecipientEmail(e.target.value)} 
                                         />
+                                        {!customer?.email && (
+                                            <p className="text-[10px] text-amber-600 font-bold">Nota: Este cliente não possui e-mail cadastrado. O endereço inserido será salvo na ficha do cliente.</p>
+                                        )}
                                     </div>
                                     <div className="bg-slate-50 p-3 rounded-lg text-xs text-muted-foreground flex gap-2">
                                         <AlertCircle className="h-4 w-4 shrink-0" />
-                                        <p>Assegura't que l'adreça és correcta. El PDF es generarà automàticament.</p>
+                                        <p>Confirme se o endereço está correto antes de enviar.</p>
                                     </div>
                                 </div>
                                 <DialogFooter>
-                                    <Button variant="outline" onClick={() => setIsEmailDialogOpen(false)}>Cancel·lar</Button>
+                                    <Button variant="outline" onClick={() => setIsEmailDialogOpen(false)}>Cancelar</Button>
                                     <Button 
                                         onClick={handleSendEmail} 
                                         disabled={isSendingEmail} 
                                         className="bg-primary font-bold"
                                     >
                                         {isSendingEmail ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
-                                        Enviar Ara
+                                        Enviar Agora
                                     </Button>
                                 </DialogFooter>
                             </DialogContent>
