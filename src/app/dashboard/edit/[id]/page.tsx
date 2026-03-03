@@ -48,8 +48,8 @@ type Material = {
     imageDataUrl?: string;
 }
 
-const MAX_IMAGE_WIDTH = 2048; // Augmentat per a màxima nitidesa OCR
-const IMAGE_QUALITY = 0.9; // Augmentat per a millor lectura de números
+const MAX_IMAGE_WIDTH = 1600; // Resolució equilibrada per a OCR
+const IMAGE_QUALITY = 0.8; // Qualitat bona sense excedir pes de fitxer
 
 function resizeAndCompressImage(file: File): Promise<string> {
     return new Promise((resolve, reject) => {
@@ -169,9 +169,9 @@ export default function EditServicePage() {
             const res = await translateToCatalan({ text: pendingTasks });
             setPendingTasks(res.translatedText);
         }
-        toast({ title: 'Text traduït al català' });
+        toast({ title: 'Text traduït correctament' });
     } catch (e) {
-        toast({ variant: 'destructive', title: 'Error en traduir' });
+        toast({ variant: 'destructive', title: 'Error en traducció' });
     } finally {
         setIsTranslating(false);
     }
@@ -182,7 +182,7 @@ export default function EditServicePage() {
     if (!file) return;
     
     setIsExtracting(true);
-    toast({ title: 'Analitzant document...', description: 'L\'IA està llegint els detalls amb alta resolució.' });
+    toast({ title: 'Processant document...', description: 'L\'IA està analitzant la foto.' });
     
     try {
         const dataUrl = await resizeAndCompressImage(file);
@@ -196,25 +196,13 @@ export default function EditServicePage() {
             }));
             
             setMaterials([...currentFilledMaterials, ...newMaterials]);
-            
-            toast({ 
-                title: 'Lectura completada', 
-                description: `S'han trobat ${res.materials.length} articles correctament.` 
-            });
+            toast({ title: 'Lectura finalitzada', description: `S'han trobat ${res.materials.length} articles.` });
         } else {
-            toast({ 
-                variant: 'destructive',
-                title: 'No s\'han detectat articles', 
-                description: "Prova de fer la foto més a prop i amb millor llum. L'IA necessita veure bé els preus i descripcions." 
-            });
+            toast({ variant: 'destructive', title: 'No s\'han trobat articles', description: 'Prova de fer la foto més a prop i amb més llum.' });
         }
     } catch (e: any) {
         console.error("OCR Error:", e);
-        toast({ 
-            variant: 'destructive', 
-            title: 'Error de processament', 
-            description: 'El fitxer podria ser massa gran o hi ha hagut un problema de connexió.' 
-        });
+        toast({ variant: 'destructive', title: 'Error de l\'IA', description: 'No s\'ha pogut processar la imatge. Revisa la connexió.' });
     } finally {
         setIsExtracting(false);
         if (ocrInputRef.current) ocrInputRef.current.value = '';
@@ -234,7 +222,7 @@ export default function EditServicePage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!firestore || !serviceDocRef || !date || !startTime || !endTime) {
-        toast({ variant: 'destructive', title: 'Camps obligatoris' });
+        toast({ variant: 'destructive', title: 'Camps obligatoris buits' });
         return;
     }
 
@@ -251,7 +239,7 @@ export default function EditServicePage() {
         const updatedData: Partial<ServiceRecord> = {
             arrivalDateTime,
             departureDateTime,
-            description: description || "Servei finalitzat",
+            description: description || "Servei realitzat",
             projectName: projectName.trim(),
             pendingTasks,
             customerId,
@@ -268,23 +256,23 @@ export default function EditServicePage() {
         };
 
         await setDoc(serviceDocRef, updatedData, { merge: true });
-        toast({ title: "Registre desat", description: `El servei s'ha actualitzat correctament.` });
+        toast({ title: "Registre actualitzat", description: `Les dades s'han desat correctament.` });
         router.push('/dashboard');
     } catch (error) {
         console.error(error);
-        toast({ variant: 'destructive', title: 'Error al desar' });
+        toast({ variant: 'destructive', title: 'Error al desar els canvis' });
     } finally {
         setIsSaving(false);
     }
   }
 
-  if (isUserLoading || isLoading || isSaving) return <div className="p-8 text-center"><Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" /><p className="mt-2 font-medium">Processant informació...</p></div>
-  if (!service) return <p>No s'ha trobat el servei.</p>
+  if (isUserLoading || isLoading || isSaving) return <div className="p-12 text-center"><Loader2 className="h-12 w-12 animate-spin mx-auto text-primary" /><p className="mt-4 font-bold uppercase tracking-widest text-slate-400">Processant informació...</p></div>
+  if (!service) return <p>Registre no trobat.</p>
   if (showCamera) return <CameraCapture onCapture={(url, type) => { setMedia(prev => [...prev, { type, dataUrl: url }]); setShowCamera(false); }} onClose={() => setShowCamera(false)} />;
 
   return (
-      <div className="max-w-2xl mx-auto space-y-8 pb-20">
-        <Button variant="ghost" onClick={() => router.back()} className="mb-4 -ml-4">
+      <div className="max-w-2xl mx-auto space-y-8 pb-24">
+        <Button variant="ghost" onClick={() => router.back()} className="mb-4 -ml-4 font-bold">
           <ArrowLeft className="mr-2 h-4 w-4" /> Tornar
         </Button>
         
@@ -302,11 +290,11 @@ export default function EditServicePage() {
           initialName={customerSignatureName || customers?.find(c => c.id === customerId)?.name || ''}
         />
         
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
+        <Card className="border-none shadow-xl">
+          <CardHeader className="flex flex-row items-center justify-between border-b bg-slate-50/50">
             <div>
-                <CardTitle>Editar Registre de Servei</CardTitle>
-                <CardDescription>Finalitza o modifica els detalls del treball.</CardDescription>
+                <CardTitle className="text-xl">Detall del Registre</CardTitle>
+                <CardDescription>Completa la informació del servei.</CardDescription>
             </div>
             <Button 
                 type="button" 
@@ -314,19 +302,19 @@ export default function EditServicePage() {
                 size="sm" 
                 onClick={handleTranslate} 
                 disabled={isTranslating}
-                className="bg-primary/5 text-primary border-primary/20 hover:bg-primary/10"
+                className="bg-primary/10 text-primary border-primary/20 hover:bg-primary/20 font-bold"
             >
                 {isTranslating ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Sparkles className="h-4 w-4 mr-2" />}
-                Traduir
+                Corregir Català
             </Button>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pt-6">
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="space-y-2">
-                  <Label>Data del Servei</Label>
+                  <Label className="font-bold">Data del Servei</Label>
                    <Popover>
                     <PopoverTrigger asChild>
-                      <Button variant="outline" className="w-full justify-start text-left font-normal h-12">
+                      <Button variant="outline" className="w-full justify-start text-left font-normal h-12 bg-white">
                         <CalendarIcon className="mr-2 h-4 w-4" />
                         {date ? format(date, "PPP", { locale: ca }) : <span>Tria una data</span>}
                       </Button>
@@ -337,116 +325,116 @@ export default function EditServicePage() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Arribada</Label>
-                  <Input type="time" required value={startTime} onChange={(e) => setStartTime(e.target.value)} className="h-12" />
+                  <Label className="font-bold">Hora Arribada</Label>
+                  <Input type="time" required value={startTime} onChange={(e) => setStartTime(e.target.value)} className="h-12 bg-white" />
                 </div>
                 <div className="space-y-2">
-                  <Label>Sortida</Label>
-                  <Input type="time" required value={endTime} onChange={(e) => setEndTime(e.target.value)} className="h-12" />
+                  <Label className="font-bold">Hora Sortida</Label>
+                  <Input type="time" required value={endTime} onChange={(e) => setEndTime(e.target.value)} className="h-12 bg-white" />
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label>Client</Label>
+                <Label className="font-bold">Client Assignat</Label>
                 <div className="flex gap-2">
-                    <Input value={customers?.find(c => c.id === customerId)?.name || 'Cap client assignat'} readOnly disabled className="bg-muted h-12 flex-grow" />
-                    <Button type="button" variant="outline" onClick={() => setIsCustomerDialogOpen(true)} className="h-12 px-6">Seleccionar</Button>
+                    <Input value={customers?.find(c => c.id === customerId)?.name || 'Sense client'} readOnly disabled className="bg-muted h-12 flex-grow" />
+                    <Button type="button" variant="outline" onClick={() => setIsCustomerDialogOpen(true)} className="h-12 px-6 font-bold">Triar</Button>
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label>Nom de l'Obra / Projecte</Label>
+                <Label className="font-bold">Nom de l'Obra</Label>
                 <div className="relative">
                     <Briefcase className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input placeholder="Ex: Reforma Cuina" value={projectName} onChange={(e) => setProjectName(e.target.value)} className="pl-10 h-12" />
+                    <Input placeholder="Ex: Manteniment Comú Encamp" value={projectName} onChange={(e) => setProjectName(e.target.value)} className="pl-10 h-12 bg-white" />
                 </div>
               </div>
               
               <div className="space-y-2">
-                <Label>Descripció del Treball</Label>
-                <Textarea placeholder="Què s'ha fet?" value={description} onChange={(e) => setDescription(e.target.value)} rows={4} />
+                <Label className="font-bold">Descripció del Treball</Label>
+                <Textarea placeholder="Descriu la feina feta..." value={description} onChange={(e) => setDescription(e.target.value)} rows={4} className="bg-white" />
               </div>
 
               <div className="space-y-2">
-                <Label>Tasques Pendents</Label>
-                <Textarea placeholder="Ha quedat alguna cosa pendent?" value={pendingTasks} onChange={(e) => setPendingTasks(e.target.value)} rows={2} className="border-amber-200 focus-visible:ring-amber-500" />
+                <Label className="font-bold text-amber-700">Tasques Pendents (si n'hi ha)</Label>
+                <Textarea placeholder="Què falta per acabar?" value={pendingTasks} onChange={(e) => setPendingTasks(e.target.value)} rows={2} className="border-amber-200 focus-visible:ring-amber-500 bg-amber-50/30" />
               </div>
 
-              <div className="space-y-4 rounded-lg border p-4 bg-slate-50">
+              <div className="space-y-4 rounded-xl border-2 border-slate-100 p-4 bg-slate-50/50 shadow-inner">
                   <div className="flex justify-between items-center">
-                    <Label className="font-bold flex items-center gap-2"><Package className="h-4 w-4" /> Materials i Despeses</Label>
+                    <Label className="font-black text-slate-900 flex items-center gap-2 uppercase tracking-tighter"><Package className="h-4 w-4" /> Materials i Despeses</Label>
                     <div className="flex gap-2">
                         <input type="file" ref={ocrInputRef} onChange={handleOCR} accept="image/*" className="hidden" />
-                        <Button type="button" variant="outline" size="sm" onClick={() => ocrInputRef.current?.click()} disabled={isExtracting} className="bg-cyan-50 text-cyan-700 border-cyan-200 hover:bg-cyan-100">
+                        <Button type="button" variant="outline" size="sm" onClick={() => ocrInputRef.current?.click()} disabled={isExtracting} className="bg-cyan-600 text-white hover:bg-cyan-700 border-none shadow-md font-bold">
                             {isExtracting ? <Loader2 className="h-3 w-3 animate-spin mr-2" /> : <ScanLine className="h-3 w-3 mr-2" />}
-                            Llegir Foto
+                            Llegir Tiquet
                         </Button>
                     </div>
                   </div>
                    <div className="space-y-3">
                       {materials.map((m, i) => (
-                          <div key={i} className="flex gap-2 items-start bg-white p-2 rounded border shadow-sm">
+                          <div key={i} className="flex gap-2 items-start bg-white p-3 rounded-lg border shadow-sm transition-all hover:border-primary/30">
                               <div className="flex-grow space-y-2">
-                                <Input placeholder="Material" value={m.description} onChange={(e) => { const nm = [...materials]; nm[i].description = e.target.value; setMaterials(nm); }} className="border-none shadow-none font-medium h-8 px-1" />
+                                <Input placeholder="Material" value={m.description} onChange={(e) => { const nm = [...materials]; nm[i].description = e.target.value; setMaterials(nm); }} className="border-none shadow-none font-bold h-8 px-1 focus-visible:ring-0" />
                                 <div className="flex gap-2">
                                     <div className="relative flex-1">
-                                        <Input type="number" placeholder="Cant." value={m.quantity} onChange={(e) => { const nm = [...materials]; nm[i].quantity = Number(e.target.value); setMaterials(nm); }} className="h-8 pl-1" />
-                                        <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground uppercase">ut.</span>
+                                        <Input type="number" placeholder="Cant." value={m.quantity} onChange={(e) => { const nm = [...materials]; nm[i].quantity = Number(e.target.value); setMaterials(nm); }} className="h-8 pl-1 bg-slate-50" />
+                                        <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground uppercase font-black">ut.</span>
                                     </div>
                                     <div className="relative flex-1">
-                                        <Input type="number" placeholder="PVP" value={m.unitPrice} onChange={(e) => { const nm = [...materials]; nm[i].unitPrice = Number(e.target.value); setMaterials(nm); }} className="h-8 pl-1" />
+                                        <Input type="number" placeholder="PVP" value={m.unitPrice} onChange={(e) => { const nm = [...materials]; nm[i].unitPrice = Number(e.target.value); setMaterials(nm); }} className="h-8 pl-1 bg-slate-50" />
                                         <Euro className="absolute right-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
                                     </div>
                                 </div>
                               </div>
-                              <Button type="button" variant="ghost" size="icon" onClick={() => setMaterials(materials.filter((_, idx) => idx !== i))} className="text-destructive h-8 w-8"><Trash className="h-4 w-4" /></Button>
+                              <Button type="button" variant="ghost" size="icon" onClick={() => setMaterials(materials.filter((_, idx) => idx !== i))} className="text-destructive h-8 w-8 hover:bg-destructive/10"><Trash className="h-4 w-4" /></Button>
                           </div>
                       ))}
                   </div>
-                  <Button type="button" variant="outline" size="sm" onClick={() => setMaterials([...materials, { description: '', quantity: 1, unitPrice: 0 }])} className="w-full h-10">+ Afegir Línia Manual</Button>
+                  <Button type="button" variant="ghost" size="sm" onClick={() => setMaterials([...materials, { description: '', quantity: 1, unitPrice: 0 }])} className="w-full h-10 border-2 border-dashed border-slate-200 hover:bg-white font-bold text-slate-500 uppercase text-xs">+ Afegir Línia</Button>
               </div>
 
-              <div className="space-y-4 rounded-lg border p-4">
+              <div className="space-y-4 rounded-xl border-2 border-slate-100 p-4 bg-white">
                   <div className="flex justify-between items-center">
-                    <Label className="font-bold flex items-center gap-2"><Camera className="h-4 w-4" /> Galeria Fotogràfica</Label>
+                    <Label className="font-black text-slate-900 flex items-center gap-2 uppercase tracking-tighter"><Camera className="h-4 w-4" /> Galeria</Label>
                     <div className="flex gap-2">
                         <input type="file" ref={galleryInputRef} onChange={handleGalleryUpload} accept="image/*" multiple className="hidden" />
-                        <Button type="button" variant="outline" size="sm" onClick={() => setShowCamera(true)}><Camera className="h-3 w-3 mr-2" /> Càmera</Button>
-                        <Button type="button" variant="outline" size="sm" onClick={() => galleryInputRef.current?.click()}><ImagePlus className="h-3 w-3 mr-2" /> Galeria</Button>
+                        <Button type="button" variant="outline" size="sm" onClick={() => setShowCamera(true)} className="font-bold"><Camera className="h-3 w-3 mr-2" /> Càmera</Button>
+                        <Button type="button" variant="outline" size="sm" onClick={() => galleryInputRef.current?.click()} className="font-bold"><ImagePlus className="h-3 w-3 mr-2" /> Galeria</Button>
                     </div>
                   </div>
-                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
                       {media.map((m, i) => (
-                          <div key={i} className="relative aspect-square rounded-md overflow-hidden border group">
-                              {m.type === 'image' ? <Image src={m.dataUrl} alt={`Foto ${i}`} fill className="object-cover" /> : <div className="w-full h-full bg-black flex items-center justify-center"><Video className="text-white" /></div>}
-                              <button type="button" onClick={() => setMedia(media.filter((_, idx) => idx !== i))} className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"><X className="h-3 w-3" /></button>
+                          <div key={i} className="relative aspect-square rounded-xl overflow-hidden border-2 border-slate-100 group shadow-sm">
+                              {m.type === 'image' ? <Image src={m.dataUrl} alt={`Foto ${i}`} fill className="object-cover" /> : <div className="w-full h-full bg-slate-900 flex items-center justify-center"><Video className="text-white" /></div>}
+                              <button type="button" onClick={() => setMedia(media.filter((_, idx) => idx !== i))} className="absolute top-1 right-1 bg-red-600 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"><X className="h-3 w-3" /></button>
                           </div>
                       ))}
                   </div>
               </div>
 
-              <div className="space-y-4 rounded-lg border p-4 bg-primary/5 border-primary/10">
-                  <Label className="font-black flex items-center gap-2 text-primary"><PenTool className="h-4 w-4" /> Signatura del Client</Label>
+              <div className="space-y-4 rounded-xl border-2 border-primary/10 p-4 bg-primary/5">
+                  <Label className="font-black flex items-center gap-2 text-primary uppercase tracking-tighter"><PenTool className="h-4 w-4" /> Signatura del Client</Label>
                   {customerSignatureDataUrl ? (
-                    <div className="flex items-center justify-between bg-white p-3 rounded-xl border border-primary/20 shadow-sm">
+                    <div className="flex items-center justify-between bg-white p-4 rounded-xl border shadow-sm">
                         <div>
-                            <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">Confirmat per:</p>
+                            <p className="text-[10px] text-muted-foreground uppercase font-black tracking-widest mb-1">Confirmat per:</p>
                             <p className="font-black text-slate-900">{customerSignatureName}</p>
                         </div>
-                        <div className="relative h-16 w-32 border-l pl-3"><Image src={customerSignatureDataUrl} alt="Signature" fill style={{ objectFit: 'contain' }} /></div>
-                        <Button type="button" variant="ghost" size="icon" onClick={() => setIsSignatureDialogOpen(true)} className="text-primary"><Edit className="h-4 w-4" /></Button>
+                        <div className="relative h-16 w-32 border-l-2 pl-4"><Image src={customerSignatureDataUrl} alt="Signature" fill style={{ objectFit: 'contain' }} /></div>
+                        <Button type="button" variant="ghost" size="icon" onClick={() => setIsSignatureDialogOpen(true)} className="text-primary hover:bg-primary/5"><Edit className="h-4 w-4" /></Button>
                     </div>
                   ) : (
-                    <Button type="button" variant="outline" onClick={() => setIsSignatureDialogOpen(true)} className="w-full h-14 border-dashed border-primary/40 text-primary font-bold hover:bg-primary/5">
-                        <PenTool className="mr-2 h-5 w-5" /> RECOLLIR SIGNATURA ARA
+                    <Button type="button" variant="outline" onClick={() => setIsSignatureDialogOpen(true)} className="w-full h-16 border-dashed border-primary/40 text-primary font-black hover:bg-primary/10 transition-all uppercase tracking-widest shadow-sm">
+                        <PenTool className="mr-3 h-6 w-6" /> Recollir Signatura Ara
                     </Button>
                   )}
               </div>
 
-              <div className="flex justify-between items-center pt-6 border-t gap-4">
+              <div className="flex justify-between items-center pt-8 border-t gap-4">
                 <AlertDialog>
                     <AlertDialogTrigger asChild>
-                        <Button type="button" variant="ghost" className="text-destructive font-bold h-12"><Trash2 className="mr-2 h-4 w-4" /> Eliminar</Button>
+                        <Button type="button" variant="ghost" className="text-destructive font-bold h-12 hover:bg-destructive/10"><Trash2 className="mr-2 h-4 w-4" /> Eliminar</Button>
                     </AlertDialogTrigger>
                     <AlertDialogContent>
                         <AlertDialogHeader><AlertDialogTitle>Segur que vols eliminar?</AlertDialogTitle><AlertDialogDescription>Aquesta acció esborrarà el registre de servei de forma permanent.</AlertDialogDescription></AlertDialogHeader>
@@ -456,9 +444,9 @@ export default function EditServicePage() {
                         </AlertDialogFooter>
                     </AlertDialogContent>
                 </AlertDialog>
-                <Button type="submit" className="bg-primary px-10 h-12 text-lg font-black shadow-lg" disabled={isSaving}>
-                    {isSaving ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <Save className="mr-2 h-5 w-5" />}
-                    DESAR REGISTRE
+                <Button type="submit" className="bg-primary px-12 h-14 text-lg font-black shadow-2xl uppercase tracking-tighter hover:scale-[1.02] transition-transform" disabled={isSaving}>
+                    {isSaving ? <Loader2 className="mr-3 h-6 w-6 animate-spin" /> : <Save className="mr-3 h-6 w-6" />}
+                    Actualitzar Registre
                 </Button>
               </div>
             </form>

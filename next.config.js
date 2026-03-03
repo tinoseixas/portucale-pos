@@ -38,7 +38,7 @@ const nextConfig = {
   },
   experimental: {
     serverActions: {
-      bodySizeLimit: '4mb',
+      bodySizeLimit: '10mb', // Augmentat a 10MB per a fotos d'alta resolució
       allowedOrigins: [
         "*.google.com",
         "*.firebase.app",
