@@ -2,7 +2,7 @@
 import React, { forwardRef, useMemo } from 'react';
 import Image from 'next/image';
 import { Separator } from '@/components/ui/separator';
-import { Calendar as CalendarIcon, Clock, User, CheckCircle } from 'lucide-react';
+import { Calendar as CalendarIcon, Clock, User, CheckCircle, Package } from 'lucide-react';
 import type { ServiceRecord, Customer, Employee } from '@/lib/types';
 import { format, differenceInMinutes, parseISO, isValid } from 'date-fns';
 import { ca } from 'date-fns/locale';
@@ -29,7 +29,7 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
 
     const allMaterials = useMemo(() => {
         return sortedServices.flatMap(service => service.materials || []).filter(material => 
-            !material.description.toLowerCase().includes('traball') && material.description.trim() !== ''
+            material.description.trim() !== ''
         );
     }, [sortedServices]);
 
@@ -162,7 +162,7 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
                 )}
                 
                 {/* Taula de Preus i Materials */}
-                {showPricing && (
+                {showPricing && allMaterials.length > 0 && (
                     <section className="mb-12 pt-10 border-t-4 border-slate-100">
                         <h3 className="text-base font-black text-slate-900 mb-6 flex items-center gap-3">
                             <span className="w-10 h-10 rounded-full bg-slate-900 text-white flex items-center justify-center text-sm">02</span>
@@ -180,7 +180,10 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
                             <tbody className="divide-y divide-slate-100">
                                 {allMaterials.map((material, index) => (
                                     <tr key={`mat-${index}`} className="hover:bg-slate-50 transition-colors">
-                                        <td className="py-5 px-6 text-slate-700 font-medium">{material.description}</td>
+                                        <td className="py-5 px-6 text-slate-700 font-medium">
+                                            {material.description}
+                                            {material.imageDataUrl && <div className="mt-2 text-[10px] text-primary font-bold flex items-center gap-1"><Package className="h-3 w-3" /> EVIDÈNCIA DOCUMENTAL ADJUNTA</div>}
+                                        </td>
                                         <td className="text-right py-5 px-6 tabular-nums font-bold text-slate-500">{material.quantity.toFixed(2)}</td>
                                         <td className="text-right py-5 px-6 tabular-nums font-bold text-slate-500">{material.unitPrice.toFixed(2)} €</td>
                                         <td className="text-right py-5 px-6 font-black tabular-nums text-slate-900">{(material.quantity * material.unitPrice).toFixed(2)} €</td>
