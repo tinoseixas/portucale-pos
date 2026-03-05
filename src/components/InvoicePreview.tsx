@@ -26,7 +26,7 @@ export const InvoicePreview = forwardRef<HTMLDivElement, InvoicePreviewProps>((p
     
     const getEmployeeName = (service: ServiceRecord) => {
         const employee = employees.find(e => e.id === service.employeeId);
-        return employee ? `${employee.firstName} ${employee.lastName}` : (service.employeeName || 'Tècnic desconegut');
+        return employee ? `${employee.firstName} ${employee.lastName}` : (service.employeeName || 'Tècnic');
     };
 
     const groupedByAlbaran = useMemo(() => {
@@ -178,6 +178,6 @@ export const InvoicePreview = forwardRef<HTMLDivElement, InvoicePreviewProps>((p
             </footer>
         </div>
     );
-}));
+});
 
 InvoicePreview.displayName = "InvoicePreview";

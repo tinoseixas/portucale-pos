@@ -1,38 +1,51 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 interface LogoProps {
   className?: string;
   variant?: 'light' | 'dark';
 }
 
-/**
- * Componente de Logótipo da TS SERVEIS.
- * Prioriza sempre a imagem /logo.png que o utilizador subiu para a pasta public.
- * Se a imagem não for encontrada, mostra um fallback SVG profissional com o slogan correto.
- */
 export function Logo({ className, variant = 'dark' }: LogoProps) {
   const [imgError, setImgError] = useState(false);
+  const [useArtificial, setUseArtificial] = useState(false);
+  
   const primaryColor = variant === 'dark' ? '#005691' : '#ffffff';
   const accentColor = '#FFD700';
 
-  // Se não houve erro ao carregar a imagem, tentamos mostrar o logo.png
-  if (!imgError) {
+  // Tentamos carregar o logo.png primeiro. 
+  // Se falhar, mostramos o SVG artificial.
+  useEffect(() => {
+    const img = new Image();
+    img.src = "/logo.png";
+    img.onload = () => {
+        setUseArtificial(false);
+        setImgError(false);
+    };
+    img.onerror = () => {
+        setUseArtificial(true);
+        setImgError(true);
+    };
+  }, []);
+
+  if (!useArtificial && !imgError) {
     return (
       <div className={className} style={{ display: 'inline-flex', alignItems: 'center' }}>
         <img 
           src="/logo.png" 
           alt="TS SERVEIS" 
           className="h-full w-auto max-h-full"
-          onError={() => setImgError(true)}
+          onError={() => {
+            setImgError(true);
+            setUseArtificial(true);
+          }}
           style={{ objectFit: 'contain' }}
         />
       </div>
     );
   }
 
-  // Fallback SVG profissional caso a imagem falhe
   return (
     <svg 
       viewBox="0 0 450 100" 

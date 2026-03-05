@@ -1,7 +1,7 @@
 'use client'
 
 import type { ServiceRecord, Employee } from '@/lib/types'
-import Link from 'next/link'
+import Link from 'next/navigation'
 import Image from 'next/image'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Clock, Camera, Edit, Hash, Video, Calendar, User, AlertCircle, AlertTriangle, Briefcase, Building } from 'lucide-react'
@@ -17,9 +17,10 @@ interface ServiceCardProps {
   service: ServiceRecord;
 }
 
-// A new sub-component to fetch and display the employee name
-function EmployeeName({ employeeId }: { employeeId: string }) {
+// Sub-componente que lida com o nome do técnico, mesmo que tenha sido removido
+function EmployeeNameDisplay({ service }: { service: ServiceRecord }) {
   const firestore = useFirestore()
+  const employeeId = service.employeeId;
   
   const employeeDocRef = useMemoFirebase(() => {
     if (!employeeId) return null;
@@ -28,49 +29,22 @@ function EmployeeName({ employeeId }: { employeeId: string }) {
 
   const { data: employee, isLoading } = useDoc<Employee>(employeeDocRef);
 
-  if (isLoading) {
-    return <Skeleton className="h-5 w-32" />;
-  }
+  if (isLoading) return <Skeleton className="h-5 w-32" />;
 
-  if (!employee) {
-     return (
-      <div className="flex items-center text-sm text-muted-foreground font-medium">
-        <User className="h-4 w-4 mr-2" />
-        <span>Empleat desconegut</span>
-      </div>
-    )
-  }
-
-  const employeeName = `${employee.firstName} ${employee.lastName}`;
+  // Se o documento employee não existir (removido), usa o nome guardado no registo
+  const displayName = employee ? `${employee.firstName} ${employee.lastName}` : (service.employeeName || 'Tècnic');
 
   return (
     <div className="flex items-center text-sm text-muted-foreground font-medium">
       <User className="h-4 w-4 mr-2" />
-      <span>{employeeName}</span>
+      <span>{displayName}</span>
     </div>
   )
 }
 
 
 export function ServiceCard({ service }: ServiceCardProps) {
-  // Defensive check to prevent crash if service is undefined
-  if (!service) {
-    return (
-      <Card className="transition-all hover:shadow-lg flex flex-col">
-        <CardHeader>
-          <Skeleton className="h-6 w-3/4 mb-2" />
-          <Skeleton className="h-4 w-1/2" />
-        </CardHeader>
-        <CardContent className="flex-1 space-y-4 flex flex-col">
-          <Skeleton className="h-10 w-full" />
-           <div className="flex items-center justify-between pt-2">
-            <Skeleton className="h-5 w-1/4" />
-            <Skeleton className="h-8 w-1/3" />
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
+  if (!service) return null;
 
   const arrival = parseISO(service.arrivalDateTime);
   const departure = parseISO(service.departureDateTime);
@@ -83,8 +57,6 @@ export function ServiceCard({ service }: ServiceCardProps) {
   const serviceDate = isValid(arrival) ? format(arrival, 'dd/MM/yyyy') : 'N/A'
   
   const mediaItems = service.media?.slice(0, 3) || [];
-
-  // With simplified permissions, the link is always the same structure.
   const editLink = `/dashboard/edit/${service.id}?ownerId=${service.employeeId}`;
 
   return (
@@ -114,7 +86,7 @@ export function ServiceCard({ service }: ServiceCardProps) {
             <Calendar className="h-4 w-4" />
             <span>{serviceDate}</span>
           </div>
-          {service.employeeId && <EmployeeName employeeId={service.employeeId} />}
+          <EmployeeNameDisplay service={service} />
           {service.customerName && (
              <div className="flex items-center gap-2 text-sm text-muted-foreground font-medium">
                 <Building className="h-4 w-4" />
