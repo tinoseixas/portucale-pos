@@ -22,7 +22,7 @@ export const InvoicePreview = forwardRef<HTMLDivElement, InvoicePreviewProps>((p
         return calculateTotalAmount(services, employees, applyIva);
     }, [services, employees, applyIva]);
     
-    const { subtotal, iva, totalGeneral } = totals;
+    const { subtotal, iva, totalGeneral, totalHours, laborCost } = totals;
     
     const getEmployeeName = (service: ServiceRecord) => {
         const employee = employees.find(e => e.id === service.employeeId);
@@ -48,6 +48,8 @@ export const InvoicePreview = forwardRef<HTMLDivElement, InvoicePreviewProps>((p
             .sort(([numA], [numB]) => Number(numA) - Number(numB));
 
     }, [services]);
+
+    const hourlyRateDisplay = totalHours > 0 ? (laborCost / totalHours).toFixed(2) : "0.00";
 
     return (
         <div ref={ref} className="bg-white p-12 font-sans text-gray-900 printable-area mx-auto" style={{ width: '210mm' }}>
@@ -86,11 +88,11 @@ export const InvoicePreview = forwardRef<HTMLDivElement, InvoicePreviewProps>((p
                  </div>
             </section>
             
-            <section className="page-break-before-auto">
+            <section>
                 <h3 className="font-black text-lg mb-4 border-b-2 pb-2 uppercase tracking-tight">Detall de Treballs i Materials</h3>
                 
                 {groupedByAlbaran.map(([albaranNum, { services: albaranServices, items: albaranItems }]) => (
-                    <div key={albaranNum} className="mb-8 page-break-inside-avoid">
+                    <div key={albaranNum} className="mb-8 break-inside-avoid">
                         {Number(albaranNum) > 0 && (
                             <h4 className="font-bold text-sm mb-3 bg-slate-100 p-2 rounded border-l-4 border-primary">Albarà de Referència #{String(albaranNum).padStart(4, '0')}</h4>
                         )}
@@ -152,7 +154,20 @@ export const InvoicePreview = forwardRef<HTMLDivElement, InvoicePreviewProps>((p
                     </div>
                 ))}
                 
-                <div className="flex justify-end mt-10">
+                {/* Resum de Mà d'obra amb valor hora */}
+                <div className="mt-6 border-t-2 border-slate-100 pt-4 break-inside-avoid">
+                    <div className="flex justify-between items-center bg-slate-50 p-4 rounded-xl border border-slate-200">
+                        <div>
+                            <p className="text-sm font-black text-slate-900 uppercase">Mà d'obra i Treball Tècnic</p>
+                            <p className="text-xs text-slate-500 italic">Total hores: {totalHours.toFixed(2)} h | Valor/hora: {hourlyRateDisplay} €</p>
+                        </div>
+                        <div className="text-right">
+                            <p className="text-lg font-black text-slate-900">{laborCost.toFixed(2)} €</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="flex justify-end mt-10 break-inside-avoid">
                     <div className="w-80 space-y-3 bg-slate-900 text-white p-8 rounded-2xl shadow-xl">
                         <div className="flex justify-between text-sm font-bold uppercase tracking-wider text-slate-400">
                             <span>Subtotal:</span>

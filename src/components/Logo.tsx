@@ -14,8 +14,6 @@ export function Logo({ className, variant = 'dark' }: LogoProps) {
   const primaryColor = variant === 'dark' ? '#005691' : '#ffffff';
   const accentColor = '#FFD700';
 
-  // Tentamos carregar o logo.png primeiro. 
-  // Se falhar, mostramos o SVG artificial.
   useEffect(() => {
     const img = new Image();
     img.src = "/logo.png";
