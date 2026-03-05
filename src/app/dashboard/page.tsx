@@ -122,9 +122,11 @@ export default function DashboardPage() {
 
   }, [allServices, selectedUser, selectedDate, selectedProject]);
   
-  const getEmployeeName = (employeeId: string) => {
-    const employee = employees.find(e => e.id === employeeId);
-    return employee ? `${employee.firstName} ${employee.lastName}` : 'Desconegut';
+  // Melhoria: Fallback para o nome guardado no registro se o funcionário já não existir
+  const getEmployeeNameDisplay = (service: ServiceRecord) => {
+    const employee = employees.find(e => e.id === service.employeeId);
+    if (employee) return `${employee.firstName} ${employee.lastName}`;
+    return service.employeeName || 'Tècnic';
   };
 
   const handleDeleteSelected = () => {
@@ -290,7 +292,7 @@ export default function DashboardPage() {
                             <TableCell>
                                 <div className="flex items-center gap-2">
                                     <div className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: getUserColor(service.employeeId) }} />
-                                    <span className="font-semibold text-sm whitespace-nowrap">{getEmployeeName(service.employeeId)}</span>
+                                    <span className="font-semibold text-sm whitespace-nowrap">{getEmployeeNameDisplay(service)}</span>
                                 </div>
                             </TableCell>
                             <TableCell className="text-xs whitespace-nowrap">{format(parseISO(service.arrivalDateTime), 'dd/MM/yy HH:mm')}</TableCell>

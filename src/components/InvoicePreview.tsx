@@ -24,10 +24,9 @@ export const InvoicePreview = forwardRef<HTMLDivElement, InvoicePreviewProps>((p
     
     const { subtotal, iva, totalGeneral } = totals;
     
-    const getEmployeeName = (employeeId?: string) => {
-        if (!employeeId || !employees) return 'Tècnic no assignat';
-        const employee = employees.find(e => e.id === employeeId);
-        return employee ? `${employee.firstName} ${employee.lastName}` : 'Tècnic desconegut';
+    const getEmployeeName = (service: ServiceRecord) => {
+        const employee = employees.find(e => e.id === service.employeeId);
+        return employee ? `${employee.firstName} ${employee.lastName}` : (service.employeeName || 'Tècnic desconegut');
     };
 
     const groupedByAlbaran = useMemo(() => {
@@ -116,7 +115,7 @@ export const InvoicePreview = forwardRef<HTMLDivElement, InvoicePreviewProps>((p
                                         return (
                                             <tr key={service.id} className="border-b border-gray-100">
                                                 <td className="py-2 px-3 align-top whitespace-nowrap font-medium text-gray-500">{format(arrival, 'dd/MM/yy')}</td>
-                                                <td className="py-2 px-3 align-top font-bold">{service.employeeName || getEmployeeName(service.employeeId)}</td>
+                                                <td className="py-2 px-3 align-top font-bold">{getEmployeeName(service)}</td>
                                                 <td className="py-2 px-3 align-top text-gray-700">{service.description}</td>
                                                 <td className="py-2 px-3 align-top text-right font-bold tabular-nums">{hours} h</td>
                                             </tr>
@@ -171,7 +170,7 @@ export const InvoicePreview = forwardRef<HTMLDivElement, InvoicePreviewProps>((p
                         </div>
                     </div>
                 </div>
-            </section>
+            </header>
 
              <footer className="mt-24 pt-8 border-t text-center text-[10px] text-gray-400 uppercase tracking-widest font-bold">
                 <p>TS SERVEIS - Solucions Tècniques i Manteniment</p>
@@ -179,7 +178,7 @@ export const InvoicePreview = forwardRef<HTMLDivElement, InvoicePreviewProps>((p
             </footer>
 
         </div>
-    )
-}))
+    );
+});
 
 InvoicePreview.displayName = "InvoicePreview";
