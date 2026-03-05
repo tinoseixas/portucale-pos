@@ -51,7 +51,6 @@ export const InvoicePreview = forwardRef<HTMLDivElement, InvoicePreviewProps>((p
 
     return (
         <div ref={ref} className="bg-white p-12 font-sans text-gray-900 printable-area mx-auto" style={{ width: '210mm' }}>
-            {/* Header com Logotipo TS Serveis */}
             <header className="flex justify-between items-center border-b-2 border-slate-900 pb-8 mb-8">
                 <div className="flex flex-col gap-4">
                     <Logo className="h-20 w-auto" />
@@ -119,7 +118,7 @@ export const InvoicePreview = forwardRef<HTMLDivElement, InvoicePreviewProps>((p
                                                 <td className="py-2 px-3 align-top text-gray-700">{service.description}</td>
                                                 <td className="py-2 px-3 align-top text-right font-bold tabular-nums">{hours} h</td>
                                             </tr>
-                                        )
+                                        );
                                     })}
                                 </tbody>
                             </table>
@@ -145,7 +144,8 @@ export const InvoicePreview = forwardRef<HTMLDivElement, InvoicePreviewProps>((p
                                             <td className="text-right py-2 px-3 tabular-nums">{item.unitPrice.toFixed(2)} €</td>
                                             <td className="text-right py-2 px-3 font-bold tabular-nums text-gray-900">{itemTotal.toFixed(2)} €</td>
                                         </tr>
-                                )})}
+                                    );
+                                })}
                             </tbody>
                         </table>
                         )}
@@ -170,15 +170,14 @@ export const InvoicePreview = forwardRef<HTMLDivElement, InvoicePreviewProps>((p
                         </div>
                     </div>
                 </div>
-            </header>
+            </section>
 
              <footer className="mt-24 pt-8 border-t text-center text-[10px] text-gray-400 uppercase tracking-widest font-bold">
                 <p>TS SERVEIS - Solucions Tècniques i Manteniment</p>
                 <p className="mt-2">Gràcies per la seva confiança.</p>
             </footer>
-
         </div>
     );
-});
+}));
 
 InvoicePreview.displayName = "InvoicePreview";

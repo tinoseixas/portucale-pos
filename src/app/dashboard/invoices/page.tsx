@@ -42,7 +42,6 @@ function InvoicesPageContent() {
     const employeesQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'employees'), orderBy('firstName', 'asc')) : null, [firestore]);
     const { data: employees, isLoading: isLoadingEmployees } = useCollection<Employee>(employeesQuery);
 
-    // Selecció automàtica des de URL
     useEffect(() => {
         const customerIdParam = searchParams.get('customerId');
         const albaranIdParam = searchParams.get('albaranId');
@@ -86,13 +85,8 @@ function InvoicesPageContent() {
                 return;
             }
 
-            // Optimització: Només demanar els serveis relacionats amb el client seleccionat
-            const optimizedQuery = query(
-                collectionGroup(firestore, 'serviceRecords'),
-                where('customerId', '==', selectedCustomerId)
-            );
-            
-            const allServicesSnapshot = await getDocs(optimizedQuery);
+            // Evitem usar 'where' en collectionGroup per no dependre d'índexs compostos manuals
+            const allServicesSnapshot = await getDocs(collectionGroup(firestore, 'serviceRecords'));
             const allServicesData = allServicesSnapshot.docs.map(d => ({ id: d.id, ...d.data() } as ServiceRecord));
             
             const aggregatedServices = allServiceRecordIds.map(serviceId => {
@@ -112,7 +106,7 @@ function InvoicesPageContent() {
             console.error("Error important serveis:", e);
             toast({ variant: 'destructive', title: 'Error', description: "No s'han pogut carregar els detalls dels serveis." });
         }
-    }, [selectedAlbaranIds, albarans, firestore, employees, toast, selectedCustomerId]);
+    }, [selectedAlbaranIds, albarans, firestore, employees, toast]);
 
     useEffect(() => {
         importAlbarans();
@@ -194,7 +188,7 @@ function InvoicesPageContent() {
     const isLoading = isUserLoading || isLoadingCustomers || isLoadingAlbarans || isLoadingEmployees;
 
     if (isLoading) {
-        return <div className="p-12 text-center"><Loader2 className="h-12 w-12 animate-spin mx-auto text-primary" /><p className="mt-4">Preparant dades de facturació optimitzades...</p></div>
+        return <div className="p-12 text-center"><Loader2 className="h-12 w-12 animate-spin mx-auto text-primary" /><p className="mt-4">Preparant dades de facturació...</p></div>
     }
 
     return (

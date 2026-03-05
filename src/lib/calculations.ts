@@ -1,10 +1,9 @@
-
 import type { ServiceRecord, Employee } from '@/lib/types';
 import { parseISO, isValid, differenceInMinutes } from 'date-fns';
 
 const ADMIN_EMAIL = 'tinoseixas@gmail.com';
-const ADMIN_HOURLY_RATE = 30; // This will now be a fallback
-const USER_HOURLY_RATE = 27; // This will now be a fallback
+const ADMIN_HOURLY_RATE = 30; 
+const USER_HOURLY_RATE = 27; 
 export const IVA_RATE = 0.045; // 4.5% IGI for Andorra
 
 export function calculateLaborCost(services: ServiceRecord[], employees: Employee[]): number {
@@ -54,14 +53,15 @@ export function calculateTotalAmount(services: ServiceRecord[], employees: Emplo
     materialsSubtotal: number,
     laborCost: number,
 } {
-    if (!services || !employees) return { subtotal: 0, iva: 0, totalGeneral: 0, totalHours: 0, materialsSubtotal: 0, laborCost: 0 };
+    const safeServices = services || [];
+    const safeEmployees = employees || [];
 
-    const laborCost = calculateLaborCost(services, employees);
-    const totalMinutes = calculateTotalMinutes(services);
+    const laborCost = calculateLaborCost(safeServices, safeEmployees);
+    const totalMinutes = calculateTotalMinutes(safeServices);
     const totalHours = totalMinutes / 60;
 
-    const allMaterials = services.flatMap(service => service.materials || []).filter(material => 
-        !material.description.toLowerCase().includes('traball') && material.description.trim() !== ''
+    const allMaterials = safeServices.flatMap(service => service.materials || []).filter(material => 
+        material && material.description && !material.description.toLowerCase().includes('traball') && material.description.trim() !== ''
     );
 
     const materialsSubtotal = allMaterials.reduce((acc, material) => acc + (material.quantity * material.unitPrice), 0);
