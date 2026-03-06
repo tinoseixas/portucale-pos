@@ -1,4 +1,3 @@
-
 'use client'
 
 import { useEffect, useState, useMemo, useRef } from 'react'
@@ -128,12 +127,23 @@ export default function EditServicePage() {
 
   const projectsQuery = useMemoFirebase(() => {
       if (!firestore || !customerId || customerId === 'none') return null;
-      // Simplificamos para evitar erro de índice composto
       return query(collection(firestore, 'projects'), where('customerId', '==', customerId));
   }, [firestore, customerId]);
   
   const { data: allProjects, isLoading: isLoadingProjects } = useCollection<Project>(projectsQuery);
-  const activeProjects = useMemo(() => allProjects?.filter(p => p.status === 'active'), [allProjects]);
+  
+  const activeProjects = useMemo(() => {
+      if (!allProjects) return [];
+      const filtered = allProjects.filter(p => p.status === 'active');
+      // Deduplicar nomes para evitar repetições visuais
+      const seen = new Set();
+      return filtered.filter(p => {
+          const nameKey = p.name.toLowerCase().trim();
+          if (seen.has(nameKey)) return false;
+          seen.add(nameKey);
+          return true;
+      }).sort((a, b) => a.name.localeCompare(b.name));
+  }, [allProjects]);
 
   useEffect(() => {
     if (service) {
@@ -204,8 +214,8 @@ export default function EditServicePage() {
     }
   }
 
-  const handleGalleryUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
+  const handleGalleryUpload = async (input: React.ChangeEvent<HTMLInputElement>) => {
+    const files = input.target.files;
     if (!files) return;
     for (let i = 0; i < files.length; i++) {
         try {

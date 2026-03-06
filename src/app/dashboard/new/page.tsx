@@ -1,4 +1,3 @@
-
 'use client'
 
 import { useState, useMemo, useEffect } from 'react'
@@ -47,7 +46,6 @@ export default function NewServicePage() {
 
   const projectsQuery = useMemoFirebase(() => {
       if (!firestore || selectedCustomerId === 'none') return null;
-      // Simplificamos a consulta para evitar necessidade de índices compostos manuais
       return query(
           collection(firestore, 'projects'), 
           where('customerId', '==', selectedCustomerId)
@@ -58,7 +56,15 @@ export default function NewServicePage() {
 
   const activeProjects = useMemo(() => {
       if (!allProjects) return [];
-      return allProjects.filter(p => p.status === 'active');
+      const filtered = allProjects.filter(p => p.status === 'active');
+      // Deduplicar por nome para evitar repetições visuais
+      const seen = new Set();
+      return filtered.filter(p => {
+          const nameKey = p.name.toLowerCase().trim();
+          if (seen.has(nameKey)) return false;
+          seen.add(nameKey);
+          return true;
+      }).sort((a, b) => a.name.localeCompare(b.name));
   }, [allProjects]);
 
   const uniqueCustomers = useMemo(() => {
@@ -115,7 +121,7 @@ export default function NewServicePage() {
             arrivalDateTime: now.toISOString(),
             departureDateTime: now.toISOString(), 
             description: "Servei en curs...",
-            projectName: selectedProject?.name || '',
+            projectName: selectedProject?.name.trim() || '',
             projectId: selectedProjectId !== 'none' ? selectedProjectId : '',
             pendingTasks: '',
             customerId: selectedCustomerId !== 'none' ? selectedCustomer?.id || '' : '',
@@ -135,7 +141,6 @@ export default function NewServicePage() {
             description: "S'ha obert un nou registre de treball.",
         });
         
-        // FIX: Corregido redirecionamento usando backticks para interpolação de strings
         router.push(`/dashboard/edit/${docRef.id}?ownerId=${currentEmployee.id}`);
 
     } catch (error) {

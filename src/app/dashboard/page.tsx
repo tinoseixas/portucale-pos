@@ -89,15 +89,25 @@ export default function DashboardPage() {
   }, [firestore, isUserLoading, user]);
   
   const projectNames = useMemo(() => {
-    const names = allServices.map(service => service.projectName).filter(Boolean);
-    return [...new Set(names)].sort((a, b) => a.localeCompare(b));
+    const names = allServices.map(service => service.projectName?.trim()).filter(Boolean);
+    // Deduplicar ignorando espaços e mantendo a capitalização original do primeiro encontrado
+    const seen = new Set();
+    const unique: string[] = [];
+    names.forEach(n => {
+        const key = n!.toLowerCase();
+        if (!seen.has(key)) {
+            seen.add(key);
+            unique.push(n!);
+        }
+    });
+    return unique.sort((a, b) => a.localeCompare(b));
   }, [allServices]);
 
   const filteredServices = useMemo(() => {
     let filtered = allServices.filter(service => {
         const userMatch = selectedUser === 'all' || service.employeeId === selectedUser;
         const dateMatch = !selectedDate || isSameDay(parseISO(service.arrivalDateTime), selectedDate);
-        const projectMatch = selectedProject === 'all' || service.projectName === selectedProject;
+        const projectMatch = selectedProject === 'all' || (service.projectName?.trim() === selectedProject);
         return userMatch && dateMatch && projectMatch;
     });
 
@@ -122,7 +132,6 @@ export default function DashboardPage() {
 
   }, [allServices, selectedUser, selectedDate, selectedProject]);
   
-  // Melhoria: Fallback para o nome guardado no registro se o funcionário já não existir
   const getEmployeeNameDisplay = (service: ServiceRecord) => {
     const employee = employees.find(e => e.id === service.employeeId);
     if (employee) return `${employee.firstName} ${employee.lastName}`;
