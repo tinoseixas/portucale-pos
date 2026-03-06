@@ -34,7 +34,6 @@ export default function ProjectsManagementPage() {
     const [isSaving, setIsSaving] = useState(false)
     const [searchTerm, setSearchTerm] = useState('')
     
-    // Form states for new project
     const [newProjectName, setNewProjectName] = useState('')
     const [selectedCustomerId, setSelectedCustomerId] = useState<string>('none')
 
@@ -51,6 +50,18 @@ export default function ProjectsManagementPage() {
     }, [firestore]);
 
     const { data: customers } = useCollection<Customer>(customersQuery);
+
+    // Deduplicate customers for the select list
+    const uniqueCustomers = useMemo(() => {
+        if (!customers) return [];
+        const seen = new Set();
+        return customers.filter(c => {
+            const nameKey = c.name.toLowerCase().trim();
+            if (seen.has(nameKey)) return false;
+            seen.add(nameKey);
+            return true;
+        });
+    }, [customers]);
 
     const filteredProjects = useMemo(() => {
         if (!projects) return [];
@@ -75,7 +86,7 @@ export default function ProjectsManagementPage() {
         if (!firestore || !newProjectName.trim() || selectedCustomerId === 'none') return;
         setIsSaving(true);
         try {
-            const customer = customers?.find(c => c.id === selectedCustomerId);
+            const customer = uniqueCustomers.find(c => c.id === selectedCustomerId);
             await addDoc(collection(firestore, 'projects'), {
                 name: newProjectName.trim(),
                 customerId: selectedCustomerId,
@@ -128,7 +139,7 @@ export default function ProjectsManagementPage() {
                                 </SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="none">Escull un client...</SelectItem>
-                                    {customers?.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                                    {uniqueCustomers.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
                                 </SelectContent>
                             </Select>
                         </div>

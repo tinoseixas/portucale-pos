@@ -42,6 +42,18 @@ function InvoicesPageContent() {
     const employeesQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'employees'), orderBy('firstName', 'asc')) : null, [firestore]);
     const { data: employees, isLoading: isLoadingEmployees } = useCollection<Employee>(employeesQuery);
 
+    // Deduplicate customers by name for the select list
+    const uniqueCustomers = useMemo(() => {
+        if (!customers) return [];
+        const seen = new Set();
+        return customers.filter(c => {
+            const nameKey = c.name.toLowerCase().trim();
+            if (seen.has(nameKey)) return false;
+            seen.add(nameKey);
+            return true;
+        });
+    }, [customers]);
+
     useEffect(() => {
         const customerIdParam = searchParams.get('customerId');
         const albaranIdParam = searchParams.get('albaranId');
@@ -85,7 +97,6 @@ function InvoicesPageContent() {
                 return;
             }
 
-            // Evitem usar 'where' en collectionGroup per no dependre d'índexs compostos manuals
             const allServicesSnapshot = await getDocs(collectionGroup(firestore, 'serviceRecords'));
             const allServicesData = allServicesSnapshot.docs.map(d => ({ id: d.id, ...d.data() } as ServiceRecord));
             
@@ -214,7 +225,7 @@ function InvoicesPageContent() {
                                     </SelectTrigger>
                                     <SelectContent>
                                         <SelectItem value="none">Cap client seleccionat</SelectItem>
-                                        {customers?.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                                        {uniqueCustomers?.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
                                     </SelectContent>
                                 </Select>
                             </div>

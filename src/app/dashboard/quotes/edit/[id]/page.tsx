@@ -1,4 +1,3 @@
-
 'use client'
 
 import { useMemo, useRef, useState, useEffect } from 'react'
@@ -41,6 +40,18 @@ export default function EditQuotePage() {
     
     const customersQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'customers'), orderBy('name', 'asc')) : null, [firestore]);
     const { data: customers, isLoading: isLoadingCustomers } = useCollection<Customer>(customersQuery)
+
+    // Deduplicate customers for the select list
+    const uniqueCustomers = useMemo(() => {
+        if (!customers) return [];
+        const seen = new Set();
+        return customers.filter(c => {
+            const nameKey = c.name.toLowerCase().trim();
+            if (seen.has(nameKey)) return false;
+            seen.add(nameKey);
+            return true;
+        });
+    }, [customers]);
 
     useEffect(() => {
         if (quote) {
@@ -292,7 +303,7 @@ export default function EditQuotePage() {
                                     </SelectTrigger>
                                     <SelectContent>
                                         <SelectItem value="all">Cap client seleccionat</SelectItem>
-                                        {customers?.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                                        {uniqueCustomers?.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
                                     </SelectContent>
                                 </Select>
                             </div>
