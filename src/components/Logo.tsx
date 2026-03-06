@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 interface LogoProps {
   className?: string;
@@ -9,30 +9,34 @@ interface LogoProps {
 }
 
 /**
- * Componente de Logótipo que dá prioridade ao ficheiro real enviado pelo utilizador.
- * Se /logo.png não for encontrado, mostra um desenho SVG de reserva.
+ * Componente de Logótipo que dá prioridade ao ficheiro real enviado pelo utilizador em /public/logo.png.
  */
 export function Logo({ className, variant = 'dark' }: LogoProps) {
-  const [useFallback, setUseFallback] = useState(false);
+  const [imgError, setImgError] = useState(false);
+  const [timestamp, setTimestamp] = useState('');
+
+  // Adicionamos um timestamp para forçar o navegador a recarregar a imagem se ela mudar
+  useEffect(() => {
+    setTimestamp(new Date().getTime().toString());
+  }, []);
   
   const primaryColor = variant === 'dark' ? '#005691' : '#ffffff';
   const accentColor = '#FFD700';
 
-  // Se não houve erro ao carregar, tentamos mostrar a imagem real
-  if (!useFallback) {
+  if (!imgError) {
     return (
       <div className={className} style={{ display: 'inline-flex', alignItems: 'center' }}>
         <img 
-          src="/logo.png" 
+          src={`/logo.png?t=${timestamp}`} 
           alt="TS SERVEIS" 
           className="h-full w-auto max-h-full object-contain"
-          onError={() => setUseFallback(true)}
+          onError={() => setImgError(true)}
         />
       </div>
     );
   }
 
-  // Desenho artificial de reserva (caso o ficheiro logo.png não exista ou falhe)
+  // Desenho artificial de reserva apenas se logo.png não existir
   return (
     <svg 
       viewBox="0 0 450 100" 
