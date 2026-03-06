@@ -52,12 +52,12 @@ export default function AlbaransHistoryPage() {
   }, [firestore]);
   const { data: customers } = useCollection<Customer>(customersQuery);
 
-  // Deduplicar clientes para o filtro
+  // DEDUPLICAÇÃO DE CLIENTES PARA O FILTRO
   const uniqueCustomers = useMemo(() => {
     if (!customers) return [];
     const seen = new Set();
     return customers.filter(c => {
-      const nameKey = c.name.toLowerCase().trim();
+      const nameKey = c.name.toLowerCase().trim().replace(/\s+/g, ' ');
       if (seen.has(nameKey)) return false;
       seen.add(nameKey);
       return true;
@@ -189,28 +189,31 @@ export default function AlbaransHistoryPage() {
     setSearchProject('')
   }
 
-  if (isUserLoading || isLoadingAlbarans) return <div className="p-12 text-center"><Loader2 className="h-12 w-12 animate-spin mx-auto text-primary" /><p className="mt-4">Carregant historial d'albarans...</p></div>
+  if (isUserLoading || isLoadingAlbarans) return <div className="p-12 text-center h-[60vh] flex flex-col items-center justify-center"><Loader2 className="h-16 w-16 animate-spin text-primary" /><p className="mt-6 text-primary font-black uppercase tracking-widest">Carregant albarans...</p></div>
 
   return (
     <AdminGate pageTitle="Gestió d'Albarans" pageDescription="Supervisió i agrupació de treballs per projecte.">
-      <div className="max-w-full mx-auto space-y-6">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-            <h1 className="text-3xl font-black tracking-tighter flex items-center gap-2 uppercase">
-                <FileArchive className="h-8 w-8 text-primary" /> Historial d'Albarans
-            </h1>
-            <Button variant="default" onClick={handleSyncAlbarans} disabled={isSyncing} className="w-full sm:w-auto bg-primary hover:bg-primary/90 shadow-lg font-bold">
-                {isSyncing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
+      <div className="max-w-full mx-auto space-y-8">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
+            <div className="space-y-1">
+                <h1 className="text-4xl font-black tracking-tighter flex items-center gap-3 uppercase text-primary">
+                    <FileArchive className="h-10 w-10" /> Historial d'Albarans
+                </h1>
+                <p className="text-muted-foreground font-medium">Control i generació de documents per obra.</p>
+            </div>
+            <Button variant="default" onClick={handleSyncAlbarans} disabled={isSyncing} className="w-full sm:w-auto bg-primary hover:bg-primary/90 shadow-xl font-black uppercase tracking-widest h-14 px-8 rounded-2xl hover:scale-[1.02] transition-all">
+                {isSyncing ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <RefreshCw className="mr-2 h-5 w-5" />}
                 Actualitzar Albarans de l'Equip
             </Button>
         </div>
 
-        <Card className="bg-slate-50 border-none shadow-inner">
-            <CardContent className="p-4">
-                <div className="flex flex-col md:flex-row gap-4 items-end">
+        <Card className="bg-white border-none shadow-2xl rounded-3xl overflow-hidden">
+            <CardContent className="p-6 bg-slate-50/50">
+                <div className="flex flex-col md:flex-row gap-6 items-end">
                     <div className="flex-1 space-y-2">
-                        <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest flex items-center gap-2"><Users className="h-3 w-3" /> Filtrar per Client</label>
+                        <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest flex items-center gap-2 px-1"><Users className="h-3 w-3" /> Filtrar per Client</label>
                         <Select value={filterCustomer} onValueChange={setFilterCustomer}>
-                            <SelectTrigger className="bg-white border-2">
+                            <SelectTrigger className="bg-white border-2 h-12 rounded-xl font-bold">
                                 <SelectValue placeholder="Tots els clients" />
                             </SelectTrigger>
                             <SelectContent>
@@ -222,18 +225,18 @@ export default function AlbaransHistoryPage() {
                         </Select>
                     </div>
                     <div className="flex-1 space-y-2">
-                        <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest flex items-center gap-2"><Search className="h-3 w-3" /> Cerca per Obra</label>
+                        <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest flex items-center gap-2 px-1"><Search className="h-3 w-3" /> Cerca per Obra</label>
                         <div className="relative">
-                            <Briefcase className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                            <Briefcase className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
                             <Input 
                                 placeholder="Nom del projecte..." 
                                 value={searchProject}
                                 onChange={(e) => setSearchProject(e.target.value)}
-                                className="pl-10 bg-white border-2"
+                                className="pl-12 bg-white border-2 h-12 rounded-xl font-bold"
                             />
                         </div>
                     </div>
-                    <Button variant="ghost" onClick={clearFilters} size="sm" className="font-bold text-slate-500">
+                    <Button variant="ghost" onClick={clearFilters} className="font-black text-slate-400 uppercase text-[10px] tracking-widest hover:bg-slate-100 h-12">
                         <X className="h-4 w-4 mr-1" /> Netejar
                     </Button>
                 </div>
@@ -241,65 +244,58 @@ export default function AlbaransHistoryPage() {
         </Card>
 
         <Tabs defaultValue="pendents" className="w-full">
-          <TabsList className="grid w-full grid-cols-3 max-w-lg mb-6 bg-slate-100 p-1">
-            <TabsTrigger value="pendents" className="font-bold gap-2 data-[state=active]:bg-white">
-                <Clock className="h-4 w-4" /> Pendents {pendingAlbarans.length > 0 && <Badge variant="destructive" className="ml-1">{pendingAlbarans.length}</Badge>}
+          <TabsList className="grid w-full grid-cols-3 max-w-xl mb-10 bg-slate-200/50 p-1.5 rounded-2xl h-16">
+            <TabsTrigger value="pendents" className="font-black uppercase text-[10px] tracking-widest gap-2 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-xl rounded-xl transition-all">
+                <Clock className="h-4 w-4" /> Pendents {pendingAlbarans.length > 0 && <Badge variant="destructive" className="ml-1 rounded-md px-1.5 h-5 bg-red-500">{pendingAlbarans.length}</Badge>}
             </TabsTrigger>
-            <TabsTrigger value="historial" className="font-bold gap-2 data-[state=active]:bg-white">
+            <TabsTrigger value="historial" className="font-black uppercase text-[10px] tracking-widest gap-2 data-[state=active]:bg-white data-[state=active]:text-green-600 data-[state=active]:shadow-xl rounded-xl transition-all">
                 <CheckCircle2 className="h-4 w-4" /> Facturats
             </TabsTrigger>
-            <TabsTrigger value="arxivats" className="font-bold gap-2 data-[state=active]:bg-white">
+            <TabsTrigger value="arxivats" className="font-black uppercase text-[10px] tracking-widest gap-2 data-[state=active]:bg-white data-[state=active]:text-slate-600 data-[state=active]:shadow-xl rounded-xl transition-all">
                 <Archive className="h-4 w-4" /> Arxivats
             </TabsTrigger>
           </TabsList>
 
           <TabsContent value="pendents">
-            <Card className="border-primary/20 shadow-md">
-              <CardHeader className="bg-primary/5">
-                <CardTitle className="text-primary flex items-center gap-2">Treballs pendents de facturar</CardTitle>
-                <CardDescription>Agrupació per obra de tota la feina feta encara no cobrada.</CardDescription>
+            <Card className="border-none shadow-2xl rounded-3xl overflow-hidden">
+              <CardHeader className="bg-primary/5 p-8 border-b border-primary/10">
+                <CardTitle className="text-primary flex items-center gap-2 text-xl font-black uppercase tracking-tight">Treballs pendents de facturar</CardTitle>
+                <CardDescription className="text-primary/60 font-medium">Llista automàtica de treballs agrupats per obra.</CardDescription>
               </CardHeader>
-              <CardContent className="pt-6">
+              <CardContent className="p-0">
                 <div className="overflow-x-auto">
                     <Table>
                         <TableHeader>
-                            <TableRow>
-                                <TableHead>Nº Albarà</TableHead>
-                                <TableHead>Obra / Projecte</TableHead>
-                                <TableHead>Client</TableHead>
-                                <TableHead>Tècnics</TableHead>
-                                <TableHead>Total Est.</TableHead>
-                                <TableHead className="text-right">Accions</TableHead>
+                            <TableRow className="bg-slate-50/50">
+                                <TableHead className="px-8 font-black uppercase text-[10px] tracking-widest">Nº Albarà</TableHead>
+                                <TableHead className="font-black uppercase text-[10px] tracking-widest">Obra / Projecte</TableHead>
+                                <TableHead className="font-black uppercase text-[10px] tracking-widest">Client</TableHead>
+                                <TableHead className="font-black uppercase text-[10px] tracking-widest">Import Est.</TableHead>
+                                <TableHead className="text-right px-8 font-black uppercase text-[10px] tracking-widest">Accions</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                         {pendingAlbarans.map(albaran => (
-                            <TableRow key={albaran.id} className="hover:bg-slate-50 transition-colors">
-                                <TableCell className="font-black">#{String(albaran.albaranNumber).padStart(4, '0')}</TableCell>
-                                <TableCell className="font-bold text-primary">
-                                    <div className="flex items-center gap-2">
-                                        <Briefcase className="h-4 w-4 shrink-0" /> 
-                                        {albaran.projectName}
-                                    </div>
-                                </TableCell>
-                                <TableCell className="font-medium">{albaran.customerName}</TableCell>
+                            <TableRow key={albaran.id} className="hover:bg-primary/5 transition-colors border-b-2 border-slate-50">
+                                <TableCell className="px-8 font-black text-slate-400">#{String(albaran.albaranNumber).padStart(4, '0')}</TableCell>
                                 <TableCell>
-                                    <div className="flex items-center gap-1 text-xs text-muted-foreground italic max-w-[180px] truncate">
-                                        <Users className="h-3 w-3 shrink-0" /> {albaran.employeeName}
+                                    <div className="flex flex-col">
+                                        <span className="font-black text-slate-900 uppercase text-sm tracking-tight">{albaran.projectName}</span>
+                                        <span className="text-[10px] text-slate-400 font-bold italic flex items-center gap-1 mt-1">
+                                            <Users className="h-3 w-3" /> {albaran.employeeName}
+                                        </span>
                                     </div>
                                 </TableCell>
-                                <TableCell className="font-black text-lg text-slate-900">{albaran.totalAmount.toFixed(2)} €</TableCell>
-                                <TableCell className="text-right">
-                                    <div className="flex justify-end gap-2">
-                                        <Button variant="outline" size="icon" asChild className="h-8 w-8 font-bold border-primary text-primary hover:bg-primary/10" title="Editar">
+                                <TableCell className="font-bold text-slate-600">{albaran.customerName}</TableCell>
+                                <TableCell className="font-black text-xl text-primary">{albaran.totalAmount.toFixed(2)} €</TableCell>
+                                <TableCell className="text-right px-8">
+                                    <div className="flex justify-end gap-3">
+                                        <Button variant="outline" size="icon" asChild className="h-10 w-10 border-2 border-primary text-primary hover:bg-primary hover:text-white rounded-xl shadow-sm transition-all" title="Veure i Editar">
                                             <Link href={`/dashboard/albarans/${albaran.id}`}>
                                                 <Edit className="h-4 w-4" />
                                             </Link>
                                         </Button>
-                                        <Button variant="outline" size="icon" onClick={() => handleArchiveAlbaran(albaran.id)} className="h-8 w-8 font-bold text-slate-500" title="Arxivar">
-                                            <Archive className="h-4 w-4" />
-                                        </Button>
-                                        <Button size="sm" asChild className="bg-primary hover:bg-primary/90 h-8 shadow-sm font-bold">
+                                        <Button size="sm" asChild className="bg-primary hover:bg-primary/90 h-10 px-5 shadow-lg font-black uppercase text-[10px] tracking-widest rounded-xl hover:scale-[1.02] transition-all">
                                             <Link href={`/dashboard/invoices?customerId=${albaran.customerId}&albaranId=${albaran.id}`}>
                                                 <CreditCard className="mr-2 h-4 w-4" /> Facturar
                                             </Link>
@@ -307,20 +303,20 @@ export default function AlbaransHistoryPage() {
                                         
                                         <AlertDialog>
                                             <AlertDialogTrigger asChild>
-                                                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-destructive/10">
+                                                <Button variant="ghost" size="icon" className="h-10 w-10 text-red-300 hover:text-red-600 hover:bg-red-50 rounded-xl">
                                                     <Trash2 className="h-4 w-4" />
                                                 </Button>
                                             </AlertDialogTrigger>
-                                            <AlertDialogContent>
+                                            <AlertDialogContent className="rounded-[2.5rem] p-10">
                                                 <AlertDialogHeader>
-                                                    <AlertDialogTitle>Vols eliminar aquest document?</AlertDialogTitle>
-                                                    <AlertDialogDescription>
-                                                        Això només esborra l'albarà de resum. Els registres de treball dos tècnics es mantindran intactes per poder-los tornar a agrupar si cal.
+                                                    <AlertDialogTitle className="text-2xl font-black uppercase">Eliminar Albarà?</AlertDialogTitle>
+                                                    <AlertDialogDescription className="text-base font-medium">
+                                                        Això només esborra o document de resum. Els registres de treball dels tècnics es mantindran intactes per poder-los tornar a agrupar.
                                                     </AlertDialogDescription>
                                                 </AlertDialogHeader>
-                                                <AlertDialogFooter>
-                                                    <AlertDialogCancel>Enrere</AlertDialogCancel>
-                                                    <AlertDialogAction onClick={() => handleDeleteAlbaran(albaran.id, albaran.albaranNumber)} className="bg-destructive hover:bg-destructive/90">Eliminar</AlertDialogAction>
+                                                <AlertDialogFooter className="pt-6">
+                                                    <AlertDialogCancel className="h-14 rounded-2xl font-bold border-2 px-8">Enrere</AlertDialogCancel>
+                                                    <AlertDialogAction onClick={() => handleDeleteAlbaran(albaran.id, albaran.albaranNumber)} className="bg-red-600 h-14 rounded-2xl font-black uppercase tracking-widest px-8">Confirmar</AlertDialogAction>
                                                 </AlertDialogFooter>
                                             </AlertDialogContent>
                                         </AlertDialog>
@@ -330,11 +326,13 @@ export default function AlbaransHistoryPage() {
                         ))}
                         {pendingAlbarans.length === 0 && (
                             <TableRow>
-                                <TableCell colSpan={6} className="h-48 text-center">
-                                    <div className="flex flex-col items-center justify-center text-muted-foreground space-y-2">
-                                        <AlertCircle className="h-8 w-8 opacity-20" />
-                                        <p className="italic">No s'han trobat albarans pendents amb aquests filtres.</p>
-                                        <p className="text-xs">Prova de netejar els filtres o prem "Actualitzar".</p>
+                                <TableCell colSpan={5} className="h-64 text-center">
+                                    <div className="flex flex-col items-center justify-center text-slate-300 space-y-4">
+                                        <AlertCircle className="h-16 w-16 opacity-20" />
+                                        <div className="space-y-1">
+                                            <p className="font-black uppercase tracking-widest">Sense albarans pendents</p>
+                                            <p className="text-sm font-medium italic">Prova de carregar en "Actualitzar Albarans" per veure si hi ha feina nova.</p>
+                                        </div>
                                     </div>
                                 </TableCell>
                             </TableRow>
@@ -347,61 +345,42 @@ export default function AlbaransHistoryPage() {
           </TabsContent>
 
           <TabsContent value="historial">
-            <Card className="shadow-sm">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">Albarans ja facturats</CardTitle>
-                <CardDescription>Consulta el registre de documents que ja han estat convertits en factures.</CardDescription>
+            <Card className="border-none shadow-2xl rounded-3xl overflow-hidden">
+              <CardHeader className="bg-green-50 p-8 border-b border-green-100">
+                <CardTitle className="text-green-700 flex items-center gap-2 text-xl font-black uppercase tracking-tight">Albarans facturats</CardTitle>
+                <CardDescription className="text-green-600/60 font-medium">Documents que ja han estat convertits en factures oficials.</CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-0">
                 <div className="overflow-x-auto">
                     <Table>
                         <TableHeader>
-                            <TableRow>
-                                <TableHead>Nº Albarà</TableHead>
-                                <TableHead>Obra</TableHead>
-                                <TableHead>Client</TableHead>
-                                <TableHead>Total</TableHead>
-                                <TableHead className="text-right">Accions</TableHead>
+                            <TableRow className="bg-slate-50/50">
+                                <TableHead className="px-8 font-black uppercase text-[10px] tracking-widest">Nº Albarà</TableHead>
+                                <TableHead className="font-black uppercase text-[10px] tracking-widest">Obra</TableHead>
+                                <TableHead className="font-black uppercase text-[10px] tracking-widest">Client</TableHead>
+                                <TableHead className="font-black uppercase text-[10px] tracking-widest">Total</TableHead>
+                                <TableHead className="text-right px-8 font-black uppercase text-[10px] tracking-widest">Accions</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {historyAlbarans.map(albaran => (
-                                <TableRow key={albaran.id} className="opacity-80">
-                                    <TableCell className="font-bold">#{String(albaran.albaranNumber).padStart(4, '0')}</TableCell>
-                                    <TableCell className="font-medium">{albaran.projectName}</TableCell>
-                                    <TableCell>{albaran.customerName}</TableCell>
-                                    <TableCell className="font-bold">{albaran.totalAmount.toFixed(2)} €</TableCell>
-                                    <TableCell className="text-right">
-                                        <div className="flex justify-end gap-2">
-                                            <Button variant="outline" size="sm" asChild className="h-8 font-bold">
-                                                <Link href={`/dashboard/albarans/${albaran.id}`}>
-                                                    <Eye className="h-4 w-4 mr-1" /> Veure
-                                                </Link>
-                                            </Button>
-                                            <AlertDialog>
-                                                <AlertDialogTrigger asChild>
-                                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive opacity-20 hover:opacity-100">
-                                                        <Trash2 className="h-4 w-4" />
-                                                    </Button>
-                                                </AlertDialogTrigger>
-                                                <AlertDialogContent>
-                                                    <AlertDialogHeader>
-                                                        <AlertDialogTitle>Eliminar de l'historial?</AlertDialogTitle>
-                                                        <AlertDialogDescription>Aquesta acció esborrarà o document de l'albarà facturat. No es recomana esborrar documents ja processats.</AlertDialogDescription>
-                                                    </AlertDialogHeader>
-                                                    <AlertDialogFooter>
-                                                        <AlertDialogCancel>Enrere</AlertDialogCancel>
-                                                        <AlertDialogAction onClick={() => handleDeleteAlbaran(albaran.id, albaran.albaranNumber)} className="bg-destructive">Eliminar definitivament</AlertDialogAction>
-                                                    </AlertDialogFooter>
-                                                </AlertDialogContent>
-                                            </AlertDialog>
-                                        </div>
+                                <TableRow key={albaran.id} className="opacity-80 hover:opacity-100 border-b border-slate-50">
+                                    <TableCell className="px-8 font-bold text-slate-400">#{String(albaran.albaranNumber).padStart(4, '0')}</TableCell>
+                                    <TableCell className="font-black uppercase text-xs">{albaran.projectName}</TableCell>
+                                    <TableCell className="font-bold text-slate-500">{albaran.customerName}</TableCell>
+                                    <TableCell className="font-black text-slate-900">{albaran.totalAmount.toFixed(2)} €</TableCell>
+                                    <TableCell className="text-right px-8">
+                                        <Button variant="outline" size="sm" asChild className="h-10 px-6 font-black uppercase text-[10px] tracking-widest border-2 rounded-xl">
+                                            <Link href={`/dashboard/albarans/${albaran.id}`}>
+                                                <Eye className="h-4 w-4 mr-2" /> Veure
+                                            </Link>
+                                        </Button>
                                     </TableCell>
                                 </TableRow>
                             ))}
                             {historyAlbarans.length === 0 && (
                                 <TableRow>
-                                    <TableCell colSpan={5} className="h-32 text-center text-muted-foreground italic">No s'han trobat albarans facturats amb aquests filtres.</TableCell>
+                                    <TableCell colSpan={5} className="h-32 text-center text-slate-400 italic font-medium">No s'ha facturat cap albarà encara.</TableCell>
                                 </TableRow>
                             )}
                         </TableBody>
@@ -412,36 +391,34 @@ export default function AlbaransHistoryPage() {
           </TabsContent>
 
           <TabsContent value="arxivats">
-            <Card className="shadow-sm border-slate-200">
-              <CardHeader className="bg-slate-50">
-                <CardTitle className="flex items-center gap-2 text-slate-600">Albarans arxivats</CardTitle>
-                <CardDescription>Documents que no s'han facturat i s'han tret del llistat actiu.</CardDescription>
+            <Card className="border-none shadow-2xl rounded-3xl overflow-hidden">
+              <CardHeader className="bg-slate-100 p-8 border-b border-slate-200">
+                <CardTitle className="flex items-center gap-2 text-slate-600 text-xl font-black uppercase tracking-tight">Albarans arxivats</CardTitle>
+                <CardDescription className="text-slate-500 font-medium">Documents fora de la llista activa.</CardDescription>
               </CardHeader>
-              <CardContent className="pt-6">
+              <CardContent className="p-0">
                 <div className="overflow-x-auto">
                     <Table>
                         <TableHeader>
-                            <TableRow>
-                                <TableHead>Nº Albarà</TableHead>
-                                <TableHead>Obra</TableHead>
-                                <TableHead>Client</TableHead>
-                                <TableHead>Total</TableHead>
-                                <TableHead className="text-right">Accions</TableHead>
+                            <TableRow className="bg-slate-50/50">
+                                <TableHead className="px-8 font-black uppercase text-[10px] tracking-widest">Nº Albarà</TableHead>
+                                <TableHead className="font-black uppercase text-[10px] tracking-widest">Obra</TableHead>
+                                <TableHead className="font-black uppercase text-[10px] tracking-widest">Client</TableHead>
+                                <TableHead className="text-right px-8 font-black uppercase text-[10px] tracking-widest">Accions</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {archivedAlbarans.map(albaran => (
-                                <TableRow key={albaran.id} className="opacity-60 bg-slate-50/50">
-                                    <TableCell className="font-bold">#{String(albaran.albaranNumber).padStart(4, '0')}</TableCell>
-                                    <TableCell>{albaran.projectName}</TableCell>
-                                    <TableCell>{albaran.customerName}</TableCell>
-                                    <TableCell>{albaran.totalAmount.toFixed(2)} €</TableCell>
-                                    <TableCell className="text-right">
+                                <TableRow key={albaran.id} className="opacity-60 bg-slate-50/20 grayscale">
+                                    <TableCell className="px-8 font-bold">#{String(albaran.albaranNumber).padStart(4, '0')}</TableCell>
+                                    <TableCell className="font-medium text-xs uppercase">{albaran.projectName}</TableCell>
+                                    <TableCell className="text-xs">{albaran.customerName}</TableCell>
+                                    <TableCell className="text-right px-8">
                                         <div className="flex justify-end gap-2">
-                                            <Button variant="outline" size="sm" onClick={() => updateDocumentNonBlocking(doc(firestore!, 'albarans', albaran.id), { status: 'pendent' })} className="h-8 font-bold">
+                                            <Button variant="outline" size="sm" onClick={() => updateDocumentNonBlocking(doc(firestore!, 'albarans', albaran.id), { status: 'pendent' })} className="h-9 px-4 font-black uppercase text-[10px] tracking-widest border-2 rounded-xl hover:bg-primary hover:text-white transition-all">
                                                 Recuperar
                                             </Button>
-                                            <Button variant="ghost" size="icon" onClick={() => handleDeleteAlbaran(albaran.id, albaran.albaranNumber)} className="h-8 w-8 text-destructive">
+                                            <Button variant="ghost" size="icon" onClick={() => handleDeleteAlbaran(albaran.id, albaran.albaranNumber)} className="h-9 w-9 text-red-400">
                                                 <Trash2 className="h-4 w-4" />
                                             </Button>
                                         </div>
@@ -450,7 +427,7 @@ export default function AlbaransHistoryPage() {
                             ))}
                             {archivedAlbarans.length === 0 && (
                                 <TableRow>
-                                    <TableCell colSpan={5} className="h-32 text-center text-muted-foreground italic">No hi ha albarans arxivats.</TableCell>
+                                    <TableCell colSpan={4} className="h-32 text-center text-slate-400 italic">No hi ha albarans arxivats.</TableCell>
                                 </TableRow>
                             )}
                         </TableBody>

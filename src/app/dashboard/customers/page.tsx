@@ -9,7 +9,8 @@ import type { Customer } from '@/lib/types'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
-import { Edit, Trash2, PlusCircle, Building, Mail, Phone, Hash, Upload } from 'lucide-react'
+import { Edit, Trash2, PlusCircle, Building, Mail, Phone, Hash, Upload, Search } from 'lucide-react'
+import { Input } from '@/components/ui/input'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -24,31 +25,12 @@ import {
 import { useToast } from '@/hooks/use-toast'
 import { AdminGate } from '@/components/AdminGate'
 
-// Dades de client de mostra para sincronização inicial
-const mockCustomers: Omit<Customer, 'id'>[] = [
-  { name: 'Adiel Serveis', nrt: 'F333016-C', address: 'Cami de engolasters 2', email: '', contact: '' },
-  { name: 'ADVOCADA EVA LOPEZ HERRERO', nrt: 'F-216873-R', address: 'C/LES CANALS N°5 1°18', email: '', contact: '' },
-  { name: 'Albertina Almeida', nrt: 'F-173750-T', address: 'Avinguda Joan Marti nº44', email: '', contact: '' },
-  { name: 'Àlex Terés', nrt: '', address: 'Pleta d’Ordino 38A', email: '', contact: '390500' },
-  { name: 'Alimentària UNIÓ la verema', nrt: 'L-706700-X', address: 'AV. SALOU, 54 LOCAL 8', email: 'administracio@alimentariaunio.com', contact: '' },
-  { name: 'AndBnB S.L', nrt: 'L716427', address: 'Cortals ,Piso Font del Ferro, -3 5', email: '', contact: '' },
-  { name: 'Certes Ventures SLU', nrt: 'B25851882', address: 'Ctra. d’Argolell núm. 1', email: 'mvilaporte@gmail.com', contact: '' },
-  { name: 'Clínica dental Diet Kahn', nrt: 'C802450z', address: 'Carrer Josep Rossel Calva 13', email: 'Clinicadietkahn@andorra.ad', contact: '803020' },
-  { name: 'CONSTRUCCIONS LA BORDA, S.L.', nrt: '', address: 'CL DE LA VALIRETA, 3 2 1, AD200 Encamp, Andorra', email: '', contact: '' },
-  { name: 'Dirgest', nrt: 'L711805D', address: 'Carre Bonaventura Riberaigua, 25, 5 B', email: 'amorchon@dirgest.eu', contact: '' },
-  { name: 'Mesas Trigo sl', nrt: '', address: 'Avinguda Meritxell, 75 3ª planta despatx 8-10 Edifici Quars', email: 'eva.seixas@mesastrigo.com', contact: '887007' },
-  { name: 'Policlinica Dental Roge', nrt: 'L144354s', address: 'Av.Rocaford 30', email: 'recepcio@dentalroge.com', contact: '844500' },
-  { name: 'Residència Clara Rabassa', nrt: 'U-126 896-N', address: 'Avda. Princep Benlloch, 26-30', email: 'direccio@clararabassa.com', contact: '805960' },
-  { name: 'VILADOMAT, SAU', nrt: 'A-700966-G', address: 'Carrer Roureda de Sansa, 10', email: 'immasopena@viladomat.com', contact: '' }
-].sort((a, b) => a.name.localeCompare(b.name, 'ca', { sensitivity: 'base' }));
-
-
 export default function CustomersPage() {
   const router = useRouter()
   const { toast } = useToast()
   const { user, isUserLoading } = useUser()
   const firestore = useFirestore()
-  const [isImporting, setIsImporting] = useState(false)
+  const [searchTerm, setSearchTerm] = useState('')
 
   useEffect(() => {
     if (!isUserLoading && !user) {
@@ -66,60 +48,23 @@ export default function CustomersPage() {
   // DEDUPLICAÇÃO DE CLIENTES NA LISTA VISUAL
   const displayCustomers = useMemo(() => {
     if (!customers) return [];
+    
+    // 1. Unificar por nome
     const seen = new Set();
-    return customers.filter(c => {
+    const unique = customers.filter(c => {
       const nameKey = c.name.toLowerCase().trim().replace(/\s+/g, ' ');
       if (seen.has(nameKey)) return false;
       seen.add(nameKey);
       return true;
-    }).sort((a, b) => a.name.localeCompare(b.name));
-  }, [customers]);
+    }).sort((a, b) => a.name.localeCompare(b.name, 'ca'));
 
-  const handleImportMockData = async () => {
-    if (!firestore) return;
-    setIsImporting(true);
-
-    try {
-      const existingSnap = await getDocs(collection(firestore, 'customers'));
-      const existingNames = new Set(existingSnap.docs.map(doc => doc.data().name.toLowerCase().trim().replace(/\s+/g, ' ')));
-
-      const batch = writeBatch(firestore);
-      const customersCollection = collection(firestore, 'customers');
-      
-      let addedCount = 0;
-      mockCustomers.forEach(customerData => {
-        const nameKey = customerData.name.toLowerCase().trim().replace(/\s+/g, ' ');
-        if (!existingNames.has(nameKey)) {
-          const docRef = doc(customersCollection);
-          batch.set(docRef, { ...customerData, name: customerData.name.trim() });
-          existingNames.add(nameKey); 
-          addedCount++;
-        }
-      });
-
-      if (addedCount > 0) {
-        await batch.commit();
-        toast({
-          title: 'Sincronització Completa',
-          description: `${addedCount} nous clients han estat afegits sense duplicats.`,
-        });
-      } else {
-        toast({
-          title: 'Sense canvis',
-          description: 'Tots els clients já existeixen a la base de dades.',
-        });
-      }
-    } catch (error) {
-      console.error("Error en importar clients:", error);
-      toast({
-        variant: 'destructive',
-        title: 'Error en la sincronització',
-        description: "No s'han pogut afegir els clients.",
-      });
-    } finally {
-      setIsImporting(false);
-    }
-  };
+    // 2. Filtrar por termo de busca
+    if (!searchTerm) return unique;
+    return unique.filter(c => 
+        c.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+        c.nrt?.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [customers, searchTerm]);
 
   const handleDeleteCustomer = (customerId: string, customerName: string) => {
     if (!firestore) return;
@@ -133,91 +78,105 @@ export default function CustomersPage() {
   
   const isLoading = isUserLoading || isLoadingCustomers;
 
-  if (isLoading) return <p className="p-4">Carregant clients...</p>;
+  if (isLoading) return <div className="p-12 text-center h-[60vh] flex flex-col items-center justify-center"><Loader2 className="h-16 w-16 animate-spin text-primary" /><p className="mt-6 text-primary font-black uppercase tracking-widest">Carregant llista de clients...</p></div>;
   if (!user) return null;
 
   return (
     <AdminGate pageTitle="Gestió de Clients" pageDescription="Visualitza, afegeix i gestiona tots els clients registrats.">
-        <div className="max-w-6xl mx-auto">
-        <Card>
-            <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center sm:justify-between gap-4">
-            <div>
-                <CardTitle>Gestió de Clients</CardTitle>
-                <CardDescription>Visualitza, afegeix i gestiona tots els clients registrats.</CardDescription>
+        <div className="max-w-6xl mx-auto space-y-8">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
+            <div className="space-y-1">
+                <h1 className="text-4xl font-black uppercase tracking-tighter text-primary flex items-center gap-3">
+                    <Building className="h-10 w-10" /> Base de Clients
+                </h1>
+                <p className="text-muted-foreground font-medium">Gestió centralitzada de dades de contacte i facturació.</p>
             </div>
-            <div className="flex gap-2 flex-wrap w-full sm:w-auto">
-                <Button variant="outline" onClick={handleImportMockData} disabled={isImporting} className="w-full sm:w-auto">
-                <Upload className="mr-2 h-4 w-4" />
-                {isImporting ? 'Sincronitzant...' : 'Sincronitzar Dades'}
-                </Button>
-                <Button onClick={() => router.push('/dashboard/customers/edit/new')} className="w-full sm:w-auto">
-                    <PlusCircle className="mr-2 h-4 w-4" />
-                    Nou Client
-                </Button>
-            </div>
+            <Button onClick={() => router.push('/dashboard/customers/edit/new')} className="w-full sm:w-auto h-14 px-8 bg-accent hover:bg-accent/90 text-accent-foreground font-black uppercase tracking-widest rounded-2xl shadow-xl hover:scale-[1.02] transition-all">
+                <PlusCircle className="mr-2 h-6 w-6" />
+                Nou Client
+            </Button>
+        </div>
+
+        <Card className="border-none shadow-2xl rounded-3xl overflow-hidden bg-white">
+            <CardHeader className="bg-slate-900 text-white p-8">
+                <div className="flex flex-col md:flex-row justify-between items-center gap-6">
+                    <CardTitle className="text-xl font-black uppercase tracking-widest flex items-center gap-3">
+                        Llistat Directori
+                        <Badge className="bg-accent text-accent-foreground font-black border-none">{displayCustomers.length}</Badge>
+                    </CardTitle>
+                    <div className="relative w-full md:w-96">
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+                        <Input 
+                            placeholder="Buscar per nom o NRT..." 
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="pl-12 bg-slate-800 border-none text-white h-12 rounded-xl focus-visible:ring-accent font-bold"
+                        />
+                    </div>
+                </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-0">
             <div className="overflow-x-auto">
                 <Table>
                     <TableHeader>
-                    <TableRow>
-                        <TableHead>Nom</TableHead>
-                        <TableHead>NIF</TableHead>
-                        <TableHead>Correu electrònic</TableHead>
-                        <TableHead>Telèfon</TableHead>
-                        <TableHead className="text-right">Accions</TableHead>
+                    <TableRow className="bg-slate-50">
+                        <TableHead className="px-8 font-black uppercase text-[10px] tracking-widest">Nom del Client</TableHead>
+                        <TableHead className="font-black uppercase text-[10px] tracking-widest">NIF / NRT</TableHead>
+                        <TableHead className="font-black uppercase text-[10px] tracking-widest">Contacte</TableHead>
+                        <TableHead className="text-right px-8 font-black uppercase text-[10px] tracking-widest">Accions</TableHead>
                     </TableRow>
                     </TableHeader>
                     <TableBody>
                     {displayCustomers.length > 0 ? displayCustomers.map(customer => (
-                        <TableRow key={customer.id}>
-                        <TableCell>
-                            <div className="font-medium flex items-center gap-2">
-                                <Building className="h-4 w-4 text-muted-foreground" />
+                        <TableRow key={customer.id} className="hover:bg-slate-50 transition-colors border-b-2 border-slate-50">
+                        <TableCell className="px-8 py-6">
+                            <div className="font-black text-slate-900 uppercase tracking-tight text-sm">
                                 {customer.name}
                             </div>
-                            <div className="text-sm text-muted-foreground max-w-[200px] truncate">{customer.address}</div>
+                            <div className="text-[10px] text-slate-400 font-bold max-w-[250px] truncate mt-1">{customer.address}</div>
                         </TableCell>
                         <TableCell>
-                            <div className="flex items-center gap-2">
-                                <Hash className="h-4 w-4 text-muted-foreground" />
+                            <Badge variant="outline" className="font-black text-[10px] border-slate-200 bg-slate-50 text-slate-600 px-3 py-1">
                                 {customer.nrt || 'N/A'}
-                            </div>
+                            </Badge>
                         </TableCell>
                         <TableCell>
-                            <div className="flex items-center gap-2 max-w-[150px] truncate">
-                                <Mail className="h-4 w-4 text-muted-foreground" />
-                                {customer.email || 'N/A'}
+                            <div className="space-y-1">
+                                {customer.email && (
+                                    <div className="flex items-center gap-2 text-xs font-bold text-slate-500">
+                                        <Mail className="h-3 w-3 text-primary" /> {customer.email}
+                                    </div>
+                                )}
+                                {customer.contact && (
+                                    <div className="flex items-center gap-2 text-xs font-bold text-slate-500">
+                                        <Phone className="h-3 w-3 text-primary" /> {customer.contact}
+                                    </div>
+                                )}
+                                {!customer.email && !customer.contact && <span className="text-[10px] text-slate-300 italic font-bold">Sense contacte</span>}
                             </div>
                         </TableCell>
-                        <TableCell>
-                            <div className="flex items-center gap-2">
-                                <Phone className="h-4 w-4 text-muted-foreground" />
-                                {customer.contact || 'N/A'}
-                            </div>
-                        </TableCell>
-                        <TableCell className="text-right">
-                            <div className="flex justify-end items-center gap-2">
-                                <Button asChild variant="outline" size="icon" onClick={() => router.push(`/dashboard/customers/edit/${customer.id}`)}>
+                        <TableCell className="text-right px-8">
+                            <div className="flex justify-end items-center gap-3">
+                                <Button asChild variant="outline" size="icon" onClick={() => router.push(`/dashboard/customers/edit/${customer.id}`)} className="h-10 w-10 border-2 rounded-xl text-primary border-primary/20 hover:bg-primary hover:text-white transition-all shadow-sm">
                                     <Edit className="h-4 w-4" />
                                 </Button>
                             
                                 <AlertDialog>
                                 <AlertDialogTrigger asChild>
-                                    <Button variant="destructive" size="icon">
+                                    <Button variant="ghost" size="icon" className="h-10 w-10 text-red-300 hover:text-red-600 hover:bg-red-50 rounded-xl">
                                         <Trash2 className="h-4 w-4" />
                                     </Button>
                                 </AlertDialogTrigger>
-                                <AlertDialogContent>
+                                <AlertDialogContent className="rounded-[2.5rem] p-10">
                                     <AlertDialogHeader>
-                                    <AlertDialogTitle>Estàs segur?</AlertDialogTitle>
-                                    <AlertDialogDescription>
-                                        Aquesta acció no es pot desfer. S'eliminarà el client <strong>{customer.name}</strong>.
+                                    <AlertDialogTitle className="text-2xl font-black uppercase">Eliminar Client?</AlertDialogTitle>
+                                    <AlertDialogDescription className="text-base font-medium">
+                                        Aquesta acció no es pot desfer. S'eliminarà o client <strong>{customer.name}</strong> de la base de dades.
                                     </AlertDialogDescription>
                                     </AlertDialogHeader>
-                                    <AlertDialogFooter>
-                                    <AlertDialogCancel>Cancel·lar</AlertDialogCancel>
-                                    <AlertDialogAction onClick={() => handleDeleteCustomer(customer.id, customer.name)} className="bg-destructive">Eliminar</AlertDialogAction>
+                                    <AlertDialogFooter className="pt-6">
+                                    <AlertDialogCancel className="h-14 rounded-2xl font-bold border-2 px-8">Cancel·lar</AlertDialogCancel>
+                                    <AlertDialogAction onClick={() => handleDeleteCustomer(customer.id, customer.name)} className="bg-red-600 h-14 rounded-2xl font-black uppercase tracking-widest px-8">Confirmar eliminació</AlertDialogAction>
                                     </AlertDialogFooter>
                                 </AlertDialogContent>
                                 </AlertDialog>
@@ -226,8 +185,11 @@ export default function CustomersPage() {
                         </TableRow>
                     )) : (
                         <TableRow>
-                            <TableCell colSpan={5} className="h-24 text-center">
-                                No s'han trobat clients.
+                            <TableCell colSpan={4} className="h-48 text-center">
+                                <div className="flex flex-col items-center justify-center text-slate-300 space-y-2">
+                                    <Building className="h-12 w-12 opacity-20" />
+                                    <p className="font-black uppercase text-[10px] tracking-widest">No s'han trobat clients</p>
+                                </div>
                             </TableCell>
                         </TableRow>
                     )}

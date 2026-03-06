@@ -2,7 +2,7 @@
 'use client'
 import React, { forwardRef, useMemo } from 'react';
 import type { Customer, ServiceRecord, Employee } from '@/lib/types';
-import { format, parseISO, isValid } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { ca } from 'date-fns/locale';
 import { calculateTotalAmount, calculateServiceEffectiveMinutes, getMealBreakOverlapMinutes } from '@/lib/calculations';
 import { Logo } from '@/components/Logo';

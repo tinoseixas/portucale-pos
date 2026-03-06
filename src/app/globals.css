@@ -5,26 +5,26 @@
 
 @layer base {
   :root {
-    --background: 0 0% 98%;
+    --background: 210 40% 98%;
     --foreground: 222 47% 11%;
     --card: 0 0% 100%;
     --card-foreground: 222 47% 11%;
     --popover: 0 0% 100%;
     --popover-foreground: 222 47% 11%;
-    --primary: 205 75% 45%; /* Azul do Logo */
+    --primary: 205 100% 30%; /* Azul Forte Corporativo */
     --primary-foreground: 210 40% 98%;
     --secondary: 210 40% 96.1%;
     --secondary-foreground: 222 47% 11.2%;
     --muted: 210 40% 96.1%;
     --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 45 90% 50%; /* Dourado/Amarelo do Logo */
+    --accent: 45 100% 50%; /* Amarelo Vibrante */
     --accent-foreground: 222 47% 11.2%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
-    --ring: 205 75% 45%;
-    --radius: 0.75rem;
+    --ring: 205 100% 30%;
+    --radius: 1rem;
   }
   .dark {
     --background: 222 47% 11%;
@@ -33,19 +33,19 @@
     --card-foreground: 210 40% 98%;
     --popover: 222 47% 11%;
     --popover-foreground: 210 40% 98%;
-    --primary: 205 75% 55%;
+    --primary: 205 100% 45%;
     --primary-foreground: 222 47% 11.2%;
     --secondary: 217.2 32.6% 17.5%;
     --secondary-foreground: 210 40% 98%;
     --muted: 217.2 32.6% 17.5%;
     --muted-foreground: 215 20.2% 65.1%;
-    --accent: 45 90% 55%;
+    --accent: 45 100% 55%;
     --accent-foreground: 210 40% 98%;
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
-    --ring: 205 75% 55%;
+    --ring: 205 100% 45%;
   }
 }
 
@@ -73,7 +73,6 @@
     }
 }
 
-/* Custom spacing for PDF generation to prevent cuts */
 .printable-area table, 
 .printable-area section, 
 .printable-area .bg-slate-900,
