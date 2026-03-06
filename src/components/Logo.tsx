@@ -1,48 +1,38 @@
 
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 
 interface LogoProps {
   className?: string;
   variant?: 'light' | 'dark';
 }
 
+/**
+ * Componente de Logótipo que dá prioridade ao ficheiro real enviado pelo utilizador.
+ * Se /logo.png não for encontrado, mostra um desenho SVG de reserva.
+ */
 export function Logo({ className, variant = 'dark' }: LogoProps) {
-  const [imgError, setImgError] = useState(false);
-  const [imgLoaded, setImgLoaded] = useState(false);
+  const [useFallback, setUseFallback] = useState(false);
   
   const primaryColor = variant === 'dark' ? '#005691' : '#ffffff';
   const accentColor = '#FFD700';
 
-  useEffect(() => {
-    // Tenta carregar a imagem real que o utilizador subiu
-    const img = new Image();
-    img.src = "/logo.png";
-    img.onload = () => {
-      setImgLoaded(true);
-      setImgError(false);
-    };
-    img.onerror = () => {
-      setImgError(true);
-      setImgLoaded(false);
-    };
-  }, []);
-
-  // Se a imagem logótipo.png existir, mostra-a com prioridade
-  if (imgLoaded && !imgError) {
+  // Se não houve erro ao carregar, tentamos mostrar a imagem real
+  if (!useFallback) {
     return (
       <div className={className} style={{ display: 'inline-flex', alignItems: 'center' }}>
         <img 
           src="/logo.png" 
           alt="TS SERVEIS" 
           className="h-full w-auto max-h-full object-contain"
+          onError={() => setUseFallback(true)}
         />
       </div>
     );
   }
 
-  // Desenho artificial de reserva (caso o ficheiro logo.png ainda não tenha sido subido)
+  // Desenho artificial de reserva (caso o ficheiro logo.png não exista ou falhe)
   return (
     <svg 
       viewBox="0 0 450 100" 
@@ -51,7 +41,7 @@ export function Logo({ className, variant = 'dark' }: LogoProps) {
       preserveAspectRatio="xMidYMid meet"
     >
       <defs>
-        <linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+        <linearGradient id="logoGradientFallback" x1="0%" y1="0%" x2="100%" y2="100%">
           <stop offset="0%" style={{ stopColor: primaryColor, stopOpacity: 1 }} />
           <stop offset="100%" style={{ stopColor: '#003d66', stopOpacity: 1 }} />
         </linearGradient>
@@ -59,7 +49,7 @@ export function Logo({ className, variant = 'dark' }: LogoProps) {
       
       <path 
         d="M20 15 L55 5 L90 15 L90 55 C90 80 55 95 55 95 C55 95 20 80 20 55 Z" 
-        fill="url(#logoGradient)" 
+        fill="url(#logoGradientFallback)" 
       />
       <path 
         d="M40 50 L55 65 L80 35" 
