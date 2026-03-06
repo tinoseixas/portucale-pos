@@ -9,8 +9,9 @@ import type { Customer } from '@/lib/types'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
-import { Edit, Trash2, PlusCircle, Building, Mail, Phone, Hash, Upload, Search } from 'lucide-react'
+import { Edit, Trash2, PlusCircle, Building, Mail, Phone, Hash, Upload, Search, Loader2 } from 'lucide-react'
 import { Input } from '@/components/ui/input'
+import { Badge } from '@/components/ui/badge'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -49,7 +50,7 @@ export default function CustomersPage() {
   const displayCustomers = useMemo(() => {
     if (!customers) return [];
     
-    // 1. Unificar por nome
+    // 1. Unificar por nome (limpando espaços e ignorando maiúsculas)
     const seen = new Set();
     const unique = customers.filter(c => {
       const nameKey = c.name.toLowerCase().trim().replace(/\s+/g, ' ');
