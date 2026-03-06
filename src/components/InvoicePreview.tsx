@@ -1,3 +1,4 @@
+
 'use client'
 import React, { forwardRef, useMemo } from 'react';
 import type { Customer, ServiceRecord, Employee } from '@/lib/types';
@@ -53,7 +54,8 @@ export const InvoicePreview = forwardRef<HTMLDivElement, InvoicePreviewProps>((p
 
     return (
         <div ref={ref} className="bg-white p-12 font-sans text-gray-900 printable-area mx-auto" style={{ width: '210mm' }}>
-            <header className="flex justify-between items-center border-b-2 border-slate-900 pb-8 mb-8">
+            {/* Cabçalera */}
+            <header className="flex justify-between items-center border-b-2 border-slate-900 pb-8 mb-8" style={{ pageBreakInside: 'avoid' }}>
                 <div className="flex flex-col gap-4">
                     <Logo className="h-20 w-auto" />
                     <div className="text-sm text-gray-600">
@@ -70,7 +72,8 @@ export const InvoicePreview = forwardRef<HTMLDivElement, InvoicePreviewProps>((p
                 </div>
             </header>
 
-            <section className="flex justify-between gap-8 my-8">
+            {/* Secció Client i Obra */}
+            <section className="flex justify-between gap-8 my-8" style={{ pageBreakInside: 'avoid' }}>
                 <div className="flex-1">
                     <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-2">DADES DEL CLIENT</h3>
                     {customer ? (
@@ -88,11 +91,12 @@ export const InvoicePreview = forwardRef<HTMLDivElement, InvoicePreviewProps>((p
                  </div>
             </section>
             
+            {/* Detalls de Treball */}
             <section>
                 <h3 className="font-black text-lg mb-4 border-b-2 pb-2 uppercase tracking-tight">Detall de Treballs i Materials</h3>
                 
                 {groupedByAlbaran.map(([albaranNum, { services: albaranServices, items: albaranItems }]) => (
-                    <div key={albaranNum} className="mb-8 break-inside-avoid">
+                    <div key={albaranNum} className="mb-8" style={{ pageBreakInside: 'avoid', breakInside: 'avoid' }}>
                         {Number(albaranNum) > 0 && (
                             <h4 className="font-bold text-sm mb-3 bg-slate-100 p-2 rounded border-l-4 border-primary">Albarà de Referència #{String(albaranNum).padStart(4, '0')}</h4>
                         )}
@@ -154,8 +158,8 @@ export const InvoicePreview = forwardRef<HTMLDivElement, InvoicePreviewProps>((p
                     </div>
                 ))}
                 
-                {/* Resum de Mà d'obra amb valor hora */}
-                <div className="mt-6 border-t-2 border-slate-100 pt-4 break-inside-avoid">
+                {/* Resum de Mà d'obra */}
+                <div className="mt-6 border-t-2 border-slate-100 pt-4" style={{ pageBreakInside: 'avoid', breakInside: 'avoid' }}>
                     <div className="flex justify-between items-center bg-slate-50 p-4 rounded-xl border border-slate-200">
                         <div>
                             <p className="text-sm font-black text-slate-900 uppercase">Mà d'obra i Treball Tècnic</p>
@@ -167,7 +171,8 @@ export const InvoicePreview = forwardRef<HTMLDivElement, InvoicePreviewProps>((p
                     </div>
                 </div>
 
-                <div className="flex justify-end mt-10 break-inside-avoid">
+                {/* Bloc de Totals Finals */}
+                <div className="flex justify-end mt-10" style={{ pageBreakInside: 'avoid', breakInside: 'avoid' }}>
                     <div className="w-80 space-y-3 bg-slate-900 text-white p-8 rounded-2xl shadow-xl">
                         <div className="flex justify-between text-sm font-bold uppercase tracking-wider text-slate-400">
                             <span>Subtotal:</span>
@@ -187,9 +192,10 @@ export const InvoicePreview = forwardRef<HTMLDivElement, InvoicePreviewProps>((p
                 </div>
             </section>
 
-             <footer className="mt-24 pt-8 border-t text-center text-[10px] text-gray-400 uppercase tracking-widest font-bold">
+             <footer className="mt-24 pt-8 border-t text-center text-[10px] text-gray-400 uppercase tracking-widest font-bold" style={{ pageBreakInside: 'avoid' }}>
                 <p>TS SERVEIS - Solucions Tècniques i Manteniment</p>
-                <p className="mt-2">Gràcies per la seva confiança.</p>
+                <p className="mt-2">CONVERTIM LES TEVES IDEES EN REALITAT</p>
+                <p className="mt-1">Gràcies per la seva confiança.</p>
             </footer>
         </div>
     );

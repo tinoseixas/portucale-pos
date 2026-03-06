@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Button } from '@/components/ui/button'
-import { LogOut, User as UserIcon, Users, Building, FileArchive, FileSignature, Receipt, LineChart } from 'lucide-react'
+import { LogOut, User as UserIcon, Users, Building, FileArchive, FileSignature, Receipt, LineChart, Briefcase } from 'lucide-react'
 import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase'
 import { signOut } from 'firebase/auth'
 import { useRouter } from 'next/navigation'
@@ -57,7 +57,11 @@ export function Header() {
              <div className="hidden lg:flex items-center gap-2 flex-wrap justify-end">
                 <Button variant="ghost" size="sm" onClick={() => router.push('/dashboard/activity-report')} className="font-bold">
                     <LineChart className="mr-2 h-4 w-4" />
-                    Informes
+                    Hores
+                </Button>
+                <Button variant="ghost" size="sm" onClick={() => router.push('/dashboard/projects')} className="font-bold text-primary">
+                    <Briefcase className="mr-2 h-4 w-4" />
+                    Obres
                 </Button>
                 <Button variant="ghost" size="sm" onClick={() => router.push('/dashboard/invoices/history')} className="font-bold">
                     <Receipt className="mr-2 h-4 w-4" />

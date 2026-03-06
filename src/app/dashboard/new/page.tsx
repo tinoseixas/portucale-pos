@@ -1,3 +1,4 @@
+
 'use client'
 
 import { useState, useMemo, useEffect } from 'react'
@@ -5,13 +6,15 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { LogIn, MapPin, Users, Loader2 } from 'lucide-react'
+import { LogIn, MapPin, Users, Loader2, Briefcase, Plus } from 'lucide-react'
 import { useToast } from "@/hooks/use-toast"
 import { useUser, useFirestore, useDoc, useCollection, useMemoFirebase } from '@/firebase'
-import { addDoc, collection, doc, query, orderBy } from 'firebase/firestore'
-import type { Employee, Customer, ServiceRecord } from '@/lib/types'
+import { addDoc, collection, doc, query, orderBy, where } from 'firebase/firestore'
+import type { Employee, Customer, ServiceRecord, Project } from '@/lib/types'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Label } from '@/components/ui/label'
+import { Input } from '@/components/ui/input'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 
 
 export default function NewServicePage() {
@@ -20,8 +23,15 @@ export default function NewServicePage() {
   const [isStarting, setIsStarting] = useState(false);
   const { user, isUserLoading } = useUser()
   const firestore = useFirestore()
-  const [selectedCustomerId, setSelectedCustomerId] = useState<string>('none');
   
+  const [selectedCustomerId, setSelectedCustomerId] = useState<string>('none');
+  const [selectedProjectId, setSelectedProjectId] = useState<string>('none');
+  
+  // Per a noves obres directes
+  const [isNewProjectDialogOpen, setIsNewProjectDialogOpen] = useState(false);
+  const [newProjectName, setNewProjectName] = useState('');
+  const [isCreatingProject, setIsCreatingProject] = useState(false);
+
   const employeeDocRef = useMemoFirebase(() => {
     if (!user) return null;
     return doc(firestore, 'employees', user.uid);
@@ -36,7 +46,17 @@ export default function NewServicePage() {
 
   const { data: customers, isLoading: isLoadingCustomers } = useCollection<Customer>(customersQuery);
 
-  // Filtrem duplicats per nom per a la interfície
+  const projectsQuery = useMemoFirebase(() => {
+      if (!firestore || selectedCustomerId === 'none') return null;
+      return query(
+          collection(firestore, 'projects'), 
+          where('customerId', '==', selectedCustomerId),
+          where('status', '==', 'active')
+      );
+  }, [firestore, selectedCustomerId]);
+
+  const { data: activeProjects, isLoading: isLoadingProjects } = useCollection<Project>(projectsQuery);
+
   const uniqueCustomers = useMemo(() => {
     if (!customers) return [];
     const seen = new Set();
@@ -48,17 +68,41 @@ export default function NewServicePage() {
     });
   }, [customers]);
 
+  const handleCreateProject = async () => {
+      if (!firestore || !newProjectName.trim() || selectedCustomerId === 'none') return;
+      setIsCreatingProject(true);
+      try {
+          const customer = uniqueCustomers.find(c => c.id === selectedCustomerId);
+          const projectRef = await addDoc(collection(firestore, 'projects'), {
+              name: newProjectName.trim(),
+              customerId: selectedCustomerId,
+              customerName: customer?.name || 'N/A',
+              status: 'active',
+              createdAt: new Date().toISOString()
+          });
+          toast({ title: "Obra creada", description: "S'ha afegit la nova obra correctament." });
+          setSelectedProjectId(projectRef.id);
+          setIsNewProjectDialogOpen(false);
+          setNewProjectName('');
+      } catch (e) {
+          console.error(e);
+          toast({ variant: 'destructive', title: "Error", description: "No s'ha pogut crear l'obra." });
+      } finally {
+          setIsCreatingProject(false);
+      }
+  };
 
   const handleStartService = async () => {
     if (!user || !firestore || !currentEmployee) {
-        toast({ variant: "destructive", title: "Error", description: "No s'han pogut carregar les dades de l'usuari. Si us plau, torna-ho a intentar." });
+        toast({ variant: "destructive", title: "Error", description: "No s'han pogut carregar les dades de l'usuari." });
         return;
     }
     
     setIsStarting(true);
 
     try {
-        const selectedCustomer = customers?.find(c => c.id === selectedCustomerId);
+        const selectedCustomer = uniqueCustomers?.find(c => c.id === selectedCustomerId);
+        const selectedProject = activeProjects?.find(p => p.id === selectedProjectId);
         
         const now = new Date();
         const serviceRecord: Omit<ServiceRecord, 'id'> = {
@@ -67,7 +111,8 @@ export default function NewServicePage() {
             arrivalDateTime: now.toISOString(),
             departureDateTime: now.toISOString(), 
             description: "Servei en curs...",
-            projectName: '',
+            projectName: selectedProject?.name || '',
+            projectId: selectedProjectId !== 'none' ? selectedProjectId : '',
             pendingTasks: '',
             customerId: selectedCustomerId !== 'none' ? selectedCustomer?.id || '' : '',
             customerName: selectedCustomerId !== 'none' ? selectedCustomer?.name || '' : '',
@@ -82,8 +127,8 @@ export default function NewServicePage() {
         const docRef = await addDoc(serviceRecordsCollection, serviceRecord);
         
         toast({ 
-            title: `Servei iniciat per a ${currentEmployee.firstName}!`,
-            description: "S'ha iniciat el registre del servei.",
+            title: `Servei iniciat!`,
+            description: "S'ha obert un nou registre de treball.",
         });
         
         router.push(`/dashboard/edit/${docRef.id}?ownerId=${currentEmployee.id}`);
@@ -97,29 +142,17 @@ export default function NewServicePage() {
   
   const isDataLoading = isUserLoading || isLoadingEmployee || isLoadingCustomers;
 
-
-  if (isUserLoading && !user) {
+  if (!user && !isUserLoading) {
     return (
-      <div className="flex items-center justify-center h-full">
-        <p>Carregant...</p>
-      </div>
-    );
-  }
-
-  if (!user) {
-    return (
-      <div className="max-w-2xl mx-auto">
-        <Card className="text-center">
+      <div className="max-w-2xl mx-auto flex items-center justify-center h-[70vh]">
+        <Card className="text-center w-full">
           <CardHeader>
             <CardTitle>Inicia Sessió</CardTitle>
-            <CardDescription>Necessites iniciar sessió per poder registrar un nou servei.</CardDescription>
+            <CardDescription>Necessites accés per registrar serveis.</CardDescription>
           </CardHeader>
           <CardContent>
-             <Button asChild>
-                <Link href="/">
-                  <LogIn className="mr-2 h-4 w-4" />
-                  Iniciar Sessió
-                </Link>
+             <Button asChild className="bg-primary text-white">
+                <Link href="/">Anar al Portal</Link>
               </Button>
           </CardContent>
         </Card>
@@ -129,34 +162,80 @@ export default function NewServicePage() {
 
   return (
       <div className="max-w-2xl mx-auto flex items-center justify-center" style={{ height: '70vh' }}>
-        <Card className="w-full text-center">
-          <CardHeader>
-            <CardTitle>Preparat per començar?</CardTitle>
-            <CardDescription>Selecciona un client (opcional) i clica el botó per iniciar un nou servei.</CardDescription>
+        <Card className="w-full shadow-2xl border-none rounded-3xl overflow-hidden">
+          <CardHeader className="bg-slate-900 text-white p-8 text-center">
+            <CardTitle className="text-3xl font-black uppercase tracking-tight">Nou Registre</CardTitle>
+            <CardDescription className="text-slate-400">Selecciona el client i l'obra per començar.</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-6">
-              <div className="space-y-2 text-left">
-                <Label htmlFor="customerId" className="flex items-center gap-2"><Users className="h-4 w-4 text-muted-foreground" /> Client</Label>
-                <Select value={selectedCustomerId} onValueChange={setSelectedCustomerId} disabled={isLoadingCustomers}>
-                  <SelectTrigger id="customerId">
-                    <SelectValue placeholder={isLoadingCustomers ? "Carregant clients..." : "Selecciona un client..."} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Cap client</SelectItem>
-                    {uniqueCustomers?.map(c => (
-                      <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+          <CardContent className="space-y-8 pt-10">
+              <div className="space-y-4">
+                <div className="space-y-2">
+                    <Label htmlFor="customerId" className="flex items-center gap-2 font-black uppercase text-[10px] text-slate-400 tracking-widest pl-1"><Users className="h-3 w-3" /> Client</Label>
+                    <Select value={selectedCustomerId} onValueChange={(val) => { setSelectedCustomerId(val); setSelectedProjectId('none'); }}>
+                    <SelectTrigger id="customerId" className="h-14 rounded-2xl border-2 font-bold">
+                        <SelectValue placeholder={isLoadingCustomers ? "Carregant..." : "Selecciona un client"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="none">Cap client</SelectItem>
+                        {uniqueCustomers?.map(c => (
+                        <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                        ))}
+                    </SelectContent>
+                    </Select>
+                </div>
+
+                {selectedCustomerId !== 'none' && (
+                    <div className="space-y-2">
+                        <div className="flex justify-between items-center px-1">
+                            <Label htmlFor="projectId" className="flex items-center gap-2 font-black uppercase text-[10px] text-slate-400 tracking-widest"><Briefcase className="h-3 w-3" /> Obra / Projecte</Label>
+                            <Dialog open={isNewProjectDialogOpen} onOpenChange={setIsNewProjectDialogOpen}>
+                                <DialogTrigger asChild>
+                                    <button className="text-[10px] font-black text-primary hover:underline uppercase">+ NOVA OBRA</button>
+                                </DialogTrigger>
+                                <DialogContent className="rounded-3xl">
+                                    <DialogHeader>
+                                        <DialogTitle>Nova Obra per a {uniqueCustomers.find(c => c.id === selectedCustomerId)?.name}</DialogTitle>
+                                        <DialogDescription>Afegeix una nova obra activa a la llista d'aquest client.</DialogDescription>
+                                    </DialogHeader>
+                                    <div className="py-4">
+                                        <Input 
+                                            placeholder="Nom de la nova obra (Ex: Reforma Pis 2B)" 
+                                            value={newProjectName}
+                                            onChange={(e) => setNewProjectName(e.target.value)}
+                                            className="h-12 rounded-xl font-bold"
+                                        />
+                                    </div>
+                                    <DialogFooter>
+                                        <Button variant="outline" onClick={() => setIsNewProjectDialogOpen(false)}>Enrere</Button>
+                                        <Button onClick={handleCreateProject} disabled={isCreatingProject || !newProjectName.trim()} className="bg-primary font-bold">Crear Obra</Button>
+                                    </DialogFooter>
+                                </DialogContent>
+                            </Dialog>
+                        </div>
+                        <Select value={selectedProjectId} onValueChange={setSelectedProjectId} disabled={isLoadingProjects}>
+                            <SelectTrigger id="projectId" className="h-14 rounded-2xl border-2 font-bold">
+                                <SelectValue placeholder={isLoadingProjects ? "Carregant obres..." : "Selecciona una obra activa"} />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="none">Selecciona una obra...</SelectItem>
+                                {activeProjects?.map(p => (
+                                    <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                                ))}
+                                {activeProjects?.length === 0 && <SelectItem value="none" disabled>No hi ha obres actives</SelectItem>}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                )}
               </div>
+
               <Button 
                   size="lg" 
-                  className="w-full h-16 text-lg bg-accent hover:bg-accent/90 text-accent-foreground"
+                  className="w-full h-20 text-xl font-black uppercase tracking-tighter bg-accent hover:bg-accent/90 text-accent-foreground rounded-[2rem] shadow-xl hover:scale-[1.02] transition-transform"
                   onClick={handleStartService}
                   disabled={isDataLoading || isStarting}
               >
-                  {isDataLoading ? <Loader2 className="mr-3 h-6 w-6 animate-spin" /> : <MapPin className="mr-3 h-6 w-6" />}
-                  {isDataLoading ? "Carregant dades..." : (isStarting ? "Iniciant..." : "Iniciar Servei")}
+                  {isDataLoading ? <Loader2 className="mr-3 h-8 w-8 animate-spin" /> : <MapPin className="mr-3 h-8 w-8" />}
+                  {isDataLoading ? "CARREGANT..." : (isStarting ? "INICIANT..." : "INICIAR SERVEI")}
               </Button>
           </CardContent>
         </Card>

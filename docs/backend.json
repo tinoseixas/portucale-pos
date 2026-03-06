@@ -91,6 +91,21 @@
         "name"
       ]
     },
+    "Project": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Project",
+      "type": "object",
+      "description": "Represents a construction project or work site (obra).",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string", "description": "The name of the project." },
+        "customerId": { "type": "string", "description": "ID of the customer this project belongs to." },
+        "customerName": { "type": "string" },
+        "status": { "type": "string", "enum": ["active", "finished"], "description": "Status of the work." },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "name", "customerId", "status"]
+    },
     "ServiceRecord": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "ServiceRecord",
@@ -116,6 +131,10 @@
         "projectName": {
           "type": "string",
           "description": "Name of the construction project or work site."
+        },
+        "projectId": {
+          "type": "string",
+          "description": "ID of the linked project."
         },
         "arrivalDateTime": {
           "type": "string",
@@ -391,7 +410,7 @@
           "schema": {
             "$ref": "#/backend/entities/Employee"
           },
-          "description": "Stores employee profiles. The employeeId is the document ID.  Security rules ensure only the authenticated employee can access their profile.",
+          "description": "Stores employee profiles.",
           "params": [
             {
               "name": "employeeId",
@@ -407,7 +426,7 @@
           "schema": {
             "$ref": "#/backend/entities/ServiceRecord"
           },
-          "description": "Stores service records for each employee. Provides path-based authorization. Only the employee who 'owns' the service record can access it.",
+          "description": "Stores service records for each employee.",
           "params": [
             {
               "name": "employeeId",
@@ -427,7 +446,7 @@
           "schema": {
             "$ref": "#/backend/entities/Customer"
           },
-          "description": "Stores customer profiles. All authenticated users (employees) can read the list of customers to assign them to service records, but only admins can create, update, or delete customers.",
+          "description": "Stores customer profiles.",
           "params": [
             {
               "name": "customerId",
@@ -437,11 +456,20 @@
         }
       },
       {
+        "path": "/projects/{projectId}",
+        "definition": {
+          "entityName": "Project",
+          "schema": { "$ref": "#/backend/entities/Project" },
+          "description": "Stores projects (obres) grouped by customer.",
+          "params": [{ "name": "projectId", "description": "ID of the project" }]
+        }
+      },
+      {
         "path": "/albarans/{albaranId}",
         "definition": {
             "entityName": "Albaran",
             "schema": { "$ref": "#/backend/entities/Albaran" },
-            "description": "Stores historical records of generated albaràs. All authenticated users can read.",
+            "description": "Stores generated albaràs.",
             "params": [{ "name": "albaranId", "description": "Unique ID for the albarà." }]
         }
       },
@@ -450,7 +478,7 @@
         "definition": {
             "entityName": "Quote",
             "schema": { "$ref": "#/backend/entities/Quote" },
-            "description": "Stores historical records of generated quotes (pressupostos). All authenticated users can read.",
+            "description": "Stores generated quotes.",
             "params": [{ "name": "quoteId", "description": "Unique ID for the quote." }]
         }
       },
@@ -459,7 +487,7 @@
         "definition": {
             "entityName": "Invoice",
             "schema": { "$ref": "#/backend/entities/Invoice" },
-            "description": "Stores historical records of generated invoices (factures). All authenticated users can read.",
+            "description": "Stores generated invoices.",
             "params": [{ "name": "invoiceId", "description": "Unique ID for the invoice." }]
         }
       },
@@ -468,7 +496,7 @@
         "definition": {
             "entityName": "Receipt",
             "schema": { "$ref": "#/backend/entities/Receipt" },
-            "description": "Stores historical records of generated receipts (rebuts). All authenticated users can read.",
+            "description": "Stores generated receipts.",
             "params": [{ "name": "receiptId", "description": "Unique ID for the receipt." }]
         }
       },
@@ -477,7 +505,7 @@
         "definition": {
             "entityName": "Counter",
             "schema": { "$ref": "#/backend/entities/Counter" },
-            "description": "Manages the sequential counter for albarà numbers. Only admins should have write access.",
+            "description": "Counter for albarà numbers.",
             "params": []
         }
       },
@@ -486,7 +514,7 @@
         "definition": {
             "entityName": "Counter",
             "schema": { "$ref": "#/backend/entities/Counter" },
-            "description": "Manages the sequential counter for quote numbers. Only admins should have write access.",
+            "description": "Counter for quote numbers.",
             "params": []
         }
       },
@@ -495,7 +523,7 @@
         "definition": {
             "entityName": "Counter",
             "schema": { "$ref": "#/backend/entities/Counter" },
-            "description": "Manages the sequential counter for invoice numbers. Only admins should have write access.",
+            "description": "Counter for invoice numbers.",
             "params": []
         }
       },
@@ -504,11 +532,11 @@
         "definition": {
             "entityName": "Counter",
             "schema": { "$ref": "#/backend/entities/Counter" },
-            "description": "Manages the sequential counter for receipt numbers. Only admins should have write access.",
+            "description": "Counter for receipt numbers.",
             "params": []
         }
       }
     ],
-    "reasoning": "The Firestore data structure is designed to support the 'Registre Diari de Treball' application, focusing on simplicity, security, and scalability. It leverages path-based ownership for employee data and nested service records. The 'photos' collection has been replaced by a 'media' array within the ServiceRecord document to store base64 data URLs of images and videos directly. This simplifies data retrieval for each service record, as it avoids extra subcollection reads, but may increase document size. This design ensures that security rules can be written clearly and efficiently.\n\n**Authorization Independence and QAPs:**\n\n*   **Employees Collection:** The `/employees/{employeeId}` collection stores employee profiles. Security rules will ensure only the authenticated employee (or an admin) can access their own profile.\n*   **Service Records:** Each employee has a subcollection `/employees/{employeeId}/serviceRecords/{serviceRecordId}`. This structure provides path-based authorization. Only the employee who 'owns' the service record can access it.\n*   **Customers Collection:** The `/customers/{customerId}` collection is readable by all authenticated users to allow assignment, but write access is restricted to admins to maintain data integrity."
+    "reasoning": "Updated structure to include a dedicated Projects collection for managing 'obres actives' and allowing them to be archived."
   }
 }

@@ -3,7 +3,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, User as UserIcon, Users, Building, FileArchive, FileSignature, Receipt, LineChart } from 'lucide-react'
+import { LayoutDashboard, User as UserIcon, Users, Building, FileArchive, FileSignature, Receipt, LineChart, Briefcase } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useUser } from '@/firebase'
 
@@ -13,8 +13,9 @@ export function BottomNav() {
 
   const navItems = [
     { href: '/dashboard', icon: LayoutDashboard, label: 'Serveis' },
-    { href: '/dashboard/activity-report', icon: LineChart, label: 'Informes' },
-    { href: '/dashboard/quotes', icon: FileSignature, label: 'Pressupostos' },
+    { href: '/dashboard/activity-report', icon: LineChart, label: 'Hores' },
+    { href: '/dashboard/projects', icon: Briefcase, label: 'Obres' },
+    { href: '/dashboard/quotes', icon: FileSignature, label: 'Presu.' },
     { href: '/dashboard/invoices/history', icon: Receipt, label: 'Factures' },
     { href: '/dashboard/albarans', icon: FileArchive, label: 'Albarans' },
     { href: '/dashboard/customers', icon: Building, label: 'Clients' },
@@ -53,7 +54,7 @@ export function BottomNav() {
               key={item.href}
               href={item.href}
               className={cn(
-                'flex flex-col items-center justify-center gap-1 transition-colors p-1 rounded-lg flex-1 min-w-[64px]',
+                'flex flex-col items-center justify-center gap-1 transition-colors p-1 rounded-lg flex-1 min-w-[60px]',
                 isActive ? 'text-primary bg-primary/10' : 'text-muted-foreground hover:text-foreground'
               )}
             >

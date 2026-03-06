@@ -9,6 +9,7 @@ export interface ServiceRecord {
   departureDateTime: string;
   description: string;
   projectName: string;
+  projectId?: string; // ID of the linked project
   pendingTasks: string;
   serviceHourlyRate?: number; // Specific rate for this service
   media: { type: 'image' | 'video'; dataUrl: string }[];
@@ -36,7 +37,7 @@ export interface Employee {
   email?: string;
   phoneNumber?: string;
   role?: 'admin' | 'user';
-  hourlyRate: number; // Default hourly rate - changed to required
+  hourlyRate: number; // Default hourly rate
 }
 
 export interface Customer {
@@ -48,6 +49,14 @@ export interface Customer {
   nrt?: string; // Tax ID number
 }
 
+export interface Project {
+  id: string;
+  name: string;
+  customerId: string;
+  customerName?: string;
+  status: 'active' | 'finished';
+  createdAt: string;
+}
 
 export interface Albaran {
   id: string;
