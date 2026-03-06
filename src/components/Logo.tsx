@@ -16,27 +16,33 @@ export function Logo({ className, variant = 'dark' }: LogoProps) {
   const accentColor = '#FFD700';
 
   useEffect(() => {
+    // Tenta carregar a imagem real que o utilizador subiu
     const img = new Image();
     img.src = "/logo.png";
-    img.onload = () => setImgLoaded(true);
-    img.onerror = () => setImgError(true);
+    img.onload = () => {
+      setImgLoaded(true);
+      setImgError(false);
+    };
+    img.onerror = () => {
+      setImgError(true);
+      setImgLoaded(false);
+    };
   }, []);
 
-  // Se a imagem carregar com sucesso, mostramos a imagem real.
+  // Se a imagem logótipo.png existir, mostra-a com prioridade
   if (imgLoaded && !imgError) {
     return (
       <div className={className} style={{ display: 'inline-flex', alignItems: 'center' }}>
         <img 
           src="/logo.png" 
           alt="TS SERVEIS" 
-          className="h-full w-auto max-h-full"
-          style={{ objectFit: 'contain' }}
+          className="h-full w-auto max-h-full object-contain"
         />
       </div>
     );
   }
 
-  // Se a imagem falhar, mostramos o logo artificial com o slogan correto.
+  // Desenho artificial de reserva (caso o ficheiro logo.png ainda não tenha sido subido)
   return (
     <svg 
       viewBox="0 0 450 100" 

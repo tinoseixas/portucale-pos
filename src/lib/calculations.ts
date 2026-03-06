@@ -5,7 +5,7 @@ import { parseISO, isValid, differenceInMinutes, setHours, setMinutes } from 'da
 const ADMIN_EMAIL = 'tinoseixas@gmail.com';
 const ADMIN_HOURLY_RATE = 30; 
 const USER_HOURLY_RATE = 27; 
-export const IVA_RATE = 0.045; // 4.5% IGI for Andorra
+export const IVA_RATE = 0.045; // 4.5% IGI para Andorra
 
 /**
  * Calcula a sobreposição em minutos entre o intervalo de serviço e a hora de almoço (13:00 - 14:00).
@@ -13,7 +13,6 @@ export const IVA_RATE = 0.045; // 4.5% IGI for Andorra
 export function getMealBreakOverlapMinutes(start: Date, end: Date): number {
     if (!isValid(start) || !isValid(end) || end <= start) return 0;
     
-    // Definimos o intervalo de almoço para o mesmo dia do início do serviço
     const mealStart = setMinutes(setHours(new Date(start), 13), 0);
     const mealEnd = setMinutes(setHours(new Date(start), 14), 0);
     
@@ -29,7 +28,7 @@ export function getMealBreakOverlapMinutes(start: Date, end: Date): number {
 
 /**
  * Calcula os minutos efetivos de trabalho, descontando a hora de refeição se aplicável,
- * e arredondando para cima para blocos de 30 minutos.
+ * e ARREDONDANDO PARA CIMA para blocos de 30 minutos (Ex: 35min -> 60min).
  */
 export function calculateServiceEffectiveMinutes(service: ServiceRecord): number {
     if (service.arrivalDateTime && service.departureDateTime) {
@@ -45,8 +44,9 @@ export function calculateServiceEffectiveMinutes(service: ServiceRecord): number
                 minutes -= mealMinutes;
             }
             
+            if (minutes <= 0) return 0;
+
             // Arredondamento para blocos de 30 minutos (sempre para cima)
-            // Ex: 35 minutos -> 60 minutos (1h), 5 minutos -> 30 minutos (0.5h)
             const roundedMinutes = Math.ceil(minutes / 30) * 30;
             return roundedMinutes;
         }
@@ -91,7 +91,7 @@ export function calculateTotalAmount(services: ServiceRecord[], employees: Emplo
     const totalHours = totalMinutes / 60;
 
     const allMaterials = safeServices.flatMap(service => service.materials || []).filter(material => 
-        material && material.description && !material.description.toLowerCase().includes('traball') && material.description.trim() !== ''
+        material && material.description && material.description.trim() !== ''
     );
 
     const materialsSubtotal = allMaterials.reduce((acc, material) => acc + (material.quantity * material.unitPrice), 0);

@@ -54,7 +54,7 @@ export const InvoicePreview = forwardRef<HTMLDivElement, InvoicePreviewProps>((p
 
     return (
         <div ref={ref} className="bg-white p-12 font-sans text-gray-900 printable-area mx-auto flex flex-col" style={{ width: '210mm', minHeight: '297mm' }}>
-            {/* Header */}
+            {/* Cabeçalho */}
             <header className="flex justify-between items-center border-b-2 border-slate-900 pb-8 mb-8" style={{ breakInside: 'avoid' }}>
                 <div className="flex flex-col gap-4">
                     <Logo className="h-24 w-auto" />
@@ -72,7 +72,7 @@ export const InvoicePreview = forwardRef<HTMLDivElement, InvoicePreviewProps>((p
                 </div>
             </header>
 
-            {/* Client i Obra */}
+            {/* Secção de Cliente e Obra */}
             <section className="flex justify-between gap-8 my-8" style={{ breakInside: 'avoid' }}>
                 <div className="flex-1">
                     <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-2">DADES DEL CLIENT</h3>
@@ -90,7 +90,7 @@ export const InvoicePreview = forwardRef<HTMLDivElement, InvoicePreviewProps>((p
                  </div>
             </section>
             
-            {/* Detalls de Treball */}
+            {/* Detalhes de Trabalhos e Materiais */}
             <section className="space-y-8 flex-grow">
                 <h3 className="font-black text-lg mb-4 border-b-2 pb-2 uppercase tracking-tight">Detall de Treballs i Materials</h3>
                 
@@ -161,7 +161,7 @@ export const InvoicePreview = forwardRef<HTMLDivElement, InvoicePreviewProps>((p
                     </div>
                 ))}
                 
-                {/* Resum de Mà d'obra */}
+                {/* Resumo de Mão de Obra */}
                 <div className="mt-12 pt-6 border-t-2 border-slate-100" style={{ breakInside: 'avoid' }}>
                     <div className="flex justify-between items-center bg-slate-50 p-6 rounded-xl border border-slate-200">
                         <div>
@@ -174,7 +174,7 @@ export const InvoicePreview = forwardRef<HTMLDivElement, InvoicePreviewProps>((p
                     </div>
                 </div>
 
-                {/* Bloc de Totals Finals */}
+                {/* Bloco de Totais Finais */}
                 <div className="flex justify-end mt-12 pb-12" style={{ breakInside: 'avoid' }}>
                     <div className="w-80 space-y-3 bg-slate-900 text-white p-8 rounded-2xl shadow-xl border-4 border-primary/20">
                         <div className="flex justify-between text-sm font-bold uppercase tracking-wider text-slate-400">
