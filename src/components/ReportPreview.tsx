@@ -1,3 +1,4 @@
+
 'use client'
 import React, { forwardRef, useMemo } from 'react';
 import Image from 'next/image';
@@ -26,6 +27,7 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
     
     const { subtotal, iva, totalGeneral, totalHours, laborCost } = calculateTotalAmount(sortedServices, employees);
     const totalTimeFormatted = `${Math.floor(totalHours)}h ${Math.round((totalHours % 1) * 60)}m`;
+    const hourlyRateDisplay = totalHours > 0 ? (laborCost / totalHours).toFixed(2) : "0.00";
 
     const allMaterials = useMemo(() => {
         return sortedServices.flatMap(service => service.materials || []).filter(material => 
@@ -51,7 +53,7 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
                 style={{ width: '210mm', minHeight: '297mm' }}
             >
                 {/* Capçalera amb Logo TS Serveis */}
-                <header className="flex justify-between items-center border-b-4 border-slate-900 pb-10 mb-10" style={{ pageBreakInside: 'avoid' }}>
+                <header className="flex justify-between items-center border-b-4 border-slate-900 pb-10 mb-10" style={{ breakInside: 'avoid' }}>
                     <div className="flex flex-col gap-4">
                         <Logo className="h-24 w-auto" />
                         <div className="space-y-1">
@@ -74,7 +76,7 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
                     </div>
                 </header>
 
-                <div className="grid grid-cols-2 gap-16 mb-12" style={{ pageBreakInside: 'avoid' }}>
+                <div className="grid grid-cols-2 gap-16 mb-12" style={{ breakInside: 'avoid' }}>
                     <section className="bg-slate-50 p-8 rounded-2xl border-2 border-slate-100">
                         <h3 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
                             <User className="w-4 h-4" /> DADES DEL CLIENT
@@ -134,7 +136,7 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
                                         const hours = minutes > 0 ? (minutes / 60).toFixed(2) : '0.00';
 
                                         return (
-                                            <tr key={service.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/30'} style={{ pageBreakInside: 'avoid' }}>
+                                            <tr key={service.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/30'} style={{ breakInside: 'avoid' }}>
                                                 <td className="py-6 px-6 align-top font-bold text-slate-500">{format(arrival, 'dd/MM/yyyy')}</td>
                                                 <td className="py-6 px-6 align-top text-slate-900 font-bold italic">{service.employeeName || getEmployeeName(service.employeeId)}</td>
                                                 <td className="py-6 px-6 align-top">
@@ -172,7 +174,7 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
                                 </thead>
                                 <tbody className="divide-y divide-slate-100">
                                     {allMaterials.map((material, index) => (
-                                        <tr key={`mat-${index}`} className="hover:bg-slate-50 transition-colors" style={{ pageBreakInside: 'avoid' }}>
+                                        <tr key={`mat-${index}`} className="hover:bg-slate-50 transition-colors" style={{ breakInside: 'avoid' }}>
                                             <td className="py-5 px-6 text-slate-700 font-medium">
                                                 {material.description}
                                                 {material.imageDataUrl && <div className="mt-2 text-[10px] text-primary font-bold flex items-center gap-1"><Package className="h-3 w-3" /> EVIDÈNCIA DOCUMENTAL ADJUNTA</div>}
@@ -183,17 +185,17 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
                                         </tr>
                                     ))}
                                     {laborCost > 0 && (
-                                        <tr className="bg-slate-50 font-bold border-t-2 border-slate-200" style={{ pageBreakInside: 'avoid' }}>
-                                            <td className="py-6 px-6 text-slate-900">Mà d'obra (Treball tècnic especialitzat)</td>
+                                        <tr className="bg-slate-50 font-bold border-t-2 border-slate-200" style={{ breakInside: 'avoid' }}>
+                                            <td className="py-6 px-6 text-slate-900">Mà d'obra i Treball Tècnic</td>
                                             <td className="text-right py-6 px-6 tabular-nums">{totalHours.toFixed(2)}</td>
-                                            <td className="text-right py-6 px-6 tabular-nums text-slate-400">{(laborCost / totalHours).toFixed(2)} €</td>
+                                            <td className="text-right py-6 px-6 tabular-nums text-slate-400">{hourlyRateDisplay} €/h</td>
                                             <td className="text-right py-6 px-6 font-black tabular-nums text-slate-900 text-lg">{laborCost.toFixed(2)} €</td>
                                         </tr>
                                     )}
                                 </tbody>
                             </table>
 
-                            <div className="flex justify-end mt-10 pb-12" style={{ pageBreakInside: 'avoid' }}>
+                            <div className="flex justify-end mt-10 pb-12" style={{ breakInside: 'avoid' }}>
                                 <div className="w-96 space-y-4 bg-slate-900 text-white p-8 rounded-2xl shadow-xl border-4 border-primary/20">
                                     <div className="flex justify-between text-sm text-slate-400 font-bold uppercase tracking-widest">
                                         <span>Subtotal Base</span>
@@ -213,7 +215,7 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
                     )}
 
                     {services.some(s => s.customerSignatureDataUrl) && (
-                        <section className="mt-16 pt-10 border-t-4 border-slate-100" style={{ pageBreakInside: 'avoid' }}>
+                        <section className="mt-16 pt-10 border-t-4 border-slate-100" style={{ breakInside: 'avoid' }}>
                             <h3 className="text-xs font-black text-slate-400 uppercase tracking-[0.3em] mb-10 border-b-2 pb-4">Confirmació de Recepció de Treballs</h3>
                             <div className="grid grid-cols-3 gap-10">
                                 {services.filter(s => s.customerSignatureDataUrl).map((s, idx) => (
@@ -236,14 +238,14 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
                     )}
 
                     {allMedia.length > 0 && (
-                        <section className="mt-16 pt-12 border-t-4 border-slate-100" style={{ pageBreakInside: 'auto' }}>
+                        <section className="mt-16 pt-12 border-t-4 border-slate-100">
                             <h3 className="text-lg font-black text-slate-900 mb-10 uppercase tracking-widest flex items-center gap-3">
                                 <span className="w-10 h-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm italic">i</span>
                                 Evidències Fotogràfiques de l'Obra
                             </h3>
                             <div className="grid grid-cols-4 gap-6">
                                 {allMedia.map((media, index) => (
-                                    <div key={index} className="aspect-square relative rounded-2xl overflow-hidden shadow-md border-4 border-white group" style={{ pageBreakInside: 'avoid' }}>
+                                    <div key={index} className="aspect-square relative rounded-2xl overflow-hidden shadow-md border-4 border-white group" style={{ breakInside: 'avoid' }}>
                                         <Image
                                             src={media.dataUrl}
                                             alt={`Evidència ${index + 1}`}
@@ -260,7 +262,7 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
                     )}
                 </div>
 
-                <footer className="mt-auto pt-10 border-t-2 border-slate-200 flex justify-between items-end text-slate-400" style={{ pageBreakInside: 'avoid' }}>
+                <footer className="mt-auto pt-10 border-t-2 border-slate-200 flex justify-between items-end text-slate-400" style={{ breakInside: 'avoid' }}>
                     <div className="text-[11px] space-y-2 font-medium">
                         <p className="font-black text-slate-500 text-xs uppercase tracking-tighter">TS SERVEIS - Solucions Tècniques i Manteniment</p>
                         <p>Aquest document certifica la realització dels treballs descrits.</p>

@@ -1,3 +1,4 @@
+
 'use client'
 
 import { useMemo, useState } from 'react'
@@ -100,8 +101,8 @@ export default function AlbaransHistoryPage() {
         
         const pendingServices = allServices.filter(s => 
             !handledServiceIds.has(s.id) && 
-            s.description !== "Servei en curs..." &&
-            s.customerId && s.projectName
+            s.customerId && s.projectName &&
+            s.projectName.trim() !== ""
         );
 
         if (pendingServices.length === 0 && albarans?.filter(a => a.status === 'pendent').length === 0) {
@@ -112,8 +113,10 @@ export default function AlbaransHistoryPage() {
 
         const groupedByProject: Record<string, ServiceRecord[]> = {};
         pendingServices.forEach(s => {
-            // Clau d'agrupament robusta: prioritza projectId, fallback a normalització de nom
-            const projectKey = s.projectId ? `proj_${s.projectId}` : `${s.customerId}_${s.projectName.trim().toLowerCase()}`.replace(/[^a-z0-9_]/gi, '_');
+            // Chave de agrupamento robusta: Unifica por nome normalizado para evitar duplicados por espaços ou capitalização
+            const normalizedName = s.projectName.trim().toLowerCase().replace(/\s+/g, ' ');
+            const projectKey = `${s.customerId}_${normalizedName}`;
+            
             if (!groupedByProject[projectKey]) groupedByProject[projectKey] = [];
             groupedByProject[projectKey].push(s);
         });
@@ -124,6 +127,7 @@ export default function AlbaransHistoryPage() {
         const counterSnap = await getDocs(query(collection(firestore, "counters"), where("__name__", "==", "albarans")));
         let nextNum = !counterSnap.empty ? (counterSnap.docs[0].data().lastNumber || 0) : 0;
 
+        // Limpa os pendentes atuais para reconstruir com os novos agrupamentos
         albarans?.filter(a => a.status === 'pendent').forEach(a => {
             batch.delete(doc(firestore, 'albarans', a.id));
         });
@@ -144,7 +148,7 @@ export default function AlbaransHistoryPage() {
                 createdAt: new Date().toISOString(),
                 customerId: firstService.customerId || '',
                 customerName: firstService.customerName || 'N/A',
-                projectName: firstService.projectName,
+                projectName: firstService.projectName.trim(), // Mantém o nome original do primeiro registo encontrado
                 serviceRecordIds: projectServices.map(s => s.id),
                 totalAmount: totalGeneral,
                 status: 'pendent',
@@ -301,7 +305,7 @@ export default function AlbaransHistoryPage() {
                                                 <AlertDialogHeader>
                                                     <AlertDialogTitle>Vols eliminar aquest document?</AlertDialogTitle>
                                                     <AlertDialogDescription>
-                                                        Això només esborra l'albarà de resum. Els registres de treball dels tècnics es mantindran intactes per poder-los tornar a agrupar si cal.
+                                                        Això només esborra l'albarà de resum. Els registres de treball dos tècnics es mantindran intactes per poder-los tornar a agrupar si cal.
                                                     </AlertDialogDescription>
                                                 </AlertDialogHeader>
                                                 <AlertDialogFooter>
