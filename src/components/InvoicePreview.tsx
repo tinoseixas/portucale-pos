@@ -1,3 +1,4 @@
+
 'use client'
 import React, { forwardRef, useMemo } from 'react';
 import type { Customer, ServiceRecord, Employee } from '@/lib/types';
@@ -114,7 +115,7 @@ export const InvoicePreview = forwardRef<HTMLDivElement, InvoicePreviewProps>((p
                                         const arrival = parseISO(service.arrivalDateTime);
                                         const departure = parseISO(service.departureDateTime);
                                         const effectiveMinutes = calculateServiceEffectiveMinutes(service);
-                                        const mealMinutes = getMealBreakOverlapMinutes(arrival, departure);
+                                        const mealMinutes = service.isLunchSubtracted !== false ? getMealBreakOverlapMinutes(arrival, departure) : 0;
                                         const hours = (effectiveMinutes / 60).toFixed(2);
                                         return (
                                             <tr key={service.id} className="border-b border-gray-100" style={{ breakInside: 'avoid' }}>
@@ -196,7 +197,7 @@ export const InvoicePreview = forwardRef<HTMLDivElement, InvoicePreviewProps>((p
 
              <footer className="mt-auto pt-8 border-t text-center text-[10px] text-gray-400 uppercase tracking-widest font-bold" style={{ breakInside: 'avoid' }}>
                 <p>TS SERVEIS - Solucions Tècniques i Manteniment</p>
-                <p className="mt-2 text-slate-300 font-bold">HORARI DE DINAR (13H-14H) EXCLÒS DEL CÀLCUL DE TEMPS</p>
+                <p className="mt-2 text-slate-300 font-bold">HORARI DE DINAR (13H-14H) EXCLÒS QUAN S'APLICA | ARREDONIMENT CADA 30 MIN</p>
                 <p className="mt-1">CONVERTIM LES TEVES IDEES EN REALITAT</p>
             </footer>
         </div>

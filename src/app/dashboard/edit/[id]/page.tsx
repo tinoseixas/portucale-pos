@@ -1,3 +1,4 @@
+
 'use client'
 
 import { useEffect, useState, useMemo, useRef } from 'react'
@@ -7,7 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Clock, Camera, ArrowLeft, Save, Trash2, Plus, X, Video, Calendar as CalendarIcon, Briefcase, Users, Package, Euro, ImagePlus, PenTool, Loader2, Sparkles, Trash, Edit } from 'lucide-react'
+import { Clock, Camera, ArrowLeft, Save, Trash2, Plus, X, Video, Calendar as CalendarIcon, Briefcase, Users, Package, Euro, ImagePlus, PenTool, Loader2, Sparkles, Trash, Edit, Utensils } from 'lucide-react'
 import { useToast } from "@/hooks/use-toast"
 import { useFirestore, useUser, useDoc, useMemoFirebase, useCollection } from '@/firebase'
 import { doc, deleteDoc, collection, query, orderBy, setDoc, where, addDoc } from 'firebase/firestore'
@@ -34,6 +35,7 @@ import { ServiceConfirmationDialog } from '@/components/ServiceConfirmationDialo
 import { translateToCatalan } from '@/ai/flows/translate-service-record'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { Switch } from '@/components/ui/switch'
 
 type MediaFile = {
   type: 'image' | 'video';
@@ -120,6 +122,7 @@ export default function EditServicePage() {
   const [serviceHourlyRate, setServiceHourlyRate] = useState<number | ''>('');
   const [customerSignatureName, setCustomerSignatureName] = useState('');
   const [customerSignatureDataUrl, setCustomerSignatureDataUrl] = useState('');
+  const [isLunchSubtracted, setIsLunchSubtracted] = useState(true);
 
   const [isNewProjectDialogOpen, setIsNewProjectDialogOpen] = useState(false);
   const [newProjectName, setNewProjectName] = useState('');
@@ -135,7 +138,6 @@ export default function EditServicePage() {
   const activeProjects = useMemo(() => {
       if (!allProjects) return [];
       const filtered = allProjects.filter(p => p.status === 'active');
-      // Deduplicar nomes para evitar repetições visuais
       const seen = new Set();
       return filtered.filter(p => {
           const nameKey = p.name.toLowerCase().trim();
@@ -167,6 +169,7 @@ export default function EditServicePage() {
       setCustomerSignatureName(service.customerSignatureName || '');
       setCustomerSignatureDataUrl(service.customerSignatureDataUrl || '');
       setServiceHourlyRate(service.serviceHourlyRate ?? '');
+      setIsLunchSubtracted(service.isLunchSubtracted ?? true);
     }
   }, [service]);
 
@@ -262,6 +265,7 @@ export default function EditServicePage() {
             customerSignatureName: customerSignatureName || '',
             customerSignatureDataUrl: customerSignatureDataUrl || '',
             updatedAt: new Date().toISOString(),
+            isLunchSubtracted: isLunchSubtracted,
         };
 
         await setDoc(serviceDocRef, updatedData, { merge: true });
@@ -337,6 +341,20 @@ export default function EditServicePage() {
                         <Input type="time" required value={endTime} onChange={(e) => setEndTime(e.target.value)} className="h-16 rounded-2xl border-2 font-black text-xl text-center bg-slate-50" />
                     </div>
                 </div>
+              </div>
+
+              {/* OPÇÕES DE TEMPO */}
+              <div className="bg-slate-50 p-6 rounded-3xl border-2 border-dashed flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                      <div className="bg-primary/10 p-2 rounded-xl text-primary">
+                        <Utensils className="h-5 w-5" />
+                      </div>
+                      <div className="space-y-0.5">
+                          <p className="font-black text-sm uppercase tracking-tight">Descomptar hora de dinar</p>
+                          <p className="text-[10px] text-slate-400 font-bold uppercase italic">Interval 13:00h - 14:00h</p>
+                      </div>
+                  </div>
+                  <Switch checked={isLunchSubtracted} onCheckedChange={setIsLunchSubtracted} />
               </div>
 
               <div className="space-y-4">

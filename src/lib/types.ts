@@ -26,6 +26,7 @@ export interface ServiceRecord {
   status?: 'pendent' | 'facturat'; // Invoicing status
   customerSignatureName?: string; // Name of the person who signed
   customerSignatureDataUrl?: string; // Base64 signature image
+  isLunchSubtracted?: boolean; // Whether to subtract the 13h-14h break (default true)
 }
 
 export interface Employee {

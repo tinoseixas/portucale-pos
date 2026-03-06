@@ -1,3 +1,4 @@
+
 'use client'
 import React, { forwardRef, useMemo } from 'react';
 import Image from 'next/image';
@@ -131,7 +132,7 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
                                         const arrival = parseISO(service.arrivalDateTime);
                                         const departure = parseISO(service.departureDateTime);
                                         const effectiveMinutes = calculateServiceEffectiveMinutes(service);
-                                        const mealMinutes = getMealBreakOverlapMinutes(arrival, departure);
+                                        const mealMinutes = service.isLunchSubtracted !== false ? getMealBreakOverlapMinutes(arrival, departure) : 0;
                                         const hours = (effectiveMinutes / 60).toFixed(2);
 
                                         return (
@@ -268,7 +269,7 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
                     <div className="text-[11px] space-y-2 font-medium">
                         <p className="font-black text-slate-500 text-xs uppercase tracking-tighter">TS SERVEIS - Solucions Tècniques i Manteniment</p>
                         <p>Document acreditatiu dels treballs realitzats a la data indicada.</p>
-                        <p className="italic text-slate-300 font-bold">Càlcul d'hores net (exclòs interval de descans 13h-14h).</p>
+                        <p className="italic text-slate-300 font-bold">Càlcul d'hores net (exclòs interval de descans 13h-14h quan s'aplica). Arredonit cada 30 minuts.</p>
                     </div>
                     <div className="text-right">
                         <p className="text-xs font-black text-slate-900 uppercase tracking-widest mb-3">Gràcies per la seva confiança</p>

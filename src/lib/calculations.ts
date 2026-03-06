@@ -1,5 +1,6 @@
+
 import type { ServiceRecord, Employee } from '@/lib/types';
-import { parseISO, isValid, differenceInMinutes, setHours, setMinutes, max, min } from 'date-fns';
+import { parseISO, isValid, differenceInMinutes, setHours, setMinutes } from 'date-fns';
 
 const ADMIN_EMAIL = 'tinoseixas@gmail.com';
 const ADMIN_HOURLY_RATE = 30; 
@@ -27,16 +28,27 @@ export function getMealBreakOverlapMinutes(start: Date, end: Date): number {
 }
 
 /**
- * Calcula os minutos efetivos de trabalho, descontando a hora de refeição.
+ * Calcula os minutos efetivos de trabalho, descontando a hora de refeição se aplicável,
+ * e arredondando para cima para blocos de 30 minutos.
  */
 export function calculateServiceEffectiveMinutes(service: ServiceRecord): number {
     if (service.arrivalDateTime && service.departureDateTime) {
         const startDate = parseISO(service.arrivalDateTime);
         const endDate = parseISO(service.departureDateTime);
         if (isValid(startDate) && isValid(endDate) && endDate > startDate) {
-            const totalMinutes = differenceInMinutes(endDate, startDate);
-            const mealMinutes = getMealBreakOverlapMinutes(startDate, endDate);
-            return totalMinutes - mealMinutes;
+            let minutes = differenceInMinutes(endDate, startDate);
+            
+            // Se isLunchSubtracted for true (por defeito), removemos o intervalo 13h-14h
+            const shouldSubtractLunch = service.isLunchSubtracted !== false;
+            if (shouldSubtractLunch) {
+                const mealMinutes = getMealBreakOverlapMinutes(startDate, endDate);
+                minutes -= mealMinutes;
+            }
+            
+            // Arredondamento para blocos de 30 minutos (sempre para cima)
+            // Ex: 35 minutos -> 60 minutos (1h), 5 minutos -> 30 minutos (0.5h)
+            const roundedMinutes = Math.ceil(minutes / 30) * 30;
+            return roundedMinutes;
         }
     }
     return 0;
