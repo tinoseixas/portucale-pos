@@ -1,4 +1,3 @@
-
 'use client'
 
 import { useMemo, useState } from 'react'
@@ -11,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Eye, FileArchive, CreditCard, Clock, CheckCircle2, Loader2, Trash2, Users, RefreshCw, Briefcase, AlertCircle, Search, Filter, X, Archive, Edit } from 'lucide-react'
+import { Eye, FileArchive, CreditCard, Clock, CheckCircle2, Loader2, Trash2, Users, RefreshCw, Briefcase, AlertCircle, Search, X, Archive, Edit } from 'lucide-react'
 import { AdminGate } from '@/components/AdminGate'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -36,7 +35,6 @@ export default function AlbaransHistoryPage() {
   const firestore = useFirestore()
   const [isSyncing, setIsSyncing] = useState(false)
   
-  // Filtres
   const [filterCustomer, setFilterCustomer] = useState<string>('all')
   const [searchProject, setSearchProject] = useState<string>('')
 
@@ -95,7 +93,6 @@ export default function AlbaransHistoryPage() {
         const servicesSnap = await getDocs(collectionGroup(firestore, 'serviceRecords'));
         const allServices = servicesSnap.docs.map(d => ({ id: d.id, ...d.data() } as ServiceRecord));
         
-        // Excloem serveis que ja estan en albarans FACTURATS o ARXIVATS
         const handledServiceIds = new Set(
             albarans?.filter(a => a.status === 'facturat' || a.status === 'arxivat')
                      .flatMap(a => a.serviceRecordIds) || []
@@ -115,18 +112,18 @@ export default function AlbaransHistoryPage() {
 
         const groupedByProject: Record<string, ServiceRecord[]> = {};
         pendingServices.forEach(s => {
-            const key = `${s.customerId}_${s.projectName.trim().toLowerCase()}`.replace(/[^a-z0-9_]/gi, '_');
-            if (!groupedByProject[key]) groupedByProject[key] = [];
-            groupedByProject[key].push(s);
+            // Clau d'agrupament robusta: prioritza projectId, fallback a normalització de nom
+            const projectKey = s.projectId ? `proj_${s.projectId}` : `${s.customerId}_${s.projectName.trim().toLowerCase()}`.replace(/[^a-z0-9_]/gi, '_');
+            if (!groupedByProject[projectKey]) groupedByProject[projectKey] = [];
+            groupedByProject[projectKey].push(s);
         });
 
         const batch = writeBatch(firestore);
         
         const counterRef = doc(firestore, "counters", "albarans");
         const counterSnap = await getDocs(query(collection(firestore, "counters"), where("__name__", "==", "albarans")));
-        let nextNum = !counterSnap.empty ? counterSnap.docs[0].data().lastNumber : 0;
+        let nextNum = !counterSnap.empty ? (counterSnap.docs[0].data().lastNumber || 0) : 0;
 
-        // Esborrem només els pendents actuals per regenerar-los amb les noves dades
         albarans?.filter(a => a.status === 'pendent').forEach(a => {
             batch.delete(doc(firestore, 'albarans', a.id));
         });
@@ -163,7 +160,7 @@ export default function AlbaransHistoryPage() {
 
         toast({ 
             title: 'Sincronització completada', 
-            description: `S'han generat ${createdCount} albarans d'obra.` 
+            description: `S'han generat ${createdCount} albarans d'obra actualitzats.` 
         });
     } catch (error) {
         console.error(error);
@@ -193,7 +190,6 @@ export default function AlbaransHistoryPage() {
             </Button>
         </div>
 
-        {/* Panell de Filtres */}
         <Card className="bg-slate-50 border-none shadow-inner">
             <CardContent className="p-4">
                 <div className="flex flex-col md:flex-row gap-4 items-end">

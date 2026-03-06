@@ -1,4 +1,3 @@
-
 'use client'
 import React, { forwardRef, useMemo } from 'react';
 import type { Customer } from '@/lib/types';
@@ -53,8 +52,8 @@ export const QuotePreview = forwardRef<HTMLDivElement, QuotePreviewProps>(({ cus
     const totalGeneral = subtotal + iva;
 
     return (
-        <div ref={ref} className="bg-white p-12 font-sans text-gray-900 printable-area mx-auto" style={{ width: '210mm' }}>
-            <header className="flex justify-between items-center border-b-4 border-slate-900 pb-10 mb-10">
+        <div ref={ref} className="bg-white p-12 font-sans text-gray-900 printable-area mx-auto flex flex-col" style={{ width: '210mm', minHeight: '297mm' }}>
+            <header className="flex justify-between items-center border-b-4 border-slate-900 pb-10 mb-10" style={{ pageBreakInside: 'avoid' }}>
                 <div className="flex flex-col gap-4">
                     <Logo className="h-24 w-auto" />
                     <div className="text-sm text-gray-600">
@@ -71,7 +70,7 @@ export const QuotePreview = forwardRef<HTMLDivElement, QuotePreviewProps>(({ cus
                 </div>
             </header>
 
-            <section className="grid grid-cols-2 gap-16 mb-12">
+            <section className="grid grid-cols-2 gap-16 mb-12" style={{ pageBreakInside: 'avoid' }}>
                 <div className="bg-slate-50 p-8 rounded-2xl border-2 border-slate-100">
                     <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4">CLIENT</h3>
                     {customer ? (
@@ -88,8 +87,8 @@ export const QuotePreview = forwardRef<HTMLDivElement, QuotePreviewProps>(({ cus
                  </div>
             </section>
             
-            <section className="page-break-before-auto">
-                <h3 className="font-black text-xl mb-8 border-b-4 border-slate-900 pb-2 uppercase">Detall del Pressupost</h3>
+            <section className="flex-grow">
+                <h3 className="font-black text-xl mb-8 border-b-4 border-slate-900 pb-2 uppercase tracking-tight">Detall del Pressupost</h3>
                 
                 {Array.from(groupedItems.entries()).map(([category, catItems], groupIdx) => {
                     const catSubtotal = catItems.reduce((acc, item) => {
@@ -99,9 +98,9 @@ export const QuotePreview = forwardRef<HTMLDivElement, QuotePreviewProps>(({ cus
                     }, 0);
 
                     return (
-                        <div key={groupIdx} className="mb-10 page-break-inside-avoid">
+                        <div key={groupIdx} className="mb-10" style={{ pageBreakInside: 'avoid' }}>
                             <h4 className="font-black text-sm text-white bg-slate-900 px-4 py-2 rounded-t-lg uppercase tracking-widest">{category}</h4>
-                            <table className="w-full text-sm border-collapse mb-2 border-2 border-slate-900">
+                            <table className="w-full text-sm border-collapse border-2 border-slate-900 mb-2">
                                 <thead className="bg-slate-50">
                                     <tr className="text-xs text-slate-600 uppercase font-black border-b-2 border-slate-900">
                                         <th className="text-left py-3 px-4">Descripció</th>
@@ -127,14 +126,14 @@ export const QuotePreview = forwardRef<HTMLDivElement, QuotePreviewProps>(({ cus
                                 </tbody>
                             </table>
                             <div className="flex justify-end pr-4">
-                                <p className="text-xs font-black text-slate-400 uppercase">Subtotal {category}: <span className="ml-2 text-lg text-slate-900">{catSubtotal.toFixed(2)} €</span></p>
+                                <p className="text-xs font-black text-slate-400 uppercase tracking-tighter">Subtotal {category}: <span className="ml-2 text-lg text-slate-900">{catSubtotal.toFixed(2)} €</span></p>
                             </div>
                         </div>
                     );
                 })}
 
                 {labor.cost > 0 && (
-                    <div className="mb-10 p-6 bg-slate-900 text-white rounded-2xl flex justify-between items-center shadow-lg">
+                    <div className="mb-10 p-6 bg-slate-900 text-white rounded-2xl flex justify-between items-center shadow-lg" style={{ pageBreakInside: 'avoid' }}>
                         <div>
                             <h4 className="font-black text-lg uppercase tracking-tight">{labor.description}</h4>
                             <p className="text-sm text-slate-400 italic">Inclou muntatge, transport i posta en marxa.</p>
@@ -143,7 +142,7 @@ export const QuotePreview = forwardRef<HTMLDivElement, QuotePreviewProps>(({ cus
                     </div>
                 )}
 
-                <div className="flex justify-end mt-12">
+                <div className="flex justify-end mt-12 pb-12" style={{ pageBreakInside: 'avoid' }}>
                     <div className="w-96 space-y-4 bg-slate-900 text-white p-8 rounded-3xl shadow-2xl border-4 border-primary/20">
                         <div className="flex justify-between text-sm text-slate-400 font-bold uppercase tracking-widest">
                             <span>Base Imposable</span>
@@ -161,13 +160,14 @@ export const QuotePreview = forwardRef<HTMLDivElement, QuotePreviewProps>(({ cus
                 </div>
             </section>
 
-            <footer className="mt-24 pt-10 border-t-2 border-slate-200">
+            <footer className="mt-auto pt-10 border-t-2 border-slate-200" style={{ pageBreakInside: 'avoid' }}>
                 <div className="bg-slate-50 p-8 rounded-2xl border-2 border-slate-100">
                     <p className="font-black text-xs text-slate-900 uppercase tracking-[0.2em] mb-4">Condicions de Pagament i Execució</p>
-                    <p className="text-sm text-slate-600 leading-relaxed italic">{notes}</p>
+                    <p className="text-sm text-slate-600 leading-relaxed italic whitespace-pre-wrap">{notes}</p>
                 </div>
                 <div className="text-center text-[10px] text-slate-400 mt-12 font-black uppercase tracking-[0.3em]">
                     <p>TS SERVEIS - Solucions Tècniques i Manteniment</p>
+                    <p className="mt-1 text-slate-300">CONVERTIM LES TEVES IDEES EN REALITAT</p>
                 </div>
             </footer>
         </div>

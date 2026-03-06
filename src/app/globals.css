@@ -64,4 +64,17 @@
     .page-break-before-always {
       page-break-before: always;
     }
+    .break-inside-avoid {
+      break-inside: avoid;
+    }
+}
+
+/* Custom spacing for PDF generation to prevent cuts */
+.printable-area table, 
+.printable-area section, 
+.printable-area .bg-slate-900,
+.printable-area header,
+.printable-area footer {
+    break-inside: avoid;
+    page-break-inside: avoid;
 }
