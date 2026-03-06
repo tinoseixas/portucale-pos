@@ -1,4 +1,3 @@
-
 'use client'
 import React, { forwardRef, useMemo } from 'react';
 import Image from 'next/image';
@@ -52,7 +51,6 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
                 className="bg-white p-12 font-sans text-slate-900 printable-area mx-auto shadow-2xl flex flex-col"
                 style={{ width: '210mm', minHeight: '297mm' }}
             >
-                {/* Capçalera */}
                 <header className="flex justify-between items-center border-b-4 border-slate-900 pb-10 mb-10" style={{ breakInside: 'avoid' }}>
                     <div className="flex flex-col gap-4">
                         <Logo className="h-24 w-auto" />

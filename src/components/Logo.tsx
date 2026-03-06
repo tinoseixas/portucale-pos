@@ -12,13 +12,14 @@ export function Logo({ className, variant = 'dark' }: LogoProps) {
   const [timestamp, setTimestamp] = useState('');
 
   useEffect(() => {
-    // Gera um timestamp para forçar o recarregamento da imagem
+    // Força o recarregamento da imagem ignorando a cache do navegador
     setTimestamp(new Date().getTime().toString());
   }, []);
 
   const primaryColor = variant === 'dark' ? '#005691' : '#ffffff';
   const accentColor = '#FFD700';
 
+  // Se não houve erro ao carregar, tenta mostrar a imagem oficial
   if (!imgError) {
     return (
       <div className={className} style={{ display: 'inline-flex', alignItems: 'center' }}>
@@ -32,7 +33,7 @@ export function Logo({ className, variant = 'dark' }: LogoProps) {
     );
   }
 
-  // Fallback visual apenas se a imagem falhar
+  // Fallback visual apenas se o ficheiro logo.png não existir na pasta public
   return (
     <svg 
       viewBox="0 0 450 100" 
