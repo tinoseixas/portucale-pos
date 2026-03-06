@@ -1,3 +1,4 @@
+
 'use client'
 import React, { forwardRef, useMemo } from 'react';
 import type { Customer } from '@/lib/types';
@@ -53,7 +54,7 @@ export const QuotePreview = forwardRef<HTMLDivElement, QuotePreviewProps>(({ cus
 
     return (
         <div ref={ref} className="bg-white p-12 font-sans text-gray-900 printable-area mx-auto flex flex-col" style={{ width: '210mm', minHeight: '297mm' }}>
-            <header className="flex justify-between items-center border-b-4 border-slate-900 pb-10 mb-10" style={{ pageBreakInside: 'avoid' }}>
+            <header className="flex justify-between items-center border-b-4 border-slate-900 pb-10 mb-10 break-inside-avoid">
                 <div className="flex flex-col gap-4">
                     <Logo className="h-24 w-auto" />
                     <div className="text-sm text-gray-600">
@@ -70,7 +71,7 @@ export const QuotePreview = forwardRef<HTMLDivElement, QuotePreviewProps>(({ cus
                 </div>
             </header>
 
-            <section className="grid grid-cols-2 gap-16 mb-12" style={{ pageBreakInside: 'avoid' }}>
+            <section className="grid grid-cols-2 gap-16 mb-12 break-inside-avoid">
                 <div className="bg-slate-50 p-8 rounded-2xl border-2 border-slate-100">
                     <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4">CLIENT</h3>
                     {customer ? (
@@ -98,7 +99,7 @@ export const QuotePreview = forwardRef<HTMLDivElement, QuotePreviewProps>(({ cus
                     }, 0);
 
                     return (
-                        <div key={groupIdx} className="mb-10" style={{ pageBreakInside: 'avoid' }}>
+                        <div key={groupIdx} className="mb-10 break-inside-avoid">
                             <h4 className="font-black text-sm text-white bg-slate-900 px-4 py-2 rounded-t-lg uppercase tracking-widest">{category}</h4>
                             <table className="w-full text-sm border-collapse border-2 border-slate-900 mb-2">
                                 <thead className="bg-slate-50">
@@ -133,7 +134,7 @@ export const QuotePreview = forwardRef<HTMLDivElement, QuotePreviewProps>(({ cus
                 })}
 
                 {labor.cost > 0 && (
-                    <div className="mb-10 p-6 bg-slate-900 text-white rounded-2xl flex justify-between items-center shadow-lg" style={{ pageBreakInside: 'avoid' }}>
+                    <div className="mb-10 p-6 bg-slate-900 text-white rounded-2xl flex justify-between items-center shadow-lg break-inside-avoid">
                         <div>
                             <h4 className="font-black text-lg uppercase tracking-tight">{labor.description}</h4>
                             <p className="text-sm text-slate-400 italic">Inclou muntatge, transport i posta en marxa.</p>
@@ -142,7 +143,7 @@ export const QuotePreview = forwardRef<HTMLDivElement, QuotePreviewProps>(({ cus
                     </div>
                 )}
 
-                <div className="flex justify-end mt-12 pb-12" style={{ pageBreakInside: 'avoid' }}>
+                <div className="flex justify-end mt-12 pb-12 break-inside-avoid">
                     <div className="w-96 space-y-4 bg-slate-900 text-white p-8 rounded-3xl shadow-2xl border-4 border-primary/20">
                         <div className="flex justify-between text-sm text-slate-400 font-bold uppercase tracking-widest">
                             <span>Base Imposable</span>
@@ -160,7 +161,7 @@ export const QuotePreview = forwardRef<HTMLDivElement, QuotePreviewProps>(({ cus
                 </div>
             </section>
 
-            <footer className="mt-auto pt-10 border-t-2 border-slate-200" style={{ pageBreakInside: 'avoid' }}>
+            <footer className="mt-auto pt-10 border-t-2 border-slate-200 break-inside-avoid">
                 <div className="bg-slate-50 p-8 rounded-2xl border-2 border-slate-100">
                     <p className="font-black text-xs text-slate-900 uppercase tracking-[0.2em] mb-4">Condicions de Pagament i Execució</p>
                     <p className="text-sm text-slate-600 leading-relaxed italic whitespace-pre-wrap">{notes}</p>

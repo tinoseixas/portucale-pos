@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -12,19 +13,19 @@ export function Logo({ className, variant = 'dark' }: LogoProps) {
   const [timestamp, setTimestamp] = useState('');
 
   useEffect(() => {
-    // Força o recarregamento da imagem ignorando a cache do navegador
+    // Força o recarregamento ignorando a cache para garantir que o logo novo aparece
     setTimestamp(new Date().getTime().toString());
   }, []);
 
   const primaryColor = variant === 'dark' ? '#005691' : '#ffffff';
   const accentColor = '#FFD700';
 
-  // Se não houve erro ao carregar, tenta mostrar a imagem oficial
+  // Tentativa de carregar a imagem direta com cache-busting
   if (!imgError) {
     return (
       <div className={className} style={{ display: 'inline-flex', alignItems: 'center' }}>
         <img 
-          src={`/logo.png?t=${timestamp}`} 
+          src={`/logo.png?v=${timestamp}`} 
           alt="TS SERVEIS" 
           className="h-full w-auto max-h-full object-contain"
           onError={() => setImgError(true)}
@@ -33,7 +34,7 @@ export function Logo({ className, variant = 'dark' }: LogoProps) {
     );
   }
 
-  // Fallback visual apenas se o ficheiro logo.png não existir na pasta public
+  // Fallback visual robusto caso o ficheiro não exista
   return (
     <svg 
       viewBox="0 0 450 100" 

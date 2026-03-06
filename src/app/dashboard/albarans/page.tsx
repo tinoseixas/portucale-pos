@@ -52,6 +52,18 @@ export default function AlbaransHistoryPage() {
   }, [firestore]);
   const { data: customers } = useCollection<Customer>(customersQuery);
 
+  // Deduplicar clientes para o filtro
+  const uniqueCustomers = useMemo(() => {
+    if (!customers) return [];
+    const seen = new Set();
+    return customers.filter(c => {
+      const nameKey = c.name.toLowerCase().trim();
+      if (seen.has(nameKey)) return false;
+      seen.add(nameKey);
+      return true;
+    });
+  }, [customers]);
+
   const filteredAlbarans = useMemo(() => {
     if (!albarans) return []
     return albarans.filter(a => {
@@ -113,7 +125,6 @@ export default function AlbaransHistoryPage() {
 
         const groupedByProject: Record<string, ServiceRecord[]> = {};
         pendingServices.forEach(s => {
-            // Chave de agrupamento robusta: Unifica por nome normalizado para evitar duplicados por espaços ou capitalização
             const normalizedName = s.projectName.trim().toLowerCase().replace(/\s+/g, ' ');
             const projectKey = `${s.customerId}_${normalizedName}`;
             
@@ -127,7 +138,6 @@ export default function AlbaransHistoryPage() {
         const counterSnap = await getDocs(query(collection(firestore, "counters"), where("__name__", "==", "albarans")));
         let nextNum = !counterSnap.empty ? (counterSnap.docs[0].data().lastNumber || 0) : 0;
 
-        // Limpa os pendentes atuais para reconstruir com os novos agrupamentos
         albarans?.filter(a => a.status === 'pendent').forEach(a => {
             batch.delete(doc(firestore, 'albarans', a.id));
         });
@@ -148,7 +158,7 @@ export default function AlbaransHistoryPage() {
                 createdAt: new Date().toISOString(),
                 customerId: firstService.customerId || '',
                 customerName: firstService.customerName || 'N/A',
-                projectName: firstService.projectName.trim(), // Mantém o nome original do primeiro registo encontrado
+                projectName: firstService.projectName.trim(),
                 serviceRecordIds: projectServices.map(s => s.id),
                 totalAmount: totalGeneral,
                 status: 'pendent',
@@ -205,7 +215,7 @@ export default function AlbaransHistoryPage() {
                             </SelectTrigger>
                             <SelectContent>
                                 <SelectItem value="all">Tots els clients</SelectItem>
-                                {customers?.map(c => (
+                                {uniqueCustomers.map(c => (
                                     <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
                                 ))}
                             </SelectContent>
@@ -377,7 +387,7 @@ export default function AlbaransHistoryPage() {
                                                 <AlertDialogContent>
                                                     <AlertDialogHeader>
                                                         <AlertDialogTitle>Eliminar de l'historial?</AlertDialogTitle>
-                                                        <AlertDialogDescription>Aquesta acció esborrarà el document de l'albarà facturat. No es recomana esborrar documents ja processats.</AlertDialogDescription>
+                                                        <AlertDialogDescription>Aquesta acció esborrarà o document de l'albarà facturat. No es recomana esborrar documents ja processats.</AlertDialogDescription>
                                                     </AlertDialogHeader>
                                                     <AlertDialogFooter>
                                                         <AlertDialogCancel>Enrere</AlertDialogCancel>
