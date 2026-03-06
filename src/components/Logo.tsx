@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -8,18 +7,15 @@ interface LogoProps {
   variant?: 'light' | 'dark';
 }
 
-/**
- * Componente de Logótipo que dá prioridade ao ficheiro real enviado pelo utilizador em /public/logo.png.
- */
 export function Logo({ className, variant = 'dark' }: LogoProps) {
   const [imgError, setImgError] = useState(false);
   const [timestamp, setTimestamp] = useState('');
 
-  // Adicionamos um timestamp para forçar o navegador a recarregar a imagem se ela mudar
   useEffect(() => {
+    // Gera um timestamp para forçar o recarregamento da imagem
     setTimestamp(new Date().getTime().toString());
   }, []);
-  
+
   const primaryColor = variant === 'dark' ? '#005691' : '#ffffff';
   const accentColor = '#FFD700';
 
@@ -36,7 +32,7 @@ export function Logo({ className, variant = 'dark' }: LogoProps) {
     );
   }
 
-  // Desenho artificial de reserva apenas se logo.png não existir
+  // Fallback visual apenas se a imagem falhar
   return (
     <svg 
       viewBox="0 0 450 100" 
@@ -44,49 +40,10 @@ export function Logo({ className, variant = 'dark' }: LogoProps) {
       className={className}
       preserveAspectRatio="xMidYMid meet"
     >
-      <defs>
-        <linearGradient id="logoGradientFallback" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" style={{ stopColor: primaryColor, stopOpacity: 1 }} />
-          <stop offset="100%" style={{ stopColor: '#003d66', stopOpacity: 1 }} />
-        </linearGradient>
-      </defs>
-      
-      <path 
-        d="M20 15 L55 5 L90 15 L90 55 C90 80 55 95 55 95 C55 95 20 80 20 55 Z" 
-        fill="url(#logoGradientFallback)" 
-      />
-      <path 
-        d="M40 50 L55 65 L80 35" 
-        fill="none" 
-        stroke={accentColor} 
-        strokeWidth="8" 
-        strokeLinecap="round" 
-        strokeLinejoin="round" 
-      />
-      
-      <text 
-        x="110" 
-        y="55" 
-        fontFamily="Inter, sans-serif" 
-        fontWeight="900" 
-        fontSize="42" 
-        letterSpacing="-1"
-        fill={primaryColor}
-      >
-        TS SERVEIS
-      </text>
-      
-      <text 
-        x="110" 
-        y="82" 
-        fontFamily="Inter, sans-serif" 
-        fontWeight="700" 
-        fontSize="14" 
-        letterSpacing="1"
-        fill={variant === 'dark' ? '#64748b' : '#cbd5e1'}
-      >
-        CONVERTIM LES TEVES IDEES EN REALITAT
-      </text>
+      <path d="M20 15 L55 5 L90 15 L90 55 C90 80 55 95 55 95 C55 95 20 80 20 55 Z" fill={primaryColor} />
+      <path d="M40 50 L55 65 L80 35" fill="none" stroke={accentColor} strokeWidth="8" strokeLinecap="round" strokeLinejoin="round" />
+      <text x="110" y="55" fontFamily="Inter, sans-serif" fontWeight="900" fontSize="42" fill={primaryColor}>TS SERVEIS</text>
+      <text x="110" y="82" fontFamily="Inter, sans-serif" fontWeight="700" fontSize="14" fill="#64748b">CONVERTIM LES TEVES IDEES EN REALITAT</text>
     </svg>
   );
 }

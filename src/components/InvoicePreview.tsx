@@ -1,4 +1,3 @@
-
 'use client'
 import React, { forwardRef, useMemo } from 'react';
 import type { Customer, ServiceRecord, Employee } from '@/lib/types';
@@ -54,8 +53,7 @@ export const InvoicePreview = forwardRef<HTMLDivElement, InvoicePreviewProps>((p
 
     return (
         <div ref={ref} className="bg-white p-12 font-sans text-gray-900 printable-area mx-auto flex flex-col" style={{ width: '210mm', minHeight: '297mm' }}>
-            {/* Cabeçalho */}
-            <header className="flex justify-between items-center border-b-2 border-slate-900 pb-8 mb-8" style={{ breakInside: 'avoid' }}>
+            <header className="flex justify-between items-center border-b-2 border-slate-900 pb-8 mb-8 break-inside-avoid">
                 <div className="flex flex-col gap-4">
                     <Logo className="h-24 w-auto" />
                     <div className="text-sm text-gray-600">
@@ -72,8 +70,7 @@ export const InvoicePreview = forwardRef<HTMLDivElement, InvoicePreviewProps>((p
                 </div>
             </header>
 
-            {/* Secção de Cliente e Obra */}
-            <section className="flex justify-between gap-8 my-8" style={{ breakInside: 'avoid' }}>
+            <section className="flex justify-between gap-8 my-8 break-inside-avoid">
                 <div className="flex-1">
                     <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-2">DADES DEL CLIENT</h3>
                     {customer ? (
@@ -90,12 +87,11 @@ export const InvoicePreview = forwardRef<HTMLDivElement, InvoicePreviewProps>((p
                  </div>
             </section>
             
-            {/* Detalhes de Trabalhos e Materiais */}
             <section className="space-y-8 flex-grow">
                 <h3 className="font-black text-lg mb-4 border-b-2 pb-2 uppercase tracking-tight">Detall de Treballs i Materials</h3>
                 
                 {groupedByAlbaran.map(([albaranNum, { services: albaranServices, items: albaranItems }]) => (
-                    <div key={albaranNum} className="mb-8" style={{ breakInside: 'avoid' }}>
+                    <div key={albaranNum} className="mb-8 break-inside-avoid">
                         {Number(albaranNum) > 0 && (
                             <h4 className="font-bold text-sm mb-3 bg-slate-100 p-2 rounded border-l-4 border-primary">Albarà de Referència #{String(albaranNum).padStart(4, '0')}</h4>
                         )}
@@ -118,7 +114,7 @@ export const InvoicePreview = forwardRef<HTMLDivElement, InvoicePreviewProps>((p
                                         const mealMinutes = service.isLunchSubtracted !== false ? getMealBreakOverlapMinutes(arrival, departure) : 0;
                                         const hours = (effectiveMinutes / 60).toFixed(2);
                                         return (
-                                            <tr key={service.id} className="border-b border-gray-100" style={{ breakInside: 'avoid' }}>
+                                            <tr key={service.id} className="border-b border-gray-100 break-inside-avoid">
                                                 <td className="py-2 px-3 align-top whitespace-nowrap font-medium text-gray-500">{format(arrival, 'dd/MM/yy')}</td>
                                                 <td className="py-2 px-3 align-top font-bold">{getEmployeeName(service)}</td>
                                                 <td className="py-2 px-3 align-top text-gray-700">{service.description}</td>
@@ -147,7 +143,7 @@ export const InvoicePreview = forwardRef<HTMLDivElement, InvoicePreviewProps>((p
                                 {albaranItems.map((item, index) => {
                                     const itemTotal = item.quantity * item.unitPrice;
                                     return (
-                                        <tr key={`item-${index}`} className="border-b border-gray-100" style={{ breakInside: 'avoid' }}>
+                                        <tr key={`item-${index}`} className="border-b border-gray-100 break-inside-avoid">
                                             <td className="py-2 px-3 font-medium">{item.description}</td>
                                             <td className="text-right py-2 px-3 tabular-nums">{item.quantity.toFixed(2)}</td>
                                             <td className="text-right py-2 px-3 tabular-nums">{item.unitPrice.toFixed(2)} €</td>
@@ -161,8 +157,7 @@ export const InvoicePreview = forwardRef<HTMLDivElement, InvoicePreviewProps>((p
                     </div>
                 ))}
                 
-                {/* Resumo de Mão de Obra */}
-                <div className="mt-12 pt-6 border-t-2 border-slate-100" style={{ breakInside: 'avoid' }}>
+                <div className="mt-12 pt-6 border-t-2 border-slate-100 break-inside-avoid">
                     <div className="flex justify-between items-center bg-slate-50 p-6 rounded-xl border border-slate-200">
                         <div>
                             <p className="text-sm font-black text-slate-900 uppercase tracking-tight">Mà d'obra i Treball Tècnic</p>
@@ -174,8 +169,7 @@ export const InvoicePreview = forwardRef<HTMLDivElement, InvoicePreviewProps>((p
                     </div>
                 </div>
 
-                {/* Bloco de Totais Finais */}
-                <div className="flex justify-end mt-12 pb-12" style={{ breakInside: 'avoid' }}>
+                <div className="flex justify-end mt-12 pb-12 break-inside-avoid">
                     <div className="w-80 space-y-3 bg-slate-900 text-white p-8 rounded-2xl shadow-xl border-4 border-primary/20">
                         <div className="flex justify-between text-sm font-bold uppercase tracking-wider text-slate-400">
                             <span>Subtotal:</span>
@@ -195,7 +189,7 @@ export const InvoicePreview = forwardRef<HTMLDivElement, InvoicePreviewProps>((p
                 </div>
             </section>
 
-             <footer className="mt-auto pt-8 border-t text-center text-[10px] text-gray-400 uppercase tracking-widest font-bold" style={{ breakInside: 'avoid' }}>
+             <footer className="mt-auto pt-8 border-t text-center text-[10px] text-gray-400 uppercase tracking-widest font-bold break-inside-avoid">
                 <p>TS SERVEIS - Solucions Tècniques i Manteniment</p>
                 <p className="mt-2 text-slate-300 font-bold">HORARI DE DINAR (13H-14H) EXCLÒS QUAN S'APLICA | ARREDONIMENT CADA 30 MIN</p>
                 <p className="mt-1">CONVERTIM LES TEVES IDEES EN REALITAT</p>
