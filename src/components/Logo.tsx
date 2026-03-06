@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -9,7 +10,7 @@ interface LogoProps {
 
 export function Logo({ className, variant = 'dark' }: LogoProps) {
   const [imgError, setImgError] = useState(false);
-  const [useArtificial, setUseArtificial] = useState(false);
+  const [imgLoaded, setImgLoaded] = useState(false);
   
   const primaryColor = variant === 'dark' ? '#005691' : '#ffffff';
   const accentColor = '#FFD700';
@@ -17,33 +18,25 @@ export function Logo({ className, variant = 'dark' }: LogoProps) {
   useEffect(() => {
     const img = new Image();
     img.src = "/logo.png";
-    img.onload = () => {
-        setUseArtificial(false);
-        setImgError(false);
-    };
-    img.onerror = () => {
-        setUseArtificial(true);
-        setImgError(true);
-    };
+    img.onload = () => setImgLoaded(true);
+    img.onerror = () => setImgError(true);
   }, []);
 
-  if (!useArtificial && !imgError) {
+  // Se a imagem carregar com sucesso, mostramos a imagem real.
+  if (imgLoaded && !imgError) {
     return (
       <div className={className} style={{ display: 'inline-flex', alignItems: 'center' }}>
         <img 
           src="/logo.png" 
           alt="TS SERVEIS" 
           className="h-full w-auto max-h-full"
-          onError={() => {
-            setImgError(true);
-            setUseArtificial(true);
-          }}
           style={{ objectFit: 'contain' }}
         />
       </div>
     );
   }
 
+  // Se a imagem falhar, mostramos o logo artificial com o slogan correto.
   return (
     <svg 
       viewBox="0 0 450 100" 

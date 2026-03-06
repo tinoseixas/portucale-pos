@@ -27,13 +27,12 @@ export default function NewServicePage() {
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>('none');
   const [selectedProjectId, setSelectedProjectId] = useState<string>('none');
   
-  // Per a noves obres directes
   const [isNewProjectDialogOpen, setIsNewProjectDialogOpen] = useState(false);
   const [newProjectName, setNewProjectName] = useState('');
   const [isCreatingProject, setIsCreatingProject] = useState(false);
 
   const employeeDocRef = useMemoFirebase(() => {
-    if (!user) return null;
+    if (!user || !firestore) return null;
     return doc(firestore, 'employees', user.uid);
   }, [firestore, user]);
 
@@ -48,14 +47,19 @@ export default function NewServicePage() {
 
   const projectsQuery = useMemoFirebase(() => {
       if (!firestore || selectedCustomerId === 'none') return null;
+      // Simplificamos a consulta para evitar necessidade de índices compostos manuais
       return query(
           collection(firestore, 'projects'), 
-          where('customerId', '==', selectedCustomerId),
-          where('status', '==', 'active')
+          where('customerId', '==', selectedCustomerId)
       );
   }, [firestore, selectedCustomerId]);
 
-  const { data: activeProjects, isLoading: isLoadingProjects } = useCollection<Project>(projectsQuery);
+  const { data: allProjects, isLoading: isLoadingProjects } = useCollection<Project>(projectsQuery);
+
+  const activeProjects = useMemo(() => {
+      if (!allProjects) return [];
+      return allProjects.filter(p => p.status === 'active');
+  }, [allProjects]);
 
   const uniqueCustomers = useMemo(() => {
     if (!customers) return [];
@@ -131,6 +135,7 @@ export default function NewServicePage() {
             description: "S'ha obert un nou registre de treball.",
         });
         
+        // FIX: Corregido redirecionamento usando backticks para interpolação de strings
         router.push(`/dashboard/edit/${docRef.id}?ownerId=${currentEmployee.id}`);
 
     } catch (error) {

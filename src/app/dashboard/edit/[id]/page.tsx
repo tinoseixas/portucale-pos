@@ -122,16 +122,18 @@ export default function EditServicePage() {
   const [customerSignatureName, setCustomerSignatureName] = useState('');
   const [customerSignatureDataUrl, setCustomerSignatureDataUrl] = useState('');
 
-  // Per a noves obres directes
   const [isNewProjectDialogOpen, setIsNewProjectDialogOpen] = useState(false);
   const [newProjectName, setNewProjectName] = useState('');
   const [isCreatingProject, setIsCreatingProject] = useState(false);
 
   const projectsQuery = useMemoFirebase(() => {
       if (!firestore || !customerId || customerId === 'none') return null;
-      return query(collection(firestore, 'projects'), where('customerId', '==', customerId), where('status', '==', 'active'));
+      // Simplificamos para evitar erro de índice composto
+      return query(collection(firestore, 'projects'), where('customerId', '==', customerId));
   }, [firestore, customerId]);
-  const { data: activeProjects, isLoading: isLoadingProjects } = useCollection<Project>(projectsQuery);
+  
+  const { data: allProjects, isLoading: isLoadingProjects } = useCollection<Project>(projectsQuery);
+  const activeProjects = useMemo(() => allProjects?.filter(p => p.status === 'active'), [allProjects]);
 
   useEffect(() => {
     if (service) {
