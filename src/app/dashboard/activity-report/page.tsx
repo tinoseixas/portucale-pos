@@ -16,19 +16,13 @@ import {
   format,
   parseISO,
   isWithinInterval,
-  eachDayOfInterval,
-  startOfWeek,
-  endOfWeek,
-  startOfMonth,
-  endOfMonth,
   getWeek,
-  getMonth,
   getYear,
-  differenceInMinutes,
   isValid
 } from 'date-fns'
 import { ca } from 'date-fns/locale'
 import { cn } from '@/lib/utils'
+import { calculateServiceEffectiveMinutes } from '@/lib/calculations'
 
 export default function ActivityReportPage() {
   const firestore = useFirestore()
@@ -75,12 +69,10 @@ export default function ActivityReportPage() {
     let totalMinutes = 0
 
     filteredServices.forEach(service => {
+      const minutes = calculateServiceEffectiveMinutes(service);
+      if (minutes <= 0) return;
+
       const start = parseISO(service.arrivalDateTime)
-      const end = parseISO(service.departureDateTime)
-
-      if (!isValid(start) || !isValid(end) || end <= start) return
-
-      const minutes = differenceInMinutes(end, start)
       totalMinutes += minutes
 
       const dayKey = format(start, 'yyyy-MM-dd')
@@ -102,7 +94,7 @@ export default function ActivityReportPage() {
   
   const formatMinutes = (minutes: number) => {
     const h = Math.floor(minutes / 60)
-    const m = minutes % 60
+    const m = Math.round(minutes % 60)
     return `${h}h ${m}m`
   }
   
@@ -122,7 +114,7 @@ export default function ActivityReportPage() {
                 <LineChart className="h-6 w-6" />
                 Informe d'Activitat dels Treballadors
             </CardTitle>
-            <CardDescription>Filtra per treballador i interval de dates per veure el total d'hores treballades.</CardDescription>
+            <CardDescription>Filtra per treballador i interval de dates per veure el total d'hores treballades. (Descomptant descans 13h-14h)</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
              <div className="flex flex-col sm:flex-row gap-4 flex-wrap">

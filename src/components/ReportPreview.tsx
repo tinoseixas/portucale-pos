@@ -1,12 +1,11 @@
-
 'use client'
 import React, { forwardRef, useMemo } from 'react';
 import Image from 'next/image';
 import { Calendar as CalendarIcon, Clock, User, CheckCircle, Package } from 'lucide-react';
 import type { ServiceRecord, Customer, Employee } from '@/lib/types';
-import { format, differenceInMinutes, parseISO, isValid } from 'date-fns';
+import { format, parseISO, isValid } from 'date-fns';
 import { ca } from 'date-fns/locale';
-import { calculateTotalAmount, IVA_RATE } from '@/lib/calculations';
+import { calculateTotalAmount, calculateServiceEffectiveMinutes, getMealBreakOverlapMinutes, IVA_RATE } from '@/lib/calculations';
 import { Logo } from '@/components/Logo';
 
 interface ReportPreviewProps {
@@ -52,7 +51,7 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
                 className="bg-white p-12 font-sans text-slate-900 printable-area mx-auto shadow-2xl flex flex-col"
                 style={{ width: '210mm', minHeight: '297mm' }}
             >
-                {/* Capçalera amb Logo TS Serveis */}
+                {/* Capçalera */}
                 <header className="flex justify-between items-center border-b-4 border-slate-900 pb-10 mb-10" style={{ breakInside: 'avoid' }}>
                     <div className="flex flex-col gap-4">
                         <Logo className="h-24 w-auto" />
@@ -88,7 +87,6 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
                                 <div className="pt-4 grid grid-cols-1 gap-1 text-base text-slate-500">
                                     <p><span className="font-bold text-slate-800">NIF:</span> {customer.nrt || '-'}</p>
                                     <p><span className="font-bold text-slate-800">Email:</span> {customer.email || '-'}</p>
-                                    <p><span className="font-bold text-slate-800">Tel:</span> {customer.contact || '-'}</p>
                                 </div>
                             </div>
                         ) : <p className="text-slate-400 italic">Dades no disponibles</p>}
@@ -98,10 +96,10 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
                         <h3 className="text-xs font-black text-primary uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
                             <CalendarIcon className="w-4 h-4" /> DETALLS DE L'OBRA
                         </h3>
-                        <p className="font-black text-2xl text-slate-900 mb-6">{projectName || 'Obra no especificada'}</p>
+                        <p className="font-black text-2xl text-slate-900 mb-6 uppercase">{projectName || 'Obra no especificada'}</p>
                         <div className="grid grid-cols-2 gap-8">
                             <div className="bg-white p-4 rounded-xl shadow-sm">
-                                <p className="text-slate-400 font-bold uppercase text-[10px] mb-1">Total Registres</p>
+                                <p className="text-slate-400 font-bold uppercase text-[10px] mb-1">Registres</p>
                                 <p className="text-2xl font-black text-slate-900">{services.length}</p>
                             </div>
                             <div className="bg-white p-4 rounded-xl shadow-sm">
@@ -132,8 +130,9 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
                                     {sortedServices.map((service, idx) => {
                                         const arrival = parseISO(service.arrivalDateTime);
                                         const departure = parseISO(service.departureDateTime);
-                                        const minutes = (isValid(arrival) && isValid(departure) && departure > arrival) ? differenceInMinutes(departure, arrival) : 0;
-                                        const hours = minutes > 0 ? (minutes / 60).toFixed(2) : '0.00';
+                                        const effectiveMinutes = calculateServiceEffectiveMinutes(service);
+                                        const mealMinutes = getMealBreakOverlapMinutes(arrival, departure);
+                                        const hours = (effectiveMinutes / 60).toFixed(2);
 
                                         return (
                                             <tr key={service.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/30'} style={{ breakInside: 'avoid' }}>
@@ -148,7 +147,10 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
                                                         </div>
                                                     )}
                                                 </td>
-                                                <td className="py-6 px-6 align-top text-right font-black tabular-nums text-slate-900 text-lg">{hours} h</td>
+                                                <td className="py-6 px-6 align-top text-right font-black tabular-nums text-slate-900 text-lg">
+                                                    {hours} h
+                                                    {mealMinutes > 0 && <span className="block text-[9px] text-slate-400 font-bold mt-1">-(refecció)</span>}
+                                                </td>
                                             </tr>
                                         )
                                     })}
@@ -157,7 +159,7 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
                         </section>
                     )}
                     
-                    {showPricing && allMaterials.length > 0 && (
+                    {showPricing && (allMaterials.length > 0 || laborCost > 0) && (
                         <section className="mb-12 pt-10 border-t-4 border-slate-100">
                             <h3 className="text-base font-black text-slate-900 mb-6 flex items-center gap-3">
                                 <span className="w-10 h-10 rounded-full bg-slate-900 text-white flex items-center justify-center text-sm">02</span>
@@ -177,7 +179,7 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
                                         <tr key={`mat-${index}`} className="hover:bg-slate-50 transition-colors" style={{ breakInside: 'avoid' }}>
                                             <td className="py-5 px-6 text-slate-700 font-medium">
                                                 {material.description}
-                                                {material.imageDataUrl && <div className="mt-2 text-[10px] text-primary font-bold flex items-center gap-1"><Package className="h-3 w-3" /> EVIDÈNCIA DOCUMENTAL ADJUNTA</div>}
+                                                {material.imageDataUrl && <div className="mt-2 text-[10px] text-primary font-bold flex items-center gap-1"><Package className="h-3 w-3" /> ADJUNT FOTOGRÀFIC</div>}
                                             </td>
                                             <td className="text-right py-5 px-6 tabular-nums font-bold text-slate-500">{material.quantity.toFixed(2)}</td>
                                             <td className="text-right py-5 px-6 tabular-nums font-bold text-slate-500">{material.unitPrice.toFixed(2)} €</td>
@@ -186,8 +188,8 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
                                     ))}
                                     {laborCost > 0 && (
                                         <tr className="bg-slate-50 font-bold border-t-2 border-slate-200" style={{ breakInside: 'avoid' }}>
-                                            <td className="py-6 px-6 text-slate-900">Mà d'obra i Treball Tècnic</td>
-                                            <td className="text-right py-6 px-6 tabular-nums">{totalHours.toFixed(2)}</td>
+                                            <td className="py-6 px-6 text-slate-900">Mà d'obra i Treball Tècnic (Efectiu)</td>
+                                            <td className="text-right py-6 px-6 tabular-nums">{totalHours.toFixed(2)} h</td>
                                             <td className="text-right py-6 px-6 tabular-nums text-slate-400">{hourlyRateDisplay} €/h</td>
                                             <td className="text-right py-6 px-6 font-black tabular-nums text-slate-900 text-lg">{laborCost.toFixed(2)} €</td>
                                         </tr>
@@ -195,10 +197,10 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
                                 </tbody>
                             </table>
 
-                            <div className="flex justify-end mt-10 pb-12" style={{ breakInside: 'avoid' }}>
+                            <div className="flex justify-end mt-10" style={{ breakInside: 'avoid' }}>
                                 <div className="w-96 space-y-4 bg-slate-900 text-white p-8 rounded-2xl shadow-xl border-4 border-primary/20">
                                     <div className="flex justify-between text-sm text-slate-400 font-bold uppercase tracking-widest">
-                                        <span>Subtotal Base</span>
+                                        <span>Subtotal</span>
                                         <span className="tabular-nums">{subtotal.toFixed(2)} €</span>
                                     </div>
                                     <div className="flex justify-between text-sm text-slate-400 font-bold uppercase tracking-widest">
@@ -216,7 +218,7 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
 
                     {services.some(s => s.customerSignatureDataUrl) && (
                         <section className="mt-16 pt-10 border-t-4 border-slate-100" style={{ breakInside: 'avoid' }}>
-                            <h3 className="text-xs font-black text-slate-400 uppercase tracking-[0.3em] mb-10 border-b-2 pb-4">Confirmació de Recepció de Treballs</h3>
+                            <h3 className="text-xs font-black text-slate-400 uppercase tracking-[0.3em] mb-10 border-b-2 pb-4">Conformitat del Client</h3>
                             <div className="grid grid-cols-3 gap-10">
                                 {services.filter(s => s.customerSignatureDataUrl).map((s, idx) => (
                                     <div key={idx} className="border-2 border-slate-100 rounded-2xl p-6 bg-slate-50/50 flex flex-col items-center">
@@ -229,7 +231,7 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
                                         </div>
                                         <div className="text-center">
                                             <p className="text-sm font-black text-slate-900 uppercase truncate mb-1">{s.customerSignatureName}</p>
-                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Autoritzat per Client</p>
+                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Signatura Autoritzada</p>
                                         </div>
                                     </div>
                                 ))}
@@ -241,7 +243,7 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
                         <section className="mt-16 pt-12 border-t-4 border-slate-100">
                             <h3 className="text-lg font-black text-slate-900 mb-10 uppercase tracking-widest flex items-center gap-3">
                                 <span className="w-10 h-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm italic">i</span>
-                                Evidències Fotogràfiques de l'Obra
+                                Annex Fotogràfic de l'Obra
                             </h3>
                             <div className="grid grid-cols-4 gap-6">
                                 {allMedia.map((media, index) => (
@@ -253,7 +255,7 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
                                             className="object-cover transition-transform duration-700 group-hover:scale-110"
                                         />
                                         <div className="absolute bottom-0 left-0 right-0 bg-slate-900/60 text-white text-[9px] font-bold p-2 text-center backdrop-blur-md">
-                                            IMG_{index + 1}.JPG
+                                            DOC_{index + 1}.JPG
                                         </div>
                                     </div>
                                 ))}
@@ -265,8 +267,8 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
                 <footer className="mt-auto pt-10 border-t-2 border-slate-200 flex justify-between items-end text-slate-400" style={{ breakInside: 'avoid' }}>
                     <div className="text-[11px] space-y-2 font-medium">
                         <p className="font-black text-slate-500 text-xs uppercase tracking-tighter">TS SERVEIS - Solucions Tècniques i Manteniment</p>
-                        <p>Aquest document certifica la realització dels treballs descrits.</p>
-                        <p className="italic text-slate-300">Sense validesa fiscal fins a l'emissió de la factura corresponent.</p>
+                        <p>Document acreditatiu dels treballs realitzats a la data indicada.</p>
+                        <p className="italic text-slate-300 font-bold">Càlcul d'hores net (exclòs interval de descans 13h-14h).</p>
                     </div>
                     <div className="text-right">
                         <p className="text-xs font-black text-slate-900 uppercase tracking-widest mb-3">Gràcies per la seva confiança</p>

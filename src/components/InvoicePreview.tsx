@@ -1,10 +1,9 @@
-
 'use client'
 import React, { forwardRef, useMemo } from 'react';
 import type { Customer, ServiceRecord, Employee } from '@/lib/types';
-import { format, differenceInMinutes, parseISO, isValid } from 'date-fns';
+import { format, parseISO, isValid } from 'date-fns';
 import { ca } from 'date-fns/locale';
-import { calculateTotalAmount } from '@/lib/calculations';
+import { calculateTotalAmount, calculateServiceEffectiveMinutes, getMealBreakOverlapMinutes } from '@/lib/calculations';
 import { Logo } from '@/components/Logo';
 
 interface InvoicePreviewProps {
@@ -57,7 +56,7 @@ export const InvoicePreview = forwardRef<HTMLDivElement, InvoicePreviewProps>((p
             {/* Header */}
             <header className="flex justify-between items-center border-b-2 border-slate-900 pb-8 mb-8" style={{ breakInside: 'avoid' }}>
                 <div className="flex flex-col gap-4">
-                    <Logo className="h-20 w-auto" />
+                    <Logo className="h-24 w-auto" />
                     <div className="text-sm text-gray-600">
                         <p className="font-bold text-gray-900">NRT: F352231c</p>
                         <p>Av. Francois Mitterrand 64, local 6</p>
@@ -81,7 +80,6 @@ export const InvoicePreview = forwardRef<HTMLDivElement, InvoicePreviewProps>((p
                              <p className="font-black text-xl">{customer.name}</p>
                              <p className="text-gray-600">{customer.address || ''}</p>
                              <p className="text-gray-600">NIF: {customer.nrt || '-'}</p>
-                             <p className="text-gray-600">{customer.email || ''}</p>
                         </div>
                     ) : <p className="text-gray-600 italic">No especificat</p>}
                 </div>
@@ -115,14 +113,18 @@ export const InvoicePreview = forwardRef<HTMLDivElement, InvoicePreviewProps>((p
                                     {albaranServices.map(service => {
                                         const arrival = parseISO(service.arrivalDateTime);
                                         const departure = parseISO(service.departureDateTime);
-                                        const minutes = (isValid(arrival) && isValid(departure) && departure > arrival) ? differenceInMinutes(departure, arrival) : 0;
-                                        const hours = minutes > 0 ? (minutes / 60).toFixed(2) : '0.00';
+                                        const effectiveMinutes = calculateServiceEffectiveMinutes(service);
+                                        const mealMinutes = getMealBreakOverlapMinutes(arrival, departure);
+                                        const hours = (effectiveMinutes / 60).toFixed(2);
                                         return (
                                             <tr key={service.id} className="border-b border-gray-100" style={{ breakInside: 'avoid' }}>
                                                 <td className="py-2 px-3 align-top whitespace-nowrap font-medium text-gray-500">{format(arrival, 'dd/MM/yy')}</td>
                                                 <td className="py-2 px-3 align-top font-bold">{getEmployeeName(service)}</td>
                                                 <td className="py-2 px-3 align-top text-gray-700">{service.description}</td>
-                                                <td className="py-2 px-3 align-top text-right font-bold tabular-nums">{hours} h</td>
+                                                <td className="py-2 px-3 align-top text-right font-bold tabular-nums">
+                                                    {hours} h
+                                                    {mealMinutes > 0 && <span className="block text-[8px] text-gray-400 font-bold mt-0.5">-(refecció)</span>}
+                                                </td>
                                             </tr>
                                         );
                                     })}
@@ -163,7 +165,7 @@ export const InvoicePreview = forwardRef<HTMLDivElement, InvoicePreviewProps>((p
                     <div className="flex justify-between items-center bg-slate-50 p-6 rounded-xl border border-slate-200">
                         <div>
                             <p className="text-sm font-black text-slate-900 uppercase tracking-tight">Mà d'obra i Treball Tècnic</p>
-                            <p className="text-xs text-slate-500 mt-1 italic">Total hores: <strong>{totalHours.toFixed(2)} h</strong> | Valor hora: <strong>{hourlyRateDisplay} €/h</strong></p>
+                            <p className="text-xs text-slate-500 mt-1 italic">Hores facturables: <strong>{totalHours.toFixed(2)} h</strong> | Valor hora: <strong>{hourlyRateDisplay} €/h</strong></p>
                         </div>
                         <div className="text-right">
                             <p className="text-xl font-black text-slate-900">{laborCost.toFixed(2)} €</p>
@@ -194,8 +196,8 @@ export const InvoicePreview = forwardRef<HTMLDivElement, InvoicePreviewProps>((p
 
              <footer className="mt-auto pt-8 border-t text-center text-[10px] text-gray-400 uppercase tracking-widest font-bold" style={{ breakInside: 'avoid' }}>
                 <p>TS SERVEIS - Solucions Tècniques i Manteniment</p>
-                <p className="mt-2 text-slate-300">CONVERTIM LES TEVES IDEES EN REALITAT</p>
-                <p className="mt-1">Gràcies per la seva confiança.</p>
+                <p className="mt-2 text-slate-300 font-bold">HORARI DE DINAR (13H-14H) EXCLÒS DEL CÀLCUL DE TEMPS</p>
+                <p className="mt-1">CONVERTIM LES TEVES IDEES EN REALITAT</p>
             </footer>
         </div>
     );
