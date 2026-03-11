@@ -1,3 +1,4 @@
+
 'use client'
 
 import { useState, useMemo, useEffect } from 'react'
@@ -88,10 +89,11 @@ export default function NewServicePage() {
         const res = await translateToCatalan({ text: description });
         if (res && res.translatedText) {
             setDescription(res.translatedText);
-            toast({ title: 'Traducció completada', description: 'El text ha estat corregit correctament.' });
+            toast({ title: 'Traducció completada', description: 'El text s\'ha corregit correctament.' });
         }
     } catch (e) {
-        toast({ variant: 'destructive', title: 'Error en la traducció' });
+        console.error(e);
+        toast({ variant: 'destructive', title: 'Error en la traducció', description: 'Revisa la connexió a internet.' });
     } finally {
         setIsTranslating(false);
     }

@@ -89,6 +89,7 @@ export default function EditServicePage() {
   
   const [isSaving, setIsSaving] = useState(false);
   const [isTranslating, setIsTranslating] = useState(false);
+  const [hasInitialized, setHasInitialized] = useState(false);
 
   const recordOwnerId = searchParams.get('ownerId');
 
@@ -101,9 +102,6 @@ export default function EditServicePage() {
   
   const customersQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'customers'), orderBy('name', 'asc')) : null, [firestore]);
   const { data: customers } = useCollection<Customer>(customersQuery);
-
-  const employeesQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'employees')) : null, [firestore]);
-  const { data: employees } = useCollection<Employee>(employeesQuery);
 
   const [date, setDate] = useState<Date | undefined>()
   const [startTime, setStartTime] = useState('')
@@ -133,7 +131,7 @@ export default function EditServicePage() {
       return query(collection(firestore, 'projects'), where('customerId', '==', customerId));
   }, [firestore, customerId]);
   
-  const { data: allProjects, isLoading: isLoadingProjects } = useCollection<Project>(projectsQuery);
+  const { data: allProjects } = useCollection<Project>(projectsQuery);
   
   const activeProjects = useMemo(() => {
       if (!allProjects) return [];
@@ -148,7 +146,7 @@ export default function EditServicePage() {
   }, [allProjects]);
 
   useEffect(() => {
-    if (service) {
+    if (service && !hasInitialized) {
       const arrival = parseISO(service.arrivalDateTime);
       const departure = parseISO(service.departureDateTime);
       if (isValid(arrival)) {
@@ -170,8 +168,9 @@ export default function EditServicePage() {
       setCustomerSignatureDataUrl(service.customerSignatureDataUrl || '');
       setServiceHourlyRate(service.serviceHourlyRate ?? '');
       setIsLunchSubtracted(service.isLunchSubtracted ?? true);
+      setHasInitialized(true);
     }
-  }, [service]);
+  }, [service, hasInitialized]);
 
   const handleCreateProject = async () => {
       if (!firestore || !newProjectName.trim() || !customerId) return;
@@ -201,17 +200,22 @@ export default function EditServicePage() {
     if (!description && !pendingTasks) return;
     setIsTranslating(true);
     try {
-        if (description) {
+        if (description && description.trim() !== "") {
             const res = await translateToCatalan({ text: description });
-            if (res && res.translatedText) setDescription(res.translatedText);
+            if (res && res.translatedText) {
+                setDescription(res.translatedText);
+            }
         }
-        if (pendingTasks) {
+        if (pendingTasks && pendingTasks.trim() !== "") {
             const res = await translateToCatalan({ text: pendingTasks });
-            if (res && res.translatedText) setPendingTasks(res.translatedText);
+            if (res && res.translatedText) {
+                setPendingTasks(res.translatedText);
+            }
         }
-        toast({ title: 'Text corregit correctament' });
+        toast({ title: 'Traducció completada', description: 'El text s\'ha actualitzat a la fitxa.' });
     } catch (e) {
-        toast({ variant: 'destructive', title: 'Error traducció' });
+        console.error(e);
+        toast({ variant: 'destructive', title: 'Error traducció', description: 'No s\'ha pogut connectar amb l\'IA.' });
     } finally {
         setIsTranslating(false);
     }
@@ -343,7 +347,6 @@ export default function EditServicePage() {
                 </div>
               </div>
 
-              {/* OPÇÕES DE TEMPO */}
               <div className="bg-slate-50 p-6 rounded-3xl border-2 border-dashed flex items-center justify-between">
                   <div className="flex items-center gap-3">
                       <div className="bg-primary/10 p-2 rounded-xl text-primary">
@@ -412,7 +415,13 @@ export default function EditServicePage() {
                         Traduir (IA)
                     </Button>
                 </div>
-                <Textarea placeholder="Descriu la teva feina..." value={description} onChange={(e) => setDescription(e.target.value)} rows={5} className="rounded-3xl border-2 font-medium text-lg p-6 bg-slate-50" />
+                <Textarea 
+                    placeholder="Descriu la teva feina..." 
+                    value={description} 
+                    onChange={(e) => setDescription(e.target.value)} 
+                    rows={5} 
+                    className="rounded-3xl border-2 font-medium text-lg p-6 bg-slate-50" 
+                />
               </div>
 
               <div className="space-y-3">
@@ -420,7 +429,6 @@ export default function EditServicePage() {
                 <Textarea placeholder="Falta alguna cosa?" value={pendingTasks} onChange={(e) => setPendingTasks(e.target.value)} rows={2} className="border-amber-200 bg-amber-50/50 rounded-2xl p-6 font-medium" />
               </div>
 
-              {/* MATERIALS */}
               <div className="space-y-6 rounded-[2.5rem] border-2 border-slate-100 p-8 bg-slate-50/50 shadow-inner">
                   <Label className="font-black text-slate-900 flex items-center gap-3 uppercase tracking-tighter text-xl"><Package className="h-6 w-6 text-primary" /> Materials</Label>
                   <div className="space-y-4">
@@ -443,7 +451,6 @@ export default function EditServicePage() {
                   <Button type="button" variant="ghost" onClick={() => setMaterials([...materials, { description: '', quantity: 1, unitPrice: 0 }])} className="w-full h-16 border-4 border-dashed border-slate-200 rounded-3xl font-black text-slate-400 uppercase text-xs">+ AFEGIR ARTICLE</Button>
               </div>
 
-              {/* GALERIA */}
               <div className="space-y-6">
                   <div className="flex justify-between items-center">
                     <Label className="font-black text-slate-900 flex items-center gap-3 uppercase tracking-tighter text-xl"><Camera className="h-6 w-6 text-primary" /> Galeria</Label>
@@ -463,7 +470,6 @@ export default function EditServicePage() {
                   </div>
               </div>
 
-              {/* SIGNATURA */}
               <div className="space-y-4 rounded-[2.5rem] border-4 border-primary/5 p-8 bg-primary/5 shadow-inner">
                   <Label className="font-black flex items-center gap-3 text-primary uppercase tracking-tighter text-xl"><PenTool className="h-6 w-6" /> Firma</Label>
                   {customerSignatureDataUrl ? (

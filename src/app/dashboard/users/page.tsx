@@ -1,17 +1,18 @@
+
 'use client'
 
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useCollection, useUser, useFirestore, useMemoFirebase, deleteDocumentNonBlocking } from '@/firebase'
-import { collection, query, doc } from 'firebase/firestore'
+import { collection, query, doc, getDocs, writeBatch, collectionGroup } from 'firebase/firestore'
 import type { Employee } from '@/lib/types'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Edit, Trash2 } from 'lucide-react'
+import { Edit, Trash2, ShieldAlert, Loader2 } from 'lucide-react'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -47,6 +48,7 @@ export default function UsersPage() {
   const { toast } = useToast()
   const { user, isUserLoading } = useUser()
   const firestore = useFirestore()
+  const [isClearing, setIsClearing] = useState(false);
 
   const employeesQuery = useMemoFirebase(() => {
     if (!user || !firestore) return null;
@@ -69,13 +71,45 @@ export default function UsersPage() {
   const handleDeleteUser = (employeeId: string, employeeName: string) => {
     if (!firestore) return;
     const employeeDocRef = doc(firestore, 'employees', employeeId);
-    
     deleteDocumentNonBlocking(employeeDocRef);
-    
     toast({
       title: 'Usuari Eliminat',
       description: `L'usuari ${employeeName} ha estat eliminat correctament.`,
     });
+  };
+
+  const handleClearAllData = async () => {
+    if (!firestore) return;
+    setIsClearing(true);
+    toast({ title: "Netejant dades...", description: "S'estan eliminant tots els registres." });
+
+    try {
+        const collections = ['customers', 'projects', 'albarans', 'invoices', 'receipts'];
+        const batch = writeBatch(firestore);
+
+        // Netejar col·leccions d'arrel
+        for (const colName of collections) {
+            const snap = await getDocs(collection(firestore, colName));
+            snap.forEach(d => batch.delete(d.ref));
+        }
+
+        // Netejar subcol·leccions de serveis (collectionGroup)
+        const servicesSnap = await getDocs(collectionGroup(firestore, 'serviceRecords'));
+        servicesSnap.forEach(d => batch.delete(d.ref));
+
+        // Netejar comptadors
+        const countersSnap = await getDocs(collection(firestore, 'counters'));
+        countersSnap.forEach(d => batch.delete(d.ref));
+
+        await batch.commit();
+        toast({ title: "Base de dades neta", description: "S'han eliminat tots els registres amb èxit." });
+        router.refresh();
+    } catch (error) {
+        console.error(error);
+        toast({ variant: 'destructive', title: "Error", description: "No s'han pogut netejar totes les dades." });
+    } finally {
+        setIsClearing(false);
+    }
   };
 
   const getInitials = (employee: Employee) => {
@@ -86,18 +120,19 @@ export default function UsersPage() {
   }
   
   const isLoading = isUserLoading || isLoadingEmployees;
+  const isAdmin = user?.email === 'tinoseixas@gmail.com';
   
   if (isLoading) {
     return <p>Carregant usuaris...</p>
   }
   
   if (!user) {
-     return null; // Redirect is handled by the useEffect hook
+     return null; 
   }
 
   return (
     <AdminGate pageTitle="Gestió d'Usuaris" pageDescription="Visualitza i gestiona tots els empleats registrats.">
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-4xl mx-auto space-y-10">
         <Card>
             <CardHeader>
             <CardTitle>Gestió d'Usuaris</CardTitle>
@@ -183,6 +218,48 @@ export default function UsersPage() {
             </div>
             </CardContent>
         </Card>
+
+        {isAdmin && (
+            <Card className="border-red-200 bg-red-50/30">
+                <CardHeader>
+                    <CardTitle className="text-red-600 flex items-center gap-2">
+                        <ShieldAlert className="h-5 w-5" />
+                        Zona de Perill (Admin)
+                    </CardTitle>
+                    <CardDescription>
+                        Aquestes accions són irreversibles. Utilitza-les per reiniciar l'aplicació.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    <div className="flex flex-col sm:flex-row justify-between items-center p-4 bg-white rounded-xl border border-red-100 gap-4">
+                        <div className="space-y-1">
+                            <p className="font-bold text-slate-900 uppercase text-xs">Netejar Tota la Base de Dades</p>
+                            <p className="text-xs text-slate-500">Apaga clients, obres, albarans, factures i registres. Manté els usuaris.</p>
+                        </div>
+                        <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                                <Button variant="destructive" disabled={isClearing}>
+                                    {isClearing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4 mr-2" />}
+                                    LIMPAR TUDO
+                                </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent className="rounded-[2.5rem] p-10">
+                                <AlertDialogHeader>
+                                    <AlertDialogTitle className="text-2xl font-black uppercase text-red-600">ESTÀS SEGUR?</AlertDialogTitle>
+                                    <AlertDialogDescription className="text-base font-medium">
+                                        Això esborrarà **TOTA** la informació de l'aplicació (excepte els perfils d'usuari). Aquesta acció no es pot desfer. La base de dades quedarà totalment buida per començar de nou.
+                                    </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter className="pt-6">
+                                    <AlertDialogCancel className="h-14 rounded-2xl font-bold border-2 px-8">CANCEL·LAR</AlertDialogCancel>
+                                    <AlertDialogAction onClick={handleClearAllData} className="bg-red-600 h-14 rounded-2xl font-black uppercase tracking-widest px-8">SÍ, ESBORRAR TOT</AlertDialogAction>
+                                </AlertDialogFooter>
+                            </AlertDialogContent>
+                        </AlertDialog>
+                    </div>
+                </CardContent>
+            </Card>
+        )}
         </div>
     </AdminGate>
   )
