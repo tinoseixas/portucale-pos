@@ -13,6 +13,7 @@ import { useAuth, useUser, useFirestore } from '@/firebase'
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth'
 import { doc, setDoc, getDoc } from 'firebase/firestore'
 import { Logo } from '@/components/Logo'
+import { BRANDING } from '@/lib/branding'
 
 export default function Home() {
   const router = useRouter()
@@ -103,7 +104,7 @@ export default function Home() {
     return (
       <main className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
-        <p className="mt-4 text-primary font-black uppercase tracking-widest animate-pulse">Iniciant TS Serveis...</p>
+        <p className="mt-4 text-primary font-black uppercase tracking-widest animate-pulse">Iniciant {BRANDING.companyName}...</p>
       </main>
     );
   }
@@ -117,7 +118,7 @@ export default function Home() {
         <Card className="shadow-2xl border-none overflow-hidden rounded-[2.5rem] bg-white/95 backdrop-blur-xl">
           <CardHeader className="text-center space-y-2 bg-slate-900 text-white p-10">
             <CardTitle className="text-3xl font-black tracking-tight uppercase">Portal Corporatiu</CardTitle>
-            <CardDescription className="text-slate-400 font-medium">Gestió Integral de Serveis i Facturació</CardDescription>
+            <CardDescription className="text-slate-400 font-medium">{BRANDING.companyName} - Gestió de Serveis</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6 pt-12 px-10">
             <div className="space-y-3">
@@ -167,7 +168,7 @@ export default function Home() {
             </Button>
           </CardFooter>
         </Card>
-        <p className="text-center mt-10 text-[10px] text-white/40 uppercase font-black tracking-[0.4em]">TS Serveis © 2024</p>
+        <p className="text-center mt-10 text-[10px] text-white/40 uppercase font-black tracking-[0.4em]">{BRANDING.companyName} © 2024</p>
       </div>
     </main>
   )

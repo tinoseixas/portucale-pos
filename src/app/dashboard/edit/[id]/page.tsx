@@ -199,6 +199,8 @@ export default function EditServicePage() {
   const handleTranslate = async () => {
     if (!description && !pendingTasks) return;
     setIsTranslating(true);
+    toast({ title: 'Traduïnt...', description: 'L\'IA està processant el text.' });
+    
     try {
         if (description && description.trim() !== "") {
             const res = await translateToCatalan({ text: description });

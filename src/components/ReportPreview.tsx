@@ -8,6 +8,7 @@ import { format, parseISO, isValid } from 'date-fns';
 import { ca } from 'date-fns/locale';
 import { calculateTotalAmount, calculateServiceEffectiveMinutes, getMealBreakOverlapMinutes, IVA_RATE } from '@/lib/calculations';
 import { Logo } from '@/components/Logo';
+import { BRANDING } from '@/lib/branding';
 
 interface ReportPreviewProps {
   customer: Customer | undefined;
@@ -56,11 +57,11 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
                     <div className="flex flex-col gap-4">
                         <Logo className="h-24 w-auto" />
                         <div className="space-y-1">
-                            <p className="font-bold text-slate-600 text-lg">NRT: F352231c</p>
+                            <p className="font-bold text-slate-600 text-lg">NRT: {BRANDING.nrt}</p>
                             <div className="text-slate-500 text-sm leading-relaxed">
-                                <p>Av. Francois Mitterrand 64, local 6</p>
-                                <p>AD200 Encamp, Andorra</p>
-                                <p className="font-semibold text-slate-700">Tel: (+376) 396 048 | eg.ad.tecnica@gmail.com</p>
+                                <p>{BRANDING.address}</p>
+                                <p>{BRANDING.location}</p>
+                                <p className="font-semibold text-slate-700">Tel: {BRANDING.phone} | {BRANDING.email}</p>
                             </div>
                         </div>
                     </div>
@@ -266,7 +267,7 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
 
                 <footer className="mt-auto pt-10 border-t-2 border-slate-200 flex justify-between items-end text-slate-400" style={{ breakInside: 'avoid' }}>
                     <div className="text-[11px] space-y-2 font-medium">
-                        <p className="font-black text-slate-500 text-xs uppercase tracking-tighter">TS SERVEIS - Solucions Tècniques i Manteniment</p>
+                        <p className="font-black text-slate-500 text-xs uppercase tracking-tighter">{BRANDING.companyName} - {BRANDING.slogan}</p>
                         <p>Document acreditatiu dels treballs realitzats a la data indicada.</p>
                         <p className="italic text-slate-300 font-bold">Càlcul d'hores net (exclòs interval de descans 13h-14h quan s'aplica). Arredonit cada 30 minuts.</p>
                     </div>

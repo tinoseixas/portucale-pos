@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview Flux de traducció per a descripcions de serveis.
@@ -34,15 +35,20 @@ export async function translateToCatalan(input: TranslateInput): Promise<Transla
         schema: TranslateOutputSchema
       },
       prompt: [
-        { text: `Act as a professional translator for technical and construction reports in Andorra.
+        { text: `You are a professional Catalan translator specialized in construction, plumbing, and electrical reports.
       
-      TASK:
-      Translate the provided text to professional, formal, and concise CATALAN. 
-      - Correct any spelling, grammar, or punctuation errors.
-      - Use correct technical terms for plumbing (lampisteria), electrical (elèctrica), masonry (paleta), and maintenance.
-      - Ensure the tone is appropriate for an official work report (Albarà).
-      - If the text is already in Catalan, just improve the clarity and fix any typos.
-      - Do not include any notes, explanations, or quotes in the output. Just the translated text.` },
+      CRITICAL TASK:
+      Translate the provided text strictly to professional, formal, and concise CATALAN. 
+      If the input is in Spanish or Portuguese, you MUST translate it to Catalan.
+      
+      Rules:
+      - "Terminar banho" -> "Acabar bany"
+      - "instalação elétrica" -> "instal·lació elèctrica"
+      - "montar cortina" -> "muntar cortina"
+      - "anular vater" -> "anul·lar vàter"
+      - Correct any spelling, grammar, or punctuation.
+      - Ensure terms for plumbing (lampisteria), electrical (elèctrica), and masonry (paleta) are correct.
+      - Output ONLY the translated text, no notes, no quotes.` },
         { text: `TEXT TO TRANSLATE: ${input.text}` }
       ],
     });
@@ -55,7 +61,6 @@ export async function translateToCatalan(input: TranslateInput): Promise<Transla
     return { translatedText: result.translatedText.trim() };
   } catch (error) {
     console.error("Error in translateToCatalan:", error);
-    // En cas d'error, retornem el text original per no perdre dades
     return { translatedText: input.text };
   }
 }

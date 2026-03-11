@@ -6,6 +6,7 @@ import { format, parseISO } from 'date-fns';
 import { ca } from 'date-fns/locale';
 import { calculateTotalAmount, calculateServiceEffectiveMinutes, getMealBreakOverlapMinutes } from '@/lib/calculations';
 import { Logo } from '@/components/Logo';
+import { BRANDING } from '@/lib/branding';
 
 interface InvoicePreviewProps {
   customer: Customer | undefined;
@@ -58,10 +59,10 @@ export const InvoicePreview = forwardRef<HTMLDivElement, InvoicePreviewProps>((p
                 <div className="flex flex-col gap-4">
                     <Logo className="h-24 w-auto" />
                     <div className="text-sm text-gray-600">
-                        <p className="font-bold text-gray-900">NRT: F352231c</p>
-                        <p>Av. Francois Mitterrand 64, local 6</p>
-                        <p>AD200 Encamp, Andorra</p>
-                        <p>Tel: 376 396 048 | eg.ad.tecnica@gmail.com</p>
+                        <p className="font-bold text-gray-900">NRT: {BRANDING.nrt}</p>
+                        <p>{BRANDING.address}</p>
+                        <p>{BRANDING.location}</p>
+                        <p>Tel: {BRANDING.phone} | {BRANDING.email}</p>
                     </div>
                 </div>
                 <div className="text-right">
@@ -191,9 +192,9 @@ export const InvoicePreview = forwardRef<HTMLDivElement, InvoicePreviewProps>((p
             </section>
 
              <footer className="mt-auto pt-8 border-t text-center text-[10px] text-gray-400 uppercase tracking-widest font-bold break-inside-avoid">
-                <p>TS SERVEIS - Solucions Tècniques i Manteniment</p>
+                <p>{BRANDING.companyName} - {BRANDING.slogan}</p>
                 <p className="mt-2 text-slate-300 font-bold">HORARI DE DINAR (13H-14H) EXCLÒS QUAN S'APLICA | ARREDONIMENT CADA 30 MIN</p>
-                <p className="mt-1">CONVERTIM LES TEVES IDEES EN REALITAT</p>
+                <p className="mt-1">{BRANDING.subSlogan}</p>
             </footer>
         </div>
     );
