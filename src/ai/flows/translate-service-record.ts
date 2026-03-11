@@ -33,7 +33,8 @@ export async function translateToCatalan(input: TranslateInput): Promise<Transla
       output: {
         schema: TranslateOutputSchema
       },
-      prompt: `Act as a professional translator for technical and construction reports in Andorra.
+      prompt: [
+        { text: `Act as a professional translator for technical and construction reports in Andorra.
       
       TASK:
       Translate the provided text to professional, formal, and concise CATALAN. 
@@ -41,9 +42,9 @@ export async function translateToCatalan(input: TranslateInput): Promise<Transla
       - Use correct technical terms for plumbing (lampisteria), electrical (elèctrica), masonry (paleta), and maintenance.
       - Ensure the tone is appropriate for an official work report (Albarà).
       - If the text is already in Catalan, just improve the clarity and fix any typos.
-      - Do not include any notes, explanations, or quotes in the output. Just the translated text.
-      
-      TEXT TO TRANSLATE: "${input.text}"`,
+      - Do not include any notes, explanations, or quotes in the output. Just the translated text.` },
+        { text: `TEXT TO TRANSLATE: ${input.text}` }
+      ],
     });
 
     const result = response.output;

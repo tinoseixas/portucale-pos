@@ -1,4 +1,3 @@
-
 'use client'
 
 import { useMemo, useState, useEffect } from 'react'
@@ -46,14 +45,14 @@ export default function CustomersPage() {
 
   const { data: customers, isLoading: isLoadingCustomers } = useCollection<Customer>(customersQuery)
   
-  // DEDUPLICAÇÃO DE CLIENTES NA LISTA VISUAL
+  // DEDUPLICAÇÃO DE CLIENTES NA LISTA VISUAL USANDO CHAVE AGRESSIVA
   const displayCustomers = useMemo(() => {
     if (!customers) return [];
     
-    // 1. Unificar por nome (limpando espaços e ignorando maiúsculas)
+    // 1. Unificar por nome (limpando caracteres especiais e espaços)
     const seen = new Set();
     const unique = customers.filter(c => {
-      const nameKey = c.name.toLowerCase().trim().replace(/\s+/g, ' ');
+      const nameKey = c.name.toLowerCase().trim().replace(/[^a-z0-9]/g, '');
       if (seen.has(nameKey)) return false;
       seen.add(nameKey);
       return true;
@@ -61,9 +60,10 @@ export default function CustomersPage() {
 
     // 2. Filtrar por termo de busca
     if (!searchTerm) return unique;
+    const search = searchTerm.toLowerCase().trim();
     return unique.filter(c => 
-        c.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-        c.nrt?.toLowerCase().includes(searchTerm.toLowerCase())
+        c.name.toLowerCase().includes(search) || 
+        c.nrt?.toLowerCase().includes(search)
     );
   }, [customers, searchTerm]);
 

@@ -51,16 +51,16 @@ export default function ProjectsManagementPage() {
 
     const { data: customers } = useCollection<Customer>(customersQuery);
 
-    // Deduplicate customers for the select list
+    // Deduplicate customers for the select list using aggressive normalization
     const uniqueCustomers = useMemo(() => {
         if (!customers) return [];
         const seen = new Set();
         return customers.filter(c => {
-            const nameKey = c.name.toLowerCase().trim();
+            const nameKey = c.name.toLowerCase().trim().replace(/[^a-z0-9]/g, '');
             if (seen.has(nameKey)) return false;
             seen.add(nameKey);
             return true;
-        });
+        }).sort((a, b) => a.name.localeCompare(b.name, 'ca'));
     }, [customers]);
 
     const filteredProjects = useMemo(() => {
@@ -114,27 +114,29 @@ export default function ProjectsManagementPage() {
         }
     };
 
-    if (isLoadingProjects) return <div className="p-12 text-center"><Loader2 className="h-12 w-12 animate-spin mx-auto text-primary" /></div>
+    if (isLoadingProjects) return <div className="p-12 text-center h-[60vh] flex flex-col items-center justify-center"><Loader2 className="h-16 w-16 animate-spin text-primary" /><p className="mt-6 text-primary font-black uppercase tracking-widest">Carregant obres...</p></div>
 
     return (
         <AdminGate pageTitle="Gestió d'Obres" pageDescription="Administra el llistat d'obres actives i finalitzades.">
             <div className="space-y-8 max-w-6xl mx-auto pb-10">
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                    <h1 className="text-3xl font-black uppercase tracking-tight flex items-center gap-3">
-                        <Briefcase className="h-8 w-8 text-primary" /> Gestió d'Obres
+                    <h1 className="text-4xl font-black uppercase tracking-tight flex items-center gap-3 text-primary">
+                        <Briefcase className="h-10 w-10" /> Gestió d'Obres
                     </h1>
                 </div>
 
-                <Card className="border-none shadow-lg bg-slate-900 text-white rounded-3xl overflow-hidden">
-                    <CardHeader>
-                        <CardTitle className="text-lg">Nova Obra / Projecte</CardTitle>
+                <Card className="border-none shadow-2xl bg-slate-900 text-white rounded-3xl overflow-hidden">
+                    <CardHeader className="p-8">
+                        <CardTitle className="text-xl font-black uppercase tracking-widest flex items-center gap-2">
+                            <Plus className="h-5 w-5 text-accent" /> Nova Obra / Projecte
+                        </CardTitle>
                         <CardDescription className="text-slate-400">Defineix una obra per un client per poder-la seleccionar als registres.</CardDescription>
                     </CardHeader>
-                    <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <CardContent className="p-8 pt-0 grid grid-cols-1 md:grid-cols-3 gap-6">
                         <div className="space-y-2">
-                            <Label className="text-[10px] font-black uppercase text-slate-400">Client Associat</Label>
+                            <Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-1">Client Associat</Label>
                             <Select value={selectedCustomerId} onValueChange={setSelectedCustomerId}>
-                                <SelectTrigger className="h-12 bg-slate-800 border-none text-white font-bold rounded-xl">
+                                <SelectTrigger className="h-14 bg-slate-800 border-none text-white font-bold rounded-2xl">
                                     <SelectValue placeholder="Selecciona client" />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -144,38 +146,41 @@ export default function ProjectsManagementPage() {
                             </Select>
                         </div>
                         <div className="space-y-2">
-                            <Label className="text-[10px] font-black uppercase text-slate-400">Nom de l'Obra</Label>
+                            <Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-1">Nom de l'Obra</Label>
                             <Input 
                                 placeholder="Ex: Reforma Cuina C/Major" 
                                 value={newProjectName}
                                 onChange={(e) => setNewProjectName(e.target.value)}
-                                className="h-12 bg-slate-800 border-none text-white font-bold rounded-xl"
+                                className="h-14 bg-slate-800 border-none text-white font-bold rounded-2xl"
                             />
                         </div>
                         <div className="flex items-end">
                             <Button 
                                 onClick={handleCreateProject} 
                                 disabled={isSaving || !newProjectName.trim() || selectedCustomerId === 'none'}
-                                className="w-full h-12 bg-accent hover:bg-accent/90 text-accent-foreground font-black uppercase tracking-widest rounded-xl"
+                                className="w-full h-14 bg-accent hover:bg-accent/90 text-accent-foreground font-black uppercase tracking-widest rounded-2xl shadow-xl hover:scale-[1.02] transition-all"
                             >
-                                {isSaving ? <Loader2 className="animate-spin h-4 w-4 mr-2" /> : <Plus className="h-4 w-4 mr-2" />}
+                                {isSaving ? <Loader2 className="animate-spin h-5 w-5 mr-2" /> : <Plus className="h-5 w-5 mr-2" />}
                                 CREAR OBRA
                             </Button>
                         </div>
                     </CardContent>
                 </Card>
 
-                <Card className="border-none shadow-xl rounded-3xl overflow-hidden">
-                    <CardHeader className="bg-slate-50 border-b">
-                        <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-                            <CardTitle>Llistat d'Obres</CardTitle>
-                            <div className="relative w-full sm:w-72">
-                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                <Card className="border-none shadow-2xl rounded-3xl overflow-hidden bg-white">
+                    <CardHeader className="bg-slate-50 border-b p-8">
+                        <div className="flex flex-col sm:flex-row justify-between items-center gap-6">
+                            <CardTitle className="text-xl font-black uppercase tracking-widest flex items-center gap-3">
+                                Llistat d'Obres
+                                <Badge className="bg-primary text-white font-black">{filteredProjects.length}</Badge>
+                            </CardTitle>
+                            <div className="relative w-full sm:w-80">
+                                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
                                 <Input 
                                     placeholder="Cerca obra o client..." 
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
-                                    className="pl-10 h-10 bg-white border-2 rounded-xl"
+                                    className="pl-12 h-12 bg-white border-2 rounded-xl font-bold"
                                 />
                             </div>
                         </div>
@@ -185,50 +190,51 @@ export default function ProjectsManagementPage() {
                             <Table>
                                 <TableHeader>
                                     <TableRow className="bg-slate-50/50">
-                                        <TableHead className="font-black uppercase text-[10px]">Obra / Projecte</TableHead>
-                                        <TableHead className="font-black uppercase text-[10px]">Client</TableHead>
-                                        <TableHead className="font-black uppercase text-[10px]">Estat</TableHead>
-                                        <TableHead className="font-black uppercase text-[10px]">Data Creació</TableHead>
-                                        <TableHead className="text-right font-black uppercase text-[10px]">Accions</TableHead>
+                                        <TableHead className="px-8 py-4 font-black uppercase text-[10px] tracking-widest">Obra / Projecte</TableHead>
+                                        <TableHead className="font-black uppercase text-[10px] tracking-widest">Client</TableHead>
+                                        <TableHead className="font-black uppercase text-[10px] tracking-widest">Estat</TableHead>
+                                        <TableHead className="font-black uppercase text-[10px] tracking-widest">Data Creació</TableHead>
+                                        <TableHead className="text-right px-8 font-black uppercase text-[10px] tracking-widest">Accions</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
                                     {filteredProjects.map(project => (
-                                        <TableRow key={project.id} className="hover:bg-slate-50/50">
-                                            <TableCell className="font-bold text-slate-900">{project.name}</TableCell>
-                                            <TableCell className="text-slate-600 font-medium">{project.customerName}</TableCell>
+                                        <TableRow key={project.id} className="hover:bg-slate-50 transition-colors border-b-2 border-slate-50">
+                                            <TableCell className="px-8 py-6">
+                                                <div className="font-black text-slate-900 uppercase tracking-tight text-sm">{project.name}</div>
+                                            </TableCell>
+                                            <TableCell className="text-slate-600 font-bold">{project.customerName}</TableCell>
                                             <TableCell>
-                                                <Badge variant={project.status === 'active' ? 'default' : 'outline'} className="uppercase font-black text-[10px]">
+                                                <Badge variant={project.status === 'active' ? 'default' : 'outline'} className={project.status === 'active' ? "uppercase font-black text-[10px] bg-green-600" : "uppercase font-black text-[10px] border-slate-300 text-slate-400"}>
                                                     {project.status === 'active' ? 'ACTIVA' : 'FINALITZADA'}
                                                 </Badge>
                                             </TableCell>
-                                            <TableCell className="text-xs text-slate-400">{format(parseISO(project.createdAt), 'dd/MM/yyyy', { locale: ca })}</TableCell>
-                                            <TableCell className="text-right">
-                                                <div className="flex justify-end gap-2">
+                                            <TableCell className="text-xs text-slate-400 font-bold">{format(parseISO(project.createdAt), 'dd/MM/yyyy', { locale: ca })}</TableCell>
+                                            <TableCell className="text-right px-8">
+                                                <div className="flex justify-end gap-3">
                                                     <Button 
-                                                        variant="ghost" 
+                                                        variant="outline" 
                                                         size="sm" 
                                                         onClick={() => handleArchiveProject(project.id, project.status)}
-                                                        className={project.status === 'active' ? 'text-green-600' : 'text-primary'}
-                                                        title={project.status === 'active' ? 'Marcar com Finalitzada' : 'Reactivar Obra'}
+                                                        className={project.status === 'active' ? 'text-green-600 border-green-200 hover:bg-green-50 rounded-xl font-bold h-10 px-4' : 'text-primary border-primary/20 hover:bg-primary/5 rounded-xl font-bold h-10 px-4'}
                                                     >
-                                                        {project.status === 'active' ? <CheckCircle2 className="h-4 w-4 mr-1" /> : <Archive className="h-4 w-4 mr-1" />}
+                                                        {project.status === 'active' ? <CheckCircle2 className="h-4 w-4 mr-2" /> : <Archive className="h-4 w-4 mr-2" />}
                                                         {project.status === 'active' ? 'Enllestir' : 'Reactivar'}
                                                     </Button>
                                                     <AlertDialog>
                                                         <AlertDialogTrigger asChild>
-                                                            <Button variant="ghost" size="icon" className="text-red-400 hover:text-red-600">
+                                                            <Button variant="ghost" size="icon" className="h-10 w-10 text-red-300 hover:text-red-600 hover:bg-red-50 rounded-xl">
                                                                 <Trash2 className="h-4 w-4" />
                                                             </Button>
                                                         </AlertDialogTrigger>
-                                                        <AlertDialogContent>
+                                                        <AlertDialogContent className="rounded-[2.5rem] p-10">
                                                             <AlertDialogHeader>
-                                                                <AlertDialogTitle>Vols eliminar aquesta obra?</AlertDialogTitle>
-                                                                <AlertDialogDescription>Si l'elimines, deixarà d'aparèixer als selectors. Els registres de treball ja creats no es veuran afectats.</AlertDialogDescription>
+                                                                <AlertDialogTitle className="text-2xl font-black uppercase">Eliminar Obra?</AlertDialogTitle>
+                                                                <AlertDialogDescription className="text-base font-medium">Si l'elimines, deixarà d'aparèixer als selectors. Els registres de treball ja creats no es veuran afectats.</AlertDialogDescription>
                                                             </AlertDialogHeader>
-                                                            <AlertDialogFooter>
-                                                                <AlertDialogCancel>Cancel·lar</AlertDialogCancel>
-                                                                <AlertDialogAction onClick={() => handleDeleteProject(project.id)} className="bg-destructive">Eliminar</AlertDialogAction>
+                                                            <AlertDialogFooter className="pt-6">
+                                                                <AlertDialogCancel className="h-14 rounded-2xl font-bold border-2 px-8">Cancel·lar</AlertDialogCancel>
+                                                                <AlertDialogAction onClick={() => handleDeleteProject(project.id)} className="bg-red-600 h-14 rounded-2xl font-black uppercase tracking-widest px-8">Eliminar</AlertDialogAction>
                                                             </AlertDialogFooter>
                                                         </AlertDialogContent>
                                                     </AlertDialog>
@@ -238,7 +244,12 @@ export default function ProjectsManagementPage() {
                                     ))}
                                     {filteredProjects.length === 0 && (
                                         <TableRow>
-                                            <TableCell colSpan={5} className="h-32 text-center text-slate-400 italic">No s'ha trobat cap obra amb aquests filtres.</TableCell>
+                                            <TableCell colSpan={5} className="h-48 text-center">
+                                                <div className="flex flex-col items-center justify-center text-slate-300 space-y-2">
+                                                    <Briefcase className="h-12 w-12 opacity-20" />
+                                                    <p className="font-black uppercase text-[10px] tracking-widest">No s'han trobat obres</p>
+                                                </div>
+                                            </TableCell>
                                         </TableRow>
                                     )}
                                 </TableBody>
