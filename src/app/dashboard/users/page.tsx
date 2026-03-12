@@ -12,11 +12,22 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Edit, ShieldAlert, Loader2, Database, AlertCircle, Download, Upload, RefreshCw, FileWarning, Cloud } from 'lucide-react'
+import { Edit, ShieldAlert, Loader2, Database, AlertCircle, Download, Upload, RefreshCw, FileWarning, Cloud, RotateCcw } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { AdminGate } from '@/components/AdminGate'
 import { format, parseISO } from 'date-fns'
 import { ca } from 'date-fns/locale'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 
 const WhatsAppIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg viewBox="0 0 24 24" fill="currentColor" {...props}>
@@ -32,6 +43,7 @@ export default function UsersPage() {
   const firestore = useFirestore()
   const [isSeeding, setIsSeeding] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
+  const [restoringId, setRestoringId] = useState<string | null>(null);
 
   const employeesQuery = useMemoFirebase(() => {
     if (!user || !firestore) return null;
@@ -56,6 +68,81 @@ export default function UsersPage() {
   const handleWhatsAppClick = (phoneNumber: string) => {
     const internationalNumber = phoneNumber.startsWith('+') ? phoneNumber : `376${phoneNumber.replace(/\s+/g, '')}`;
     window.open(`https://wa.me/${internationalNumber}`, '_blank');
+  };
+
+  const processImportData = async (data: any) => {
+    if (!firestore) return;
+    
+    // Função auxiliar para processar batches de 400 em 400 (limite do Firestore é 500)
+    const runInChunks = async (items: any[], callback: (item: any, batch: any) => void) => {
+        let batch = writeBatch(firestore);
+        let count = 0;
+        for (const item of items) {
+            callback(item, batch);
+            count++;
+            if (count === 400) {
+                await batch.commit();
+                batch = writeBatch(firestore);
+                count = 0;
+            }
+        }
+        if (count > 0) await batch.commit();
+    };
+
+    // 1. Clientes
+    if (data.customers) {
+        await runInChunks(data.customers, (c, batch) => {
+            const { id, ...rest } = c;
+            batch.set(doc(firestore, 'customers', id), rest, { merge: true });
+        });
+    }
+
+    // 2. Projectes
+    if (data.projects) {
+        await runInChunks(data.projects, (p, batch) => {
+            const { id, ...rest } = p;
+            batch.set(doc(firestore, 'projects', id), rest, { merge: true });
+        });
+    }
+
+    // 3. Service Records
+    if (data.serviceRecords) {
+        await runInChunks(data.serviceRecords, (s, batch) => {
+            const { id, parentPath, ...rest } = s;
+            if (parentPath) {
+                batch.set(doc(firestore, parentPath, id), rest, { merge: true });
+            }
+        });
+    }
+
+    // 4. Outros
+    for (const col of ['albarans', 'invoices', 'quotes', 'receipts', 'employees']) {
+        if (data[col]) {
+            await runInChunks(data[col], (docData, batch) => {
+                const { id, ...rest } = docData;
+                batch.set(doc(firestore, col, id), rest, { merge: true });
+            });
+        }
+    }
+  };
+
+  const handleRestoreFromCloud = async (backup: any) => {
+    if (!firestore) return;
+    setRestoringId(backup.id);
+    toast({ title: "Restaurante dades...", description: "Això pot trigar uns segons depenent del volum de dades." });
+
+    try {
+        const data = JSON.parse(backup.data);
+        await processImportData(data);
+        
+        toast({ title: "Restauració completada", description: "Tots os registres han estat recuperats correctament." });
+        window.location.reload();
+    } catch (e) {
+        console.error(e);
+        toast({ variant: 'destructive', title: "Error en restaurar", description: "No s'ha pogut processar o backup de la nuvol." });
+    } finally {
+        setRestoringId(null);
+    }
   };
 
   const handleRestoreSampleData = async () => {
@@ -171,37 +258,7 @@ export default function UsersPage() {
     reader.onload = async (evt) => {
         try {
             const data = JSON.parse(evt.target?.result as string);
-            const batch = writeBatch(firestore);
-            
-            // 1. Clientes
-            data.customers?.forEach((c: any) => {
-                const { id, ...rest } = c;
-                batch.set(doc(firestore, 'customers', id), rest);
-            });
-
-            // 2. Projectes
-            data.projects?.forEach((p: any) => {
-                const { id, ...rest } = p;
-                batch.set(doc(firestore, 'projects', id), rest);
-            });
-
-            // 3. Service Records (Requires parent path handling)
-            data.serviceRecords?.forEach((s: any) => {
-                const { id, parentPath, ...rest } = s;
-                if (parentPath) {
-                    batch.set(doc(firestore, parentPath, id), rest);
-                }
-            });
-
-            // 4. Otros documentos
-            ['albarans', 'invoices', 'quotes', 'receipts', 'employees'].forEach(col => {
-                data[col]?.forEach((docData: any) => {
-                    const { id, ...rest } = docData;
-                    batch.set(doc(firestore, col, id), rest);
-                });
-            });
-
-            await batch.commit();
+            await processImportData(data);
             toast({ title: "Importació Finalitzada", description: "Totes les dades s'han restaurat correctament." });
             window.location.reload();
         } catch (err) {
@@ -294,7 +351,7 @@ export default function UsersPage() {
                             <Cloud className="h-6 w-6" />
                             Còpies de Seguretat al Firebase
                         </CardTitle>
-                        <CardDescription className="text-blue-100 font-medium italic">Historial de backups automàtics guardats a la nuvol.</CardDescription>
+                        <CardDescription className="text-blue-100 font-medium italic">Historial de backups automàtics. Pots restaurar registres perduts des d'aquí.</CardDescription>
                     </CardHeader>
                     <CardContent className="p-0 bg-white">
                         <div className="overflow-x-auto">
@@ -303,7 +360,7 @@ export default function UsersPage() {
                                     <TableRow>
                                         <TableHead className="px-8 py-4 font-black uppercase text-[10px] tracking-widest">Identificador</TableHead>
                                         <TableHead className="font-black uppercase text-[10px] tracking-widest">Data i Hora</TableHead>
-                                        <TableHead className="text-right px-8 font-black uppercase text-[10px] tracking-widest">Estat</TableHead>
+                                        <TableHead className="text-right px-8 font-black uppercase text-[10px] tracking-widest">Accions</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
@@ -316,7 +373,27 @@ export default function UsersPage() {
                                                 {format(parseISO(backup.createdAt), 'dd MMMM yyyy HH:mm', { locale: ca })}
                                             </TableCell>
                                             <TableCell className="text-right px-8">
-                                                <Badge className="bg-green-100 text-green-700 border-green-200 uppercase font-black text-[10px]">Cloud OK</Badge>
+                                                <AlertDialog>
+                                                    <AlertDialogTrigger asChild>
+                                                        <Button variant="outline" size="sm" disabled={restoringId === backup.id} className="h-9 px-4 border-primary text-primary font-black uppercase text-[10px] tracking-widest rounded-xl hover:bg-primary hover:text-white transition-all">
+                                                            {restoringId === backup.id ? <Loader2 className="animate-spin h-3 w-3 mr-2" /> : <RotateCcw className="h-3 w-3 mr-2" />}
+                                                            Restaurar
+                                                        </Button>
+                                                    </AlertDialogTrigger>
+                                                    <AlertDialogContent className="rounded-[2.5rem] p-10">
+                                                        <AlertDialogHeader>
+                                                            <AlertDialogTitle className="text-2xl font-black uppercase">Restaurar aquesta versió?</AlertDialogTitle>
+                                                            <AlertDialogDescription className="text-base font-medium">
+                                                                Aquesta acció sobreescriurà les dades actuals amb la versió del dia <strong>{format(parseISO(backup.createdAt), 'dd/MM/yyyy')}</strong>.
+                                                                Tots os registres creats després d'aquesta data podrien perdre's.
+                                                            </AlertDialogDescription>
+                                                        </AlertDialogHeader>
+                                                        <AlertDialogFooter className="pt-6">
+                                                            <AlertDialogCancel className="h-14 rounded-2xl font-bold px-8 border-2">Cancel·lar</AlertDialogCancel>
+                                                            <AlertDialogAction onClick={() => handleRestoreFromCloud(backup)} className="bg-primary h-14 rounded-2xl font-black uppercase px-8 text-white">SÍ, RESTAURAR TOT</AlertDialogAction>
+                                                        </AlertDialogFooter>
+                                                    </AlertDialogContent>
+                                                </AlertDialog>
                                             </TableCell>
                                         </TableRow>
                                     )) : (
@@ -396,5 +473,3 @@ export default function UsersPage() {
     </AdminGate>
   )
 }
-
-    
