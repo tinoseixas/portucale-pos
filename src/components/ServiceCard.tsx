@@ -1,7 +1,7 @@
 'use client'
 
 import type { ServiceRecord, Employee } from '@/lib/types'
-import Link from 'next/navigation'
+import Link from 'next/link'
 import Image from 'next/image'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Clock, Camera, Edit, Hash, Video, Calendar, User, AlertCircle, AlertTriangle, Briefcase, Building } from 'lucide-react'

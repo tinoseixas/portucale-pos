@@ -1,4 +1,3 @@
-
 'use client'
 
 import { useState, useMemo, useEffect } from 'react'
@@ -6,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { LogIn, MapPin, Users, Loader2, Briefcase, Plus, Sparkles, FileText } from 'lucide-react'
+import { LogIn, MapPin, Users, Loader2, Briefcase, Plus, FileText } from 'lucide-react'
 import { useToast } from "@/hooks/use-toast"
 import { useUser, useFirestore, useDoc, useCollection, useMemoFirebase } from '@/firebase'
 import { addDoc, collection, doc, query, orderBy, where } from 'firebase/firestore'
@@ -16,14 +15,11 @@ import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
-import { translateToCatalan } from '@/ai/flows/translate-service-record'
-
 
 export default function NewServicePage() {
   const router = useRouter()
   const { toast } = useToast()
   const [isStarting, setIsStarting] = useState(false);
-  const [isTranslating, setIsTranslating] = useState(false);
   const { user, isUserLoading } = useUser()
   const firestore = useFirestore()
   
@@ -81,23 +77,6 @@ export default function NewServicePage() {
       return true;
     }).sort((a, b) => a.name.localeCompare(b.name));
   }, [customers]);
-
-  const handleTranslate = async () => {
-    if (!description || !description.trim()) return;
-    setIsTranslating(true);
-    try {
-        const res = await translateToCatalan({ text: description });
-        if (res && res.translatedText) {
-            setDescription(res.translatedText);
-            toast({ title: 'Traducció completada', description: 'El text s\'ha corregit correctament.' });
-        }
-    } catch (e) {
-        console.error(e);
-        toast({ variant: 'destructive', title: 'Error en la traducció', description: 'Revisa la connexió a internet.' });
-    } finally {
-        setIsTranslating(false);
-    }
-  };
 
   const handleCreateProject = async () => {
       if (!firestore || !newProjectName.trim() || selectedCustomerId === 'none') return;
@@ -168,7 +147,7 @@ export default function NewServicePage() {
     } catch (error) {
         console.error("Error creating service record:", error);
         setIsStarting(false);
-        toast({ variant: "destructive", title: "Error", description: "No s'ha pogut iniciar el servei." });
+        toast({ variant: "destructive", title: "Error", description: "No s'ha pogut iniciar o servei." });
     }
   };
   
@@ -262,17 +241,6 @@ export default function NewServicePage() {
                 <div className="space-y-2">
                     <div className="flex justify-between items-center px-1">
                         <Label htmlFor="description" className="flex items-center gap-2 font-black uppercase text-[10px] text-slate-400 tracking-widest"><FileText className="h-3 w-3" /> Què vas a fer? (Opcional)</Label>
-                        <Button 
-                            type="button" 
-                            variant="ghost" 
-                            size="sm" 
-                            onClick={handleTranslate} 
-                            disabled={isTranslating || !description.trim()}
-                            className="h-6 text-[10px] font-black text-primary uppercase hover:bg-primary/5 px-2 rounded-lg"
-                        >
-                            {isTranslating ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Sparkles className="h-3 w-3 mr-1" />}
-                            Traduir (IA)
-                        </Button>
                     </div>
                     <Textarea 
                         id="description"
