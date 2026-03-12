@@ -1,11 +1,10 @@
-
 'use client'
 
 import Link from 'next/link'
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Button } from '@/components/ui/button'
-import { LogOut, User as UserIcon, Users, Building, FileArchive, FileSignature, Receipt, LineChart, Briefcase } from 'lucide-react'
+import { LogOut, User as UserIcon, Users, Building, FileArchive, FileSignature, Receipt, LineChart, Briefcase, Sparkles } from 'lucide-react'
 import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase'
 import { signOut } from 'firebase/auth'
 import { useRouter } from 'next/navigation'
@@ -55,6 +54,10 @@ export function Header() {
         ) : user && (
           <div className="flex items-center gap-4">
              <div className="hidden lg:flex items-center gap-2 flex-wrap justify-end">
+                <Button variant="ghost" size="sm" onClick={() => router.push('/dashboard/import-legacy')} className="font-bold text-accent-foreground bg-accent/10 hover:bg-accent/20">
+                    <Sparkles className="mr-2 h-4 w-4 text-accent" />
+                    Scanner IA
+                </Button>
                 <Button variant="ghost" size="sm" onClick={() => router.push('/dashboard/activity-report')} className="font-bold">
                     <LineChart className="mr-2 h-4 w-4" />
                     Hores

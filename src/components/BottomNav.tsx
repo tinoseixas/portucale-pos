@@ -1,9 +1,8 @@
-
 'use client'
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, User as UserIcon, Users, Building, FileArchive, FileSignature, Receipt, LineChart, Briefcase } from 'lucide-react'
+import { LayoutDashboard, User as UserIcon, Users, Building, FileArchive, FileSignature, Receipt, LineChart, Briefcase, Sparkles } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useUser } from '@/firebase'
 
@@ -13,6 +12,7 @@ export function BottomNav() {
 
   const navItems = [
     { href: '/dashboard', icon: LayoutDashboard, label: 'Serveis' },
+    { href: '/dashboard/import-legacy', icon: Sparkles, label: 'Scanner' },
     { href: '/dashboard/activity-report', icon: LineChart, label: 'Hores' },
     { href: '/dashboard/projects', icon: Briefcase, label: 'Obres' },
     { href: '/dashboard/quotes', icon: FileSignature, label: 'Presu.' },
