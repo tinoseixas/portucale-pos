@@ -1,11 +1,10 @@
-
 'use client'
 
 import { useState, useMemo, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
-import { PlusCircle, Calendar as CalendarIcon, User, Edit, Trash2, Briefcase, Filter, History, Search, X, Download, AlertTriangle, ShieldCheck, Loader2, Sparkles } from 'lucide-react'
+import { PlusCircle, Calendar as CalendarIcon, User, Edit, Trash2, Briefcase, Filter, History, Search, X, Download, AlertTriangle, ShieldCheck, Loader2 } from 'lucide-react'
 import type { ServiceRecord, Employee } from '@/lib/types'
 import { useUser, useFirestore, updateDocumentNonBlocking, useDoc, useMemoFirebase } from '@/firebase';
 import { collection, query, orderBy, getDocs, collectionGroup, doc, getDoc, setDoc } from 'firebase/firestore';
@@ -44,7 +43,7 @@ const getUserColor = (userId: string) => {
   return userColors[Math.abs(hash) % userColors.length];
 };
 
-type ServiceWithRowColor = ServiceRecord & { rowColor: string };
+type ServiceRecordWithColor = ServiceRecord & { rowColor: string };
 
 export default function DashboardPage() {
   const { user, isUserLoading } = useUser();
@@ -201,7 +200,7 @@ export default function DashboardPage() {
         return {
             ...service,
             rowColor: dayColors[currentColorIndex],
-        } as ServiceWithRowColor;
+        } as ServiceRecordWithColor;
     });
     return colored.reverse();
 
@@ -277,7 +276,7 @@ export default function DashboardPage() {
         setNeedsBackup(false);
         toast({ title: "Backup completat!", description: "Les teves dades estan segures al teu ordinador." });
     } catch (e) {
-        toast({ variant: 'destructive', title: "Error en el backup" });
+        toast({ variant: 'destructive', title: "Error en o backup" });
     } finally {
         setIsExporting(false);
     }
@@ -309,7 +308,7 @@ export default function DashboardPage() {
                   </div>
                   <div>
                       <p className="font-black text-slate-900 uppercase tracking-tight">Còpia de Seguretat Necessària</p>
-                      <p className="text-xs text-slate-500 font-bold uppercase tracking-widest">S'ha iniciat el backup automàtic al Firebase. Protegeix la teva feina.</p>
+                      <p className="text-xs text-slate-500 font-bold uppercase tracking-widest">S'ha iniciat el backup automàtic al Firebase. Protegeix a teva feina.</p>
                   </div>
               </div>
               <Button onClick={handleBackup} disabled={isExporting} className="bg-primary hover:bg-primary/90 text-white font-black uppercase tracking-widest h-14 px-10 rounded-2xl shadow-xl w-full md:w-auto">
@@ -328,12 +327,6 @@ export default function DashboardPage() {
           <p className="text-slate-400 font-bold uppercase text-[10px] tracking-[0.2em]">Supervisió de serveis realitzats per l'equip.</p>
         </div>
         <div className="flex items-center gap-3 w-full md:w-auto flex-wrap">
-            <Button asChild variant="outline" className="h-14 px-6 border-2 border-blue-600 text-blue-600 font-black uppercase tracking-widest rounded-2xl hover:bg-blue-50 transition-all shadow-sm">
-                <Link href="/dashboard/import-legacy">
-                    <Sparkles className="mr-2 h-5 w-5" />
-                    Scanner IA
-                </Link>
-            </Button>
             <Button asChild variant="outline" className="h-14 px-6 border-2 border-slate-300 text-slate-500 font-black uppercase tracking-widest rounded-2xl hover:bg-slate-50 transition-all shadow-sm">
                 <Link href="/dashboard/trash">
                     <History className="mr-2 h-5 w-5" />
@@ -377,8 +370,8 @@ export default function DashboardPage() {
                             </AlertDialogTrigger>
                             <AlertDialogContent className="rounded-[2.5rem] p-10">
                                 <AlertDialogHeader>
-                                <AlertDialogTitle className="text-2xl font-black uppercase">Moure a la papelera?</AlertDialogTitle>
-                                <AlertDialogDescription className="text-base font-medium">Podràs recuperar aquests registres més tard si cal.</AlertDialogDescription>
+                                <AlertDialogTitle className="text-2xl font-black uppercase">Moure a papelera?</AlertDialogTitle>
+                                <AlertDialogDescription className="text-base font-medium">Podràs recuperar aquests registres més tard se cal.</AlertDialogDescription>
                                 </AlertDialogHeader>
                                 <AlertDialogFooter className="pt-6">
                                 <AlertDialogCancel className="h-14 rounded-2xl font-bold border-2">Enrere</AlertDialogCancel>
@@ -399,7 +392,7 @@ export default function DashboardPage() {
                         </SelectTrigger>
                         <SelectContent>
                             <SelectItem value="all">Tots els Tècnics</SelectItem>
-                            <SelectItem value={user.uid} className="font-bold text-primary italic">La meva feina</SelectItem>
+                            <SelectItem value={user.uid} className="font-bold text-primary italic">A meva feina</SelectItem>
                             {employees.filter(e => e.id !== user.uid).map(emp => (
                             <SelectItem key={emp.id} value={emp.id}>{emp.firstName} {emp.lastName}</SelectItem>
                             ))}
