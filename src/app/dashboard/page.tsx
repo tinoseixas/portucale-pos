@@ -168,7 +168,6 @@ export default function DashboardPage() {
             unique.push(n!);
         }
     });
-    // FIX: unique is a string array, so use a.localeCompare(b) directly
     return unique.sort((a, b) => a.localeCompare(b, 'ca'));
   }, [allServices]);
 
@@ -222,8 +221,8 @@ export default function DashboardPage() {
     });
 
     toast({
-      title: `${selectedRows.length} registres enviats a la papelera`,
-      description: 'Pots recuperar-los a la secció de Papelera.',
+      title: `${selectedRows.length} registres enviats a la paperera`,
+      description: 'Pots recuperar-los a la secció de Paperera.',
     });
 
     setAllServices(allServices.filter(s => !selectedRows.includes(s.id)));
@@ -269,9 +268,9 @@ export default function DashboardPage() {
         
         localStorage.setItem('last_backup_date', today);
         setNeedsBackup(false);
-        toast({ title: "Backup completat!", description: "Les teves dades estan segures ao teu ordinador." });
+        toast({ title: "Backup completat!", description: "Les teves dades estan segures al teu ordinador." });
     } catch (e) {
-        toast({ variant: 'destructive', title: "Error no backup" });
+        toast({ variant: 'destructive', title: "Error al backup" });
     } finally {
         setIsExporting(false);
     }
@@ -302,7 +301,7 @@ export default function DashboardPage() {
                   </div>
                   <div>
                       <p className="font-black text-slate-900 uppercase tracking-tight">Còpia de Seguretat Necessària</p>
-                      <p className="text-[10px] md:text-xs text-slate-500 font-bold uppercase tracking-widest">Backup automàtic ao Firebase em curso. Recomanamos descarga local.</p>
+                      <p className="text-[10px] md:text-xs text-slate-500 font-bold uppercase tracking-widest">Backup automàtic al Firebase en curs. Recomanem descàrrega local.</p>
                   </div>
               </div>
               <Button onClick={handleBackup} disabled={isExporting} className="bg-primary hover:bg-primary/90 text-white font-black uppercase tracking-widest h-12 md:h-14 px-6 md:px-10 rounded-2xl shadow-xl w-full md:w-auto text-xs">
@@ -323,7 +322,7 @@ export default function DashboardPage() {
             <Button asChild variant="outline" className="h-12 md:h-14 px-4 md:px-6 border-2 border-slate-300 text-slate-500 font-black uppercase tracking-widest rounded-2xl hover:bg-slate-50 text-[10px] md:text-xs">
                 <Link href="/dashboard/trash">
                     <History className="mr-2 h-4 w-4" />
-                    Papelera
+                    Paperera
                 </Link>
             </Button>
             <Button asChild className="h-12 md:h-14 px-6 md:px-8 bg-accent hover:bg-accent/90 text-accent-foreground flex-1 md:flex-none font-black uppercase tracking-widest rounded-2xl shadow-xl hover:scale-[1.02] transition-transform text-[10px] md:text-xs">
@@ -362,8 +361,8 @@ export default function DashboardPage() {
                             </AlertDialogTrigger>
                             <AlertDialogContent className="rounded-[2rem] p-8 max-w-[90vw] md:max-w-lg">
                                 <AlertDialogHeader>
-                                <AlertDialogTitle className="text-xl md:text-2xl font-black uppercase">Moure a papelera?</AlertDialogTitle>
-                                <AlertDialogDescription className="text-sm md:text-base font-medium">Podràs recuperar aquests registres més tard se cal.</AlertDialogDescription>
+                                <AlertDialogTitle className="text-xl md:text-2xl font-black uppercase">Moure a la paperera?</AlertDialogTitle>
+                                <AlertDialogDescription className="text-sm md:text-base font-medium">Podràs recuperar aquests registres més tard si cal.</AlertDialogDescription>
                                 </AlertDialogHeader>
                                 <AlertDialogFooter className="pt-4 flex flex-col md:flex-row gap-2">
                                 <AlertDialogCancel className="h-12 md:h-14 rounded-2xl font-bold border-2 w-full md:w-auto">Enrere</AlertDialogCancel>
@@ -384,7 +383,7 @@ export default function DashboardPage() {
                         </SelectTrigger>
                         <SelectContent>
                             <SelectItem value="all">Tots els Tècnics</SelectItem>
-                            <SelectItem value={user.uid} className="font-bold text-primary italic">A meva feina</SelectItem>
+                            <SelectItem value={user.uid} className="font-bold text-primary italic">La meva feina</SelectItem>
                             {employees.filter(e => e.id !== user.uid).map(emp => (
                             <SelectItem key={emp.id} value={emp.id}>{emp.firstName} {emp.lastName}</SelectItem>
                             ))}

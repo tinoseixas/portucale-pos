@@ -1,4 +1,3 @@
-
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
@@ -73,7 +72,6 @@ export default function UsersPage() {
   const processImportData = async (data: any) => {
     if (!firestore) return;
     
-    // Função auxiliar para processar batches de 400 em 400 (limite do Firestore é 500)
     const runInChunks = async (items: any[], callback: (item: any, batch: any) => void) => {
         let batch = writeBatch(firestore);
         let count = 0;
@@ -89,7 +87,6 @@ export default function UsersPage() {
         if (count > 0) await batch.commit();
     };
 
-    // 1. Clientes
     if (data.customers) {
         await runInChunks(data.customers, (c, batch) => {
             const { id, ...rest } = c;
@@ -97,7 +94,6 @@ export default function UsersPage() {
         });
     }
 
-    // 2. Projectes
     if (data.projects) {
         await runInChunks(data.projects, (p, batch) => {
             const { id, ...rest } = p;
@@ -105,7 +101,6 @@ export default function UsersPage() {
         });
     }
 
-    // 3. Service Records
     if (data.serviceRecords) {
         await runInChunks(data.serviceRecords, (s, batch) => {
             const { id, parentPath, ...rest } = s;
@@ -115,7 +110,6 @@ export default function UsersPage() {
         });
     }
 
-    // 4. Outros
     for (const col of ['albarans', 'invoices', 'quotes', 'receipts', 'employees']) {
         if (data[col]) {
             await runInChunks(data[col], (docData, batch) => {
@@ -129,17 +123,17 @@ export default function UsersPage() {
   const handleRestoreFromCloud = async (backup: any) => {
     if (!firestore) return;
     setRestoringId(backup.id);
-    toast({ title: "Restaurante dades...", description: "Això pot trigar uns segons depenent del volum de dades." });
+    toast({ title: "Restaurant dades...", description: "Això pot trigar uns segons depenent del volum de dades." });
 
     try {
         const data = JSON.parse(backup.data);
         await processImportData(data);
         
-        toast({ title: "Restauració completada", description: "Tots os registres han estat recuperats correctament." });
+        toast({ title: "Restauració completada", description: "Tots els registres s'han recuperat correctament." });
         window.location.reload();
     } catch (e) {
         console.error(e);
-        toast({ variant: 'destructive', title: "Error en restaurar", description: "No s'ha pogut processar o backup de la nuvol." });
+        toast({ variant: 'destructive', title: "Error en restaurar", description: "No s'ha pogut processar el backup del núvol." });
     } finally {
         setRestoringId(null);
     }
@@ -385,7 +379,7 @@ export default function UsersPage() {
                                                             <AlertDialogTitle className="text-2xl font-black uppercase">Restaurar aquesta versió?</AlertDialogTitle>
                                                             <AlertDialogDescription className="text-base font-medium">
                                                                 Aquesta acció sobreescriurà les dades actuals amb la versió del dia <strong>{format(parseISO(backup.createdAt), 'dd/MM/yyyy')}</strong>.
-                                                                Tots os registres creats després d'aquesta data podrien perdre's.
+                                                                Tots els registres creats després d'aquesta data podrien perdre's.
                                                             </AlertDialogDescription>
                                                         </AlertDialogHeader>
                                                         <AlertDialogFooter className="pt-6">

@@ -147,7 +147,7 @@ export default function NewServicePage() {
     } catch (error) {
         console.error("Error creating service record:", error);
         setIsStarting(false);
-        toast({ variant: "destructive", title: "Error", description: "No s'ha pogut iniciar o servei." });
+        toast({ variant: "destructive", title: "Error", description: "No s'ha pogut iniciar el servei." });
     }
   };
   
@@ -159,7 +159,7 @@ export default function NewServicePage() {
         <Card className="text-center w-full shadow-lg rounded-3xl overflow-hidden">
           <CardHeader className="p-8 bg-slate-900 text-white">
             <CardTitle>Inicia Sessió</CardTitle>
-            <CardDescription className="text-slate-400">Necessites accés per registrar serveis.</CardDescription>
+            <CardDescription>Necessites accés per registrar serveis.</CardDescription>
           </CardHeader>
           <CardContent className="p-10">
              <Button asChild className="bg-primary text-white h-14 px-10 rounded-2xl font-black uppercase tracking-tight">
@@ -176,7 +176,7 @@ export default function NewServicePage() {
         <Card className="w-full shadow-2xl border-none rounded-3xl overflow-hidden">
           <CardHeader className="bg-slate-900 text-white p-6 sm:p-8 text-center">
             <CardTitle className="text-2xl sm:text-3xl font-black uppercase tracking-tight">Nou Registre</CardTitle>
-            <CardDescription className="text-slate-400">Comença un nou treball per a un client.</CardDescription>
+            <CardDescription className="text-slate-400 font-medium">Comença un nou treball per a un client.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-8 pt-8 sm:pt-10 px-6 sm:p-10">
               <div className="space-y-6">

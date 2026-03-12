@@ -257,7 +257,7 @@ export default function EditServicePage() {
   const handleSoftDelete = () => {
     if (!serviceDocRef) return;
     updateDocumentNonBlocking(serviceDocRef, { deleted: true, deletedAt: new Date().toISOString() });
-    toast({ title: "Enviat a la papelera", description: "Pots recuperar-lo si cal." });
+    toast({ title: "Enviat a la paperera", description: "Pots recuperar-lo si cal." });
     router.push('/dashboard');
   };
 
@@ -460,8 +460,8 @@ export default function EditServicePage() {
                         <Button type="button" variant="ghost" className="text-red-500 font-bold h-16 w-full sm:w-auto rounded-2xl px-8 transition-colors">Esborrar Registre</Button>
                     </AlertDialogTrigger>
                     <AlertDialogContent className="rounded-[2.5rem] p-10">
-                        <AlertDialogHeader><AlertDialogTitle className="text-2xl font-black uppercase">Moure a la Papelera?</AlertDialogTitle></AlertDialogHeader>
-                        <AlertDialogDescription>El registre no s'esborrarà per sempre, podràs recuperar-lo a la papelera del dashboard.</AlertDialogDescription>
+                        <AlertDialogHeader><AlertDialogTitle className="text-2xl font-black uppercase">Moure a la Paperera?</AlertDialogTitle></AlertDialogHeader>
+                        <AlertDialogDescription>El registre no s'esborrarà per sempre, podràs recuperar-lo a la paperera del dashboard.</AlertDialogDescription>
                         <AlertDialogFooter className="pt-6">
                             <AlertDialogCancel className="rounded-2xl h-14 font-bold border-2">Enrere</AlertDialogCancel>
                             <AlertDialogAction onClick={handleSoftDelete} className="bg-red-600 rounded-2xl h-14 font-black uppercase tracking-widest">Esborrar</AlertDialogAction>

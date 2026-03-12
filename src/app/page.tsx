@@ -58,7 +58,7 @@ export default function Home() {
        toast({
           variant: "destructive",
           title: "Error d'accés",
-          description: "Verifica o correu i a contrasenya e torna a tentar.",
+          description: "Verifica el correu i la contrasenya i torna-ho a provar.",
         })
     } finally {
       setIsAuthenticating(false);
@@ -86,13 +86,13 @@ export default function Home() {
         hourlyRate: 30,
       }, { merge: true });
 
-      toast({ title: "Compte creat", description: "O teu perfil foi configurado com sucesso." });
+      toast({ title: "Compte creat", description: "El teu perfil s'ha configurat correctament." });
       router.push('/dashboard');
     } catch (error: any) {
       toast({
         variant: "destructive",
         title: "Error en registrar-se",
-        description: error.message || "No s'ha pogut crear o compte.",
+        description: error.message || "No s'ha pogut crear el compte.",
       });
     } finally {
       setIsAuthenticating(false);
@@ -152,7 +152,7 @@ export default function Home() {
           <CardFooter className="flex flex-col gap-4 pb-8 md:pb-12 px-6 md:px-10">
             <Button onClick={handleSignIn} className="w-full h-16 text-lg font-black uppercase tracking-tight shadow-xl bg-primary hover:bg-primary/90 rounded-2xl hover:scale-[1.02] transition-transform" disabled={isAuthenticating}>
               {isAuthenticating ? <Loader2 className="mr-3 h-6 w-6 animate-spin" /> : null}
-              Entrar ao Sistema
+              Entrar al Sistema
             </Button>
             <div className="relative w-full py-4">
                 <div className="absolute inset-0 flex items-center">
