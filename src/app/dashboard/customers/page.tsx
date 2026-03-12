@@ -1,4 +1,3 @@
-
 'use client'
 
 import { useMemo, useState, useEffect, useRef } from 'react'
@@ -11,6 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '@/components/ui/button'
 import { Edit, Trash2, PlusCircle, Building, Mail, Phone, Upload, Search, Loader2, ListPlus, X, FileSpreadsheet, CheckSquare, AlertTriangle } from 'lucide-react'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Textarea } from '@/components/ui/textarea'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -228,7 +228,7 @@ export default function CustomersPage() {
                                 <FileSpreadsheet className="h-12 w-12 mx-auto text-primary" />
                                 <div>
                                     <p className="font-black text-primary uppercase text-sm">Carregar Ficheiro Excel</p>
-                                    <p className="text-[10px] text-slate-400 font-bold">Llegirem els noms de la primera columna.</p>
+                                    <p className="text-[10px] text-slate-400 font-bold">Llegirem els noms de la primeira columna.</p>
                                 </div>
                                 <input type="file" ref={fileInputRef} onChange={handleExcelUpload} accept=".xlsx, .xls" className="hidden" />
                                 <Button onClick={() => fileInputRef.current?.click()} variant="outline" className="bg-white border-primary text-primary font-bold rounded-xl h-10 px-6">Escolliu fitxer</Button>
