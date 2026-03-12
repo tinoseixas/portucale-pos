@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -14,7 +14,7 @@ import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { doc, addDoc, collection } from 'firebase/firestore';
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import type { Customer } from '@/lib/types';
-import { Save, ArrowLeft, Building, MapPin, Phone, Mail, Hash, MapPinned, Loader2 } from 'lucide-react';
+import { Save, ArrowLeft, Building, MapPin, Phone, Mail, Hash, Loader2 } from 'lucide-react';
 import { AdminGate } from '@/components/AdminGate';
 
 
@@ -65,13 +65,6 @@ export default function EditCustomerPage() {
   });
 
   useEffect(() => {
-    if (!isUserLoading && !user) {
-      toast({ variant: 'destructive', title: 'Accés no autoritzat' });
-      router.push('/');
-    }
-  }, [isUserLoading, user, router, toast]);
-
-  useEffect(() => {
     if (customer && !isNew) {
       reset({
         name: customer.name,
@@ -110,11 +103,8 @@ export default function EditCustomerPage() {
     return <div className="p-12 text-center flex flex-col items-center justify-center h-[60vh]"><Loader2 className="h-12 w-12 animate-spin text-primary" /><p className="mt-4 font-bold">Carregant dades del client...</p></div>;
   }
 
-  if (!user) return null; 
-  if (!isNew && !customer) return <p className="p-8 text-center">No s'ha trobat o client.</p>;
-
   return (
-    <AdminGate pageTitle="Edició de Client" pageDescription="Aquesta secció està protegida.">
+    <AdminGate pageTitle="Edició de Client" pageDescription="Gestió de dades de facturació i contacte.">
         <div className="max-w-2xl mx-auto space-y-6 pb-20">
         <Button variant="ghost" onClick={() => router.back()} className="font-bold -ml-4">
             <ArrowLeft className="mr-2 h-4 w-4" />
@@ -124,7 +114,7 @@ export default function EditCustomerPage() {
             <CardHeader className="bg-slate-900 text-white p-8">
             <CardTitle className="text-2xl font-black uppercase tracking-tight">{isNew ? 'Nou Client' : 'Editar Client'}</CardTitle>
             <CardDescription className="text-slate-400">
-                {isNew ? "Afegeix um nou cliente à base de dades." : `Modifica as dades de ${customer?.name}.`}
+                Organitza les dades seguint l'ordre oficial del sistema.
             </CardDescription>
             </CardHeader>
             <CardContent className="p-8 pt-10">
@@ -133,24 +123,23 @@ export default function EditCustomerPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {/* 1. Nome */}
                     <div className="space-y-2">
-                        <Label htmlFor="name" className="flex items-center gap-2 font-black uppercase text-[10px] text-slate-400 tracking-widest pl-1"><Building className="h-3 w-3" /> 1. Nom del Client</Label>
+                        <Label htmlFor="name" className="flex items-center gap-2 font-black uppercase text-[10px] text-primary tracking-widest pl-1"><Building className="h-3 w-3" /> 1. Nom del Client</Label>
                         <Controller
                             name="name"
                             control={control}
-                            render={({ field }) => <Input id="name" placeholder="Ex: Empresa de Construcció SL" className="h-12 rounded-xl font-bold border-2 bg-slate-50" {...field} />}
+                            render={({ field }) => <Input id="name" placeholder="Ex: Alimentària UNIÓ" className="h-12 rounded-xl font-bold border-2 bg-slate-50" {...field} />}
                         />
                         {errors.name && <p className="text-xs text-destructive font-bold">{errors.name.message}</p>}
                     </div>
                     
                     {/* 2. NIF / NRT */}
                     <div className="space-y-2">
-                        <Label htmlFor="nrt" className="flex items-center gap-2 font-black uppercase text-[10px] text-slate-400 tracking-widest pl-1"><Hash className="h-3 w-3" /> 2. NIF / NRT</Label>
+                        <Label htmlFor="nrt" className="flex items-center gap-2 font-black uppercase text-[10px] text-primary tracking-widest pl-1"><Hash className="h-3 w-3" /> 2. NIF / NRT</Label>
                         <Controller
                             name="nrt"
                             control={control}
                             render={({ field }) => <Input id="nrt" placeholder="Ex: L-123456-X" className="h-12 rounded-xl font-bold border-2 bg-slate-50" {...field} />}
                         />
-                        {errors.nrt && <p className="text-xs text-destructive font-bold">{errors.nrt.message}</p>}
                     </div>
                 </div>
 
@@ -192,7 +181,7 @@ export default function EditCustomerPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {/* 6. Telefone */}
                     <div className="space-y-2">
-                        <Label htmlFor="contact" className="flex items-center gap-2 font-black uppercase text-[10px] text-slate-400 tracking-widest pl-1"><Phone className="h-3 w-3" /> 6. Telèfon</Label>
+                        <Label htmlFor="contact" className="flex items-center gap-2 font-black uppercase text-[10px] text-primary tracking-widest pl-1"><Phone className="h-3 w-3" /> 6. Telèfon</Label>
                         <Controller
                             name="contact"
                             control={control}
@@ -202,7 +191,7 @@ export default function EditCustomerPage() {
 
                     {/* 7. E-mail */}
                     <div className="space-y-2">
-                        <Label htmlFor="email" className="flex items-center gap-2 font-black uppercase text-[10px] text-slate-400 tracking-widest pl-1"><Mail className="h-3 w-3" /> 7. E-mail</Label>
+                        <Label htmlFor="email" className="flex items-center gap-2 font-black uppercase text-[10px] text-primary tracking-widest pl-1"><Mail className="h-3 w-3" /> 7. E-mail</Label>
                         <Controller
                             name="email"
                             control={control}
