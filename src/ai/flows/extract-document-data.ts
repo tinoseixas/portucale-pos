@@ -8,17 +8,17 @@ import { ai } from '@/ai/genkit';
 import { z } from 'zod';
 
 const ExtractedDataSchema = z.object({
-  type: z.string().describe('Tipus de document detectat (service_record, albaran, invoice, o general).'),
-  date: z.string().optional().describe('Data del document en format ISO o text llegible.'),
-  customerName: z.string().optional().describe('Nom del client trobat al document.'),
+  type: z.string().default('general').describe('Tipus de document detectat.'),
+  date: z.string().optional().describe('Data del document.'),
+  customerName: z.string().optional().describe('Nom del client.'),
   projectName: z.string().optional().describe('Nom de l\'obra o projecte.'),
-  description: z.string().optional().describe('Resum detallat dels treballs realitzats en CATALÀ.'),
+  description: z.string().optional().describe('Resum dels treballs realitzats.'),
   materials: z.array(z.object({
     description: z.string(),
-    quantity: z.number(),
-    unitPrice: z.number()
-  })).optional().describe('Llista de materials amb quantitat i preu unitari.'),
-  totalAmount: z.number().optional().describe('Import total del document.')
+    quantity: z.number().default(1),
+    unitPrice: z.number().default(0)
+  })).optional().describe('Llista de materials.'),
+  totalAmount: z.number().optional().describe('Import total.')
 });
 
 export type ExtractedDocumentData = z.infer<typeof ExtractedDataSchema>;
@@ -34,23 +34,24 @@ export async function extractDataFromDocument(fileDataUri: string): Promise<Extr
           { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' },
           { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
           { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' },
+          { category: 'HARM_CATEGORY_CIVIC_INTEGRITY', threshold: 'BLOCK_NONE' },
         ]
       },
       output: { schema: ExtractedDataSchema },
       prompt: [
         { media: { url: fileDataUri } },
-        { text: `Ets un assistent administratiu expert en construcció i manteniment (lampisteria, electricitat).
+        { text: `Ets un assistent expert en lectura de documents de construcció (albarans, factures, notes).
         
         TASCA:
-        Analitza aquest document (pot ser una foto o PDF) i extreu tota la informació rellevant per registrar-lo al sistema.
+        Analitza la imatge o PDF adjunt. NO SIGUIS MASSA ESTRICTE. 
+        Si el document és difícil de llegir, extreu qualsevol text rellevant que trobis.
         
-        REGLES CRÍTIQUES:
-        1. Tradueix totes les descripcions tècniques al CATALÀ professional.
-        2. Identifica el client i l'obra encara que el text sigui poc clar.
-        3. Extreu la llista de materials si n'hi ha, ignorant totals i impostos.
-        4. Si no estàs segur del tipus de document, posa "general".
+        PRIORITATS:
+        1. Troba el CLIENT (Customer).
+        2. Troba la DATA (Date).
+        3. Fes una DESCRIPCIÓ el més detallada possible del que s'ha fet. Si no trobes camps clars, descriu tot el que veus al document en l'apartat 'description'.
         
-        Retorna les dades en el format JSON especificat. Si el document és difícil de llegir, intenta extreure el màxim possible.` }
+        Retorna les dades en JSON. Si no trobes materials, deixa la llista buida.` }
       ],
     });
 

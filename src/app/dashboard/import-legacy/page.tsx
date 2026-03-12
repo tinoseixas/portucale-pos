@@ -3,8 +3,8 @@
 import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase'
-import { collection, query, orderBy, addDoc, doc } from 'firebase/firestore'
-import type { Customer, ServiceRecord, Employee } from '@/lib/types'
+import { collection, query, orderBy, addDoc } from 'firebase/firestore'
+import type { Customer, ServiceRecord } from '@/lib/types'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
@@ -13,7 +13,6 @@ import { useToast } from '@/hooks/use-toast'
 import { AdminGate } from '@/components/AdminGate'
 import { extractDataFromDocument, type ExtractedDocumentData } from '@/ai/flows/extract-document-data'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { format, parseISO, isValid } from 'date-fns'
 
 export default function ImportLegacyPage() {
   const { user } = useUser()
@@ -36,7 +35,7 @@ export default function ImportLegacyPage() {
 
     setIsScanning(true)
     setExtractedData(null)
-    toast({ title: "Escanejant document...", description: "L'IA està analitzant el contingut del fitxer." })
+    toast({ title: "Escanejant document...", description: "L'IA està analitzant el contingut." })
 
     try {
       const reader = new FileReader()
@@ -44,7 +43,7 @@ export default function ImportLegacyPage() {
         const dataUri = reader.result as string
         const result = await extractDataFromDocument(dataUri)
         
-        if (result && (result.description || result.customerName)) {
+        if (result) {
           setExtractedData(result)
           // Intentar pre-seleccionar el client si el nom coincideix
           if (result.customerName && customers) {
@@ -54,12 +53,12 @@ export default function ImportLegacyPage() {
             )
             if (match) setSelectedCustomerId(match.id)
           }
-          toast({ title: "Escaneig completat", description: "Revisa les dades extretes abans de guardar." })
+          toast({ title: "Anàlisi completada", description: "Revisa les dades extretes." })
         } else {
           toast({ 
             variant: "destructive", 
-            title: "Dades insuficients", 
-            description: "L'IA no ha pogut llegir el contingut clarament. Prova amb una foto millor o un PDF." 
+            title: "Error d'IA", 
+            description: "No s'ha pogut processar el fitxer. Prova amb una imatge més nítida." 
           })
         }
         setIsScanning(false)
@@ -68,7 +67,7 @@ export default function ImportLegacyPage() {
     } catch (err) {
       console.error(err)
       setIsScanning(false)
-      toast({ variant: "destructive", title: "Error", description: "No s'ha pogut processar el fitxer." })
+      toast({ variant: "destructive", title: "Error fatal", description: "No s'ha pogut carregar el fitxer." })
     }
   }
 
@@ -85,10 +84,10 @@ export default function ImportLegacyPage() {
         employeeName: user.displayName || user.email?.split('@')[0] || 'Tècnic',
         arrivalDateTime: extractedData.date || now,
         departureDateTime: extractedData.date || now,
-        description: extractedData.description || "Importat de document antic",
-        projectName: extractedData.projectName || "Obra Importada",
+        description: extractedData.description || "Treballs importats via scanner IA",
+        projectName: extractedData.projectName || "Obra Scanner",
         customerId: selectedCustomerId !== 'none' ? selectedCustomerId : '',
-        customerName: customer?.name || extractedData.customerName || '',
+        customerName: customer?.name || extractedData.customerName || 'Client desconegut',
         serviceHourlyRate: 30,
         media: [],
         albarans: [],
@@ -98,7 +97,7 @@ export default function ImportLegacyPage() {
       }
 
       const docRef = await addDoc(collection(firestore, `employees/${user.uid}/serviceRecords`), serviceData)
-      toast({ title: "Registre creat", description: "S'ha afegit correctament a la base de dades." })
+      toast({ title: "Registre creat", description: "S'ha afegit correctament." })
       router.push(`/dashboard/edit/${docRef.id}?ownerId=${user.uid}`)
     } catch (e) {
       toast({ variant: "destructive", title: "Error en desar" })
@@ -108,7 +107,7 @@ export default function ImportLegacyPage() {
   }
 
   return (
-    <AdminGate pageTitle="Scanner de Documents" pageDescription="Converteix documents antics en registres digitals.">
+    <AdminGate pageTitle="Scanner de Documents" pageDescription="Converteix fotos en registres digitals.">
       <div className="max-w-4xl mx-auto space-y-8 pb-20">
         <div className="space-y-1">
           <h1 className="text-4xl font-black uppercase tracking-tight flex items-center gap-3 text-primary">
@@ -123,8 +122,8 @@ export default function ImportLegacyPage() {
               {isScanning ? <Loader2 className="h-12 w-12 animate-spin text-primary" /> : <FileUp className="h-12 w-12 text-primary" />}
             </div>
             <div className="space-y-2">
-              <h2 className="text-2xl font-black uppercase text-slate-900">{isScanning ? 'Analitzant Document...' : 'Puja el teu document'}</h2>
-              <p className="text-slate-500 font-medium">L'IA llegirà el text i crearà el registre per tu.</p>
+              <h2 className="text-2xl font-black uppercase text-slate-900">{isScanning ? 'Analitzant...' : 'Puja el teu document'}</h2>
+              <p className="text-slate-500 font-medium">L'IA llegirà el text i intentarà extreure la feina feta.</p>
             </div>
             <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept="image/*,application/pdf" className="hidden" />
             <Button 
@@ -148,18 +147,18 @@ export default function ImportLegacyPage() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-2">
                       <Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest flex items-center gap-2"><CalendarIcon className="h-3 w-3" /> Data</Label>
-                      <p className="font-bold text-lg">{extractedData.date || 'No detectada'}</p>
+                      <p className="font-bold text-lg">{extractedData.date || 'No detectada (es posarà AVUI)'}</p>
                     </div>
                     <div className="space-y-2">
                       <Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest flex items-center gap-2"><Briefcase className="h-3 w-3" /> Obra / Projecte</Label>
-                      <p className="font-bold text-lg uppercase text-primary">{extractedData.projectName || 'General'}</p>
+                      <p className="font-bold text-lg uppercase text-primary">{extractedData.projectName || 'General / Scanner'}</p>
                     </div>
                   </div>
 
                   <div className="space-y-2">
                     <Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest flex items-center gap-2"><FileText className="h-3 w-3" /> Descripció dels Treballs</Label>
                     <div className="bg-slate-50 p-6 rounded-2xl border-2 border-slate-100 font-medium italic text-slate-700 leading-relaxed">
-                      {extractedData.description || 'Sense descripció detectada.'}
+                      {extractedData.description || 'Sense descripció detectada. Podràs editar-la després.'}
                     </div>
                   </div>
 
@@ -198,7 +197,7 @@ export default function ImportLegacyPage() {
                       </SelectContent>
                     </Select>
                     {extractedData.customerName && (
-                      <p className="text-[10px] font-bold text-amber-600 uppercase mt-1 italic">Detectat al doc: {extractedData.customerName}</p>
+                      <p className="text-[10px] font-bold text-amber-600 uppercase mt-1 italic">Doc diu: {extractedData.customerName}</p>
                     )}
                   </div>
 
@@ -208,23 +207,14 @@ export default function ImportLegacyPage() {
                     className="w-full h-20 bg-accent hover:bg-accent/90 text-accent-foreground font-black uppercase tracking-tighter text-lg rounded-3xl shadow-xl hover:scale-[1.02] transition-all"
                   >
                     {isSaving ? <Loader2 className="animate-spin mr-3 h-6 w-6" /> : <ArrowRight className="mr-3 h-6 w-6" />}
-                    Convertir en Registre
+                    Confirmar i Crear
                   </Button>
 
                   <Button variant="ghost" onClick={() => setExtractedData(null)} className="w-full text-slate-400 font-bold uppercase text-[10px] tracking-widest">
-                    Cancel·lar i Escanejar un altre
+                    Tornar a provar
                   </Button>
                 </div>
               </Card>
-
-              <div className="bg-slate-900 p-6 rounded-3xl text-white space-y-2 shadow-xl border-4 border-primary/20">
-                <div className="flex items-center gap-2 text-primary font-black uppercase text-[10px]">
-                  <AlertCircle className="h-4 w-4" /> Consell de l'IA
-                </div>
-                <p className="text-xs text-slate-400 font-medium leading-relaxed">
-                  L'IA és intel·ligent però pot cometre errors en lletra manuscrita difícil o fotos amb poca llum. Revisa sempre les dades abans de guardar.
-                </p>
-              </div>
             </div>
           </div>
         )}
