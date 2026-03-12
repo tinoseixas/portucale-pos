@@ -169,7 +169,7 @@ export default function DashboardPage() {
             unique.push(n!);
         }
     });
-    return unique.sort((a, b) => a.name.localeCompare(b));
+    return unique.sort((a, b) => a.localeCompare(b, 'ca'));
   }, [allServices]);
 
   const filteredServices = useMemo(() => {
