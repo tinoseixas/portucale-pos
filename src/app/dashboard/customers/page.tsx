@@ -52,6 +52,7 @@ export default function CustomersPage() {
   // Bulk Import State
   const [isBulkDialogOpen, setIsBulkDialogOpen] = useState(false)
   const [bulkText, setBulkText] = useState('')
+  const [excelCustomers, setExcelCustomers] = useState<Partial<Customer>[]>([])
   const [isImporting, setIsImporting] = useState(false)
 
   useEffect(() => {
@@ -94,20 +95,43 @@ export default function CustomersPage() {
   }, [customers, searchTerm]);
 
   const handleBulkImport = async () => {
-    if (!firestore || !bulkText.trim()) return;
+    if (!firestore) return;
+    
+    let customersToImport: Partial<Customer>[] = [];
+    
+    if (excelCustomers.length > 0) {
+        customersToImport = excelCustomers;
+    } else if (bulkText.trim()) {
+        customersToImport = bulkText.split('\n')
+            .map(n => ({ name: n.trim(), address: '', contact: '', email: '', nrt: '' }))
+            .filter(c => c.name.length > 0);
+    }
+
+    if (customersToImport.length === 0) {
+        toast({ variant: 'destructive', title: "Sense dades", description: "No hi ha clients per importar." });
+        return;
+    }
+
     setIsImporting(true);
-    const names = bulkText.split('\n').map(n => n.trim()).filter(n => n.length > 0);
     
     try {
         const batch = writeBatch(firestore);
         let count = 0;
         
-        for (const name of names) {
+        for (const cust of customersToImport) {
+            if (!cust.name) continue;
+            
             // Basic check to avoid adding exact duplicates if they already exist
-            const alreadyExists = customers?.some(c => c.name.toLowerCase().trim() === name.toLowerCase());
+            const alreadyExists = customers?.some(c => c.name.toLowerCase().trim() === cust.name!.toLowerCase().trim());
             if (!alreadyExists) {
                 const cRef = doc(collection(firestore, 'customers'));
-                batch.set(cRef, { name, address: '', contact: '', email: '', nrt: '' });
+                batch.set(cRef, {
+                    name: cust.name,
+                    address: cust.address || '',
+                    contact: cust.contact || '',
+                    email: cust.email || '',
+                    nrt: cust.nrt || ''
+                });
                 count++;
             }
         }
@@ -120,8 +144,10 @@ export default function CustomersPage() {
         }
         
         setBulkText('');
+        setExcelCustomers([]);
         setIsBulkDialogOpen(false);
     } catch (e) {
+        console.error(e);
         toast({ variant: 'destructive', title: "Error", description: "No s'ha pogut realitzar l'importació." });
     } finally {
         setIsImporting(false);
@@ -141,14 +167,26 @@ export default function CustomersPage() {
             const ws = wb.Sheets[wsname];
             const data = XLSX.utils.sheet_to_json(ws, { header: 1 }) as any[][];
             
-            // Extract column 0 (usually names)
-            const names = data.map(row => String(row[0]).trim())
-                             .filter(n => n && n !== 'undefined' && n.length > 1 && n.toLowerCase() !== 'nom' && n.toLowerCase() !== 'name');
+            // Parse common columns: 0:Name, 1:NRT, 2:Address, 3:Contact, 4:Email
+            // We skip the first row (header)
+            const parsed: Partial<Customer>[] = data.slice(1).map(row => ({
+                name: String(row[0] || '').trim(),
+                nrt: String(row[1] || '').trim(),
+                address: String(row[2] || '').trim(),
+                contact: String(row[3] || '').trim(),
+                email: String(row[4] || '').trim(),
+            })).filter(c => c.name && c.name !== 'undefined' && c.name.length > 1 && c.name.toLowerCase() !== 'nom');
             
-            setBulkText(prev => (prev ? prev + '\n' : '') + names.join('\n'));
-            toast({ title: "Excel processat", description: `S'han afegit ${names.length} noms a la llista.` });
+            if (parsed.length > 0) {
+                setExcelCustomers(parsed);
+                setBulkText(''); // Clear manual text if Excel is used
+                toast({ title: "Excel processat", description: `S'han detectat ${parsed.length} clients amb dades completes.` });
+            } else {
+                toast({ variant: 'destructive', title: "Fitxer buit", description: "No s'han trobat dades vàlides al fitxer." });
+            }
         } catch (err) {
-            toast({ variant: 'destructive', title: "Error Excel", description: "El fitxer no s'ha pogut llegir." });
+            console.error(err);
+            toast({ variant: 'destructive', title: "Error Excel", description: "El fitxer no s'ha pogut llegir correctament." });
         }
     };
     reader.readAsBinaryString(file);
@@ -212,7 +250,7 @@ export default function CustomersPage() {
                 <p className="text-muted-foreground font-medium">Gestió centralitzada de dades de contacte i facturació.</p>
             </div>
             <div className="flex gap-3 w-full sm:w-auto">
-                <Dialog open={isBulkDialogOpen} onOpenChange={setIsBulkDialogOpen}>
+                <Dialog open={isBulkDialogOpen} onOpenChange={(open) => { setIsBulkDialogOpen(open); if(!open) setExcelCustomers([]); }}>
                     <DialogTrigger asChild>
                         <Button variant="outline" className="h-14 px-6 border-2 border-primary text-primary font-black uppercase tracking-widest rounded-2xl shadow-lg hover:bg-primary/5">
                             <ListPlus className="mr-2 h-5 w-5" /> Importació Massa / Excel
@@ -221,33 +259,50 @@ export default function CustomersPage() {
                     <DialogContent className="rounded-[2rem] max-w-xl">
                         <DialogHeader>
                             <DialogTitle className="text-2xl font-black uppercase">Importar Clients</DialogTitle>
-                            <DialogDescription className="font-medium">Pots carregar un Excel o enganxar una llista de noms.</DialogDescription>
+                            <DialogDescription className="font-medium">Carrega un Excel amb columnes (Nom, NIF, Morada, Telèfon, Email) o enganxa noms.</DialogDescription>
                         </DialogHeader>
                         <div className="py-4 space-y-6">
-                            <div className="p-6 border-4 border-dashed border-primary/20 rounded-3xl bg-primary/5 text-center space-y-4">
-                                <FileSpreadsheet className="h-12 w-12 mx-auto text-primary" />
-                                <div>
-                                    <p className="font-black text-primary uppercase text-sm">Carregar Ficheiro Excel</p>
-                                    <p className="text-[10px] text-slate-400 font-bold">Llegirem els noms de la primeira columna.</p>
+                            {excelCustomers.length > 0 ? (
+                                <div className="bg-green-50 border-2 border-green-200 p-6 rounded-3xl flex items-center justify-between animate-in zoom-in-95">
+                                    <div className="flex items-center gap-4">
+                                        <div className="bg-green-600 p-2 rounded-xl text-white">
+                                            <CheckSquare className="h-6 w-6" />
+                                        </div>
+                                        <div>
+                                            <p className="font-black text-green-800 uppercase text-sm">{excelCustomers.length} Clients Detectats</p>
+                                            <p className="text-[10px] text-green-600 font-bold uppercase tracking-tight">Dades de l'Excel a punt per importar.</p>
+                                        </div>
+                                    </div>
+                                    <Button variant="ghost" size="sm" onClick={() => setExcelCustomers([])} className="text-green-700 hover:bg-green-100 font-bold">Netejar</Button>
                                 </div>
-                                <input type="file" ref={fileInputRef} onChange={handleExcelUpload} accept=".xlsx, .xls" className="hidden" />
-                                <Button onClick={() => fileInputRef.current?.click()} variant="outline" className="bg-white border-primary text-primary font-bold rounded-xl h-10 px-6">Escolliu fitxer</Button>
-                            </div>
+                            ) : (
+                                <div className="p-6 border-4 border-dashed border-primary/20 rounded-3xl bg-primary/5 text-center space-y-4">
+                                    <FileSpreadsheet className="h-12 w-12 mx-auto text-primary" />
+                                    <div>
+                                        <p className="font-black text-primary uppercase text-sm">Carregar Ficheiro Excel</p>
+                                        <p className="text-[10px] text-slate-400 font-bold uppercase mt-1">Llegirem: Nom | NIF | Morada | Telèfon | Email</p>
+                                    </div>
+                                    <input type="file" ref={fileInputRef} onChange={handleExcelUpload} accept=".xlsx, .xls" className="hidden" />
+                                    <Button onClick={() => fileInputRef.current?.click()} variant="outline" className="bg-white border-primary text-primary font-bold rounded-xl h-10 px-6">Escolliu fitxer</Button>
+                                </div>
+                            )}
 
-                            <div className="space-y-2">
-                                <Label className="text-[10px] font-black uppercase text-slate-400 pl-1">O enganxa la llista manualment (un per línia)</Label>
-                                <Textarea 
-                                    placeholder="Client A&#10;Client B&#10;Empresa C..." 
-                                    value={bulkText} 
-                                    onChange={(e) => setBulkText(e.target.value)} 
-                                    rows={6}
-                                    className="rounded-2xl border-2 font-bold p-4 bg-slate-50"
-                                />
-                            </div>
+                            {!excelCustomers.length && (
+                                <div className="space-y-2">
+                                    <Label className="text-[10px] font-black uppercase text-slate-400 pl-1">O enganxa la llista manualment (un per línia)</Label>
+                                    <Textarea 
+                                        placeholder="Client A&#10;Client B&#10;Empresa C..." 
+                                        value={bulkText} 
+                                        onChange={(e) => setBulkText(e.target.value)} 
+                                        rows={6}
+                                        className="rounded-2xl border-2 font-bold p-4 bg-slate-50"
+                                    />
+                                </div>
+                            )}
                         </div>
                         <DialogFooter>
                             <Button variant="ghost" onClick={() => setIsBulkDialogOpen(false)} className="font-bold">Cancel·lar</Button>
-                            <Button onClick={handleBulkImport} disabled={isImporting || !bulkText.trim()} className="bg-primary font-black uppercase tracking-widest px-8">
+                            <Button onClick={handleBulkImport} disabled={isImporting || (!bulkText.trim() && excelCustomers.length === 0)} className="bg-primary font-black uppercase tracking-widest px-8">
                                 {isImporting ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : <Upload className="mr-2 h-4 w-4" />}
                                 IMPORTAR ARA
                             </Button>
