@@ -79,11 +79,9 @@ export default function DashboardPage() {
     try {
         const backupSnap = await getDoc(backupRef);
         if (backupSnap.exists()) {
-            console.log("Cloud backup already exists for today.");
             return;
         }
 
-        console.log("Starting automatic cloud backup...");
         const data: any = {
             customers: [],
             projects: [],
@@ -114,7 +112,6 @@ export default function DashboardPage() {
             createdBy: user.uid
         });
 
-        console.log("Automatic cloud backup completed.");
         localStorage.setItem('last_backup_date', today);
         setNeedsBackup(false);
     } catch (e) {
@@ -142,13 +139,11 @@ export default function DashboardPage() {
                 .filter(s => !s.deleted); 
             setAllServices(servicesData);
 
-            // Check for backup
             if (currentEmployee?.role === 'admin') {
                 const lastBackup = localStorage.getItem('last_backup_date');
                 const today = format(new Date(), 'yyyy-MM-dd');
                 if (lastBackup !== today) {
                     setNeedsBackup(true);
-                    // Trigger cloud backup automatically
                     handleCloudBackup();
                 }
             }
@@ -174,7 +169,7 @@ export default function DashboardPage() {
             unique.push(n!);
         }
     });
-    return unique.sort((a, b) => a.localeCompare(b));
+    return unique.sort((a, b) => a.name.localeCompare(b));
   }, [allServices]);
 
   const filteredServices = useMemo(() => {
@@ -274,9 +269,9 @@ export default function DashboardPage() {
         
         localStorage.setItem('last_backup_date', today);
         setNeedsBackup(false);
-        toast({ title: "Backup completat!", description: "Les teves dades estan segures al teu ordinador." });
+        toast({ title: "Backup completat!", description: "Les teves dades estan segures ao teu ordinador." });
     } catch (e) {
-        toast({ variant: 'destructive', title: "Error en o backup" });
+        toast({ variant: 'destructive', title: "Error no backup" });
     } finally {
         setIsExporting(false);
     }
@@ -297,9 +292,8 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto space-y-8 md:space-y-12 px-2 md:px-6">
+    <div className="max-w-7xl mx-auto space-y-8 md:space-y-12 px-4 md:px-8">
       
-      {/* BACKUP NOTIFICATION */}
       {needsBackup && (
           <div className="bg-accent/15 border-2 border-accent/30 p-5 md:p-6 rounded-3xl flex flex-col md:flex-row items-center justify-between gap-4 md:gap-6 animate-in slide-in-from-top duration-500 shadow-xl">
               <div className="flex items-center gap-4 text-center md:text-left">
@@ -308,7 +302,7 @@ export default function DashboardPage() {
                   </div>
                   <div>
                       <p className="font-black text-slate-900 uppercase tracking-tight">Còpia de Seguretat Necessària</p>
-                      <p className="text-[10px] md:text-xs text-slate-500 font-bold uppercase tracking-widest">Backup automàtic al Firebase en curs. Recomanem descàrrega local.</p>
+                      <p className="text-[10px] md:text-xs text-slate-500 font-bold uppercase tracking-widest">Backup automàtic ao Firebase em curso. Recomanamos descarga local.</p>
                   </div>
               </div>
               <Button onClick={handleBackup} disabled={isExporting} className="bg-primary hover:bg-primary/90 text-white font-black uppercase tracking-widest h-12 md:h-14 px-6 md:px-10 rounded-2xl shadow-xl w-full md:w-auto text-xs">
@@ -318,8 +312,7 @@ export default function DashboardPage() {
           </div>
       )}
 
-      {/* HEADER SECTION */}
-      <div className="flex flex-col md:flex-row items-start md:items-end justify-between gap-6 px-2">
+      <div className="flex flex-col md:flex-row items-start md:items-end justify-between gap-6">
         <div className="space-y-1">
           <h1 className="text-3xl md:text-5xl lg:text-6xl font-black tracking-tighter leading-[0.9] text-slate-900 uppercase">
             REGISTRES DE<br />TREBALL
@@ -342,13 +335,12 @@ export default function DashboardPage() {
         </div>
       </div>
       
-      {/* FILTER SECTION */}
       {isLoadingData ? (
-        <div className="space-y-4 px-2">
+        <div className="space-y-4">
             <Skeleton className="h-40 w-full rounded-3xl" />
         </div>
       ) : (
-        <Card className="border-none shadow-2xl rounded-[2rem] md:rounded-[2.5rem] bg-white overflow-hidden mx-2">
+        <Card className="border-none shadow-2xl rounded-[2rem] md:rounded-[2.5rem] bg-white overflow-hidden">
             <CardHeader className="bg-slate-50/50 p-6 md:p-8 border-b border-slate-100">
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                     <div className="flex items-center gap-3 text-slate-900">

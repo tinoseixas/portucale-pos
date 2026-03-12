@@ -109,17 +109,17 @@ export default function Home() {
   }
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-br from-primary via-primary/90 to-slate-900 p-4">
+    <main className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-br from-primary via-primary/90 to-slate-900 p-4 md:p-8">
       <div className="w-full max-w-md">
-        <div className="flex justify-center mb-10 scale-110">
-            <Logo className="h-32 w-auto drop-shadow-2xl" variant="light" />
+        <div className="flex justify-center mb-8 md:mb-12 scale-110">
+            <Logo className="h-24 md:h-32 w-auto drop-shadow-2xl" variant="light" />
         </div>
-        <Card className="shadow-2xl border-none overflow-hidden rounded-[2.5rem] bg-white/95 backdrop-blur-xl">
-          <CardHeader className="text-center space-y-2 bg-slate-900 text-white p-6 sm:p-10">
-            <CardTitle className="text-2xl sm:text-3xl font-black tracking-tight uppercase">Portal Corporatiu</CardTitle>
+        <Card className="shadow-2xl border-none overflow-hidden rounded-[2rem] md:rounded-[2.5rem] bg-white/95 backdrop-blur-xl">
+          <CardHeader className="text-center space-y-2 bg-slate-900 text-white p-6 md:p-10">
+            <CardTitle className="text-2xl md:text-3xl font-black tracking-tight uppercase">Portal Corporatiu</CardTitle>
             <CardDescription className="text-slate-400 font-medium">{BRANDING.companyName} - Gestió de Serveis</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-6 pt-8 sm:pt-12 px-6 sm:px-10">
+          <CardContent className="space-y-6 pt-8 md:pt-12 px-6 md:px-10">
             <div className="space-y-3">
               <Label htmlFor="email" className="flex items-center gap-2 font-black uppercase text-[10px] text-slate-400 tracking-widest">
                 <Mail className="h-3 w-3" /> Correu electrònic
@@ -149,10 +149,10 @@ export default function Home() {
               />
             </div>
           </CardContent>
-          <CardFooter className="flex flex-col gap-4 pb-8 sm:pb-12 px-6 sm:px-10">
+          <CardFooter className="flex flex-col gap-4 pb-8 md:pb-12 px-6 md:px-10">
             <Button onClick={handleSignIn} className="w-full h-16 text-lg font-black uppercase tracking-tight shadow-xl bg-primary hover:bg-primary/90 rounded-2xl hover:scale-[1.02] transition-transform" disabled={isAuthenticating}>
               {isAuthenticating ? <Loader2 className="mr-3 h-6 w-6 animate-spin" /> : null}
-              Entrar al Sistema
+              Entrar ao Sistema
             </Button>
             <div className="relative w-full py-4">
                 <div className="absolute inset-0 flex items-center">
