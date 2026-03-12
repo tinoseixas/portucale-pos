@@ -14,7 +14,7 @@ import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { doc, addDoc, collection } from 'firebase/firestore';
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import type { Customer } from '@/lib/types';
-import { Save, ArrowLeft, Building, MapPin, Phone, Mail, Hash, Loader2, Globe } from 'lucide-react';
+import { Save, ArrowLeft, Building, MapPin, Phone, Mail, Hash, Loader2 } from 'lucide-react';
 import { AdminGate } from '@/components/AdminGate';
 
 const customerSchema = z.object({

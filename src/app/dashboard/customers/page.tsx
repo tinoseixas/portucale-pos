@@ -8,7 +8,7 @@ import type { Customer } from '@/lib/types'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
-import { Edit, Trash2, PlusCircle, Building, Mail, Phone, Upload, Search, Loader2, ListPlus, X, FileSpreadsheet, CheckSquare, AlertTriangle, MapPin, Hash } from 'lucide-react'
+import { Edit, Trash2, PlusCircle, Building, Mail, Phone, Upload, Search, Loader2, ListPlus, X, FileSpreadsheet, CheckSquare, MapPin, Hash } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
@@ -126,22 +126,26 @@ export default function CustomersPage() {
             const bstr = evt.target?.result;
             const wb = XLSX.read(bstr, { type: 'binary' });
             const ws = wb.Sheets[wb.SheetNames[0]];
-            const data = XLSX.utils.sheet_to_json(ws, { header: 1 }) as any[][];
+            // defval: "" garanteix que cel·les buides no facin saltar les columnes
+            const data = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "" }) as any[][];
             
-            // MAPEIG ESTRICTE DE 7 COLUMNES:
+            // MAPEIG ESTRICTE DE 7 COLUMNES (Ignorant la primera fila de títols):
             // 0: Nom, 1: NRT, 2: Rua, 3: Ciutat, 4: CP, 5: Tel, 6: Email
-            const parsed: Partial<Customer>[] = data.slice(1).map(row => ({
-                name: String(row[0] || '').trim(),
-                nrt: String(row[1] || '').trim(),
-                street: String(row[2] || '').trim(),
-                city: String(row[3] || '').trim(),
-                postalCode: String(row[4] || '').trim(),
-                contact: String(row[5] || '').trim(),
-                email: String(row[6] || '').trim(),
-            })).filter(c => c.name && c.name !== 'undefined' && c.name.length > 1);
+            const parsed: Partial<Customer>[] = data.slice(1).map(row => {
+                const getString = (val: any) => val !== undefined && val !== null ? String(val).trim() : "";
+                return {
+                    name: getString(row[0]),
+                    nrt: getString(row[1]),
+                    street: getString(row[2]),
+                    city: getString(row[3]),
+                    postalCode: getString(row[4]),
+                    contact: getString(row[5]),
+                    email: getString(row[6]),
+                };
+            }).filter(c => c.name && c.name.length > 1 && c.name !== "Nom" && c.name !== "Name");
             
             setExcelCustomers(parsed);
-            toast({ title: "Excel processat", description: `S'han detectat ${parsed.length} clients a la llista.` });
+            toast({ title: "Excel processat", description: `S'han detectat ${parsed.length} línies de dades (ignorant capçalera).` });
         } catch (err) {
             toast({ variant: 'destructive', title: "Error llegint el fitxer Excel" });
         }
@@ -190,7 +194,7 @@ export default function CustomersPage() {
                 <h1 className="text-4xl md:text-5xl font-black uppercase tracking-tighter text-slate-900 flex items-center gap-3">
                     <Building className="h-10 w-10 text-primary" /> Base de Clients
                 </h1>
-                <p className="text-slate-400 font-bold uppercase text-[10px] tracking-widest pl-1">Gestió sincronitzada de 7 columnes (Nom, NRT, Rua, Ciutat, CP, Tel, Email).</p>
+                <p className="text-slate-400 font-bold uppercase text-[10px] tracking-widest pl-1">Ordre de 7 columnes (Nom, NRT, Rua, Ciutat, CP, Tel, Email).</p>
             </div>
             <div className="flex gap-3 w-full sm:w-auto">
                 <Dialog open={isBulkDialogOpen} onOpenChange={setIsBulkDialogOpen}>
@@ -199,11 +203,11 @@ export default function CustomersPage() {
                             <ListPlus className="mr-2 h-5 w-5" /> Importar Excel
                         </Button>
                     </DialogTrigger>
-                    <DialogContent className="rounded-[2rem] max-w-xl">
+                    <DialogContent className="rounded-[2.5rem] max-w-xl">
                         <DialogHeader>
-                            <DialogTitle className="text-2xl font-black uppercase">Importar des d'Excel (7 Columnes)</DialogTitle>
+                            <DialogTitle className="text-2xl font-black uppercase">Importar Excel amb Capçalera</DialogTitle>
                             <DialogDescription className="font-bold text-primary">
-                                L'ordre estricte ha de ser: 1.Nom | 2.NRT | 3.Rua | 4.Ciutat | 5.CP | 6.Tel | 7.Email
+                                El sistema ignorarà la 1ª fila. Ordre: 1.Nom | 2.NRT | 3.Rua | 4.Ciutat | 5.CP | 6.Tel | 7.Email
                             </DialogDescription>
                         </DialogHeader>
                         <div className="py-4 space-y-6">
@@ -212,8 +216,8 @@ export default function CustomersPage() {
                                     <div className="flex items-center gap-4">
                                         <CheckSquare className="h-8 w-8 text-green-600" />
                                         <div>
-                                            <p className="font-black text-green-800 uppercase text-sm">{excelCustomers.length} Clients Preparats</p>
-                                            <p className="text-[10px] text-green-600 font-bold uppercase">Dades mapejades correctament.</p>
+                                            <p className="font-black text-green-800 uppercase text-sm">{excelCustomers.length} Registres Detectats</p>
+                                            <p className="text-[10px] text-green-600 font-bold uppercase">Pronts per carregar a la base de dades.</p>
                                         </div>
                                     </div>
                                     <Button variant="ghost" onClick={() => setExcelCustomers([])} className="text-green-700 hover:bg-green-100">Netejar</Button>
@@ -223,7 +227,7 @@ export default function CustomersPage() {
                                     <FileSpreadsheet className="h-12 w-12 mx-auto text-primary" />
                                     <div className="space-y-1">
                                         <p className="text-xs font-black uppercase text-slate-600">Pujar fitxer .xlsx o .xls</p>
-                                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">El sistema llegirà les primeres 7 columnes.</p>
+                                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Es mapejaran les primeres 7 columnes a partir de la 2ª fila.</p>
                                     </div>
                                     <input type="file" ref={fileInputRef} onChange={handleExcelUpload} accept=".xlsx, .xls" className="hidden" />
                                     <Button onClick={() => fileInputRef.current?.click()} variant="outline" className="border-primary text-primary font-bold px-8">Escollir fitxer</Button>
