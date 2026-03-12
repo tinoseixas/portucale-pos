@@ -60,7 +60,6 @@ export default function DashboardPage() {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
   const [selectedProject, setSelectedProject] = useState<string>('all');
   
-  // Backup state
   const [needsBackup, setNeedsBackup] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
 
@@ -169,6 +168,7 @@ export default function DashboardPage() {
             unique.push(n!);
         }
     });
+    // FIX: unique is a string array, so use a.localeCompare(b) directly
     return unique.sort((a, b) => a.localeCompare(b, 'ca'));
   }, [allServices]);
 
