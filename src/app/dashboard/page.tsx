@@ -168,7 +168,7 @@ export default function DashboardPage() {
             unique.push(n!);
         }
     });
-    return unique.sort((a, b) => a.localeCompare(b, 'ca'));
+    return (unique as string[]).sort((a, b) => a.localeCompare(b, 'ca'));
   }, [allServices]);
 
   const filteredServices = useMemo(() => {
@@ -294,7 +294,7 @@ export default function DashboardPage() {
     <div className="max-w-7xl mx-auto space-y-8 md:space-y-12 px-4 md:px-8">
       
       {needsBackup && (
-          <div className="bg-accent/15 border-2 border-accent/30 p-5 md:p-6 rounded-3xl flex flex-col md:flex-row items-center justify-between gap-4 md:gap-6 animate-in slide-in-from-top duration-500 shadow-xl">
+          <div className="bg-accent/15 border-2 border-accent/30 p-5 md:p-6 rounded-3xl flex flex-col md:row items-center justify-between gap-4 md:gap-6 animate-in slide-in-from-top duration-500 shadow-xl">
               <div className="flex items-center gap-4 text-center md:text-left">
                   <div className="hidden md:block bg-accent p-3 rounded-2xl shadow-lg">
                     <AlertTriangle className="h-6 w-6 text-accent-foreground" />
