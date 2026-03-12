@@ -5,7 +5,7 @@ import { useState, useMemo, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
-import { PlusCircle, Calendar as CalendarIcon, User, Edit, Trash2, Briefcase, Filter, History } from 'lucide-react'
+import { PlusCircle, Calendar as CalendarIcon, User, Edit, Trash2, Briefcase, Filter, History, Search, X } from 'lucide-react'
 import type { ServiceRecord, Employee } from '@/lib/types'
 import { useUser, useFirestore, updateDocumentNonBlocking } from '@/firebase';
 import { collection, query, orderBy, getDocs, collectionGroup, doc } from 'firebase/firestore';
@@ -78,7 +78,7 @@ export default function DashboardPage() {
             const serviceSnapshot = await getDocs(servicesQuery);
             const servicesData = serviceSnapshot.docs
                 .map(doc => ({ id: doc.id, ...doc.data() } as ServiceRecord))
-                .filter(s => !s.deleted); // EXCLUDE DELETED RECORDS
+                .filter(s => !s.deleted); 
             setAllServices(servicesData);
 
         } catch (error) {
@@ -147,7 +147,6 @@ export default function DashboardPage() {
       const service = allServices.find(s => s.id === serviceId);
       if (service) {
         const docRef = doc(firestore, `employees/${service.employeeId}/serviceRecords`, serviceId);
-        // SOFT DELETE: Mark as deleted instead of removing
         updateDocumentNonBlocking(docRef, { 
             deleted: true, 
             deletedAt: new Date().toISOString() 
@@ -179,130 +178,145 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="space-y-8">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-black tracking-tight uppercase">Registres de Treball</h1>
-          <p className="text-muted-foreground">Gestió de tots els serveis realitzats per l'equip.</p>
+    <div className="max-w-[1400px] mx-auto space-y-10 px-4 md:px-8">
+      {/* HEADER SECTION */}
+      <div className="flex flex-col md:flex-row items-start md:items-end justify-between gap-6 pt-4">
+        <div className="space-y-1">
+          <h1 className="text-5xl md:text-6xl font-black tracking-tighter leading-[0.9] text-slate-900 uppercase">
+            REGISTRES DE<br />TREBALL
+          </h1>
+          <p className="text-slate-400 font-bold uppercase text-[10px] tracking-[0.2em]">Supervisió de serveis realitzats per l'equip.</p>
         </div>
-        <div className="flex items-center gap-2 w-full sm:w-auto">
-            <Button asChild variant="outline" className="border-primary text-primary font-bold">
+        <div className="flex items-center gap-3 w-full md:w-auto">
+            <Button asChild variant="outline" className="h-14 px-8 border-2 border-primary text-primary font-black uppercase tracking-widest rounded-2xl hover:bg-primary/5 transition-all shadow-sm">
                 <Link href="/dashboard/trash">
-                    <History className="mr-2 h-4 w-4" />
+                    <History className="mr-2 h-5 w-5" />
                     Papelera
                 </Link>
             </Button>
-            <Button asChild className="bg-accent hover:bg-accent/90 text-accent-foreground flex-1 sm:flex-none font-bold">
+            <Button asChild className="h-14 px-8 bg-accent hover:bg-accent/90 text-accent-foreground flex-1 md:flex-none font-black uppercase tracking-widest rounded-2xl shadow-xl hover:scale-[1.02] transition-transform">
                 <Link href="/dashboard/new">
-                    <PlusCircle className="mr-2 h-4 w-4" />
+                    <PlusCircle className="mr-2 h-6 w-6" />
                     Nou Servei
                 </Link>
             </Button>
         </div>
       </div>
       
+      {/* FILTER SECTION */}
       {isLoadingData ? (
         <div className="space-y-4">
-            <Skeleton className="h-10 w-full" />
-            <Skeleton className="h-40 w-full" />
+            <Skeleton className="h-40 w-full rounded-3xl" />
         </div>
       ) : (
-        <Card className="border-none shadow-lg">
-            <CardHeader className="bg-slate-50/50 rounded-t-lg border-b">
-                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                    <div className="flex items-center gap-2">
-                        <Filter className="h-5 w-5 text-primary" />
-                        <CardTitle className="text-lg">Filtres de Supervisió</CardTitle>
+        <Card className="border-none shadow-2xl rounded-[2.5rem] bg-white overflow-hidden">
+            <CardHeader className="bg-slate-50/50 p-8 border-b border-slate-100">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+                    <div className="flex items-center gap-3 text-slate-900">
+                        <Filter className="h-6 w-6 text-primary" />
+                        <CardTitle className="text-xl font-black uppercase tracking-tight">Filtres de Supervisió</CardTitle>
                     </div>
                     {selectedRows.length > 0 && (
                         <AlertDialog>
                         <AlertDialogTrigger asChild>
-                            <Button variant="destructive" size="sm" className="font-bold">
+                            <Button variant="destructive" className="font-black uppercase tracking-widest h-10 px-6 rounded-xl shadow-lg animate-in zoom-in-95">
                             <Trash2 className="mr-2 h-4 w-4" /> Esborrar ({selectedRows.length})
                             </Button>
                         </AlertDialogTrigger>
-                        <AlertDialogContent>
+                        <AlertDialogContent className="rounded-[2.5rem] p-10">
                             <AlertDialogHeader>
-                            <AlertDialogTitle>Vols esborrar els serveis seleccionats?</AlertDialogTitle>
-                            <AlertDialogDescription>Els registres es mouran a la **Papelera**, on podràs recuperar-los si cal.</AlertDialogDescription>
+                            <AlertDialogTitle className="text-2xl font-black uppercase">Moure a la papelera?</AlertDialogTitle>
+                            <AlertDialogDescription className="text-base font-medium">Podràs recuperar aquests registres més tard si cal.</AlertDialogDescription>
                             </AlertDialogHeader>
-                            <AlertDialogFooter>
-                            <AlertDialogCancel>Enrere</AlertDialogCancel>
-                            <AlertDialogAction onClick={handleMoveToTrash} className="bg-red-600">Enviar a la Papelera</AlertDialogAction>
+                            <AlertDialogFooter className="pt-6">
+                            <AlertDialogCancel className="h-14 rounded-2xl font-bold border-2">Enrere</AlertDialogCancel>
+                            <AlertDialogAction onClick={handleMoveToTrash} className="bg-red-600 h-14 rounded-2xl font-black uppercase tracking-widest px-8">Eliminar</AlertDialogAction>
                             </AlertDialogFooter>
                         </AlertDialogContent>
                         </AlertDialog>
                     )}
                 </div>
-                <div className="flex flex-col sm:flex-row gap-3 pt-4 flex-wrap">
-                    <Select value={selectedUser} onValueChange={setSelectedUser}>
-                    <SelectTrigger className="w-full sm:w-[220px] bg-white h-10">
-                        <User className="mr-2 h-4 w-4 text-muted-foreground" />
-                        <SelectValue placeholder="Tècnic" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="all">Tots els Tècnics</SelectItem>
-                        <SelectItem value={user.uid} className="font-bold text-primary">La meva feina</SelectItem>
-                        {employees.filter(e => e.id !== user.uid).map(emp => (
-                        <SelectItem key={emp.id} value={emp.id}>{emp.firstName} {emp.lastName}</SelectItem>
-                        ))}
-                    </SelectContent>
-                    </Select>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pt-8">
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-1">Tècnic</label>
+                        <Select value={selectedUser} onValueChange={setSelectedUser}>
+                        <SelectTrigger className="bg-white border-2 h-14 rounded-2xl font-bold text-slate-700">
+                            <User className="mr-3 h-5 w-5 text-slate-300" />
+                            <SelectValue placeholder="Tots els Tècnics" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">Tots els Tècnics</SelectItem>
+                            <SelectItem value={user.uid} className="font-bold text-primary italic">La meva feina</SelectItem>
+                            {employees.filter(e => e.id !== user.uid).map(emp => (
+                            <SelectItem key={emp.id} value={emp.id}>{emp.firstName} {emp.lastName}</SelectItem>
+                            ))}
+                        </SelectContent>
+                        </Select>
+                    </div>
 
-                    <Popover>
-                    <PopoverTrigger asChild>
-                        <Button variant="outline" className="w-full sm:w-[240px] justify-start text-left font-normal bg-white h-10">
-                        <CalendarIcon className="mr-2 h-4 w-4 text-muted-foreground" />
-                        {selectedDate ? format(selectedDate, "PPP", { locale: ca }) : <span>Tria una data</span>}
-                        </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar mode="single" selected={selectedDate} onSelect={setSelectedDate} initialFocus locale={ca} />
-                    </PopoverContent>
-                    </Popover>
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-1">Data de Servei</label>
+                        <Popover>
+                        <PopoverTrigger asChild>
+                            <Button variant="outline" className="w-full justify-start text-left font-bold bg-white border-2 h-14 rounded-2xl text-slate-700">
+                            <CalendarIcon className="mr-3 h-5 w-5 text-slate-300" />
+                            {selectedDate ? format(selectedDate, "PPP", { locale: ca }) : <span>Tria una data</span>}
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar mode="single" selected={selectedDate} onSelect={setSelectedDate} initialFocus locale={ca} />
+                        </PopoverContent>
+                        </Popover>
+                    </div>
 
-                    <Select value={selectedProject} onValueChange={setSelectedProject}>
-                    <SelectTrigger className="w-full sm:w-[220px] bg-white h-10">
-                        <Briefcase className="mr-2 h-4 w-4 text-muted-foreground" />
-                        <SelectValue placeholder="Obra / Projecte" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="all">Totes les Obres</SelectItem>
-                        {projectNames.map(name => (
-                        <SelectItem key={name} value={name}>{name}</SelectItem>
-                        ))}
-                    </SelectContent>
-                    </Select>
-                    
-                    {(selectedUser !== 'all' || selectedDate || selectedProject !== 'all') && (
-                    <Button variant="ghost" onClick={() => { setSelectedUser('all'); setSelectedDate(undefined); setSelectedProject('all'); }} className="text-xs">
-                        Netejar Filtres
-                    </Button>
-                    )}
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-1">Obra / Projecte</label>
+                        <Select value={selectedProject} onValueChange={setSelectedProject}>
+                        <SelectTrigger className="bg-white border-2 h-14 rounded-2xl font-bold text-slate-700">
+                            <Briefcase className="mr-3 h-5 w-5 text-slate-300" />
+                            <SelectValue placeholder="Totes les Obres" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">Totes les Obres</SelectItem>
+                            {projectNames.map(name => (
+                            <SelectItem key={name} value={name}>{name}</SelectItem>
+                            ))}
+                        </SelectContent>
+                        </Select>
+                    </div>
                 </div>
+                
+                {(selectedUser !== 'all' || selectedDate || selectedProject !== 'all') && (
+                    <div className="flex justify-end pt-4">
+                        <Button variant="ghost" onClick={() => { setSelectedUser('all'); setSelectedDate(undefined); setSelectedProject('all'); }} className="text-[10px] font-black uppercase text-primary tracking-widest hover:bg-primary/5">
+                            <X className="h-3 w-3 mr-1" /> Netejar Filtres
+                        </Button>
+                    </div>
+                )}
             </CardHeader>
+            
             <CardContent className="p-0">
                 <div className="overflow-x-auto">
                     <Table>
                     <TableHeader className="bg-slate-50/30">
-                        <TableRow>
-                        <TableHead className="w-[40px] px-4">
+                        <TableRow className="border-b-2 border-slate-50">
+                        <TableHead className="w-[60px] px-8 py-6">
                             <Checkbox
                                 checked={selectedRows.length > 0 && filteredServices.length > 0 && selectedRows.length === filteredServices.length}
                                 onCheckedChange={(checked) => setSelectedRows(checked ? filteredServices.map(s => s.id) : [])}
                             />
                         </TableHead>
-                        <TableHead>Tècnic</TableHead>
-                        <TableHead>Data i Hora</TableHead>
-                        <TableHead>Obra</TableHead>
-                        <TableHead className="hidden md:table-cell">Descripció</TableHead>
-                        <TableHead className="text-right px-4">Acció</TableHead>
+                        <TableHead className="font-black uppercase text-[10px] tracking-widest text-slate-400">Tècnic</TableHead>
+                        <TableHead className="font-black uppercase text-[10px] tracking-widest text-slate-400">Data i Hora</TableHead>
+                        <TableHead className="font-black uppercase text-[10px] tracking-widest text-slate-400">Obra</TableHead>
+                        <TableHead className="font-black uppercase text-[10px] tracking-widest text-slate-400 hidden md:table-cell">Descripció</TableHead>
+                        <TableHead className="text-right px-8 font-black uppercase text-[10px] tracking-widest text-slate-400">Acció</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {filteredServices.length > 0 ? filteredServices.map(service => (
-                        <TableRow key={service.id} className={cn((service as any).rowColor, "hover:bg-slate-100/50 transition-colors")}>
-                            <TableCell className="px-4">
+                        <TableRow key={service.id} className={cn((service as any).rowColor, "hover:bg-slate-100/50 transition-colors border-b border-slate-50")}>
+                            <TableCell className="px-8">
                                 <Checkbox
                                     checked={selectedRows.includes(service.id)}
                                     onCheckedChange={(checked) => {
@@ -311,25 +325,36 @@ export default function DashboardPage() {
                                 />
                             </TableCell>
                             <TableCell>
-                                <div className="flex items-center gap-2">
-                                    <div className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: getUserColor(service.employeeId) }} />
-                                    <span className="font-semibold text-sm whitespace-nowrap">{getEmployeeNameDisplay(service)}</span>
+                                <div className="flex items-center gap-3">
+                                    <div className="h-3 w-3 rounded-full shrink-0 shadow-sm" style={{ backgroundColor: getUserColor(service.employeeId) }} />
+                                    <span className="font-black text-xs text-slate-900 uppercase tracking-tight">{getEmployeeNameDisplay(service)}</span>
                                 </div>
                             </TableCell>
-                            <TableCell className="text-xs whitespace-nowrap">{format(parseISO(service.arrivalDateTime), 'dd/MM/yy HH:mm')}</TableCell>
-                            <TableCell className="max-w-[150px] truncate font-medium">{service.projectName || 'Sense nom'}</TableCell>
-                            <TableCell className="max-w-[250px] truncate text-muted-foreground text-xs hidden md:table-cell">{service.description}</TableCell>
-                            <TableCell className="text-right px-4">
-                                <Button variant="outline" size="sm" asChild className="h-8 font-bold">
+                            <TableCell className="font-bold text-slate-500 text-xs whitespace-nowrap">
+                                {format(parseISO(service.arrivalDateTime), 'dd/MM/yy HH:mm')}
+                            </TableCell>
+                            <TableCell className="max-w-[180px] truncate font-black text-slate-900 uppercase text-xs">
+                                {service.projectName || 'SENSE NOM'}
+                            </TableCell>
+                            <TableCell className="max-w-[300px] truncate text-slate-400 text-xs hidden md:table-cell italic font-medium">
+                                {service.description}
+                            </TableCell>
+                            <TableCell className="text-right px-8">
+                                <Button variant="outline" size="sm" asChild className="h-10 px-5 border-2 border-slate-200 rounded-xl font-black uppercase text-[10px] tracking-widest hover:border-primary hover:text-primary transition-all">
                                     <Link href={`/dashboard/edit/${service.id}?ownerId=${service.employeeId}`}>
-                                        <Edit className="h-3 w-3 mr-1" /> Editar
+                                        <Edit className="h-3.5 w-3.5 mr-2" /> Editar
                                     </Link>
                                 </Button>
                             </TableCell>
                         </TableRow>
                         )) : (
                         <TableRow>
-                            <TableCell colSpan={6} className="h-32 text-center text-muted-foreground italic">No s'han trobat registres que coincideixin.</TableCell>
+                            <TableCell colSpan={6} className="h-64 text-center">
+                                <div className="flex flex-col items-center justify-center space-y-4 opacity-30 grayscale">
+                                    <Search className="h-12 w-12" />
+                                    <p className="font-black uppercase text-xs tracking-widest italic">No s'han trobat registres que coincideixin.</p>
+                                </div>
+                            </TableCell>
                         </TableRow>
                         )}
                     </TableBody>
