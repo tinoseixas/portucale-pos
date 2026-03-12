@@ -1,14 +1,14 @@
 
 'use client'
 
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
-import { PlusCircle, Calendar as CalendarIcon, User, Edit, Trash2, Briefcase, Filter, History, Search, X, Download, AlertTriangle, ShieldCheck } from 'lucide-react'
+import { PlusCircle, Calendar as CalendarIcon, User, Edit, Trash2, Briefcase, Filter, History, Search, X, Download, AlertTriangle, ShieldCheck, Loader2 } from 'lucide-react'
 import type { ServiceRecord, Employee } from '@/lib/types'
 import { useUser, useFirestore, updateDocumentNonBlocking, useDoc, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy, getDocs, collectionGroup, doc } from 'firebase/firestore';
+import { collection, query, orderBy, getDocs, collectionGroup, doc, getDoc, setDoc } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton'
 import { Card, CardHeader, CardContent, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
@@ -71,6 +71,58 @@ export default function DashboardPage() {
   }, [firestore, user]);
   const { data: currentEmployee } = useDoc<Employee>(employeeDocRef);
 
+  const handleCloudBackup = useCallback(async () => {
+    if (!firestore || !user) return;
+    const today = format(new Date(), 'yyyy-MM-dd');
+    const backupId = `daily_${today}`;
+    const backupRef = doc(firestore, 'backups', backupId);
+
+    try {
+        const backupSnap = await getDoc(backupRef);
+        if (backupSnap.exists()) {
+            console.log("Cloud backup already exists for today.");
+            return;
+        }
+
+        console.log("Starting automatic cloud backup...");
+        const data: any = {
+            customers: [],
+            projects: [],
+            albarans: [],
+            invoices: [],
+            quotes: [],
+            receipts: [],
+            serviceRecords: []
+        };
+
+        const collections = ['customers', 'projects', 'albarans', 'invoices', 'quotes', 'receipts', 'employees'];
+        for (const colName of collections) {
+            const snap = await getDocs(collection(firestore, colName));
+            data[colName] = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        }
+
+        const servicesSnap = await getDocs(collectionGroup(firestore, 'serviceRecords'));
+        data.serviceRecords = servicesSnap.docs.map(d => ({ 
+            id: d.id, 
+            parentPath: d.ref.parent.path, 
+            ...d.data() 
+        }));
+
+        await setDoc(backupRef, {
+            id: backupId,
+            createdAt: new Date().toISOString(),
+            data: JSON.stringify(data),
+            createdBy: user.uid
+        });
+
+        console.log("Automatic cloud backup completed.");
+        localStorage.setItem('last_backup_date', today);
+        setNeedsBackup(false);
+    } catch (e) {
+        console.error("Error in automatic cloud backup:", e);
+    }
+  }, [firestore, user]);
+
   useEffect(() => {
     if (isUserLoading || !firestore || !user) {
       if (!isUserLoading && !user) setIsLoadingData(false);
@@ -97,6 +149,8 @@ export default function DashboardPage() {
                 const today = format(new Date(), 'yyyy-MM-dd');
                 if (lastBackup !== today) {
                     setNeedsBackup(true);
+                    // Trigger cloud backup automatically
+                    handleCloudBackup();
                 }
             }
 
@@ -108,7 +162,7 @@ export default function DashboardPage() {
     };
     
     fetchData();
-  }, [firestore, isUserLoading, user, currentEmployee?.role]);
+  }, [firestore, isUserLoading, user, currentEmployee?.role, handleCloudBackup]);
   
   const projectNames = useMemo(() => {
     const names = allServices.map(service => service.projectName?.trim()).filter(Boolean);
@@ -198,7 +252,7 @@ export default function DashboardPage() {
             serviceRecords: []
         };
 
-        const collections = ['customers', 'projects', 'albarans', 'invoices', 'quotes', 'receipts'];
+        const collections = ['customers', 'projects', 'albarans', 'invoices', 'quotes', 'receipts', 'employees'];
         for (const colName of collections) {
             const snap = await getDocs(collection(firestore, colName));
             data[colName] = snap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -255,7 +309,7 @@ export default function DashboardPage() {
                   </div>
                   <div>
                       <p className="font-black text-slate-900 uppercase tracking-tight">Còpia de Seguretat Necessària</p>
-                      <p className="text-xs text-slate-500 font-bold uppercase tracking-widest">No has fet el backup diari avui. Protegeix la teva feina.</p>
+                      <p className="text-xs text-slate-500 font-bold uppercase tracking-widest">S'ha iniciat el backup automàtic al Firebase. Protegeix la teva feina.</p>
                   </div>
               </div>
               <Button onClick={handleBackup} disabled={isExporting} className="bg-primary hover:bg-primary/90 text-white font-black uppercase tracking-widest h-14 px-10 rounded-2xl shadow-xl w-full md:w-auto">
@@ -459,3 +513,5 @@ export default function DashboardPage() {
     </div>
   );
 }
+
+    

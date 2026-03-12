@@ -5,17 +5,18 @@ import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useCollection, useUser, useFirestore, useMemoFirebase } from '@/firebase'
-import { collection, query, doc, getDocs, writeBatch, collectionGroup, addDoc, setDoc } from 'firebase/firestore'
+import { collection, query, doc, getDocs, writeBatch, collectionGroup, addDoc, setDoc, orderBy, limit } from 'firebase/firestore'
 import type { Employee, Customer, ServiceRecord, Albaran, Invoice, Quote, Project, Receipt } from '@/lib/types'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Edit, ShieldAlert, Loader2, Database, AlertCircle, Download, Upload, RefreshCw, FileWarning } from 'lucide-react'
+import { Edit, ShieldAlert, Loader2, Database, AlertCircle, Download, Upload, RefreshCw, FileWarning, Cloud } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { AdminGate } from '@/components/AdminGate'
-import { format } from 'date-fns'
+import { format, parseISO } from 'date-fns'
+import { ca } from 'date-fns/locale'
 
 const WhatsAppIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg viewBox="0 0 24 24" fill="currentColor" {...props}>
@@ -38,6 +39,13 @@ export default function UsersPage() {
   }, [firestore, user])
 
   const { data: employees, isLoading: isLoadingEmployees } = useCollection<Employee>(employeesQuery)
+
+  const backupsQuery = useMemoFirebase(() => {
+    if (!user || !firestore) return null;
+    return query(collection(firestore, 'backups'), orderBy('createdAt', 'desc'), limit(10))
+  }, [firestore, user]);
+
+  const { data: cloudBackups, isLoading: isLoadingBackups } = useCollection<any>(backupsQuery);
   
   useEffect(() => {
     if (!isUserLoading && !user) {
@@ -128,7 +136,7 @@ export default function UsersPage() {
             serviceRecords: []
         };
 
-        const collections = ['customers', 'projects', 'albarans', 'invoices', 'quotes', 'receipts'];
+        const collections = ['customers', 'projects', 'albarans', 'invoices', 'quotes', 'receipts', 'employees'];
         for (const colName of collections) {
             const snap = await getDocs(collection(firestore, colName));
             data[colName] = snap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -186,7 +194,7 @@ export default function UsersPage() {
             });
 
             // 4. Otros documentos
-            ['albarans', 'invoices', 'quotes', 'receipts'].forEach(col => {
+            ['albarans', 'invoices', 'quotes', 'receipts', 'employees'].forEach(col => {
                 data[col]?.forEach((docData: any) => {
                     const { id, ...rest } = docData;
                     batch.set(doc(firestore, col, id), rest);
@@ -279,70 +287,114 @@ export default function UsersPage() {
         </Card>
 
         {isAdmin && (
-            <Card className="border-none shadow-2xl bg-blue-50/50 rounded-[2.5rem] overflow-hidden">
-                <CardHeader className="bg-primary text-white p-8">
-                    <CardTitle className="text-xl font-black uppercase tracking-widest flex items-center gap-2">
-                        <ShieldAlert className="h-6 w-6" />
-                        Zona de Recuperació e Backup
-                    </CardTitle>
-                    <CardDescription className="text-blue-100 font-medium italic">Accions per restaurar o protegir les teves dades.</CardDescription>
-                </CardHeader>
-                <CardContent className="p-8 space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="p-6 bg-white rounded-3xl border-2 border-primary/10 shadow-sm space-y-4">
-                            <div className="space-y-1">
-                                <p className="font-black text-primary uppercase text-xs">Còpia de Seguretat Total</p>
-                                <p className="text-[10px] text-slate-400 font-bold uppercase">Exporta TOTS els registres (Clientes, Obras, Facturas, etc).</p>
-                            </div>
-                            <Button variant="outline" onClick={handleExportData} className="w-full h-12 border-primary text-primary font-black uppercase tracking-widest rounded-xl hover:bg-primary/5">
-                                <Download className="h-4 w-4 mr-2" />
-                                EXPORTAR TOTA LA BASE
-                            </Button>
+            <div className="space-y-10">
+                <Card className="border-none shadow-2xl bg-blue-50/50 rounded-[2.5rem] overflow-hidden">
+                    <CardHeader className="bg-primary text-white p-8">
+                        <CardTitle className="text-xl font-black uppercase tracking-widest flex items-center gap-2">
+                            <Cloud className="h-6 w-6" />
+                            Còpies de Seguretat al Firebase
+                        </CardTitle>
+                        <CardDescription className="text-blue-100 font-medium italic">Historial de backups automàtics guardats a la nuvol.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="p-0 bg-white">
+                        <div className="overflow-x-auto">
+                            <Table>
+                                <TableHeader className="bg-slate-50">
+                                    <TableRow>
+                                        <TableHead className="px-8 py-4 font-black uppercase text-[10px] tracking-widest">Identificador</TableHead>
+                                        <TableHead className="font-black uppercase text-[10px] tracking-widest">Data i Hora</TableHead>
+                                        <TableHead className="text-right px-8 font-black uppercase text-[10px] tracking-widest">Estat</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {isLoadingBackups ? (
+                                        <TableRow><TableCell colSpan={3} className="text-center py-8"><Loader2 className="animate-spin h-6 w-6 mx-auto text-primary" /></TableCell></TableRow>
+                                    ) : cloudBackups && cloudBackups.length > 0 ? cloudBackups.map(backup => (
+                                        <TableRow key={backup.id} className="hover:bg-slate-50">
+                                            <TableCell className="px-8 py-4 font-bold text-slate-600">{backup.id}</TableCell>
+                                            <TableCell className="text-xs font-medium text-slate-400">
+                                                {format(parseISO(backup.createdAt), 'dd MMMM yyyy HH:mm', { locale: ca })}
+                                            </TableCell>
+                                            <TableCell className="text-right px-8">
+                                                <Badge className="bg-green-100 text-green-700 border-green-200 uppercase font-black text-[10px]">Cloud OK</Badge>
+                                            </TableCell>
+                                        </TableRow>
+                                    )) : (
+                                        <TableRow><TableCell colSpan={3} className="text-center py-8 text-slate-400 italic">No hi ha backups al núvol encara.</TableCell></TableRow>
+                                    )}
+                                </TableBody>
+                            </Table>
                         </div>
-                        <div className="p-6 bg-white rounded-3xl border-2 border-primary/10 shadow-sm space-y-4">
-                            <div className="space-y-1">
-                                <p className="font-black text-primary uppercase text-xs">Restaurar des de Fitxer</p>
-                                <p className="text-[10px] text-slate-400 font-bold uppercase">Carrega un fitxer .json prèviament exportat.</p>
-                            </div>
-                            <div className="relative">
-                                <input type="file" accept=".json" onChange={handleImportData} className="hidden" id="import-json" />
-                                <Button asChild variant="outline" disabled={isImporting} className="w-full h-12 border-primary text-primary font-black uppercase tracking-widest rounded-xl hover:bg-primary/5 cursor-pointer">
-                                    <label htmlFor="import-json" className="flex items-center justify-center gap-2">
-                                        {isImporting ? <Loader2 className="animate-spin h-4 w-4" /> : <Upload className="h-4 w-4" />}
-                                        IMPORTAR BACKUP .JSON
-                                    </label>
+                    </CardContent>
+                </Card>
+
+                <Card className="border-none shadow-2xl bg-slate-50 rounded-[2.5rem] overflow-hidden">
+                    <CardHeader className="bg-slate-900 text-white p-8">
+                        <CardTitle className="text-xl font-black uppercase tracking-widest flex items-center gap-2">
+                            <ShieldAlert className="h-6 w-6 text-primary" />
+                            Zona de Recuperació Manual
+                        </CardTitle>
+                        <CardDescription className="text-slate-400 font-medium italic">Accions per restaurar o exportar dades al teu ordinador.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="p-8 space-y-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="p-6 bg-white rounded-3xl border-2 border-primary/10 shadow-sm space-y-4">
+                                <div className="space-y-1">
+                                    <p className="font-black text-primary uppercase text-xs">Còpia de Seguretat Local</p>
+                                    <p className="text-[10px] text-slate-400 font-bold uppercase">Descarrega TOTS els registres en format .json.</p>
+                                </div>
+                                <Button variant="outline" onClick={handleExportData} className="w-full h-12 border-primary text-primary font-black uppercase tracking-widest rounded-xl hover:bg-primary/5">
+                                    <Download className="h-4 w-4 mr-2" />
+                                    EXPORTAR ARA
                                 </Button>
                             </div>
-                        </div>
-                    </div>
-
-                    <div className="p-6 bg-amber-50 rounded-3xl border-2 border-amber-200 shadow-sm space-y-4">
-                        <div className="flex items-start gap-4">
-                            <div className="bg-amber-100 p-2 rounded-xl">
-                                <FileWarning className="h-6 w-6 text-amber-600" />
+                            <div className="p-6 bg-white rounded-3xl border-2 border-primary/10 shadow-sm space-y-4">
+                                <div className="space-y-1">
+                                    <p className="font-black text-primary uppercase text-xs">Restaurar des de Fitxer</p>
+                                    <p className="text-[10px] text-slate-400 font-bold uppercase">Carrega un fitxer .json prèviament exportat.</p>
+                                </div>
+                                <div className="relative">
+                                    <input type="file" accept=".json" onChange={handleImportData} className="hidden" id="import-json" />
+                                    <Button asChild variant="outline" disabled={isImporting} className="w-full h-12 border-primary text-primary font-black uppercase tracking-widest rounded-xl hover:bg-primary/5 cursor-pointer">
+                                        <label htmlFor="import-json" className="flex items-center justify-center gap-2">
+                                            {isImporting ? <Loader2 className="animate-spin h-4 w-4" /> : <Upload className="h-4 w-4" />}
+                                            IMPORTAR BACKUP
+                                        </label>
+                                    </Button>
+                                </div>
                             </div>
-                            <div className="space-y-1">
-                                <p className="font-black text-amber-800 uppercase text-xs">Emergència: Dades de Prova</p>
-                                <p className="text-[10px] text-amber-600 font-bold uppercase">Només si la base està buida i vols carregar exemples.</p>
+                        </div>
+
+                        <div className="p-6 bg-amber-50 rounded-3xl border-2 border-amber-200 shadow-sm space-y-4">
+                            <div className="flex items-start gap-4">
+                                <div className="bg-amber-100 p-2 rounded-xl">
+                                    <FileWarning className="h-6 w-6 text-amber-600" />
+                                </div>
+                                <div className="space-y-1">
+                                    <p className="font-black text-amber-800 uppercase text-xs">Emergència: Dades de Prova</p>
+                                    <p className="text-[10px] text-amber-600 font-bold uppercase">Només si la base està buida i vols carregar exemples.</p>
+                                </div>
+                            </div>
+                            <Button variant="outline" onClick={handleRestoreSampleData} disabled={isSeeding} className="w-full h-12 border-amber-300 text-amber-700 font-black uppercase tracking-widest rounded-xl hover:bg-amber-100">
+                                {isSeeding ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <RefreshCw className="h-4 w-4 mr-2" />}
+                                CARREGAR MOSTRA COMPLETA
+                            </Button>
+                        </div>
+
+                        <div className="bg-slate-900 border-2 border-primary p-4 rounded-2xl flex gap-3 shadow-inner">
+                            <AlertCircle className="h-6 w-6 text-primary shrink-0" />
+                            <div className="text-[10px] font-bold text-slate-400 uppercase leading-relaxed">
+                                <span className="text-white">RECOMANACIÓ:</span> El sistema fa backups automàtics cada dia al Firebase. 
+                                En cas de pèrdua massiva, contacta amb suport per restaurar una versió de l'historial del núvol.
                             </div>
                         </div>
-                        <Button variant="outline" onClick={handleRestoreSampleData} disabled={isSeeding} className="w-full h-12 border-amber-300 text-amber-700 font-black uppercase tracking-widest rounded-xl hover:bg-amber-100">
-                            {isSeeding ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <RefreshCw className="h-4 w-4 mr-2" />}
-                            CARREGAR MOSTRA COMPLETA
-                        </Button>
-                    </div>
-
-                    <div className="bg-slate-900 border-2 border-primary p-4 rounded-2xl flex gap-3 shadow-inner">
-                        <AlertCircle className="h-6 w-6 text-primary shrink-0" />
-                        <div className="text-[10px] font-bold text-slate-400 uppercase leading-relaxed">
-                            <span className="text-white">RECOMANACIÓ:</span> Els servidors de Google no permeten desfer eliminacions directament. 
-                            Fes un backup un cop per setmana i guarda'l en un disc dur extern ou al núvol (Drive/Dropbox).
-                        </div>
-                    </div>
-                </CardContent>
-            </Card>
+                    </CardContent>
+                </Card>
+            </div>
         )}
         </div>
     </AdminGate>
   )
 }
+
+    

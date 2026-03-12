@@ -393,6 +393,19 @@
         }
       },
       "required": ["lastNumber"]
+    },
+    "Backup": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Backup",
+      "type": "object",
+      "description": "Represents a cloud backup of the database.",
+      "properties": {
+        "id": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "data": { "type": "string", "description": "JSON string of the database state" },
+        "createdBy": { "type": "string" }
+      },
+      "required": ["id", "createdAt", "data"]
     }
   },
   "auth": {
@@ -535,8 +548,19 @@
             "description": "Counter for receipt numbers.",
             "params": []
         }
+      },
+      {
+        "path": "/backups/{backupId}",
+        "definition": {
+            "entityName": "Backup",
+            "schema": { "$ref": "#/backend/entities/Backup" },
+            "description": "Stores daily automatic cloud backups.",
+            "params": [{ "name": "backupId", "description": "ID of the backup" }]
+        }
       }
     ],
-    "reasoning": "Updated structure to include a dedicated Projects collection for managing 'obres actives' and allowing them to be archived."
+    "reasoning": "Updated structure to include a Backups collection for automatic daily cloud storage of database state."
   }
 }
+
+    
