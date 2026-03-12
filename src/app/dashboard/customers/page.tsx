@@ -126,11 +126,8 @@ export default function CustomersPage() {
             const bstr = evt.target?.result;
             const wb = XLSX.read(bstr, { type: 'binary' });
             const ws = wb.Sheets[wb.SheetNames[0]];
-            // defval: "" garanteix que cel·les buides no facin saltar les columnes
             const data = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "" }) as any[][];
             
-            // MAPEIG ESTRICTE DE 7 COLUMNES SEGUINT ORDRE A-G:
-            // A(0): Nom, B(1): NRT, C(2): Rua, D(3): Ciutat, E(4): CP, F(5): Tel, G(6): Email
             const parsed: Partial<Customer>[] = data.slice(1).map(row => {
                 const getString = (val: any) => val !== undefined && val !== null ? String(val).trim() : "";
                 return {
@@ -145,7 +142,7 @@ export default function CustomersPage() {
             }).filter(c => c.name && c.name.length > 1 && c.name !== "Nom" && c.name !== "Name");
             
             setExcelCustomers(parsed);
-            toast({ title: "Excel processat", description: `S'han detectat ${parsed.length} línies de dades (ignorant capçalera).` });
+            toast({ title: "Excel processat", description: `S'han detectat ${parsed.length} línies de dades.` });
         } catch (err) {
             toast({ variant: 'destructive', title: "Error llegint el fitxer Excel" });
         }
@@ -188,127 +185,127 @@ export default function CustomersPage() {
 
   return (
     <AdminGate pageTitle="Gestió de Clients" pageDescription="Administració centralitzada de dades.">
-        <div className="max-w-7xl mx-auto space-y-8 px-4">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
+        <div className="max-w-7xl mx-auto space-y-8 px-2 md:px-6">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 px-2">
             <div className="space-y-1">
                 <h1 className="text-4xl md:text-5xl font-black uppercase tracking-tighter text-slate-900 flex items-center gap-3">
-                    <Building className="h-10 w-10 text-primary" /> Base de Clients
+                    <Building className="h-8 w-8 md:h-10 md:w-10 text-primary" /> Base de Clients
                 </h1>
-                <p className="text-slate-400 font-bold uppercase text-[10px] tracking-widest pl-1">Ordre de 7 columnes (Nom, NRT, Rua, Ciutat, CP, Tel, Email).</p>
+                <p className="text-slate-400 font-bold uppercase text-[9px] md:text-[10px] tracking-widest pl-1">Ordre de 7 columnes (Nom, NRT, Rua, Ciutat, CP, Tel, Email).</p>
             </div>
-            <div className="flex gap-3 w-full sm:w-auto">
+            <div className="flex flex-wrap gap-2 w-full md:w-auto">
                 <Dialog open={isBulkDialogOpen} onOpenChange={setIsBulkDialogOpen}>
                     <DialogTrigger asChild>
-                        <Button variant="outline" className="h-14 px-6 border-2 border-primary text-primary font-black uppercase tracking-widest rounded-2xl shadow-lg hover:bg-primary/5">
-                            <ListPlus className="mr-2 h-5 w-5" /> Importar Excel
+                        <Button variant="outline" className="h-12 md:h-14 px-4 md:px-6 border-2 border-primary text-primary font-black uppercase tracking-widest rounded-2xl shadow-lg hover:bg-primary/5 text-[10px] md:text-xs">
+                            <ListPlus className="mr-2 h-4 w-4 md:h-5 md:w-5" /> Importar Excel
                         </Button>
                     </DialogTrigger>
-                    <DialogContent className="rounded-[2.5rem] max-w-xl">
+                    <DialogContent className="rounded-[2rem] max-w-[95vw] md:max-w-xl">
                         <DialogHeader>
-                            <DialogTitle className="text-2xl font-black uppercase">Importar Excel amb Capçalera</DialogTitle>
-                            <DialogDescription className="font-bold text-primary">
-                                El sistema ignorarà la 1ª fila. Ordre: 1.Nom | 2.NRT | 3.Rua | 4.Ciutat | 5.CP | 6.Tel | 7.Email
+                            <DialogTitle className="text-xl md:text-2xl font-black uppercase">Importar Excel</DialogTitle>
+                            <DialogDescription className="font-bold text-primary text-xs md:text-sm">
+                                Ordre Estricte: Nom | NRT | Rua | Ciutat | CP | Tel | Email
                             </DialogDescription>
                         </DialogHeader>
-                        <div className="py-4 space-y-6">
+                        <div className="py-4 space-y-4 md:space-y-6">
                             {excelCustomers.length > 0 ? (
-                                <div className="bg-green-50 border-2 border-green-200 p-6 rounded-3xl flex items-center justify-between">
-                                    <div className="flex items-center gap-4">
-                                        <CheckSquare className="h-8 w-8 text-green-600" />
+                                <div className="bg-green-50 border-2 border-green-200 p-4 md:p-6 rounded-2xl md:rounded-3xl flex items-center justify-between gap-4">
+                                    <div className="flex items-center gap-3 md:gap-4">
+                                        <CheckSquare className="h-6 w-6 md:h-8 md:w-8 text-green-600" />
                                         <div>
-                                            <p className="font-black text-green-800 uppercase text-sm">{excelCustomers.length} Registres Detectats</p>
-                                            <p className="text-[10px] text-green-600 font-bold uppercase">Pronts per carregar a la base de dades.</p>
+                                            <p className="font-black text-green-800 uppercase text-xs md:text-sm">{excelCustomers.length} Registres Detectats</p>
+                                            <p className="text-[9px] md:text-[10px] text-green-600 font-bold uppercase">Pronts per carregar.</p>
                                         </div>
                                     </div>
-                                    <Button variant="ghost" onClick={() => setExcelCustomers([])} className="text-green-700 hover:bg-green-100">Netejar</Button>
+                                    <Button variant="ghost" onClick={() => setExcelCustomers([])} className="text-green-700 hover:bg-green-100 text-xs">Netejar</Button>
                                 </div>
                             ) : (
-                                <div className="p-8 border-4 border-dashed border-primary/20 rounded-3xl bg-primary/5 text-center space-y-4">
-                                    <FileSpreadsheet className="h-12 w-12 mx-auto text-primary" />
+                                <div className="p-6 md:p-8 border-4 border-dashed border-primary/20 rounded-2xl md:rounded-3xl bg-primary/5 text-center space-y-4">
+                                    <FileSpreadsheet className="h-10 w-10 md:h-12 md:w-12 mx-auto text-primary" />
                                     <div className="space-y-1">
                                         <p className="text-xs font-black uppercase text-slate-600">Pujar fitxer .xlsx o .xls</p>
-                                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Es mapejaran les primeres 7 columnes a partir de la 2ª fila.</p>
+                                        <p className="text-[8px] md:text-[9px] font-bold text-slate-400 uppercase tracking-widest">Es mapegen les primeres 7 columnes (ignora 1ª fila).</p>
                                     </div>
                                     <input type="file" ref={fileInputRef} onChange={handleExcelUpload} accept=".xlsx, .xls" className="hidden" />
-                                    <Button onClick={() => fileInputRef.current?.click()} variant="outline" className="border-primary text-primary font-bold px-8">Escollir fitxer</Button>
+                                    <Button onClick={() => fileInputRef.current?.click()} variant="outline" className="border-primary text-primary font-bold px-6 md:px-8 text-xs h-10">Escollir fitxer</Button>
                                 </div>
                             )}
                             <div className="space-y-2">
-                                <Label className="text-[10px] font-black uppercase text-slate-400 pl-1">O enganxa noms manualment (un per línia)</Label>
-                                <Textarea value={bulkText} onChange={(e) => setBulkText(e.target.value)} rows={4} className="rounded-2xl border-2 font-bold bg-slate-50" placeholder="Nom del Client 1&#10;Nom del Client 2..." />
+                                <Label className="text-[9px] md:text-[10px] font-black uppercase text-slate-400 pl-1">O enganxa noms manualment (un per línia)</Label>
+                                <Textarea value={bulkText} onChange={(e) => setBulkText(e.target.value)} rows={3} className="rounded-xl border-2 font-bold bg-slate-50 text-xs" placeholder="Nom del Client 1&#10;Nom del Client 2..." />
                             </div>
                         </div>
                         <DialogFooter>
-                            <Button onClick={handleBulkImport} disabled={isImporting || (excelCustomers.length === 0 && !bulkText.trim())} className="bg-primary font-black uppercase w-full h-14 rounded-2xl shadow-xl">
-                                {isImporting ? <Loader2 className="animate-spin mr-2 h-5 w-5" /> : <Upload className="mr-2 h-5 w-5" />}
-                                EXECUTAR IMPORTACIÓ ARA
+                            <Button onClick={handleBulkImport} disabled={isImporting || (excelCustomers.length === 0 && !bulkText.trim())} className="bg-primary font-black uppercase w-full h-12 md:h-14 rounded-2xl shadow-xl text-xs">
+                                {isImporting ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : <Upload className="mr-2 h-4 w-4" />}
+                                EXECUTAR IMPORTACIÓ
                             </Button>
                         </DialogFooter>
                     </DialogContent>
                 </Dialog>
 
-                <Button onClick={() => router.push('/dashboard/customers/edit/new')} className="h-14 px-8 bg-accent text-accent-foreground font-black uppercase tracking-widest rounded-2xl shadow-xl hover:scale-[1.02] transition-transform">
-                    <PlusCircle className="mr-2 h-6 w-6" /> Nou Client
+                <Button onClick={() => router.push('/dashboard/customers/edit/new')} className="h-12 md:h-14 px-6 md:px-8 bg-accent text-accent-foreground font-black uppercase tracking-widest rounded-2xl shadow-xl hover:scale-[1.02] transition-transform flex-1 md:flex-none text-[10px] md:text-xs">
+                    <PlusCircle className="mr-2 h-5 w-5 md:h-6 md:w-6" /> Nou Client
                 </Button>
             </div>
         </div>
 
-        <Card className="border-none shadow-2xl rounded-[2.5rem] overflow-hidden bg-white">
-            <CardHeader className="bg-slate-900 text-white p-8">
-                <div className="flex flex-col md:flex-row justify-between items-center gap-6">
-                    <div className="flex items-center gap-4">
-                        <CardTitle className="text-xl font-black uppercase tracking-widest flex items-center gap-3">
+        <Card className="border-none shadow-2xl rounded-[2rem] md:rounded-[2.5rem] overflow-hidden bg-white mx-2">
+            <CardHeader className="bg-slate-900 text-white p-6 md:p-8">
+                <div className="flex flex-col lg:flex-row justify-between items-center gap-6">
+                    <div className="flex items-center gap-4 w-full lg:w-auto">
+                        <CardTitle className="text-lg md:text-xl font-black uppercase tracking-widest flex items-center gap-3">
                             Directori
-                            <Badge className="bg-accent text-accent-foreground font-black text-sm px-3">{displayCustomers.length}</Badge>
+                            <Badge className="bg-accent text-accent-foreground font-black text-xs md:text-sm px-3">{displayCustomers.length}</Badge>
                         </CardTitle>
                         {selectedRows.length > 0 && (
                             <AlertDialog>
                                 <AlertDialogTrigger asChild>
-                                    <Button variant="destructive" className="font-black uppercase text-[10px] tracking-widest h-10 px-6 rounded-xl animate-in zoom-in-95 shadow-lg">
-                                        <Trash2 className="mr-2 h-4 w-4" /> Esborrar Selecció ({selectedRows.length})
+                                    <Button variant="destructive" className="font-black uppercase text-[9px] md:text-[10px] tracking-widest h-9 md:h-10 px-4 md:px-6 rounded-xl animate-in zoom-in-95 shadow-lg">
+                                        <Trash2 className="mr-1.5 h-3.5 w-3.5" /> Esborrar ({selectedRows.length})
                                     </Button>
                                 </AlertDialogTrigger>
-                                <AlertDialogContent className="rounded-[2.5rem] p-10">
+                                <AlertDialogContent className="rounded-[2rem] p-8 md:p-10 max-w-[90vw] md:max-w-lg">
                                     <AlertDialogHeader>
-                                        <AlertDialogTitle className="text-2xl font-black uppercase text-slate-900">Confirmar Eliminació?</AlertDialogTitle>
-                                        <AlertDialogDescription className="text-base font-medium">S'esborraran {selectedRows.length} registres de forma permanent de la base de dades.</AlertDialogDescription>
+                                        <AlertDialogTitle className="text-xl md:text-2xl font-black uppercase text-slate-900">Confirmar Eliminació?</AlertDialogTitle>
+                                        <AlertDialogDescription className="text-sm md:text-base font-medium">S'esborraran {selectedRows.length} registres de forma permanent.</AlertDialogDescription>
                                     </AlertDialogHeader>
-                                    <AlertDialogFooter className="pt-6">
-                                        <AlertDialogCancel className="h-14 rounded-2xl font-bold px-8 border-2">Enrere</AlertDialogCancel>
-                                        <AlertDialogAction onClick={handleBulkDelete} className="bg-red-600 h-14 rounded-2xl font-black uppercase px-8">SÍ, ESBORRAR TOT</AlertDialogAction>
+                                    <AlertDialogFooter className="pt-6 flex flex-col md:flex-row gap-3">
+                                        <AlertDialogCancel className="h-12 md:h-14 rounded-2xl font-bold px-8 border-2 w-full md:w-auto">Enrere</AlertDialogCancel>
+                                        <AlertDialogAction onClick={handleBulkDelete} className="bg-red-600 h-12 md:h-14 rounded-2xl font-black uppercase px-8 w-full md:w-auto">SÍ, ESBORRAR TOT</AlertDialogAction>
                                     </AlertDialogFooter>
                                 </AlertDialogContent>
                             </AlertDialog>
                         )}
                     </div>
-                    <div className="relative w-full md:w-96">
-                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
-                        <Input placeholder="Cerca per nom, NRT o e-mail..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-12 bg-slate-800 border-none text-white h-14 rounded-2xl focus:ring-2 ring-primary" />
+                    <div className="relative w-full lg:w-96">
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 md:h-5 md:w-5 text-slate-400" />
+                        <Input placeholder="Cerca per nom, NRT o e-mail..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10 md:pl-12 bg-slate-800 border-none text-white h-12 md:h-14 rounded-2xl focus:ring-2 ring-primary text-xs md:text-sm" />
                     </div>
                 </div>
             </CardHeader>
             <CardContent className="p-0">
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-slate-200">
                 <Table>
                     <TableHeader className="bg-slate-50/50">
                     <TableRow className="border-b-2 border-slate-100">
-                        <TableHead className="w-[80px] px-8 py-6">
+                        <TableHead className="w-[60px] md:w-[80px] px-4 md:px-8 py-4 md:py-6">
                             <Checkbox 
                                 checked={selectedRows.length > 0 && selectedRows.length === displayCustomers.length} 
                                 onCheckedChange={(c) => setSelectedRows(c ? displayCustomers.map(x => x.id) : [])} 
                             />
                         </TableHead>
-                        <TableHead className="font-black uppercase text-[10px] tracking-widest text-slate-400">1. Nom del Client</TableHead>
-                        <TableHead className="font-black uppercase text-[10px] tracking-widest text-slate-400">2. NRT</TableHead>
-                        <TableHead className="font-black uppercase text-[10px] tracking-widest text-slate-400">3-5. Localització (Rua, Ciutat, CP)</TableHead>
-                        <TableHead className="font-black uppercase text-[10px] tracking-widest text-slate-400">6-7. Contacte</TableHead>
-                        <TableHead className="text-right px-8 font-black uppercase text-[10px] tracking-widest text-slate-400">Accions</TableHead>
+                        <TableHead className="font-black uppercase text-[9px] md:text-[10px] tracking-widest text-slate-400">1. Nom del Client</TableHead>
+                        <TableHead className="font-black uppercase text-[9px] md:text-[10px] tracking-widest text-slate-400">2. NRT</TableHead>
+                        <TableHead className="font-black uppercase text-[9px] md:text-[10px] tracking-widest text-slate-400">3-5. Localització</TableHead>
+                        <TableHead className="font-black uppercase text-[9px] md:text-[10px] tracking-widest text-slate-400">6-7. Contacte</TableHead>
+                        <TableHead className="text-right px-4 md:px-8 font-black uppercase text-[9px] md:text-[10px] tracking-widest text-slate-400">Accions</TableHead>
                     </TableRow>
                     </TableHeader>
                     <TableBody>
                     {displayCustomers.map(customer => (
                         <TableRow key={customer.id} className={`${selectedRows.includes(customer.id) ? 'bg-primary/5' : ''} hover:bg-slate-50 transition-colors border-b border-slate-50`}>
-                        <TableCell className="px-8 py-6">
+                        <TableCell className="px-4 md:px-8 py-4 md:py-6">
                             <Checkbox 
                                 checked={selectedRows.includes(customer.id)} 
                                 onCheckedChange={(c) => setSelectedRows(prev => c ? [...prev, customer.id] : prev.filter(x => x !== customer.id))} 
@@ -316,48 +313,48 @@ export default function CustomersPage() {
                         </TableCell>
                         <TableCell>
                             <div className="flex items-center gap-2">
-                                <span className="font-black text-slate-900 uppercase text-sm tracking-tight">{customer.name}</span>
-                                {customer.isDuplicate && <Badge variant="outline" className="bg-amber-50 text-amber-600 border-amber-200 text-[8px] font-black uppercase">Duplicat</Badge>}
+                                <span className="font-black text-slate-900 uppercase text-[11px] md:text-sm tracking-tight truncate max-w-[150px] md:max-w-none">{customer.name}</span>
+                                {customer.isDuplicate && <Badge variant="outline" className="bg-amber-50 text-amber-600 border-amber-200 text-[7px] md:text-[8px] font-black uppercase">Duplicat</Badge>}
                             </div>
                         </TableCell>
                         <TableCell>
-                            <Badge variant="outline" className="font-black text-[10px] border-slate-200 text-slate-500 bg-white">
+                            <Badge variant="outline" className="font-black text-[9px] md:text-[10px] border-slate-200 text-slate-500 bg-white">
                                 {customer.nrt || 'N/A'}
                             </Badge>
                         </TableCell>
                         <TableCell>
-                            <div className="text-[10px] font-bold text-slate-500 uppercase leading-relaxed">
-                                <p className="text-slate-900 font-black truncate max-w-[220px]">{customer.street || '---'}</p>
+                            <div className="text-[9px] md:text-[10px] font-bold text-slate-500 uppercase leading-relaxed">
+                                <p className="text-slate-900 font-black truncate max-w-[150px] md:max-w-[220px]">{customer.street || '---'}</p>
                                 <p className="flex items-center gap-1">
                                     <MapPin className="h-2 w-2 text-primary" /> {customer.postalCode} {customer.city}
                                 </p>
                             </div>
                         </TableCell>
                         <TableCell>
-                            <div className="space-y-1 text-[10px] font-bold text-slate-500">
-                                {customer.email && <p className="flex items-center gap-2 text-primary font-black uppercase tracking-tight truncate max-w-[180px]"><Mail className="h-3 w-3" /> {customer.email}</p>}
-                                {customer.contact && <p className="flex items-center gap-2 text-slate-400"><Phone className="h-3 w-3" /> {customer.contact}</p>}
+                            <div className="space-y-1 text-[9px] md:text-[10px] font-bold text-slate-500">
+                                {customer.email && <p className="flex items-center gap-1.5 text-primary font-black uppercase tracking-tight truncate max-w-[140px] md:max-w-[180px]"><Mail className="h-2.5 w-2.5" /> {customer.email}</p>}
+                                {customer.contact && <p className="flex items-center gap-1.5 text-slate-400"><Phone className="h-2.5 w-2.5" /> {customer.contact}</p>}
                             </div>
                         </TableCell>
-                        <TableCell className="text-right px-8">
-                            <div className="flex justify-end gap-3">
-                                <Button variant="outline" size="icon" onClick={() => router.push(`/dashboard/customers/edit/${customer.id}`)} className="h-10 w-10 border-2 rounded-xl text-primary border-primary/20 hover:bg-primary hover:text-white transition-all shadow-sm">
-                                    <Edit className="h-4 w-4" />
+                        <TableCell className="text-right px-4 md:px-8">
+                            <div className="flex justify-end gap-2 md:gap-3">
+                                <Button variant="outline" size="icon" onClick={() => router.push(`/dashboard/customers/edit/${customer.id}`)} className="h-8 w-8 md:h-10 md:w-10 border-2 rounded-xl text-primary border-primary/20 hover:bg-primary hover:text-white transition-all shadow-sm">
+                                    <Edit className="h-3.5 w-3.5 md:h-4 md:w-4" />
                                 </Button>
                                 <AlertDialog>
                                     <AlertDialogTrigger asChild>
-                                        <Button variant="ghost" size="icon" className="h-10 w-10 text-red-300 hover:text-red-600 hover:bg-red-50 rounded-xl">
-                                            <Trash2 className="h-4 w-4" />
+                                        <Button variant="ghost" size="icon" className="h-8 w-8 md:h-10 md:w-10 text-red-300 hover:text-red-600 hover:bg-red-50 rounded-xl">
+                                            <Trash2 className="h-3.5 w-3.5 md:h-4 md:w-4" />
                                         </Button>
                                     </AlertDialogTrigger>
-                                    <AlertDialogContent className="rounded-[2.5rem] p-10">
+                                    <AlertDialogContent className="rounded-[2rem] p-8 md:p-10 max-w-[90vw] md:max-w-lg">
                                         <AlertDialogHeader>
-                                            <AlertDialogTitle className="text-2xl font-black uppercase">Eliminar Client?</AlertDialogTitle>
-                                            <AlertDialogDescription className="text-base font-medium">Aquesta acció no es pot desfer. Les dades de <strong>{customer.name}</strong> es perdran.</AlertDialogDescription>
+                                            <AlertDialogTitle className="text-xl md:text-2xl font-black uppercase">Eliminar Client?</AlertDialogTitle>
+                                            <AlertDialogDescription className="text-sm md:text-base">Aquesta acció no es pot desfer.</AlertDialogDescription>
                                         </AlertDialogHeader>
-                                        <AlertDialogFooter className="pt-6">
-                                            <AlertDialogCancel className="h-14 rounded-2xl font-bold px-8 border-2">Cancel·lar</AlertDialogCancel>
-                                            <AlertDialogAction onClick={() => handleDeleteCustomer(customer.id)} className="bg-red-600 h-14 rounded-2xl font-black uppercase px-8">Confirmar</AlertDialogAction>
+                                        <AlertDialogFooter className="pt-6 flex flex-col md:flex-row gap-3">
+                                            <AlertDialogCancel className="h-12 md:h-14 rounded-2xl font-bold px-8 border-2 w-full md:w-auto">Cancel·lar</AlertDialogCancel>
+                                            <AlertDialogAction onClick={() => handleDeleteCustomer(customer.id)} className="bg-red-600 h-12 md:h-14 rounded-2xl font-black uppercase px-8 w-full md:w-auto">Confirmar</AlertDialogAction>
                                         </AlertDialogFooter>
                                     </AlertDialogContent>
                                 </AlertDialog>
@@ -369,8 +366,8 @@ export default function CustomersPage() {
                         <TableRow>
                             <TableCell colSpan={6} className="h-64 text-center">
                                 <div className="flex flex-col items-center justify-center space-y-4 opacity-20 grayscale">
-                                    <Building className="h-16 w-16" />
-                                    <p className="font-black uppercase text-xs tracking-widest italic">No hi ha cap client a la llista.</p>
+                                    <Building className="h-12 w-12 md:h-16 md:w-16" />
+                                    <p className="font-black uppercase text-[10px] md:text-xs tracking-widest italic">No hi ha cap client a la llista.</p>
                                 </div>
                             </TableCell>
                         </TableRow>
