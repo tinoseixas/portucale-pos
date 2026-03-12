@@ -5,14 +5,14 @@ import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useCollection, useUser, useFirestore, useMemoFirebase } from '@/firebase'
-import { collection, query, doc, getDocs, writeBatch, collectionGroup } from 'firebase/firestore'
-import type { Employee } from '@/lib/types'
+import { collection, query, doc, getDocs, writeBatch, collectionGroup, addDoc } from 'firebase/firestore'
+import type { Employee, Customer, ServiceRecord, Albaran, Invoice, Quote, Project } from '@/lib/types'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Edit, ShieldAlert, Loader2, Database, AlertCircle } from 'lucide-react'
+import { Edit, ShieldAlert, Loader2, Database, AlertCircle, Download, Upload, RefreshCw } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { AdminGate } from '@/components/AdminGate'
 
@@ -49,40 +49,101 @@ export default function UsersPage() {
   };
 
   const handleRestoreSampleData = async () => {
-    if (!firestore) return;
+    if (!firestore || !user) return;
     setIsSeeding(true);
-    toast({ title: "Restaurant dades...", description: "S'està creant el contingut de prova." });
+    toast({ title: "Restaurant dades...", description: "S'està creant el contingut de prova complet." });
 
     try {
-        const customers = [
-            { name: "Residencial Els Arcs", address: "Carrer de les Escoles 12, Andorra la Vella", nrt: "L-706521-X", email: "info@elsarcs.ad" },
-            { name: "Promocions Canillo 2000", address: "Av. Sant Joan 4, Canillo", nrt: "F-123456-Z", email: "gerencia@canillo2000.ad" }
-        ];
-
         const batch = writeBatch(firestore);
         
+        // 1. Clientes
+        const customers = [
+            { name: "Residencial Els Arcs", address: "Carrer de les Escoles 12, Encamp", nrt: "L-706521-X", email: "info@elsarcs.ad" },
+            { name: "Comunitat Av. Princep", address: "Av. Princep Benlloch 4, Andorra la Vella", nrt: "F-123456-Z", email: "gerencia@comunitat.ad" }
+        ];
+
         for (const cust of customers) {
             const cRef = doc(collection(firestore, 'customers'));
             batch.set(cRef, cust);
             
+            // 2. Obra/Proyecto
             const pRef = doc(collection(firestore, 'projects'));
-            batch.set(pRef, {
+            const projectData = {
                 name: `Reforma Interior - ${cust.name}`,
                 customerId: cRef.id,
                 customerName: cust.name,
-                status: 'active',
+                status: 'active' as const,
                 createdAt: new Date().toISOString()
-            });
+            };
+            batch.set(pRef, projectData);
+
+            // 3. Registre de Treball
+            const sRef = doc(collection(firestore, `employees/${user.uid}/serviceRecords`));
+            const serviceData: Omit<ServiceRecord, 'id'> = {
+                employeeId: user.uid,
+                employeeName: user.displayName || user.email?.split('@')[0] || 'Tècnic',
+                arrivalDateTime: new Date().toISOString(),
+                departureDateTime: new Date(Date.now() + 7200000).toISOString(), // 2h later
+                description: "Revisió de caldera i instal·lació de termòstat digital.",
+                projectName: projectData.name,
+                projectId: pRef.id,
+                pendingTasks: "",
+                customerId: cRef.id,
+                customerName: cust.name,
+                serviceHourlyRate: 30,
+                media: [],
+                albarans: [],
+                materials: [{ description: "Termòstat WiFi", quantity: 1, unitPrice: 85 }],
+                createdAt: new Date().toISOString(),
+                isLunchSubtracted: true
+            };
+            batch.set(sRef, serviceData);
         }
 
         await batch.commit();
-        toast({ title: "Dades restaurades", description: "S'han afegit clients e obres de mostra." });
+        toast({ title: "Dades restaurades", description: "S'han afegit clients, obres e serveis de mostra." });
         router.push('/dashboard');
     } catch (error) {
         console.error(error);
-        toast({ variant: 'destructive', title: "Error", description: "No s'han pogut carregar les dades de prova." });
+        toast({ variant: 'destructive', title: "Error", description: "No s'han pogut carregar les dades." });
     } finally {
         setIsSeeding(false);
+    }
+  };
+
+  const handleExportData = async () => {
+    if (!firestore) return;
+    toast({ title: "Preparant exportació..." });
+    
+    try {
+        const data: any = {
+            customers: [],
+            projects: [],
+            albarans: [],
+            invoices: [],
+            quotes: [],
+            serviceRecords: []
+        };
+
+        const collections = ['customers', 'projects', 'albarans', 'invoices', 'quotes'];
+        for (const colName of collections) {
+            const snap = await getDocs(collection(firestore, colName));
+            data[colName] = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        }
+
+        const servicesSnap = await getDocs(collectionGroup(firestore, 'serviceRecords'));
+        data.serviceRecords = servicesSnap.docs.map(d => ({ id: d.id, parentPath: d.ref.parent.path, ...d.data() }));
+
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `TS-Serveis-Backup-${new Date().toISOString().split('T')[0]}.json`;
+        a.click();
+        
+        toast({ title: "Backup completat", description: "El fitxer s'ha descarregat." });
+    } catch (e) {
+        toast({ variant: 'destructive', title: "Error exportant" });
     }
   };
 
@@ -163,25 +224,38 @@ export default function UsersPage() {
                 <CardHeader className="bg-primary text-white p-8">
                     <CardTitle className="text-xl font-black uppercase tracking-widest flex items-center gap-2">
                         <ShieldAlert className="h-6 w-6" />
-                        Zona d'Administració
+                        Zona de Recuperació e Backup
                     </CardTitle>
-                    <CardDescription className="text-blue-100 font-medium italic">Accions per a la configuració da aplicação.</CardDescription>
+                    <CardDescription className="text-blue-100 font-medium italic">Accions per restaurar o protegir les teves dades.</CardDescription>
                 </CardHeader>
                 <CardContent className="p-8 space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="p-6 bg-white rounded-3xl border-2 border-primary/10 shadow-sm space-y-4">
                             <div className="space-y-1">
-                                <p className="font-black text-primary uppercase text-xs">Restaurar Dades de Prova</p>
-                                <p className="text-[10px] text-slate-400 font-bold uppercase">Crea clients e obres de mostra automàticament.</p>
+                                <p className="font-black text-primary uppercase text-xs">Còpia de Seguretat</p>
+                                <p className="text-[10px] text-slate-400 font-bold uppercase">Exporta tots els teus registres a un fitxer JSON.</p>
                             </div>
-                            <Button variant="outline" onClick={handleRestoreSampleData} disabled={isSeeding} className="w-full h-12 border-primary text-primary font-black uppercase tracking-widest rounded-xl hover:bg-primary/5">
-                                {isSeeding ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Database className="h-4 w-4 mr-2" />}
-                                CARREGAR MOSTRA
+                            <Button variant="outline" onClick={handleExportData} className="w-full h-12 border-primary text-primary font-black uppercase tracking-widest rounded-xl hover:bg-primary/5">
+                                <Download className="h-4 w-4 mr-2" />
+                                EXPORTAR TOTA LA BASE
                             </Button>
                         </div>
-                        <div className="p-6 bg-slate-50 rounded-3xl border-2 border-dashed border-slate-200 flex flex-col justify-center items-center text-center">
-                            <AlertCircle className="h-8 w-8 text-slate-300 mb-2" />
-                            <p className="text-[10px] font-black uppercase text-slate-400">Nota: O botão de limpeza total foi removido para sua segurança.</p>
+                        <div className="p-6 bg-white rounded-3xl border-2 border-primary/10 shadow-sm space-y-4">
+                            <div className="space-y-1">
+                                <p className="font-black text-primary uppercase text-xs">Emergència: Dades de Prova</p>
+                                <p className="text-[10px] text-slate-400 font-bold uppercase">Si la base està buida, carrega exemples per començar.</p>
+                            </div>
+                            <Button variant="outline" onClick={handleRestoreSampleData} disabled={isSeeding} className="w-full h-12 border-primary text-primary font-black uppercase tracking-widest rounded-xl hover:bg-primary/5">
+                                {isSeeding ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <RefreshCw className="h-4 w-4 mr-2" />}
+                                CARREGAR MOSTRA COMPLETA
+                            </Button>
+                        </div>
+                    </div>
+                    <div className="bg-amber-50 border-2 border-amber-200 p-4 rounded-2xl flex gap-3">
+                        <AlertCircle className="h-6 w-6 text-amber-600 shrink-0" />
+                        <div className="text-[10px] font-bold text-amber-800 uppercase leading-relaxed">
+                            Atenuació: Els servidors de Google no permeten desfer eliminacions de dades directament. 
+                            Recomanem exportar un backup un cop per setmana per seguretat.
                         </div>
                     </div>
                 </CardContent>
