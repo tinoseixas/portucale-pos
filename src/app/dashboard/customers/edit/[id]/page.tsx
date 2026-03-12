@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useEffect } from 'react';
@@ -21,12 +20,12 @@ import { AdminGate } from '@/components/AdminGate';
 
 const customerSchema = z.object({
   name: z.string().min(1, 'El nom és obligatori'),
+  nrt: z.string().optional(),
   street: z.string().optional(),
   city: z.string().optional(),
   postalCode: z.string().optional(),
   contact: z.string().optional(),
   email: z.string().email('Format de correu invàlid').optional().or(z.literal('')),
-  nrt: z.string().optional(),
 });
 
 type CustomerFormValues = z.infer<typeof customerSchema>;
@@ -56,12 +55,12 @@ export default function EditCustomerPage() {
     resolver: zodResolver(customerSchema),
     defaultValues: {
       name: '',
+      nrt: '',
       street: '',
       city: '',
       postalCode: '',
       contact: '',
       email: '',
-      nrt: '',
     },
   });
 
@@ -76,12 +75,12 @@ export default function EditCustomerPage() {
     if (customer && !isNew) {
       reset({
         name: customer.name,
+        nrt: customer.nrt || '',
         street: customer.street || '',
         city: customer.city || '',
         postalCode: customer.postalCode || '',
         contact: customer.contact || '',
         email: customer.email || '',
-        nrt: customer.nrt || '',
       });
     }
   }, [customer, isNew, reset]);
@@ -108,17 +107,11 @@ export default function EditCustomerPage() {
   };
 
   if (isUserLoading || (!isNew && isCustomerLoading)) {
-    return <p className="p-8 text-center">Carregant dades del client...</p>;
+    return <div className="p-12 text-center flex flex-col items-center justify-center h-[60vh]"><Loader2 className="h-12 w-12 animate-spin text-primary" /><p className="mt-4 font-bold">Carregant dades del client...</p></div>;
   }
 
-  if (!user) {
-    return null; 
-  }
-  
-  if (!isNew && !customer) {
-    return <p className="p-8 text-center">No s'ha trobat o client.</p>;
-  }
-
+  if (!user) return null; 
+  if (!isNew && !customer) return <p className="p-8 text-center">No s'ha trobat o client.</p>;
 
   return (
     <AdminGate pageTitle="Edició de Client" pageDescription="Aquesta secció està protegida.">
@@ -138,8 +131,9 @@ export default function EditCustomerPage() {
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* 1. Nome */}
                     <div className="space-y-2">
-                        <Label htmlFor="name" className="flex items-center gap-2 font-black uppercase text-[10px] text-slate-400 tracking-widest pl-1"><Building className="h-3 w-3" /> Nom del Client</Label>
+                        <Label htmlFor="name" className="flex items-center gap-2 font-black uppercase text-[10px] text-slate-400 tracking-widest pl-1"><Building className="h-3 w-3" /> 1. Nom del Client</Label>
                         <Controller
                             name="name"
                             control={control}
@@ -148,8 +142,9 @@ export default function EditCustomerPage() {
                         {errors.name && <p className="text-xs text-destructive font-bold">{errors.name.message}</p>}
                     </div>
                     
+                    {/* 2. NIF / NRT */}
                     <div className="space-y-2">
-                        <Label htmlFor="nrt" className="flex items-center gap-2 font-black uppercase text-[10px] text-slate-400 tracking-widest pl-1"><Hash className="h-3 w-3" /> NIF / NRT</Label>
+                        <Label htmlFor="nrt" className="flex items-center gap-2 font-black uppercase text-[10px] text-slate-400 tracking-widest pl-1"><Hash className="h-3 w-3" /> 2. NIF / NRT</Label>
                         <Controller
                             name="nrt"
                             control={control}
@@ -160,10 +155,11 @@ export default function EditCustomerPage() {
                 </div>
 
                 <div className="space-y-6 bg-slate-50/50 p-6 rounded-3xl border-2 border-dashed">
-                    <p className="font-black uppercase text-[10px] text-slate-400 tracking-widest flex items-center gap-2"><MapPin className="h-3 w-3" /> Localització i Morada</p>
+                    <p className="font-black uppercase text-[10px] text-slate-400 tracking-widest flex items-center gap-2"><MapPin className="h-3 w-3" /> Localització</p>
                     
+                    {/* 3. Rua */}
                     <div className="space-y-2">
-                        <Label htmlFor="street" className="text-xs font-bold text-slate-600">Carrer i Número</Label>
+                        <Label htmlFor="street" className="text-xs font-bold text-slate-600">3. Carrer i Número</Label>
                         <Controller
                             name="street"
                             control={control}
@@ -172,16 +168,18 @@ export default function EditCustomerPage() {
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {/* 4. Cidade */}
                         <div className="space-y-2">
-                            <Label htmlFor="city" className="text-xs font-bold text-slate-600">Cidade / Parròquia</Label>
+                            <Label htmlFor="city" className="text-xs font-bold text-slate-600">4. Cidade / Parròquia</Label>
                             <Controller
                                 name="city"
                                 control={control}
                                 render={({ field }) => <Input id="city" placeholder="Ex: Escaldes-Engordany" className="h-12 rounded-xl font-bold border-2 bg-white" {...field} />}
                             />
                         </div>
+                        {/* 5. Código Postal */}
                         <div className="space-y-2">
-                            <Label htmlFor="postalCode" className="text-xs font-bold text-slate-600">Codi Postal</Label>
+                            <Label htmlFor="postalCode" className="text-xs font-bold text-slate-600">5. Codi Postal</Label>
                             <Controller
                                 name="postalCode"
                                 control={control}
@@ -192,8 +190,9 @@ export default function EditCustomerPage() {
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* 6. Telefone */}
                     <div className="space-y-2">
-                        <Label htmlFor="contact" className="flex items-center gap-2 font-black uppercase text-[10px] text-slate-400 tracking-widest pl-1"><Phone className="h-3 w-3" /> Telèfon</Label>
+                        <Label htmlFor="contact" className="flex items-center gap-2 font-black uppercase text-[10px] text-slate-400 tracking-widest pl-1"><Phone className="h-3 w-3" /> 6. Telèfon</Label>
                         <Controller
                             name="contact"
                             control={control}
@@ -201,8 +200,9 @@ export default function EditCustomerPage() {
                         />
                     </div>
 
+                    {/* 7. E-mail */}
                     <div className="space-y-2">
-                        <Label htmlFor="email" className="flex items-center gap-2 font-black uppercase text-[10px] text-slate-400 tracking-widest pl-1"><Mail className="h-3 w-3" /> E-mail</Label>
+                        <Label htmlFor="email" className="flex items-center gap-2 font-black uppercase text-[10px] text-slate-400 tracking-widest pl-1"><Mail className="h-3 w-3" /> 7. E-mail</Label>
                         <Controller
                             name="email"
                             control={control}

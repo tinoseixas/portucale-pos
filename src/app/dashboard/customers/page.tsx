@@ -1,4 +1,3 @@
-
 'use client'
 
 import { useMemo, useState, useEffect, useRef } from 'react'
@@ -9,7 +8,7 @@ import type { Customer } from '@/lib/types'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
-import { Edit, Trash2, PlusCircle, Building, Mail, Phone, Upload, Search, Loader2, ListPlus, X, FileSpreadsheet, CheckSquare, AlertTriangle, MapPin } from 'lucide-react'
+import { Edit, Trash2, PlusCircle, Building, Mail, Phone, Upload, Search, Loader2, ListPlus, X, FileSpreadsheet, CheckSquare, AlertTriangle, MapPin, Hash, MapPinned } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
@@ -104,7 +103,15 @@ export default function CustomersPage() {
         customersToImport = excelCustomers;
     } else if (bulkText.trim()) {
         customersToImport = bulkText.split('\n')
-            .map(n => ({ name: n.trim(), street: '', city: '', postalCode: '', contact: '', email: '', nrt: '' }))
+            .map(n => ({ 
+                name: n.trim(), 
+                street: '', 
+                city: '', 
+                postalCode: '', 
+                contact: '', 
+                email: '', 
+                nrt: '' 
+            }))
             .filter(c => c.name.length > 0);
     }
 
@@ -170,7 +177,8 @@ export default function CustomersPage() {
             const ws = wb.Sheets[wsname];
             const data = XLSX.utils.sheet_to_json(ws, { header: 1 }) as any[][];
             
-            // Expected columns: 0:Name, 1:NRT, 2:Street, 3:City, 4:PostalCode, 5:Contact, 6:Email
+            // MAPEO ESTRICTO DE 7 COLUMNAS:
+            // 0: Nome, 1: NRT, 2: Rua, 3: Cidade, 4: Código Postal, 5: Telefone, 6: E-mail
             const parsed: Partial<Customer>[] = data.slice(1).map(row => ({
                 name: String(row[0] || '').trim(),
                 nrt: String(row[1] || '').trim(),
@@ -183,7 +191,7 @@ export default function CustomersPage() {
             
             if (parsed.length > 0) {
                 setExcelCustomers(parsed);
-                setBulkText(''); // Clear manual text if Excel is used
+                setBulkText(''); 
                 toast({ title: "Excel processat", description: `S'han detectat ${parsed.length} clients amb dades completes.` });
             } else {
                 toast({ variant: 'destructive', title: "Fitxer buit", description: "No s'han trobat dades vàlides al fitxer." });
@@ -263,7 +271,7 @@ export default function CustomersPage() {
                     <DialogContent className="rounded-[2rem] max-w-xl">
                         <DialogHeader>
                             <DialogTitle className="text-2xl font-black uppercase">Importar Clients</DialogTitle>
-                            <DialogDescription className="font-medium">Carrega un Excel amb columnes (Nom, NIF, Rua, Cidade, CP, Tel., Email) o enganxa noms.</DialogDescription>
+                            <DialogDescription className="font-medium">Carrega un Excel o enganxa noms per crear múltiples clients.</DialogDescription>
                         </DialogHeader>
                         <div className="py-4 space-y-6">
                             {excelCustomers.length > 0 ? (
@@ -284,16 +292,19 @@ export default function CustomersPage() {
                                     <FileSpreadsheet className="h-12 w-12 mx-auto text-primary" />
                                     <div>
                                         <p className="font-black text-primary uppercase text-sm">Carregar Ficheiro Excel</p>
-                                        <p className="text-[10px] text-slate-400 font-bold uppercase mt-1">Order: Nom | NIF | Rua | Cidade | CP | Tel. | Email</p>
+                                        <p className="text-[10px] text-slate-400 font-bold uppercase mt-1 leading-relaxed">
+                                            L'ordre ha de ser:<br/>
+                                            1. Nome | 2. NRT | 3. Rua | 4. Cidade | 5. CP | 6. Tel. | 7. Email
+                                        </p>
                                     </div>
                                     <input type="file" ref={fileInputRef} onChange={handleExcelUpload} accept=".xlsx, .xls" className="hidden" />
-                                    <Button onClick={() => fileInputRef.current?.click()} variant="outline" className="bg-white border-primary text-primary font-bold rounded-xl h-10 px-6">Escolliu fitxer</Button>
+                                    <Button onClick={() => fileInputRef.current?.click()} variant="outline" className="bg-white border-primary text-primary font-bold rounded-xl h-10 px-6">Escollir fitxer</Button>
                                 </div>
                             )}
 
                             {!excelCustomers.length && (
                                 <div className="space-y-2">
-                                    <Label className="text-[10px] font-black uppercase text-slate-400 pl-1">O enganxa la llista manualment (un per línia)</Label>
+                                    <Label className="text-[10px] font-black uppercase text-slate-400 pl-1">O enganxa la llista manualment (només noms, un per línia)</Label>
                                     <Textarea 
                                         placeholder="Client A&#10;Client B&#10;Empresa C..." 
                                         value={bulkText} 
@@ -372,7 +383,7 @@ export default function CustomersPage() {
                         </TableHead>
                         <TableHead className="font-black uppercase text-[10px] tracking-widest">Nom del Client</TableHead>
                         <TableHead className="font-black uppercase text-[10px] tracking-widest">NIF / NRT</TableHead>
-                        <TableHead className="font-black uppercase text-[10px] tracking-widest">Morada / Localització</TableHead>
+                        <TableHead className="font-black uppercase text-[10px] tracking-widest">Morada Completa</TableHead>
                         <TableHead className="font-black uppercase text-[10px] tracking-widest">Contacte</TableHead>
                         <TableHead className="text-right px-8 font-black uppercase text-[10px] tracking-widest">Accions</TableHead>
                     </TableRow>
@@ -407,8 +418,12 @@ export default function CustomersPage() {
                         </TableCell>
                         <TableCell>
                             <div className="flex flex-col gap-0.5 min-w-[200px]">
-                                <div className="text-[10px] text-slate-900 font-black uppercase truncate">{customer.street || '-'}</div>
-                                <div className="text-[10px] text-slate-400 font-bold uppercase">{customer.postalCode ? `${customer.postalCode} ` : ''}{customer.city || ''}</div>
+                                <div className="text-[10px] text-slate-900 font-black uppercase truncate">
+                                    {customer.street || <span className="text-slate-300 italic">Sense carrer</span>}
+                                </div>
+                                <div className="text-[10px] text-slate-400 font-bold uppercase">
+                                    {customer.postalCode ? `${customer.postalCode} ` : ''}{customer.city || ''}
+                                </div>
                             </div>
                         </TableCell>
                         <TableCell>
