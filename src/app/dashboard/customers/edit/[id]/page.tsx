@@ -168,7 +168,7 @@ export default function EditCustomerPage() {
                             
                             {/* 3. RUA */}
                             <div className="space-y-2">
-                                <Label htmlFor="street" className="text-xs font-black text-slate-600 uppercase">3. Carrer i Número</Label>
+                                <Label htmlFor="street" className="text-xs font-black text-slate-600 uppercase">3. Carrer i Número (Rua)</Label>
                                 <Controller
                                     name="street"
                                     control={control}

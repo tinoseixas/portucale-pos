@@ -129,8 +129,8 @@ export default function CustomersPage() {
             // defval: "" garanteix que cel·les buides no facin saltar les columnes
             const data = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "" }) as any[][];
             
-            // MAPEIG ESTRICTE DE 7 COLUMNES (Ignorant la primera fila de títols):
-            // 0: Nom, 1: NRT, 2: Rua, 3: Ciutat, 4: CP, 5: Tel, 6: Email
+            // MAPEIG ESTRICTE DE 7 COLUMNES SEGUINT ORDRE A-G:
+            // A(0): Nom, B(1): NRT, C(2): Rua, D(3): Ciutat, E(4): CP, F(5): Tel, G(6): Email
             const parsed: Partial<Customer>[] = data.slice(1).map(row => {
                 const getString = (val: any) => val !== undefined && val !== null ? String(val).trim() : "";
                 return {
