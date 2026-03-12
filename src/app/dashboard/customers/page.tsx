@@ -1,3 +1,4 @@
+
 'use client'
 
 import { useMemo, useState, useEffect, useRef } from 'react'
@@ -8,7 +9,7 @@ import type { Customer } from '@/lib/types'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
-import { Edit, Trash2, PlusCircle, Building, Mail, Phone, Upload, Search, Loader2, ListPlus, X, FileSpreadsheet, CheckSquare, AlertTriangle } from 'lucide-react'
+import { Edit, Trash2, PlusCircle, Building, Mail, Phone, Upload, Search, Loader2, ListPlus, X, FileSpreadsheet, CheckSquare, AlertTriangle, MapPin } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
@@ -103,7 +104,7 @@ export default function CustomersPage() {
         customersToImport = excelCustomers;
     } else if (bulkText.trim()) {
         customersToImport = bulkText.split('\n')
-            .map(n => ({ name: n.trim(), address: '', contact: '', email: '', nrt: '' }))
+            .map(n => ({ name: n.trim(), street: '', city: '', postalCode: '', contact: '', email: '', nrt: '' }))
             .filter(c => c.name.length > 0);
     }
 
@@ -127,7 +128,9 @@ export default function CustomersPage() {
                 const cRef = doc(collection(firestore, 'customers'));
                 batch.set(cRef, {
                     name: cust.name,
-                    address: cust.address || '',
+                    street: cust.street || '',
+                    city: cust.city || '',
+                    postalCode: cust.postalCode || '',
                     contact: cust.contact || '',
                     email: cust.email || '',
                     nrt: cust.nrt || ''
@@ -167,14 +170,15 @@ export default function CustomersPage() {
             const ws = wb.Sheets[wsname];
             const data = XLSX.utils.sheet_to_json(ws, { header: 1 }) as any[][];
             
-            // Parse common columns: 0:Name, 1:NRT, 2:Address, 3:Contact, 4:Email
-            // We skip the first row (header)
+            // Expected columns: 0:Name, 1:NRT, 2:Street, 3:City, 4:PostalCode, 5:Contact, 6:Email
             const parsed: Partial<Customer>[] = data.slice(1).map(row => ({
                 name: String(row[0] || '').trim(),
                 nrt: String(row[1] || '').trim(),
-                address: String(row[2] || '').trim(),
-                contact: String(row[3] || '').trim(),
-                email: String(row[4] || '').trim(),
+                street: String(row[2] || '').trim(),
+                city: String(row[3] || '').trim(),
+                postalCode: String(row[4] || '').trim(),
+                contact: String(row[5] || '').trim(),
+                email: String(row[6] || '').trim(),
             })).filter(c => c.name && c.name !== 'undefined' && c.name.length > 1 && c.name.toLowerCase() !== 'nom');
             
             if (parsed.length > 0) {
@@ -259,7 +263,7 @@ export default function CustomersPage() {
                     <DialogContent className="rounded-[2rem] max-w-xl">
                         <DialogHeader>
                             <DialogTitle className="text-2xl font-black uppercase">Importar Clients</DialogTitle>
-                            <DialogDescription className="font-medium">Carrega un Excel amb columnes (Nom, NIF, Morada, Telèfon, Email) o enganxa noms.</DialogDescription>
+                            <DialogDescription className="font-medium">Carrega un Excel amb columnes (Nom, NIF, Rua, Cidade, CP, Tel., Email) o enganxa noms.</DialogDescription>
                         </DialogHeader>
                         <div className="py-4 space-y-6">
                             {excelCustomers.length > 0 ? (
@@ -280,7 +284,7 @@ export default function CustomersPage() {
                                     <FileSpreadsheet className="h-12 w-12 mx-auto text-primary" />
                                     <div>
                                         <p className="font-black text-primary uppercase text-sm">Carregar Ficheiro Excel</p>
-                                        <p className="text-[10px] text-slate-400 font-bold uppercase mt-1">Llegirem: Nom | NIF | Morada | Telèfon | Email</p>
+                                        <p className="text-[10px] text-slate-400 font-bold uppercase mt-1">Order: Nom | NIF | Rua | Cidade | CP | Tel. | Email</p>
                                     </div>
                                     <input type="file" ref={fileInputRef} onChange={handleExcelUpload} accept=".xlsx, .xls" className="hidden" />
                                     <Button onClick={() => fileInputRef.current?.click()} variant="outline" className="bg-white border-primary text-primary font-bold rounded-xl h-10 px-6">Escolliu fitxer</Button>
@@ -368,6 +372,7 @@ export default function CustomersPage() {
                         </TableHead>
                         <TableHead className="font-black uppercase text-[10px] tracking-widest">Nom del Client</TableHead>
                         <TableHead className="font-black uppercase text-[10px] tracking-widest">NIF / NRT</TableHead>
+                        <TableHead className="font-black uppercase text-[10px] tracking-widest">Morada / Localització</TableHead>
                         <TableHead className="font-black uppercase text-[10px] tracking-widest">Contacte</TableHead>
                         <TableHead className="text-right px-8 font-black uppercase text-[10px] tracking-widest">Accions</TableHead>
                     </TableRow>
@@ -394,12 +399,17 @@ export default function CustomersPage() {
                                     </Badge>
                                 )}
                             </div>
-                            <div className="text-[10px] text-slate-400 font-bold max-w-[250px] truncate mt-1">{customer.address}</div>
                         </TableCell>
                         <TableCell>
                             <Badge variant="outline" className="font-black text-[10px] border-slate-200 bg-slate-50 text-slate-600 px-3 py-1">
                                 {customer.nrt || 'N/A'}
                             </Badge>
+                        </TableCell>
+                        <TableCell>
+                            <div className="flex flex-col gap-0.5 min-w-[200px]">
+                                <div className="text-[10px] text-slate-900 font-black uppercase truncate">{customer.street || '-'}</div>
+                                <div className="text-[10px] text-slate-400 font-bold uppercase">{customer.postalCode ? `${customer.postalCode} ` : ''}{customer.city || ''}</div>
+                            </div>
                         </TableCell>
                         <TableCell>
                             <div className="space-y-1">
@@ -446,7 +456,7 @@ export default function CustomersPage() {
                         </TableRow>
                     )) : (
                         <TableRow>
-                            <TableCell colSpan={5} className="h-48 text-center">
+                            <TableCell colSpan={6} className="h-48 text-center">
                                 <div className="flex flex-col items-center justify-center text-slate-300 space-y-2">
                                     <Building className="h-12 w-12 opacity-20" />
                                     <p className="font-black uppercase text-[10px] tracking-widest">No s'han trobat clients</p>

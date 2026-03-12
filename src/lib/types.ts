@@ -46,7 +46,9 @@ export interface Employee {
 export interface Customer {
   id: string;
   name: string;
-  address?: string;
+  street?: string;
+  city?: string;
+  postalCode?: string;
   contact?: string;
   email?: string;
   nrt?: string; // Tax ID number

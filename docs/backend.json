@@ -68,9 +68,17 @@
           "type": "string",
           "description": "The full name or company name of the customer."
         },
-        "address": {
+        "street": {
           "type": "string",
-          "description": "The physical address of the customer."
+          "description": "The street and number."
+        },
+        "city": {
+          "type": "string",
+          "description": "The city or location."
+        },
+        "postalCode": {
+          "type": "string",
+          "description": "The postal code."
         },
         "contact": {
           "type": "string",
@@ -558,9 +566,6 @@
             "params": [{ "name": "backupId", "description": "ID of the backup" }]
         }
       }
-    ],
-    "reasoning": "Updated structure to include a Backups collection for automatic daily cloud storage of database state."
+    ]
   }
 }
-
-    

@@ -15,13 +15,15 @@ import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { doc, addDoc, collection } from 'firebase/firestore';
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import type { Customer } from '@/lib/types';
-import { Save, ArrowLeft, Building, MapPin, Phone, Mail, Hash } from 'lucide-react';
+import { Save, ArrowLeft, Building, MapPin, Phone, Mail, Hash, MapPinned } from 'lucide-react';
 import { AdminGate } from '@/components/AdminGate';
 
 
 const customerSchema = z.object({
   name: z.string().min(1, 'El nom és obligatori'),
-  address: z.string().optional(),
+  street: z.string().optional(),
+  city: z.string().optional(),
+  postalCode: z.string().optional(),
   contact: z.string().optional(),
   email: z.string().email('Format de correu invàlid').optional().or(z.literal('')),
   nrt: z.string().optional(),
@@ -54,7 +56,9 @@ export default function EditCustomerPage() {
     resolver: zodResolver(customerSchema),
     defaultValues: {
       name: '',
-      address: '',
+      street: '',
+      city: '',
+      postalCode: '',
       contact: '',
       email: '',
       nrt: '',
@@ -72,7 +76,9 @@ export default function EditCustomerPage() {
     if (customer && !isNew) {
       reset({
         name: customer.name,
-        address: customer.address || '',
+        street: customer.street || '',
+        city: customer.city || '',
+        postalCode: customer.postalCode || '',
         contact: customer.contact || '',
         email: customer.email || '',
         nrt: customer.nrt || '',
@@ -102,7 +108,7 @@ export default function EditCustomerPage() {
   };
 
   if (isUserLoading || (!isNew && isCustomerLoading)) {
-    return <p>Carregant dades del client...</p>;
+    return <p className="p-8 text-center">Carregant dades del client...</p>;
   }
 
   if (!user) {
@@ -110,81 +116,106 @@ export default function EditCustomerPage() {
   }
   
   if (!isNew && !customer) {
-    return <p>No s'ha trobat el client.</p>;
+    return <p className="p-8 text-center">No s'ha trobat o client.</p>;
   }
 
 
   return (
     <AdminGate pageTitle="Edició de Client" pageDescription="Aquesta secció està protegida.">
-        <div className="max-w-2xl mx-auto">
-        <Button variant="ghost" onClick={() => router.back()} className="mb-4 -ml-4">
+        <div className="max-w-2xl mx-auto space-y-6 pb-20">
+        <Button variant="ghost" onClick={() => router.back()} className="font-bold -ml-4">
             <ArrowLeft className="mr-2 h-4 w-4" />
-            Tornar a clients
+            Tornar a llista de clients
         </Button>
-        <Card>
-            <CardHeader>
-            <CardTitle>{isNew ? 'Nou Client' : 'Editar Client'}</CardTitle>
-            <CardDescription>
-                {isNew ? "Afegeix un nou client a la teva base de dades." : `Modifica les dades de ${customer?.name}.`}
+        <Card className="border-none shadow-2xl rounded-3xl overflow-hidden">
+            <CardHeader className="bg-slate-900 text-white p-8">
+            <CardTitle className="text-2xl font-black uppercase tracking-tight">{isNew ? 'Nou Client' : 'Editar Client'}</CardTitle>
+            <CardDescription className="text-slate-400">
+                {isNew ? "Afegeix um nou cliente à base de dades." : `Modifica as dades de ${customer?.name}.`}
             </CardDescription>
             </CardHeader>
-            <CardContent>
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+            <CardContent className="p-8 pt-10">
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
                 
-                <div className="space-y-2">
-                <Label htmlFor="name" className="flex items-center gap-2"><Building className="h-4 w-4 text-muted-foreground" /> Nom del Client</Label>
-                <Controller
-                    name="name"
-                    control={control}
-                    render={({ field }) => <Input id="name" placeholder="Nom complet o de l'empresa" {...field} />}
-                />
-                {errors.name && <p className="text-sm text-destructive">{errors.name.message}</p>}
-                </div>
-                
-                <div className="space-y-2">
-                <Label htmlFor="nrt" className="flex items-center gap-2"><Hash className="h-4 w-4 text-muted-foreground" /> NIF / NRT</Label>
-                <Controller
-                    name="nrt"
-                    control={control}
-                    render={({ field }) => <Input id="nrt" placeholder="Número d'identificació fiscal" {...field} />}
-                />
-                {errors.nrt && <p className="text-sm text-destructive">{errors.nrt.message}</p>}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                        <Label htmlFor="name" className="flex items-center gap-2 font-black uppercase text-[10px] text-slate-400 tracking-widest pl-1"><Building className="h-3 w-3" /> Nom del Client</Label>
+                        <Controller
+                            name="name"
+                            control={control}
+                            render={({ field }) => <Input id="name" placeholder="Ex: Empresa de Construcció SL" className="h-12 rounded-xl font-bold border-2 bg-slate-50" {...field} />}
+                        />
+                        {errors.name && <p className="text-xs text-destructive font-bold">{errors.name.message}</p>}
+                    </div>
+                    
+                    <div className="space-y-2">
+                        <Label htmlFor="nrt" className="flex items-center gap-2 font-black uppercase text-[10px] text-slate-400 tracking-widest pl-1"><Hash className="h-3 w-3" /> NIF / NRT</Label>
+                        <Controller
+                            name="nrt"
+                            control={control}
+                            render={({ field }) => <Input id="nrt" placeholder="Ex: L-123456-X" className="h-12 rounded-xl font-bold border-2 bg-slate-50" {...field} />}
+                        />
+                        {errors.nrt && <p className="text-xs text-destructive font-bold">{errors.nrt.message}</p>}
+                    </div>
                 </div>
 
-                <div className="space-y-2">
-                <Label htmlFor="address" className="flex items-center gap-2"><MapPin className="h-4 w-4 text-muted-foreground" /> Adreça</Label>
-                <Controller
-                    name="address"
-                    control={control}
-                    render={({ field }) => <Input id="address" placeholder="Adreça completa" {...field} />}
-                />
-                {errors.address && <p className="text-sm text-destructive">{errors.address.message}</p>}
+                <div className="space-y-6 bg-slate-50/50 p-6 rounded-3xl border-2 border-dashed">
+                    <p className="font-black uppercase text-[10px] text-slate-400 tracking-widest flex items-center gap-2"><MapPin className="h-3 w-3" /> Localització i Morada</p>
+                    
+                    <div className="space-y-2">
+                        <Label htmlFor="street" className="text-xs font-bold text-slate-600">Carrer i Número</Label>
+                        <Controller
+                            name="street"
+                            control={control}
+                            render={({ field }) => <Input id="street" placeholder="Ex: Av. Carlemany, 100" className="h-12 rounded-xl font-bold border-2 bg-white" {...field} />}
+                        />
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="city" className="text-xs font-bold text-slate-600">Cidade / Parròquia</Label>
+                            <Controller
+                                name="city"
+                                control={control}
+                                render={({ field }) => <Input id="city" placeholder="Ex: Escaldes-Engordany" className="h-12 rounded-xl font-bold border-2 bg-white" {...field} />}
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="postalCode" className="text-xs font-bold text-slate-600">Codi Postal</Label>
+                            <Controller
+                                name="postalCode"
+                                control={control}
+                                render={({ field }) => <Input id="postalCode" placeholder="Ex: AD700" className="h-12 rounded-xl font-bold border-2 bg-white" {...field} />}
+                            />
+                        </div>
+                    </div>
                 </div>
                 
-                <div className="space-y-2">
-                <Label htmlFor="contact" className="flex items-center gap-2"><Phone className="h-4 w-4 text-muted-foreground" /> Telèfon de Contacte</Label>
-                <Controller
-                    name="contact"
-                    control={control}
-                    render={({ field }) => <Input id="contact" type="tel" placeholder="600123456" {...field} />}
-                />
-                {errors.contact && <p className="text-sm text-destructive">{errors.contact.message}</p>}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                        <Label htmlFor="contact" className="flex items-center gap-2 font-black uppercase text-[10px] text-slate-400 tracking-widest pl-1"><Phone className="h-3 w-3" /> Telèfon</Label>
+                        <Controller
+                            name="contact"
+                            control={control}
+                            render={({ field }) => <Input id="contact" type="tel" placeholder="600123" className="h-12 rounded-xl font-bold border-2 bg-slate-50" {...field} />}
+                        />
+                    </div>
+
+                    <div className="space-y-2">
+                        <Label htmlFor="email" className="flex items-center gap-2 font-black uppercase text-[10px] text-slate-400 tracking-widest pl-1"><Mail className="h-3 w-3" /> E-mail</Label>
+                        <Controller
+                            name="email"
+                            control={control}
+                            render={({ field }) => <Input id="email" type="email" placeholder="client@exemple.ad" className="h-12 rounded-xl font-bold border-2 bg-slate-50" {...field} />}
+                        />
+                        {errors.email && <p className="text-xs text-destructive font-bold">{errors.email.message}</p>}
+                    </div>
                 </div>
 
-                <div className="space-y-2">
-                <Label htmlFor="email" className="flex items-center gap-2"><Mail className="h-4 w-4 text-muted-foreground" /> Correu electrònic</Label>
-                <Controller
-                    name="email"
-                    control={control}
-                    render={({ field }) => <Input id="email" type="email" placeholder="client@exemple.com" {...field} />}
-                />
-                {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
-                </div>
-
-                <div className="flex justify-end pt-4">
-                <Button type="submit" disabled={!isDirty && !isNew} className="bg-accent hover:bg-accent/90 text-accent-foreground">
-                    <Save className="mr-2 h-4 w-4"/>
-                    {isNew ? 'Crear Client' : 'Desa els Canvis'}
+                <div className="flex justify-end pt-6">
+                <Button type="submit" disabled={!isDirty && !isNew} className="h-14 px-10 bg-accent hover:bg-accent/90 text-accent-foreground font-black uppercase tracking-widest rounded-2xl shadow-xl hover:scale-[1.02] transition-transform">
+                    <Save className="mr-2 h-5 w-5"/>
+                    {isNew ? 'CREAR CLIENT' : 'DESAR CANVIS'}
                 </Button>
                 </div>
             </form>
