@@ -4,26 +4,15 @@
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useCollection, useUser, useFirestore, useMemoFirebase, deleteDocumentNonBlocking } from '@/firebase'
-import { collection, query, doc, getDocs, writeBatch, collectionGroup, addDoc } from 'firebase/firestore'
-import type { Employee, Customer, Project } from '@/lib/types'
+import { useCollection, useUser, useFirestore, useMemoFirebase } from '@/firebase'
+import { collection, query, doc, getDocs, writeBatch, collectionGroup } from 'firebase/firestore'
+import type { Employee } from '@/lib/types'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Edit, Trash2, ShieldAlert, Loader2, Database, RotateCcw } from 'lucide-react'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog"
+import { Edit, ShieldAlert, Loader2, Database, AlertCircle } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { AdminGate } from '@/components/AdminGate'
 
@@ -39,7 +28,6 @@ export default function UsersPage() {
   const { toast } = useToast()
   const { user, isUserLoading } = useUser()
   const firestore = useFirestore()
-  const [isClearing, setIsClearing] = useState(false);
   const [isSeeding, setIsSeeding] = useState(false);
 
   const employeesQuery = useMemoFirebase(() => {
@@ -60,44 +48,12 @@ export default function UsersPage() {
     window.open(`https://wa.me/${internationalNumber}`, '_blank');
   };
 
-  const handleClearAllData = async () => {
-    if (!firestore) return;
-    setIsClearing(true);
-    toast({ title: "Netejant dades...", description: "S'estan eliminant tots els registres." });
-
-    try {
-        const collections = ['customers', 'projects', 'albarans', 'invoices', 'receipts', 'quotes'];
-        const batch = writeBatch(firestore);
-
-        for (const colName of collections) {
-            const snap = await getDocs(collection(firestore, colName));
-            snap.forEach(d => batch.delete(d.ref));
-        }
-
-        const servicesSnap = await getDocs(collectionGroup(firestore, 'serviceRecords'));
-        servicesSnap.forEach(d => batch.delete(d.ref));
-
-        const countersSnap = await getDocs(collection(firestore, 'counters'));
-        countersSnap.forEach(d => batch.delete(d.ref));
-
-        await batch.commit();
-        toast({ title: "Base de dades neta", description: "S'han eliminat tots els registres amb èxit." });
-        router.refresh();
-    } catch (error) {
-        console.error(error);
-        toast({ variant: 'destructive', title: "Error", description: "No s'ha pogut netejar la base de dades." });
-    } finally {
-        setIsClearing(false);
-    }
-  };
-
   const handleRestoreSampleData = async () => {
     if (!firestore) return;
     setIsSeeding(true);
     toast({ title: "Restaurant dades...", description: "S'està creant el contingut de prova." });
 
     try {
-        // Create Sample Customers
         const customers = [
             { name: "Residencial Els Arcs", address: "Carrer de les Escoles 12, Andorra la Vella", nrt: "L-706521-X", email: "info@elsarcs.ad" },
             { name: "Promocions Canillo 2000", address: "Av. Sant Joan 4, Canillo", nrt: "F-123456-Z", email: "gerencia@canillo2000.ad" }
@@ -109,7 +65,6 @@ export default function UsersPage() {
             const cRef = doc(collection(firestore, 'customers'));
             batch.set(cRef, cust);
             
-            // Create a sample project for each customer
             const pRef = doc(collection(firestore, 'projects'));
             batch.set(pRef, {
                 name: `Reforma Interior - ${cust.name}`,
@@ -204,43 +159,16 @@ export default function UsersPage() {
         </Card>
 
         {isAdmin && (
-            <Card className="border-none shadow-2xl bg-red-50/50 rounded-[2.5rem] overflow-hidden">
-                <CardHeader className="bg-red-600 text-white p-8">
+            <Card className="border-none shadow-2xl bg-blue-50/50 rounded-[2.5rem] overflow-hidden">
+                <CardHeader className="bg-primary text-white p-8">
                     <CardTitle className="text-xl font-black uppercase tracking-widest flex items-center gap-2">
                         <ShieldAlert className="h-6 w-6" />
-                        Zona de Perill (Admin)
+                        Zona d'Administració
                     </CardTitle>
-                    <CardDescription className="text-red-100 font-medium italic">Accions per a la configuració de la nova base de dades.</CardDescription>
+                    <CardDescription className="text-blue-100 font-medium italic">Accions per a la configuració da aplicação.</CardDescription>
                 </CardHeader>
                 <CardContent className="p-8 space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="p-6 bg-white rounded-3xl border-2 border-red-100 shadow-sm space-y-4">
-                            <div className="space-y-1">
-                                <p className="font-black text-slate-900 uppercase text-xs">Repor registres (Eliminar dades)</p>
-                                <p className="text-[10px] text-slate-400 font-bold uppercase">Neteja tota la informació per començar de nou.</p>
-                            </div>
-                            <AlertDialog>
-                                <AlertDialogTrigger asChild>
-                                    <Button variant="destructive" disabled={isClearing} className="w-full h-12 font-black uppercase tracking-widest rounded-xl">
-                                        {isClearing ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Trash2 className="h-4 w-4 mr-2" />}
-                                        LIMPAR TUDO
-                                    </Button>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent className="rounded-[2.5rem] p-10">
-                                    <AlertDialogHeader>
-                                        <AlertDialogTitle className="text-2xl font-black uppercase text-red-600 italic">ATENCIÓ! ACCIÓ IRREVERSIBLE</AlertDialogTitle>
-                                        <AlertDialogDescription className="text-base font-medium">
-                                            Això esborrarà **TODOS** os registos (Clientes, Obras, Alvarás, Facturas). Os perfis de utilizador mantêm-se.
-                                        </AlertDialogDescription>
-                                    </AlertDialogHeader>
-                                    <AlertDialogFooter className="pt-6">
-                                        <AlertDialogCancel className="h-14 rounded-2xl font-bold border-2 px-8">CANCEL·LAR</AlertDialogCancel>
-                                        <AlertDialogAction onClick={handleClearAllData} className="bg-red-600 h-14 rounded-2xl font-black uppercase tracking-widest px-8">SÍ, REPOR TUDO</AlertDialogAction>
-                                    </AlertDialogFooter>
-                                </AlertDialogContent>
-                            </AlertDialog>
-                        </div>
-
                         <div className="p-6 bg-white rounded-3xl border-2 border-primary/10 shadow-sm space-y-4">
                             <div className="space-y-1">
                                 <p className="font-black text-primary uppercase text-xs">Restaurar Dades de Prova</p>
@@ -250,6 +178,10 @@ export default function UsersPage() {
                                 {isSeeding ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Database className="h-4 w-4 mr-2" />}
                                 CARREGAR MOSTRA
                             </Button>
+                        </div>
+                        <div className="p-6 bg-slate-50 rounded-3xl border-2 border-dashed border-slate-200 flex flex-col justify-center items-center text-center">
+                            <AlertCircle className="h-8 w-8 text-slate-300 mb-2" />
+                            <p className="text-[10px] font-black uppercase text-slate-400">Nota: O botão de limpeza total foi removido para sua segurança.</p>
                         </div>
                     </div>
                 </CardContent>

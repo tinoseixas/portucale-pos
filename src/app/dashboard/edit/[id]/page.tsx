@@ -66,7 +66,7 @@ function resizeAndCompressImage(file: File): Promise<string> {
                 }
                 canvas.width = width;
                 canvas.height = height;
-                const ctx = canvas.withContext('2d');
+                const ctx = canvas.getContext('2d');
                 if (!ctx) return reject(new Error('Canvas Error'));
                 ctx.drawImage(img, 0, 0, width, height);
                 resolve(canvas.toDataURL('image/jpeg', IMAGE_QUALITY));
@@ -286,7 +286,6 @@ export default function EditServicePage() {
 
   const handleSoftDelete = () => {
     if (!serviceDocRef) return;
-    // Instead of actual delete, we move to recycle bin
     updateDocumentNonBlocking(serviceDocRef, { deleted: true, deletedAt: new Date().toISOString() });
     toast({ title: "Enviat a la papelera", description: "Pots recuperar-lo si cal." });
     router.push('/dashboard');
@@ -419,7 +418,7 @@ export default function EditServicePage() {
                         size="sm" 
                         onClick={handleTranslate} 
                         disabled={isTranslating}
-                        className="bg-primary/5 text-primary border-primary/20 font-black uppercase text-[10px] tracking-widest h-8 px-4 rounded-xl"
+                        className="bg-accent text-accent-foreground font-black uppercase text-[10px] tracking-widest h-8 px-4 rounded-xl shadow-sm border-none"
                     >
                         {isTranslating ? <Loader2 className="h-3 w-3 animate-spin mr-2" /> : <Sparkles className="h-3 w-3 mr-2" />}
                         Traduir (IA)
