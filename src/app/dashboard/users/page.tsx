@@ -5,16 +5,17 @@ import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useCollection, useUser, useFirestore, useMemoFirebase } from '@/firebase'
-import { collection, query, doc, getDocs, writeBatch, collectionGroup, addDoc } from 'firebase/firestore'
-import type { Employee, Customer, ServiceRecord, Albaran, Invoice, Quote, Project } from '@/lib/types'
+import { collection, query, doc, getDocs, writeBatch, collectionGroup, addDoc, setDoc } from 'firebase/firestore'
+import type { Employee, Customer, ServiceRecord, Albaran, Invoice, Quote, Project, Receipt } from '@/lib/types'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Edit, ShieldAlert, Loader2, Database, AlertCircle, Download, Upload, RefreshCw } from 'lucide-react'
+import { Edit, ShieldAlert, Loader2, Database, AlertCircle, Download, Upload, RefreshCw, FileWarning } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { AdminGate } from '@/components/AdminGate'
+import { format } from 'date-fns'
 
 const WhatsAppIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg viewBox="0 0 24 24" fill="currentColor" {...props}>
@@ -29,6 +30,7 @@ export default function UsersPage() {
   const { user, isUserLoading } = useUser()
   const firestore = useFirestore()
   const [isSeeding, setIsSeeding] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
 
   const employeesQuery = useMemoFirebase(() => {
     if (!user || !firestore) return null;
@@ -56,7 +58,6 @@ export default function UsersPage() {
     try {
         const batch = writeBatch(firestore);
         
-        // 1. Clientes Profissionais de Andorra
         const customers = [
             { name: "Comunitat Edifici Font de Ferro", address: "AD200 Encamp", nrt: "L-706521-X", email: "info@fontferro.ad" },
             { name: "Hotel Roc de Caldes", address: "Ctra. d'Engolasters, Escaldes-Engordany", nrt: "F-123456-Z", email: "recepcio@rocdescaldes.ad" },
@@ -69,7 +70,6 @@ export default function UsersPage() {
             const cRef = doc(collection(firestore, 'customers'));
             batch.set(cRef, cust);
             
-            // 2. Obra/Proyecto por cada cliente
             const pRef = doc(collection(firestore, 'projects'));
             const projectData = {
                 name: `Manteniment Preventiu - ${cust.name}`,
@@ -80,7 +80,6 @@ export default function UsersPage() {
             };
             batch.set(pRef, projectData);
 
-            // 3. Registre de Treball
             const sRef = doc(collection(firestore, `employees/${user.uid}/serviceRecords`));
             const serviceData: Omit<ServiceRecord, 'id'> = {
                 employeeId: user.uid,
@@ -125,29 +124,86 @@ export default function UsersPage() {
             albarans: [],
             invoices: [],
             quotes: [],
+            receipts: [],
             serviceRecords: []
         };
 
-        const collections = ['customers', 'projects', 'albarans', 'invoices', 'quotes'];
+        const collections = ['customers', 'projects', 'albarans', 'invoices', 'quotes', 'receipts'];
         for (const colName of collections) {
             const snap = await getDocs(collection(firestore, colName));
             data[colName] = snap.docs.map(d => ({ id: d.id, ...d.data() }));
         }
 
         const servicesSnap = await getDocs(collectionGroup(firestore, 'serviceRecords'));
-        data.serviceRecords = servicesSnap.docs.map(d => ({ id: d.id, parentPath: d.ref.parent.path, ...d.data() }));
+        data.serviceRecords = servicesSnap.docs.map(d => ({ 
+            id: d.id, 
+            parentPath: d.ref.parent.path, 
+            ...d.data() 
+        }));
 
         const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `TS-Serveis-Backup-${new Date().toISOString().split('T')[0]}.json`;
+        a.download = `TS-Serveis-Full-Backup-${format(new Date(), 'yyyy-MM-dd')}.json`;
         a.click();
         
-        toast({ title: "Backup completat", description: "El fitxer s'ha descarregat." });
+        toast({ title: "Backup completat", description: "El fitxer s'ha descarregat correctament." });
     } catch (e) {
         toast({ variant: 'destructive', title: "Error exportant" });
     }
+  };
+
+  const handleImportData = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !firestore) return;
+
+    setIsImporting(true);
+    const reader = new FileReader();
+    reader.onload = async (evt) => {
+        try {
+            const data = JSON.parse(evt.target?.result as string);
+            const batch = writeBatch(firestore);
+            
+            // 1. Clientes
+            data.customers?.forEach((c: any) => {
+                const { id, ...rest } = c;
+                batch.set(doc(firestore, 'customers', id), rest);
+            });
+
+            // 2. Projectes
+            data.projects?.forEach((p: any) => {
+                const { id, ...rest } = p;
+                batch.set(doc(firestore, 'projects', id), rest);
+            });
+
+            // 3. Service Records (Requires parent path handling)
+            data.serviceRecords?.forEach((s: any) => {
+                const { id, parentPath, ...rest } = s;
+                if (parentPath) {
+                    batch.set(doc(firestore, parentPath, id), rest);
+                }
+            });
+
+            // 4. Otros documentos
+            ['albarans', 'invoices', 'quotes', 'receipts'].forEach(col => {
+                data[col]?.forEach((docData: any) => {
+                    const { id, ...rest } = docData;
+                    batch.set(doc(firestore, col, id), rest);
+                });
+            });
+
+            await batch.commit();
+            toast({ title: "Importació Finalitzada", description: "Totes les dades s'han restaurat correctament." });
+            window.location.reload();
+        } catch (err) {
+            console.error(err);
+            toast({ variant: 'destructive', title: "Error en importar", description: "El fitxer no és un backup vàlid." });
+        } finally {
+            setIsImporting(false);
+        }
+    };
+    reader.readAsText(file);
   };
 
   const getInitials = (employee: Employee) => {
@@ -235,8 +291,8 @@ export default function UsersPage() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="p-6 bg-white rounded-3xl border-2 border-primary/10 shadow-sm space-y-4">
                             <div className="space-y-1">
-                                <p className="font-black text-primary uppercase text-xs">Còpia de Seguretat</p>
-                                <p className="text-[10px] text-slate-400 font-bold uppercase">Exporta tots els teus registres a un fitxer JSON.</p>
+                                <p className="font-black text-primary uppercase text-xs">Còpia de Seguretat Total</p>
+                                <p className="text-[10px] text-slate-400 font-bold uppercase">Exporta TOTS els registres (Clientes, Obras, Facturas, etc).</p>
                             </div>
                             <Button variant="outline" onClick={handleExportData} className="w-full h-12 border-primary text-primary font-black uppercase tracking-widest rounded-xl hover:bg-primary/5">
                                 <Download className="h-4 w-4 mr-2" />
@@ -245,20 +301,42 @@ export default function UsersPage() {
                         </div>
                         <div className="p-6 bg-white rounded-3xl border-2 border-primary/10 shadow-sm space-y-4">
                             <div className="space-y-1">
-                                <p className="font-black text-primary uppercase text-xs">Emergència: Dades de Prova</p>
-                                <p className="text-[10px] text-slate-400 font-bold uppercase">Si la base està buida, carrega exemples per començar.</p>
+                                <p className="font-black text-primary uppercase text-xs">Restaurar des de Fitxer</p>
+                                <p className="text-[10px] text-slate-400 font-bold uppercase">Carrega un fitxer .json prèviament exportat.</p>
                             </div>
-                            <Button variant="outline" onClick={handleRestoreSampleData} disabled={isSeeding} className="w-full h-12 border-primary text-primary font-black uppercase tracking-widest rounded-xl hover:bg-primary/5">
-                                {isSeeding ? <Loader2 className="h-4 w-4 mr-2" /> : <RefreshCw className="h-4 w-4 mr-2" />}
-                                CARREGAR MOSTRA COMPLETA
-                            </Button>
+                            <div className="relative">
+                                <input type="file" accept=".json" onChange={handleImportData} className="hidden" id="import-json" />
+                                <Button asChild variant="outline" disabled={isImporting} className="w-full h-12 border-primary text-primary font-black uppercase tracking-widest rounded-xl hover:bg-primary/5 cursor-pointer">
+                                    <label htmlFor="import-json" className="flex items-center justify-center gap-2">
+                                        {isImporting ? <Loader2 className="animate-spin h-4 w-4" /> : <Upload className="h-4 w-4" />}
+                                        IMPORTAR BACKUP .JSON
+                                    </label>
+                                </Button>
+                            </div>
                         </div>
                     </div>
-                    <div className="bg-amber-50 border-2 border-amber-200 p-4 rounded-2xl flex gap-3">
-                        <AlertCircle className="h-6 w-6 text-amber-600 shrink-0" />
-                        <div className="text-[10px] font-bold text-amber-800 uppercase leading-relaxed">
-                            Atenuació: Els servidors de Google no permeten desfer eliminacions de dades directament. 
-                            Recomanem exportar un backup un cop per setmana per seguretat.
+
+                    <div className="p-6 bg-amber-50 rounded-3xl border-2 border-amber-200 shadow-sm space-y-4">
+                        <div className="flex items-start gap-4">
+                            <div className="bg-amber-100 p-2 rounded-xl">
+                                <FileWarning className="h-6 w-6 text-amber-600" />
+                            </div>
+                            <div className="space-y-1">
+                                <p className="font-black text-amber-800 uppercase text-xs">Emergència: Dades de Prova</p>
+                                <p className="text-[10px] text-amber-600 font-bold uppercase">Només si la base està buida i vols carregar exemples.</p>
+                            </div>
+                        </div>
+                        <Button variant="outline" onClick={handleRestoreSampleData} disabled={isSeeding} className="w-full h-12 border-amber-300 text-amber-700 font-black uppercase tracking-widest rounded-xl hover:bg-amber-100">
+                            {isSeeding ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <RefreshCw className="h-4 w-4 mr-2" />}
+                            CARREGAR MOSTRA COMPLETA
+                        </Button>
+                    </div>
+
+                    <div className="bg-slate-900 border-2 border-primary p-4 rounded-2xl flex gap-3 shadow-inner">
+                        <AlertCircle className="h-6 w-6 text-primary shrink-0" />
+                        <div className="text-[10px] font-bold text-slate-400 uppercase leading-relaxed">
+                            <span className="text-white">RECOMANACIÓ:</span> Els servidors de Google no permeten desfer eliminacions directament. 
+                            Fes un backup un cop per setmana i guarda'l en un disc dur extern ou al núvol (Drive/Dropbox).
                         </div>
                     </div>
                 </CardContent>

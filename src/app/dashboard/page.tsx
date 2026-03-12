@@ -5,9 +5,9 @@ import { useState, useMemo, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
-import { PlusCircle, Calendar as CalendarIcon, User, Edit, Trash2, Briefcase, Filter, History, Search, X } from 'lucide-react'
+import { PlusCircle, Calendar as CalendarIcon, User, Edit, Trash2, Briefcase, Filter, History, Search, X, Download, AlertTriangle, ShieldCheck } from 'lucide-react'
 import type { ServiceRecord, Employee } from '@/lib/types'
-import { useUser, useFirestore, updateDocumentNonBlocking } from '@/firebase';
+import { useUser, useFirestore, updateDocumentNonBlocking, useDoc, useMemoFirebase } from '@/firebase';
 import { collection, query, orderBy, getDocs, collectionGroup, doc } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton'
 import { Card, CardHeader, CardContent, CardTitle } from '@/components/ui/card'
@@ -60,6 +60,16 @@ export default function DashboardPage() {
   const [selectedUser, setSelectedUser] = useState<string>('all');
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
   const [selectedProject, setSelectedProject] = useState<string>('all');
+  
+  // Backup state
+  const [needsBackup, setNeedsBackup] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+
+  const employeeDocRef = useMemoFirebase(() => {
+    if (!user || !firestore) return null;
+    return doc(firestore, 'employees', user.uid);
+  }, [firestore, user]);
+  const { data: currentEmployee } = useDoc<Employee>(employeeDocRef);
 
   useEffect(() => {
     if (isUserLoading || !firestore || !user) {
@@ -81,6 +91,15 @@ export default function DashboardPage() {
                 .filter(s => !s.deleted); 
             setAllServices(servicesData);
 
+            // Check for backup
+            if (currentEmployee?.role === 'admin') {
+                const lastBackup = localStorage.getItem('last_backup_date');
+                const today = format(new Date(), 'yyyy-MM-dd');
+                if (lastBackup !== today) {
+                    setNeedsBackup(true);
+                }
+            }
+
         } catch (error) {
             console.error("Error en carregar dades:", error);
         } finally {
@@ -89,7 +108,7 @@ export default function DashboardPage() {
     };
     
     fetchData();
-  }, [firestore, isUserLoading, user]);
+  }, [firestore, isUserLoading, user, currentEmployee?.role]);
   
   const projectNames = useMemo(() => {
     const names = allServices.map(service => service.projectName?.trim()).filter(Boolean);
@@ -162,6 +181,53 @@ export default function DashboardPage() {
     setAllServices(allServices.filter(s => !selectedRows.includes(s.id)));
     setSelectedRows([]);
   };
+
+  const handleBackup = async () => {
+    if (!firestore) return;
+    setIsExporting(true);
+    toast({ title: "Preparant backup diari...", description: "Espera un moment." });
+    
+    try {
+        const data: any = {
+            customers: [],
+            projects: [],
+            albarans: [],
+            invoices: [],
+            quotes: [],
+            receipts: [],
+            serviceRecords: []
+        };
+
+        const collections = ['customers', 'projects', 'albarans', 'invoices', 'quotes', 'receipts'];
+        for (const colName of collections) {
+            const snap = await getDocs(collection(firestore, colName));
+            data[colName] = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        }
+
+        const servicesSnap = await getDocs(collectionGroup(firestore, 'serviceRecords'));
+        data.serviceRecords = servicesSnap.docs.map(d => ({ 
+            id: d.id, 
+            parentPath: d.ref.parent.path, 
+            ...d.data() 
+        }));
+
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        const today = format(new Date(), 'yyyy-MM-dd');
+        a.href = url;
+        a.download = `TS-Serveis-Backup-${today}.json`;
+        a.click();
+        
+        localStorage.setItem('last_backup_date', today);
+        setNeedsBackup(false);
+        toast({ title: "Backup completat!", description: "Les teves dades estan segures al teu ordinador." });
+    } catch (e) {
+        toast({ variant: 'destructive', title: "Error en el backup" });
+    } finally {
+        setIsExporting(false);
+    }
+  };
   
   if (isUserLoading) {
     return (
@@ -178,7 +244,27 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="max-w-[1400px] mx-auto space-y-10 px-4 md:px-8">
+    <div className="max-w-[1400px] mx-auto space-y-10 px-4 md:px-8 pb-20">
+      
+      {/* BACKUP NOTIFICATION */}
+      {needsBackup && (
+          <div className="bg-accent/15 border-2 border-accent/30 p-6 rounded-3xl flex flex-col md:flex-row items-center justify-between gap-6 animate-in slide-in-from-top duration-500 shadow-xl">
+              <div className="flex items-center gap-4">
+                  <div className="bg-accent p-3 rounded-2xl shadow-lg">
+                    <AlertTriangle className="h-6 w-6 text-accent-foreground" />
+                  </div>
+                  <div>
+                      <p className="font-black text-slate-900 uppercase tracking-tight">Còpia de Seguretat Necessària</p>
+                      <p className="text-xs text-slate-500 font-bold uppercase tracking-widest">No has fet el backup diari avui. Protegeix la teva feina.</p>
+                  </div>
+              </div>
+              <Button onClick={handleBackup} disabled={isExporting} className="bg-primary hover:bg-primary/90 text-white font-black uppercase tracking-widest h-14 px-10 rounded-2xl shadow-xl w-full md:w-auto">
+                  {isExporting ? <Loader2 className="animate-spin mr-2 h-5 w-5" /> : <Download className="mr-2 h-5 w-5" />}
+                  DESCARREGAR BACKUP ARA
+              </Button>
+          </div>
+      )}
+
       {/* HEADER SECTION */}
       <div className="flex flex-col md:flex-row items-start md:items-end justify-between gap-6 pt-4">
         <div className="space-y-1">
@@ -216,25 +302,32 @@ export default function DashboardPage() {
                         <Filter className="h-6 w-6 text-primary" />
                         <CardTitle className="text-xl font-black uppercase tracking-tight">Filtres de Supervisió</CardTitle>
                     </div>
-                    {selectedRows.length > 0 && (
-                        <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                            <Button variant="destructive" className="font-black uppercase tracking-widest h-10 px-6 rounded-xl shadow-lg animate-in zoom-in-95">
-                            <Trash2 className="mr-2 h-4 w-4" /> Esborrar ({selectedRows.length})
+                    <div className="flex gap-2">
+                        {currentEmployee?.role === 'admin' && !needsBackup && (
+                            <Button variant="ghost" onClick={handleBackup} disabled={isExporting} className="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-primary">
+                                <ShieldCheck className="h-4 w-4 mr-2" /> Backup OK
                             </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent className="rounded-[2.5rem] p-10">
-                            <AlertDialogHeader>
-                            <AlertDialogTitle className="text-2xl font-black uppercase">Moure a la papelera?</AlertDialogTitle>
-                            <AlertDialogDescription className="text-base font-medium">Podràs recuperar aquests registres més tard si cal.</AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter className="pt-6">
-                            <AlertDialogCancel className="h-14 rounded-2xl font-bold border-2">Enrere</AlertDialogCancel>
-                            <AlertDialogAction onClick={handleMoveToTrash} className="bg-red-600 h-14 rounded-2xl font-black uppercase tracking-widest px-8">Eliminar</AlertDialogAction>
-                            </AlertDialogFooter>
-                        </AlertDialogContent>
-                        </AlertDialog>
-                    )}
+                        )}
+                        {selectedRows.length > 0 && (
+                            <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                                <Button variant="destructive" className="font-black uppercase tracking-widest h-10 px-6 rounded-xl shadow-lg animate-in zoom-in-95">
+                                <Trash2 className="mr-2 h-4 w-4" /> Esborrar ({selectedRows.length})
+                                </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent className="rounded-[2.5rem] p-10">
+                                <AlertDialogHeader>
+                                <AlertDialogTitle className="text-2xl font-black uppercase">Moure a la papelera?</AlertDialogTitle>
+                                <AlertDialogDescription className="text-base font-medium">Podràs recuperar aquests registres més tard si cal.</AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter className="pt-6">
+                                <AlertDialogCancel className="h-14 rounded-2xl font-bold border-2">Enrere</AlertDialogCancel>
+                                <AlertDialogAction onClick={handleMoveToTrash} className="bg-red-600 h-14 rounded-2xl font-black uppercase tracking-widest px-8">Eliminar</AlertDialogAction>
+                                </AlertDialogFooter>
+                            </AlertDialogContent>
+                            </AlertDialog>
+                        )}
+                    </div>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pt-8">
                     <div className="space-y-2">
