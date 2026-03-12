@@ -5,7 +5,7 @@ import { useState, useMemo, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
-import { PlusCircle, Calendar as CalendarIcon, User, Edit, Trash2, Briefcase, Filter, History, Search, X, Download, AlertTriangle, ShieldCheck, Loader2 } from 'lucide-react'
+import { PlusCircle, Calendar as CalendarIcon, User, Edit, Trash2, Briefcase, Filter, History, Search, X, Download, AlertTriangle, ShieldCheck, Loader2, Sparkles } from 'lucide-react'
 import type { ServiceRecord, Employee } from '@/lib/types'
 import { useUser, useFirestore, updateDocumentNonBlocking, useDoc, useMemoFirebase } from '@/firebase';
 import { collection, query, orderBy, getDocs, collectionGroup, doc, getDoc, setDoc } from 'firebase/firestore';
@@ -327,8 +327,14 @@ export default function DashboardPage() {
           </h1>
           <p className="text-slate-400 font-bold uppercase text-[10px] tracking-[0.2em]">Supervisió de serveis realitzats per l'equip.</p>
         </div>
-        <div className="flex items-center gap-3 w-full md:w-auto">
-            <Button asChild variant="outline" className="h-14 px-8 border-2 border-primary text-primary font-black uppercase tracking-widest rounded-2xl hover:bg-primary/5 transition-all shadow-sm">
+        <div className="flex items-center gap-3 w-full md:w-auto flex-wrap">
+            <Button asChild variant="outline" className="h-14 px-6 border-2 border-blue-600 text-blue-600 font-black uppercase tracking-widest rounded-2xl hover:bg-blue-50 transition-all shadow-sm">
+                <Link href="/dashboard/import-legacy">
+                    <Sparkles className="mr-2 h-5 w-5" />
+                    Scanner IA
+                </Link>
+            </Button>
+            <Button asChild variant="outline" className="h-14 px-6 border-2 border-slate-300 text-slate-500 font-black uppercase tracking-widest rounded-2xl hover:bg-slate-50 transition-all shadow-sm">
                 <Link href="/dashboard/trash">
                     <History className="mr-2 h-5 w-5" />
                     Papelera
@@ -513,5 +519,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-
-    
