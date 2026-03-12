@@ -8,7 +8,7 @@ import { ai } from '@/ai/genkit';
 import { z } from 'zod';
 
 const ExtractedDataSchema = z.object({
-  type: z.enum(['service_record', 'albaran', 'invoice']).describe('Tipus de document detectat.'),
+  type: z.string().describe('Tipus de document detectat (service_record, albaran, invoice, o general).'),
   date: z.string().optional().describe('Data del document en format ISO o text llegible.'),
   customerName: z.string().optional().describe('Nom del client trobat al document.'),
   projectName: z.string().optional().describe('Nom de l\'obra o projecte.'),
@@ -27,7 +27,15 @@ export async function extractDataFromDocument(fileDataUri: string): Promise<Extr
   try {
     const response = await ai.generate({
       model: 'googleai/gemini-1.5-flash',
-      config: { temperature: 0.1 },
+      config: { 
+        temperature: 0.1,
+        safetySettings: [
+          { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
+          { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' },
+          { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
+          { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' },
+        ]
+      },
       output: { schema: ExtractedDataSchema },
       prompt: [
         { media: { url: fileDataUri } },
@@ -36,19 +44,19 @@ export async function extractDataFromDocument(fileDataUri: string): Promise<Extr
         TASCA:
         Analitza aquest document (pot ser una foto o PDF) i extreu tota la informació rellevant per registrar-lo al sistema.
         
-        RELES CRÍTIQUES:
+        REGLES CRÍTIQUES:
         1. Tradueix totes les descripcions tècniques al CATALÀ professional.
-        2. Si el document és un resum de diversos dies, marca'l com a "albaran". Si és d'un sol dia, com a "service_record".
-        3. Identifica bé el client i l'obra.
-        4. Extreu la llista de materials si n'hi ha.
+        2. Identifica el client i l'obra encara que el text sigui poc clar.
+        3. Extreu la llista de materials si n'hi ha, ignorant totals i impostos.
+        4. Si no estàs segur del tipus de document, posa "general".
         
-        Retorna les dades en el format JSON especificat.` }
+        Retorna les dades en el format JSON especificat. Si el document és difícil de llegir, intenta extreure el màxim possible.` }
       ],
     });
 
     return response.output || null;
   } catch (error) {
-    console.error("Error analitzant document:", error);
+    console.error("Error analitzant document amb IA:", error);
     return null;
   }
 }

@@ -44,7 +44,7 @@ export default function ImportLegacyPage() {
         const dataUri = reader.result as string
         const result = await extractDataFromDocument(dataUri)
         
-        if (result) {
+        if (result && (result.description || result.customerName)) {
           setExtractedData(result)
           // Intentar pre-seleccionar el client si el nom coincideix
           if (result.customerName && customers) {
@@ -56,7 +56,11 @@ export default function ImportLegacyPage() {
           }
           toast({ title: "Escaneig completat", description: "Revisa les dades extretes abans de guardar." })
         } else {
-          toast({ variant: "destructive", title: "Error en l'anàlisi", description: "No s'han pogut extreure dades vàlides." })
+          toast({ 
+            variant: "destructive", 
+            title: "Dades insuficients", 
+            description: "L'IA no ha pogut llegir el contingut clarament. Prova amb una foto millor o un PDF." 
+          })
         }
         setIsScanning(false)
       }
@@ -155,7 +159,7 @@ export default function ImportLegacyPage() {
                   <div className="space-y-2">
                     <Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest flex items-center gap-2"><FileText className="h-3 w-3" /> Descripció dels Treballs</Label>
                     <div className="bg-slate-50 p-6 rounded-2xl border-2 border-slate-100 font-medium italic text-slate-700 leading-relaxed">
-                      {extractedData.description}
+                      {extractedData.description || 'Sense descripció detectada.'}
                     </div>
                   </div>
 
@@ -194,7 +198,7 @@ export default function ImportLegacyPage() {
                       </SelectContent>
                     </Select>
                     {extractedData.customerName && (
-                      <p className="text-[10px] font-bold text-amber-600 uppercase mt-1 italic">Detectat: {extractedData.customerName}</p>
+                      <p className="text-[10px] font-bold text-amber-600 uppercase mt-1 italic">Detectat al doc: {extractedData.customerName}</p>
                     )}
                   </div>
 
@@ -218,7 +222,7 @@ export default function ImportLegacyPage() {
                   <AlertCircle className="h-4 w-4" /> Consell de l'IA
                 </div>
                 <p className="text-xs text-slate-400 font-medium leading-relaxed">
-                  L'IA és intel·ligent però pot cometre errors en lletra manuscrita difícil. Revisa sempre les quantitats de material abans de guardar.
+                  L'IA és intel·ligent però pot cometre errors en lletra manuscrita difícil o fotos amb poca llum. Revisa sempre les dades abans de guardar.
                 </p>
               </div>
             </div>
