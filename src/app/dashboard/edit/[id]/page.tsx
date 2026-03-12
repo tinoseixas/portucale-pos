@@ -10,8 +10,8 @@ import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Clock, Camera, ArrowLeft, Save, Trash2, Plus, X, Video, Calendar as CalendarIcon, Briefcase, Users, Package, Euro, ImagePlus, PenTool, Loader2, Sparkles, Trash, Edit, Utensils } from 'lucide-react'
 import { useToast } from "@/hooks/use-toast"
-import { useFirestore, useUser, useDoc, useMemoFirebase, useCollection } from '@/firebase'
-import { doc, deleteDoc, collection, query, orderBy, setDoc, where, addDoc } from 'firebase/firestore'
+import { useFirestore, useUser, useDoc, useMemoFirebase, useCollection, updateDocumentNonBlocking } from '@/firebase'
+import { doc, collection, query, orderBy, setDoc, where, addDoc } from 'firebase/firestore'
 import type { ServiceRecord, Customer, Employee, Project } from '@/lib/types'
 import Image from 'next/image'
 import {
@@ -66,7 +66,7 @@ function resizeAndCompressImage(file: File): Promise<string> {
                 }
                 canvas.width = width;
                 canvas.height = height;
-                const ctx = canvas.getContext('2d');
+                const ctx = canvas.withContext('2d');
                 if (!ctx) return reject(new Error('Canvas Error'));
                 ctx.drawImage(img, 0, 0, width, height);
                 resolve(canvas.toDataURL('image/jpeg', IMAGE_QUALITY));
@@ -199,7 +199,7 @@ export default function EditServicePage() {
   const handleTranslate = async () => {
     if (!description && !pendingTasks) return;
     setIsTranslating(true);
-    toast({ title: 'Traduïnt...', description: 'L\'IA està processant el text.' });
+    toast({ title: 'IA: Traduint al català...', description: 'Espera un moment.' });
     
     try {
         if (description && description.trim() !== "") {
@@ -214,7 +214,7 @@ export default function EditServicePage() {
                 setPendingTasks(res.translatedText);
             }
         }
-        toast({ title: 'Traducció completada', description: 'El text s\'ha actualitzat a la fitxa.' });
+        toast({ title: 'Traduit!', description: 'El text s\'ha actualitzat correctament.' });
     } catch (e) {
         console.error(e);
         toast({ variant: 'destructive', title: 'Error traducció', description: 'No s\'ha pogut connectar amb l\'IA.' });
@@ -283,6 +283,14 @@ export default function EditServicePage() {
         setIsSaving(false);
     }
   }
+
+  const handleSoftDelete = () => {
+    if (!serviceDocRef) return;
+    // Instead of actual delete, we move to recycle bin
+    updateDocumentNonBlocking(serviceDocRef, { deleted: true, deletedAt: new Date().toISOString() });
+    toast({ title: "Enviat a la papelera", description: "Pots recuperar-lo si cal." });
+    router.push('/dashboard');
+  };
 
   if (isUserLoading || isLoading || isSaving) return <div className="p-12 text-center h-[80vh] flex flex-col items-center justify-center"><Loader2 className="h-16 w-16 animate-spin mx-auto text-primary" /><p className="mt-6 font-black uppercase tracking-widest text-slate-400">Processant...</p></div>
   if (!service) return <div className="p-12 text-center">Registre no trobat.</div>
@@ -493,13 +501,14 @@ export default function EditServicePage() {
               <div className="flex flex-col sm:flex-row justify-between items-center pt-12 border-t-2 border-slate-100 gap-6">
                 <AlertDialog>
                     <AlertDialogTrigger asChild>
-                        <Button type="button" variant="ghost" className="text-red-500 font-bold h-16 w-full sm:w-auto rounded-2xl px-8 transition-colors">Eliminar Registre</Button>
+                        <Button type="button" variant="ghost" className="text-red-500 font-bold h-16 w-full sm:w-auto rounded-2xl px-8 transition-colors">Esborrar Registre</Button>
                     </AlertDialogTrigger>
                     <AlertDialogContent className="rounded-[2.5rem] p-10">
-                        <AlertDialogHeader><AlertDialogTitle className="text-2xl font-black uppercase">Segur que vols eliminar?</AlertDialogTitle></AlertDialogHeader>
+                        <AlertDialogHeader><AlertDialogTitle className="text-2xl font-black uppercase">Moure a la Papelera?</AlertDialogTitle></AlertDialogHeader>
+                        <AlertDialogDescription>El registre no s'esborrarà per sempre, podràs recuperar-lo a la papelera del dashboard.</AlertDialogDescription>
                         <AlertDialogFooter className="pt-6">
                             <AlertDialogCancel className="rounded-2xl h-14 font-bold border-2">Enrere</AlertDialogCancel>
-                            <AlertDialogAction onClick={async () => { await deleteDoc(serviceDocRef!); router.push('/dashboard'); }} className="bg-red-600 rounded-2xl h-14 font-black uppercase tracking-widest">Eliminar definitivament</AlertDialogAction>
+                            <AlertDialogAction onClick={handleSoftDelete} className="bg-red-600 rounded-2xl h-14 font-black uppercase tracking-widest">Esborrar</AlertDialogAction>
                         </AlertDialogFooter>
                     </AlertDialogContent>
                 </AlertDialog>

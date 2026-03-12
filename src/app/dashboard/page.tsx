@@ -1,12 +1,13 @@
+
 'use client'
 
 import { useState, useMemo, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
-import { PlusCircle, Calendar as CalendarIcon, User, Edit, Trash2, Briefcase, Filter } from 'lucide-react'
+import { PlusCircle, Calendar as CalendarIcon, User, Edit, Trash2, Briefcase, Filter, History } from 'lucide-react'
 import type { ServiceRecord, Employee } from '@/lib/types'
-import { useUser, useFirestore, deleteDocumentNonBlocking } from '@/firebase';
+import { useUser, useFirestore, updateDocumentNonBlocking } from '@/firebase';
 import { collection, query, orderBy, getDocs, collectionGroup, doc } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton'
 import { Card, CardHeader, CardContent, CardTitle } from '@/components/ui/card'
@@ -75,7 +76,9 @@ export default function DashboardPage() {
 
             const servicesQuery = query(collectionGroup(firestore, 'serviceRecords'), orderBy('arrivalDateTime', 'desc'));
             const serviceSnapshot = await getDocs(servicesQuery);
-            const servicesData = serviceSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ServiceRecord));
+            const servicesData = serviceSnapshot.docs
+                .map(doc => ({ id: doc.id, ...doc.data() } as ServiceRecord))
+                .filter(s => !s.deleted); // EXCLUDE DELETED RECORDS
             setAllServices(servicesData);
 
         } catch (error) {
@@ -90,7 +93,6 @@ export default function DashboardPage() {
   
   const projectNames = useMemo(() => {
     const names = allServices.map(service => service.projectName?.trim()).filter(Boolean);
-    // Deduplicar ignorando espaços e mantendo a capitalização original do primeiro encontrado
     const seen = new Set();
     const unique: string[] = [];
     names.forEach(n => {
@@ -138,20 +140,24 @@ export default function DashboardPage() {
     return service.employeeName || 'Tècnic';
   };
 
-  const handleDeleteSelected = () => {
+  const handleMoveToTrash = () => {
     if (!firestore) return;
     
     selectedRows.forEach(serviceId => {
       const service = allServices.find(s => s.id === serviceId);
       if (service) {
         const docRef = doc(firestore, `employees/${service.employeeId}/serviceRecords`, serviceId);
-        deleteDocumentNonBlocking(docRef);
+        // SOFT DELETE: Mark as deleted instead of removing
+        updateDocumentNonBlocking(docRef, { 
+            deleted: true, 
+            deletedAt: new Date().toISOString() 
+        });
       }
     });
 
     toast({
-      title: `${selectedRows.length} registres eliminats`,
-      description: 'Els serveis seleccionats s\'han esborrat correctament.',
+      title: `${selectedRows.length} registres enviats a la papelera`,
+      description: 'Pots recuperar-los a la secció de Papelera.',
     });
 
     setAllServices(allServices.filter(s => !selectedRows.includes(s.id)));
@@ -180,6 +186,12 @@ export default function DashboardPage() {
           <p className="text-muted-foreground">Gestió de tots els serveis realitzats per l'equip.</p>
         </div>
         <div className="flex items-center gap-2 w-full sm:w-auto">
+            <Button asChild variant="outline" className="border-primary text-primary font-bold">
+                <Link href="/dashboard/trash">
+                    <History className="mr-2 h-4 w-4" />
+                    Papelera
+                </Link>
+            </Button>
             <Button asChild className="bg-accent hover:bg-accent/90 text-accent-foreground flex-1 sm:flex-none font-bold">
                 <Link href="/dashboard/new">
                     <PlusCircle className="mr-2 h-4 w-4" />
@@ -206,17 +218,17 @@ export default function DashboardPage() {
                         <AlertDialog>
                         <AlertDialogTrigger asChild>
                             <Button variant="destructive" size="sm" className="font-bold">
-                            <Trash2 className="mr-2 h-4 w-4" /> Eliminar Seleccionats ({selectedRows.length})
+                            <Trash2 className="mr-2 h-4 w-4" /> Esborrar ({selectedRows.length})
                             </Button>
                         </AlertDialogTrigger>
                         <AlertDialogContent>
                             <AlertDialogHeader>
-                            <AlertDialogTitle>Vols eliminar els serveis seleccionats?</AlertDialogTitle>
-                            <AlertDialogDescription>Aquesta acció esborrarà permanentment {selectedRows.length} registres. Recorda que si ja tenen albarà, l'hauràs d'actualitzar.</AlertDialogDescription>
+                            <AlertDialogTitle>Vols esborrar els serveis seleccionats?</AlertDialogTitle>
+                            <AlertDialogDescription>Els registres es mouran a la **Papelera**, on podràs recuperar-los si cal.</AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
                             <AlertDialogCancel>Enrere</AlertDialogCancel>
-                            <AlertDialogAction onClick={handleDeleteSelected} className="bg-destructive">Eliminar definitivament</AlertDialogAction>
+                            <AlertDialogAction onClick={handleMoveToTrash} className="bg-red-600">Enviar a la Papelera</AlertDialogAction>
                             </AlertDialogFooter>
                         </AlertDialogContent>
                         </AlertDialog>

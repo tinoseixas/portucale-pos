@@ -27,6 +27,8 @@ export interface ServiceRecord {
   customerSignatureName?: string; // Name of the person who signed
   customerSignatureDataUrl?: string; // Base64 signature image
   isLunchSubtracted?: boolean; // Whether to subtract the 13h-14h break (default true)
+  deleted?: boolean; // For soft-delete/recycle bin
+  deletedAt?: string;
 }
 
 export interface Employee {
