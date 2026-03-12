@@ -1,3 +1,4 @@
+
 'use client'
 
 import { useMemo, useState, useEffect } from 'react'
@@ -8,9 +9,10 @@ import type { Customer } from '@/lib/types'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
-import { Edit, Trash2, PlusCircle, Building, Mail, Phone, Hash, Upload, Search, Loader2 } from 'lucide-react'
+import { Edit, Trash2, PlusCircle, Building, Mail, Phone, Upload, Search, Loader2, ListPlus, X } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
+import { Textarea } from '@/components/ui/textarea'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,6 +24,15 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
 import { useToast } from '@/hooks/use-toast'
 import { AdminGate } from '@/components/AdminGate'
 
@@ -31,6 +42,11 @@ export default function CustomersPage() {
   const { user, isUserLoading } = useUser()
   const firestore = useFirestore()
   const [searchTerm, setSearchTerm] = useState('')
+  
+  // Bulk Import State
+  const [isBulkDialogOpen, setIsBulkDialogOpen] = useState(false)
+  const [bulkText, setBulkText] = useState('')
+  const [isImporting, setIsImporting] = useState(false)
 
   useEffect(() => {
     if (!isUserLoading && !user) {
@@ -45,11 +61,9 @@ export default function CustomersPage() {
 
   const { data: customers, isLoading: isLoadingCustomers } = useCollection<Customer>(customersQuery)
   
-  // DEDUPLICAÇÃO DE CLIENTES NA LISTA VISUAL USANDO CHAVE AGRESSIVA
   const displayCustomers = useMemo(() => {
     if (!customers) return [];
     
-    // 1. Unificar por nome (limpando caracteres especiais e espaços)
     const seen = new Set();
     const unique = customers.filter(c => {
       const nameKey = c.name.toLowerCase().trim().replace(/[^a-z0-9]/g, '');
@@ -58,7 +72,6 @@ export default function CustomersPage() {
       return true;
     }).sort((a, b) => a.name.localeCompare(b.name, 'ca'));
 
-    // 2. Filtrar por termo de busca
     if (!searchTerm) return unique;
     const search = searchTerm.toLowerCase().trim();
     return unique.filter(c => 
@@ -66,6 +79,41 @@ export default function CustomersPage() {
         c.nrt?.toLowerCase().includes(search)
     );
   }, [customers, searchTerm]);
+
+  const handleBulkImport = async () => {
+    if (!firestore || !bulkText.trim()) return;
+    setIsImporting(true);
+    const names = bulkText.split('\n').map(n => n.trim()).filter(n => n.length > 0);
+    
+    try {
+        const batch = writeBatch(firestore);
+        let count = 0;
+        
+        for (const name of names) {
+            // Basic check to avoid duplicates within the import itself
+            const exists = customers?.some(c => c.name.toLowerCase().trim() === name.toLowerCase());
+            if (!exists) {
+                const cRef = doc(collection(firestore, 'customers'));
+                batch.set(cRef, { name, address: '', contact: '', email: '', nrt: '' });
+                count++;
+            }
+        }
+        
+        if (count > 0) {
+            await batch.commit();
+            toast({ title: "Importació completada", description: `S'han afegit ${count} nous clients.` });
+        } else {
+            toast({ title: "Sense canvis", description: "Tots els clients ja existien a la llista." });
+        }
+        
+        setBulkText('');
+        setIsBulkDialogOpen(false);
+    } catch (e) {
+        toast({ variant: 'destructive', title: "Error", description: "No s'ha pogut realitzar l'importació." });
+    } finally {
+        setIsImporting(false);
+    }
+  };
 
   const handleDeleteCustomer = (customerId: string, customerName: string) => {
     if (!firestore) return;
@@ -92,10 +140,41 @@ export default function CustomersPage() {
                 </h1>
                 <p className="text-muted-foreground font-medium">Gestió centralitzada de dades de contacte i facturació.</p>
             </div>
-            <Button onClick={() => router.push('/dashboard/customers/edit/new')} className="w-full sm:w-auto h-14 px-8 bg-accent hover:bg-accent/90 text-accent-foreground font-black uppercase tracking-widest rounded-2xl shadow-xl hover:scale-[1.02] transition-all">
-                <PlusCircle className="mr-2 h-6 w-6" />
-                Nou Client
-            </Button>
+            <div className="flex gap-3 w-full sm:w-auto">
+                <Dialog open={isBulkDialogOpen} onOpenChange={setIsBulkDialogOpen}>
+                    <DialogTrigger asChild>
+                        <Button variant="outline" className="h-14 px-6 border-2 border-primary text-primary font-black uppercase tracking-widest rounded-2xl shadow-lg hover:bg-primary/5">
+                            <ListPlus className="mr-2 h-5 w-5" /> Importació Massa
+                        </Button>
+                    </DialogTrigger>
+                    <DialogContent className="rounded-[2rem] max-w-xl">
+                        <DialogHeader>
+                            <DialogTitle className="text-2xl font-black uppercase">Importar Llista de Clients</DialogTitle>
+                            <DialogDescription className="font-medium">Enganxa una llista de noms (un per línia). El sistema crearà les fitxes automàticament.</DialogDescription>
+                        </DialogHeader>
+                        <div className="py-4">
+                            <Textarea 
+                                placeholder="Client A&#10;Client B&#10;Empresa C..." 
+                                value={bulkText} 
+                                onChange={(e) => setBulkText(e.target.value)} 
+                                rows={10}
+                                className="rounded-2xl border-2 font-bold p-4 bg-slate-50"
+                            />
+                        </div>
+                        <DialogFooter>
+                            <Button variant="ghost" onClick={() => setIsBulkDialogOpen(false)} className="font-bold">Cancel·lar</Button>
+                            <Button onClick={handleBulkImport} disabled={isImporting || !bulkText.trim()} className="bg-primary font-black uppercase tracking-widest px-8">
+                                {isImporting ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : <Upload className="mr-2 h-4 w-4" />}
+                                COMENÇAR IMPORTACIÓ
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+
+                <Button onClick={() => router.push('/dashboard/customers/edit/new')} className="flex-1 sm:flex-none h-14 px-8 bg-accent hover:bg-accent/90 text-accent-foreground font-black uppercase tracking-widest rounded-2xl shadow-xl hover:scale-[1.02] transition-all">
+                    <PlusCircle className="mr-2 h-6 w-6" /> Nou Client
+                </Button>
+            </div>
         </div>
 
         <Card className="border-none shadow-2xl rounded-3xl overflow-hidden bg-white">

@@ -56,20 +56,23 @@ export default function UsersPage() {
     try {
         const batch = writeBatch(firestore);
         
-        // 1. Clientes
+        // 1. Clientes Profissionais de Andorra
         const customers = [
-            { name: "Residencial Els Arcs", address: "Carrer de les Escoles 12, Encamp", nrt: "L-706521-X", email: "info@elsarcs.ad" },
-            { name: "Comunitat Av. Princep", address: "Av. Princep Benlloch 4, Andorra la Vella", nrt: "F-123456-Z", email: "gerencia@comunitat.ad" }
+            { name: "Comunitat Edifici Font de Ferro", address: "AD200 Encamp", nrt: "L-706521-X", email: "info@fontferro.ad" },
+            { name: "Hotel Roc de Caldes", address: "Ctra. d'Engolasters, Escaldes-Engordany", nrt: "F-123456-Z", email: "recepcio@rocdescaldes.ad" },
+            { name: "Comú d'Encamp - Dept. Obres", address: "Plaça dels Arinsols, Encamp", nrt: "G-000001-A", email: "obres@encamp.ad" },
+            { name: "Residencial Les Terrasses", address: "Av. Príncep Benlloch, Andorra la Vella", nrt: "L-998877-B", email: "admin@terrasses.ad" },
+            { name: "Restaurant L'Era d'en Jaume", address: "Carrer Major, Ordino", nrt: "F-554433-C", email: "reserves@erajaume.ad" }
         ];
 
         for (const cust of customers) {
             const cRef = doc(collection(firestore, 'customers'));
             batch.set(cRef, cust);
             
-            // 2. Obra/Proyecto
+            // 2. Obra/Proyecto por cada cliente
             const pRef = doc(collection(firestore, 'projects'));
             const projectData = {
-                name: `Reforma Interior - ${cust.name}`,
+                name: `Manteniment Preventiu - ${cust.name}`,
                 customerId: cRef.id,
                 customerName: cust.name,
                 status: 'active' as const,
@@ -83,8 +86,8 @@ export default function UsersPage() {
                 employeeId: user.uid,
                 employeeName: user.displayName || user.email?.split('@')[0] || 'Tècnic',
                 arrivalDateTime: new Date().toISOString(),
-                departureDateTime: new Date(Date.now() + 7200000).toISOString(), // 2h later
-                description: "Revisió de caldera i instal·lació de termòstat digital.",
+                departureDateTime: new Date(Date.now() + 7200000).toISOString(), 
+                description: `Revisió general de instal·lacions i verificació de punts crítics a ${cust.name}.`,
                 projectName: projectData.name,
                 projectId: pRef.id,
                 pendingTasks: "",
@@ -93,7 +96,7 @@ export default function UsersPage() {
                 serviceHourlyRate: 30,
                 media: [],
                 albarans: [],
-                materials: [{ description: "Termòstat WiFi", quantity: 1, unitPrice: 85 }],
+                materials: [{ description: "Material divers de revisió", quantity: 1, unitPrice: 15 }],
                 createdAt: new Date().toISOString(),
                 isLunchSubtracted: true
             };
@@ -101,7 +104,7 @@ export default function UsersPage() {
         }
 
         await batch.commit();
-        toast({ title: "Dades restaurades", description: "S'han afegit clients, obres e serveis de mostra." });
+        toast({ title: "Dades restaurades", description: "S'han afegit 5 clients corporatius i les seves obres." });
         router.push('/dashboard');
     } catch (error) {
         console.error(error);
@@ -246,7 +249,7 @@ export default function UsersPage() {
                                 <p className="text-[10px] text-slate-400 font-bold uppercase">Si la base està buida, carrega exemples per començar.</p>
                             </div>
                             <Button variant="outline" onClick={handleRestoreSampleData} disabled={isSeeding} className="w-full h-12 border-primary text-primary font-black uppercase tracking-widest rounded-xl hover:bg-primary/5">
-                                {isSeeding ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <RefreshCw className="h-4 w-4 mr-2" />}
+                                {isSeeding ? <Loader2 className="h-4 w-4 mr-2" /> : <RefreshCw className="h-4 w-4 mr-2" />}
                                 CARREGAR MOSTRA COMPLETA
                             </Button>
                         </div>
