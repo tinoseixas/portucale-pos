@@ -288,18 +288,18 @@ export default function EditServicePage() {
         />
         
         <Card className="border-none shadow-2xl rounded-3xl overflow-hidden bg-white">
-          <CardHeader className="bg-slate-900 text-white p-8">
+          <CardHeader className="bg-slate-900 text-white p-6 sm:p-8">
             <div className="flex justify-between items-center">
                 <div className="space-y-1">
-                    <CardTitle className="text-3xl font-black uppercase tracking-tighter">Informe de Treball</CardTitle>
+                    <CardTitle className="text-2xl sm:text-3xl font-black uppercase tracking-tighter">Informe de Treball</CardTitle>
                     <CardDescription className="text-slate-400 font-medium">Tècnic: {service.employeeName || '...'}</CardDescription>
                 </div>
-                <div className="bg-primary/20 p-3 rounded-2xl">
+                <div className="bg-primary/20 p-3 rounded-2xl hidden sm:block">
                     <Briefcase className="h-8 w-8 text-primary" />
                 </div>
             </div>
           </CardHeader>
-          <CardContent className="pt-10 space-y-10">
+          <CardContent className="pt-8 sm:pt-10 px-6 sm:px-10 space-y-10">
             <form onSubmit={handleSubmit} className="space-y-10">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
                 <div className="space-y-3">
@@ -395,7 +395,7 @@ export default function EditServicePage() {
                 <Textarea placeholder="Falta alguna cosa?" value={pendingTasks} onChange={(e) => setPendingTasks(e.target.value)} rows={2} className="border-amber-200 bg-amber-50/50 rounded-2xl p-6 font-medium" />
               </div>
 
-              <div className="space-y-6 rounded-[2.5rem] border-2 border-slate-100 p-8 bg-slate-50/50 shadow-inner">
+              <div className="space-y-6 rounded-[2.5rem] border-2 border-slate-100 p-6 sm:p-8 bg-slate-50/50 shadow-inner">
                   <Label className="font-black text-slate-900 flex items-center gap-3 uppercase tracking-tighter text-xl"><Package className="h-6 w-6 text-primary" /> Materials</Label>
                   <div className="space-y-4">
                       {materials.map((m, i) => (
@@ -418,12 +418,12 @@ export default function EditServicePage() {
               </div>
 
               <div className="space-y-6">
-                  <div className="flex justify-between items-center">
+                  <div className="flex justify-between items-center px-1">
                     <Label className="font-black text-slate-900 flex items-center gap-3 uppercase tracking-tighter text-xl"><Camera className="h-6 w-6 text-primary" /> Galeria</Label>
                     <div className="flex gap-2">
                         <input type="file" min-h-svh ref={galleryInputRef} onChange={handleGalleryUpload} accept="image/*" multiple className="hidden" />
-                        <Button type="button" variant="outline" size="sm" onClick={() => setShowCamera(true)} className="font-black h-12 rounded-2xl px-6 border-2">Càmera</Button>
-                        <Button type="button" variant="outline" size="sm" onClick={() => galleryInputRef.current?.click()} className="font-black h-12 rounded-2xl px-6 border-2">Arxius</Button>
+                        <Button type="button" variant="outline" size="sm" onClick={() => setShowCamera(true)} className="font-black h-12 rounded-2xl px-4 sm:px-6 border-2 text-[10px] sm:text-xs">CÀMERA</Button>
+                        <Button type="button" variant="outline" size="sm" onClick={() => galleryInputRef.current?.click()} className="font-black h-12 rounded-2xl px-4 sm:px-6 border-2 text-[10px] sm:text-xs">ARXIUS</Button>
                     </div>
                   </div>
                   <div className="grid grid-cols-3 sm:grid-cols-4 gap-4">
@@ -436,11 +436,11 @@ export default function EditServicePage() {
                   </div>
               </div>
 
-              <div className="space-y-4 rounded-[2.5rem] border-4 border-primary/5 p-8 bg-primary/5 shadow-inner">
-                  <Label className="font-black flex items-center gap-3 text-primary uppercase tracking-tighter text-xl"><PenTool className="h-6 w-6" /> Firma</Label>
+              <div className="space-y-4 rounded-[2.5rem] border-4 border-primary/5 p-6 sm:p-8 bg-primary/5 shadow-inner text-center sm:text-left">
+                  <Label className="font-black flex items-center justify-center sm:justify-start gap-3 text-primary uppercase tracking-tighter text-xl"><PenTool className="h-6 w-6" /> Firma</Label>
                   {customerSignatureDataUrl ? (
-                    <div className="flex items-center justify-between bg-white p-6 rounded-3xl border-2 shadow-lg">
-                        <div>
+                    <div className="flex flex-col sm:flex-row items-center justify-between bg-white p-6 rounded-3xl border-2 shadow-lg gap-4">
+                        <div className="text-center sm:text-left">
                             <p className="text-[10px] text-slate-400 uppercase font-black">Confirmat per:</p>
                             <p className="font-black text-slate-900 text-xl">{customerSignatureName}</p>
                         </div>
@@ -449,7 +449,7 @@ export default function EditServicePage() {
                     </div>
                   ) : (
                     <Button type="button" variant="outline" onClick={() => setIsSignatureDialogOpen(true)} className="w-full h-24 border-dashed border-4 border-primary/20 text-primary font-black shadow-sm rounded-3xl text-sm">
-                        <PenTool className="mr-4 h-8 w-8" /> Recollir Signatura
+                        <PenTool className="mr-2 sm:mr-4 h-6 sm:h-8 w-6 sm:w-8" /> Recollir Signatura
                     </Button>
                   )}
               </div>
@@ -468,8 +468,8 @@ export default function EditServicePage() {
                         </AlertDialogFooter>
                     </AlertDialogContent>
                 </AlertDialog>
-                <Button type="submit" className="bg-primary px-20 h-20 text-2xl font-black shadow-2xl uppercase tracking-tighter hover:scale-[1.02] transition-all rounded-3xl w-full sm:w-auto" disabled={isSaving}>
-                    {isSaving ? <Loader2 className="mr-4 h-8 w-8 animate-spin" /> : <Save className="mr-4 h-8 w-8" />}
+                <Button type="submit" className="bg-primary px-10 sm:px-20 h-20 text-xl sm:text-2xl font-black shadow-2xl uppercase tracking-tighter hover:scale-[1.02] transition-all rounded-3xl w-full sm:w-auto" disabled={isSaving}>
+                    {isSaving ? <Loader2 className="mr-2 sm:mr-4 h-6 sm:h-8 w-6 sm:w-8 animate-spin" /> : <Save className="mr-2 sm:mr-4 h-6 sm:h-8 w-6 sm:w-8" />}
                     GUARDAR TREBALL
                 </Button>
               </div>

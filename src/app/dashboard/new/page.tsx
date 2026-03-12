@@ -155,14 +155,14 @@ export default function NewServicePage() {
 
   if (!user && !isUserLoading) {
     return (
-      <div className="max-w-2xl mx-auto flex items-center justify-center h-[70vh]">
-        <Card className="text-center w-full">
-          <CardHeader>
+      <div className="max-w-2xl mx-auto flex items-center justify-center h-[70vh] px-4">
+        <Card className="text-center w-full shadow-lg rounded-3xl overflow-hidden">
+          <CardHeader className="p-8 bg-slate-900 text-white">
             <CardTitle>Inicia Sessió</CardTitle>
-            <CardDescription>Necessites accés per registrar serveis.</CardDescription>
+            <CardDescription className="text-slate-400">Necessites accés per registrar serveis.</CardDescription>
           </CardHeader>
-          <CardContent>
-             <Button asChild className="bg-primary text-white">
+          <CardContent className="p-10">
+             <Button asChild className="bg-primary text-white h-14 px-10 rounded-2xl font-black uppercase tracking-tight">
                 <Link href="/">Anar al Portal</Link>
               </Button>
           </CardContent>
@@ -172,13 +172,13 @@ export default function NewServicePage() {
   }
 
   return (
-      <div className="max-w-2xl mx-auto flex items-center justify-center min-h-[80vh] py-10">
+      <div className="max-w-2xl mx-auto flex items-center justify-center min-h-[80vh] py-10 px-4">
         <Card className="w-full shadow-2xl border-none rounded-3xl overflow-hidden">
-          <CardHeader className="bg-slate-900 text-white p-8 text-center">
-            <CardTitle className="text-3xl font-black uppercase tracking-tight">Nou Registre</CardTitle>
+          <CardHeader className="bg-slate-900 text-white p-6 sm:p-8 text-center">
+            <CardTitle className="text-2xl sm:text-3xl font-black uppercase tracking-tight">Nou Registre</CardTitle>
             <CardDescription className="text-slate-400">Comença un nou treball per a un client.</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-8 pt-10">
+          <CardContent className="space-y-8 pt-8 sm:pt-10 px-6 sm:p-10">
               <div className="space-y-6">
                 <div className="space-y-2">
                     <Label htmlFor="customerId" className="flex items-center gap-2 font-black uppercase text-[10px] text-slate-400 tracking-widest pl-1"><Users className="h-3 w-3" /> Client</Label>

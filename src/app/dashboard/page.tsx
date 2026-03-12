@@ -321,7 +321,7 @@ export default function DashboardPage() {
       {/* HEADER SECTION */}
       <div className="flex flex-col md:flex-row items-start md:items-end justify-between gap-6 px-2">
         <div className="space-y-1">
-          <h1 className="text-4xl md:text-6xl font-black tracking-tighter leading-[0.9] text-slate-900 uppercase">
+          <h1 className="text-3xl md:text-5xl lg:text-6xl font-black tracking-tighter leading-[0.9] text-slate-900 uppercase">
             REGISTRES DE<br />TREBALL
           </h1>
           <p className="text-slate-400 font-bold uppercase text-[9px] md:text-[10px] tracking-[0.2em]">Supervisió de serveis realitzats per l'equip.</p>
@@ -352,7 +352,7 @@ export default function DashboardPage() {
             <CardHeader className="bg-slate-50/50 p-6 md:p-8 border-b border-slate-100">
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                     <div className="flex items-center gap-3 text-slate-900">
-                        <Filter className="h-5 w-5 md:h-6 md:w-6 text-primary" />
+                        <Filter className="h-5 w-5 md:h-6 w-6 text-primary" />
                         <CardTitle className="text-lg md:text-xl font-black uppercase tracking-tight">Filtres de Supervisió</CardTitle>
                     </div>
                     <div className="flex gap-2">
