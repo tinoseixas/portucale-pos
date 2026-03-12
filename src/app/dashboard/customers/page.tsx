@@ -128,7 +128,7 @@ export default function CustomersPage() {
             const data = XLSX.utils.sheet_to_json(ws, { header: 1 }) as any[][];
             
             // MAPEO ESTRICTO DE 7 COLUMNAS:
-            // 0: Nome, 1: NRT, 2: Rua, 3: Cidade, 4: CP, 5: Tel, 6: Email
+            // 0: Nom, 1: NIF, 2: Rua, 3: Cidade, 4: CP, 5: Tel, 6: Email
             const parsed: Partial<Customer>[] = data.slice(1).map(row => ({
                 name: String(row[0] || '').trim(),
                 nrt: String(row[1] || '').trim(),
