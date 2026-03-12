@@ -36,6 +36,7 @@ const userColors = [
 ];
 
 const getUserColor = (userId: string) => {
+  if (!userId) return '#94a3b8';
   let hash = 0;
   for (let i = 0; i < userId.length; i++) {
     hash = userId.charCodeAt(i) + ((hash << 5) - hash);
@@ -162,10 +163,12 @@ export default function DashboardPage() {
     const seen = new Set();
     const unique: string[] = [];
     names.forEach(n => {
-        const key = n!.toLowerCase();
-        if (!seen.has(key)) {
-            seen.add(key);
-            unique.push(n!);
+        if (n) {
+            const key = n.toLowerCase();
+            if (!seen.has(key)) {
+                seen.add(key);
+                unique.push(n);
+            }
         }
     });
     return unique.sort((a, b) => a.localeCompare(b, 'ca'));
