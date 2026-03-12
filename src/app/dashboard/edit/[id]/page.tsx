@@ -65,7 +65,7 @@ function resizeAndCompressImage(file: File): Promise<string> {
                 canvas.width = width;
                 canvas.height = height;
                 const ctx = canvas.getContext('2d');
-                if (!ctx) return reject(new Error('Canvas Error'));
+                if (!ctx) return reject(new Error('Error al Canvas'));
                 ctx.drawImage(img, 0, 0, width, height);
                 resolve(canvas.toDataURL('image/jpeg', IMAGE_QUALITY));
             };
@@ -201,7 +201,7 @@ export default function EditServicePage() {
             const url = await resizeAndCompressImage(files[i]);
             setMedia(prev => [...prev, { type: 'image', dataUrl: url }]);
         } catch (err) {
-            console.error("Error processing image", err);
+            console.error("Error al processar la imatge", err);
         }
     }
     if (galleryInputRef.current) galleryInputRef.current.value = '';
@@ -245,7 +245,7 @@ export default function EditServicePage() {
         };
 
         await setDoc(serviceDocRef, updatedData, { merge: true });
-        toast({ title: "Registre guardat" });
+        toast({ title: "Registre desat" });
         router.push('/dashboard');
     } catch (error) {
         toast({ variant: 'destructive', title: 'Error al desar' });
@@ -421,7 +421,7 @@ export default function EditServicePage() {
                   <div className="flex justify-between items-center px-1">
                     <Label className="font-black text-slate-900 flex items-center gap-3 uppercase tracking-tighter text-xl"><Camera className="h-6 w-6 text-primary" /> Galeria</Label>
                     <div className="flex gap-2">
-                        <input type="file" min-h-svh ref={galleryInputRef} onChange={handleGalleryUpload} accept="image/*" multiple className="hidden" />
+                        <input type="file" ref={galleryInputRef} onChange={handleGalleryUpload} accept="image/*" multiple className="hidden" />
                         <Button type="button" variant="outline" size="sm" onClick={() => setShowCamera(true)} className="font-black h-12 rounded-2xl px-4 sm:px-6 border-2 text-[10px] sm:text-xs">CÀMERA</Button>
                         <Button type="button" variant="outline" size="sm" onClick={() => galleryInputRef.current?.click()} className="font-black h-12 rounded-2xl px-4 sm:px-6 border-2 text-[10px] sm:text-xs">ARXIUS</Button>
                     </div>
@@ -437,14 +437,14 @@ export default function EditServicePage() {
               </div>
 
               <div className="space-y-4 rounded-[2.5rem] border-4 border-primary/5 p-6 sm:p-8 bg-primary/5 shadow-inner text-center sm:text-left">
-                  <Label className="font-black flex items-center justify-center sm:justify-start gap-3 text-primary uppercase tracking-tighter text-xl"><PenTool className="h-6 w-6" /> Firma</Label>
+                  <Label className="font-black flex items-center justify-center sm:justify-start gap-3 text-primary uppercase tracking-tighter text-xl"><PenTool className="h-6 w-6" /> Signatura</Label>
                   {customerSignatureDataUrl ? (
                     <div className="flex flex-col sm:flex-row items-center justify-between bg-white p-6 rounded-3xl border-2 shadow-lg gap-4">
                         <div className="text-center sm:text-left">
                             <p className="text-[10px] text-slate-400 uppercase font-black">Confirmat per:</p>
                             <p className="font-black text-slate-900 text-xl">{customerSignatureName}</p>
                         </div>
-                        <div className="relative h-24 w-40"><Image src={customerSignatureDataUrl} alt="Signature" fill style={{ objectFit: 'contain' }} /></div>
+                        <div className="relative h-24 w-40"><Image src={customerSignatureDataUrl} alt="Signatura" fill style={{ objectFit: 'contain' }} /></div>
                         <Button type="button" variant="ghost" size="icon" onClick={() => setIsSignatureDialogOpen(true)} className="text-primary rounded-2xl h-12 w-12"><Edit className="h-6 w-6" /></Button>
                     </div>
                   ) : (

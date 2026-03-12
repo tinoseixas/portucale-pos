@@ -145,7 +145,7 @@ export default function NewServicePage() {
         router.push(`/dashboard/edit/${docRef.id}?ownerId=${currentEmployee.id}`);
 
     } catch (error) {
-        console.error("Error creating service record:", error);
+        console.error("Error al crear el registre:", error);
         setIsStarting(false);
         toast({ variant: "destructive", title: "Error", description: "No s'ha pogut iniciar el servei." });
     }
@@ -240,7 +240,7 @@ export default function NewServicePage() {
 
                 <div className="space-y-2">
                     <div className="flex justify-between items-center px-1">
-                        <Label htmlFor="description" className="flex items-center gap-2 font-black uppercase text-[10px] text-slate-400 tracking-widest"><FileText className="h-3 w-3" /> Què vas a fer? (Opcional)</Label>
+                        <Label htmlFor="description" className="flex items-center gap-2 font-black uppercase text-[10px] text-slate-400 tracking-widest"><FileText className="h-3 w-3" /> Què faràs? (Opcional)</Label>
                     </div>
                     <Textarea 
                         id="description"

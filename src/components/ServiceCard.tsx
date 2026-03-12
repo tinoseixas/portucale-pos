@@ -17,7 +17,6 @@ interface ServiceCardProps {
   service: ServiceRecord;
 }
 
-// Sub-componente que lida com o nome do técnico, mesmo que tenha sido removido
 function EmployeeNameDisplay({ service }: { service: ServiceRecord }) {
   const firestore = useFirestore()
   const employeeId = service.employeeId;
@@ -31,7 +30,6 @@ function EmployeeNameDisplay({ service }: { service: ServiceRecord }) {
 
   if (isLoading) return <Skeleton className="h-5 w-32" />;
 
-  // Se o documento employee não existir (removido), usa o nome guardado no registo
   const displayName = employee ? `${employee.firstName} ${employee.lastName}` : (service.employeeName || 'Tècnic');
 
   return (
@@ -113,7 +111,7 @@ export function ServiceCard({ service }: ServiceCardProps) {
                 {mediaItems.map((media, index) => (
                     <div key={index} className="relative h-16 w-16 rounded-md overflow-hidden border">
                          {media.type === 'image' ? (
-                            <Image src={media.dataUrl} alt={`Media ${index + 1}`} fill style={{ objectFit: 'cover' }} sizes="64px" />
+                            <Image src={media.dataUrl} alt={`Foto ${index + 1}`} fill style={{ objectFit: 'cover' }} sizes="64px" />
                          ) : (
                             <div className="w-full h-full bg-black flex items-center justify-center">
                                 <Video className="h-8 w-8 text-white" />

@@ -114,7 +114,7 @@ export default function DashboardPage() {
         localStorage.setItem('last_backup_date', today);
         setNeedsBackup(false);
     } catch (e) {
-        console.error("Error in automatic cloud backup:", e);
+        console.error("Error en la còpia de seguretat automàtica:", e);
     }
   }, [firestore, user]);
 
@@ -168,7 +168,7 @@ export default function DashboardPage() {
             unique.push(n!);
         }
     });
-    return (unique as string[]).sort((a, b) => a.localeCompare(b, 'ca'));
+    return unique.sort((a, b) => a.localeCompare(b, 'ca'));
   }, [allServices]);
 
   const filteredServices = useMemo(() => {
@@ -232,7 +232,7 @@ export default function DashboardPage() {
   const handleBackup = async () => {
     if (!firestore) return;
     setIsExporting(true);
-    toast({ title: "Preparant backup diari...", description: "Espera un moment." });
+    toast({ title: "Preparant còpia de seguretat...", description: "Espera un moment." });
     
     try {
         const data: any = {
@@ -268,9 +268,9 @@ export default function DashboardPage() {
         
         localStorage.setItem('last_backup_date', today);
         setNeedsBackup(false);
-        toast({ title: "Backup completat!", description: "Les teves dades estan segures al teu ordinador." });
+        toast({ title: "Còpia completada!", description: "Les teves dades estan segures." });
     } catch (e) {
-        toast({ variant: 'destructive', title: "Error al backup" });
+        toast({ variant: 'destructive', title: "Error en la còpia" });
     } finally {
         setIsExporting(false);
     }
@@ -294,14 +294,14 @@ export default function DashboardPage() {
     <div className="max-w-7xl mx-auto space-y-8 md:space-y-12 px-4 md:px-8">
       
       {needsBackup && (
-          <div className="bg-accent/15 border-2 border-accent/30 p-5 md:p-6 rounded-3xl flex flex-col md:row items-center justify-between gap-4 md:gap-6 animate-in slide-in-from-top duration-500 shadow-xl">
+          <div className="bg-accent/15 border-2 border-accent/30 p-5 md:p-6 rounded-3xl flex flex-col md:flex-row items-center justify-between gap-4 md:gap-6 animate-in slide-in-from-top duration-500 shadow-xl">
               <div className="flex items-center gap-4 text-center md:text-left">
                   <div className="hidden md:block bg-accent p-3 rounded-2xl shadow-lg">
                     <AlertTriangle className="h-6 w-6 text-accent-foreground" />
                   </div>
                   <div>
                       <p className="font-black text-slate-900 uppercase tracking-tight">Còpia de Seguretat Necessària</p>
-                      <p className="text-[10px] md:text-xs text-slate-500 font-bold uppercase tracking-widest">Backup automàtic al Firebase en curs. Recomanem descàrrega local.</p>
+                      <p className="text-[10px] md:text-xs text-slate-500 font-bold uppercase tracking-widest">Còpia automàtica en curs. Recomanem descàrrega local.</p>
                   </div>
               </div>
               <Button onClick={handleBackup} disabled={isExporting} className="bg-primary hover:bg-primary/90 text-white font-black uppercase tracking-widest h-12 md:h-14 px-6 md:px-10 rounded-2xl shadow-xl w-full md:w-auto text-xs">
@@ -341,7 +341,7 @@ export default function DashboardPage() {
       ) : (
         <Card className="border-none shadow-2xl rounded-[2rem] md:rounded-[2.5rem] bg-white overflow-hidden">
             <CardHeader className="bg-slate-50/50 p-6 md:p-8 border-b border-slate-100">
-                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div className="flex flex-col md:row justify-between items-start md:items-center gap-4">
                     <div className="flex items-center gap-3 text-slate-900">
                         <Filter className="h-5 w-5 md:h-6 w-6 text-primary" />
                         <CardTitle className="text-lg md:text-xl font-black uppercase tracking-tight">Filtres de Supervisió</CardTitle>
@@ -359,7 +359,7 @@ export default function DashboardPage() {
                                 <Trash2 className="mr-1.5 h-3.5 w-3.5" /> Esborrar ({selectedRows.length})
                                 </Button>
                             </AlertDialogTrigger>
-                            <AlertDialogContent className="rounded-[2rem] p-8 max-w-[90vw] md:max-w-lg">
+                            <AlertDialogContent className="rounded-[2.5rem] p-8 max-w-[90vw] md:max-w-lg">
                                 <AlertDialogHeader>
                                 <AlertDialogTitle className="text-xl md:text-2xl font-black uppercase">Moure a la paperera?</AlertDialogTitle>
                                 <AlertDialogDescription className="text-sm md:text-base font-medium">Podràs recuperar aquests registres més tard si cal.</AlertDialogDescription>
@@ -396,8 +396,8 @@ export default function DashboardPage() {
                         <Popover>
                         <PopoverTrigger asChild>
                             <Button variant="outline" className="w-full justify-start text-left font-bold bg-white border-2 h-12 md:h-14 rounded-2xl text-slate-700 text-xs md:text-sm">
-                            <CalendarIcon className="mr-2 h-4 w-4 md:h-5 md:w-5 text-slate-300" />
-                            {selectedDate ? format(selectedDate, "PPP", { locale: ca }) : <span>Tria una data</span>}
+                                <CalendarIcon className="mr-2 h-4 w-4 md:h-5 md:w-5 text-slate-300" />
+                                {selectedDate ? format(selectedDate, "PPP", { locale: ca }) : <span>Tria una data</span>}
                             </Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-auto p-0" align="start">
