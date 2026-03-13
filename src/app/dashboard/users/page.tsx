@@ -1,3 +1,4 @@
+
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
@@ -11,7 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Edit, ShieldAlert, Loader2, Database, AlertCircle, Download, Upload, RefreshCw, FileWarning, Cloud, RotateCcw } from 'lucide-react'
+import { Edit, ShieldAlert, Loader2, Database, AlertCircle, Download, Upload, RefreshCw, FileWarning, Cloud, RotateCcw, Star, Plus } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { AdminGate } from '@/components/AdminGate'
 import { format, parseISO } from 'date-fns'
@@ -136,6 +137,78 @@ export default function UsersPage() {
         toast({ variant: 'destructive', title: "Error en restaurar", description: "No s'ha pogut processar el backup del núvol." });
     } finally {
         setRestoringId(null);
+    }
+  };
+
+  const handleLoadBlueBlueRecord = async () => {
+    if (!firestore || !user) return;
+    setIsSeeding(true);
+    toast({ title: "Creant registre Blue&Blue...", description: "S'estan afegint tots els detalls tècnics." });
+
+    try {
+        const batch = writeBatch(firestore);
+        
+        // 1. Client
+        const cRef = doc(collection(firestore, 'customers'));
+        batch.set(cRef, {
+            name: "Blue&Blue, slu",
+            street: "antic camí ral, 22 Baixos",
+            city: "Andorra la Vella",
+            nrt: "L-703322-J",
+            email: "welcomebluemoreblue@gmail.com"
+        });
+
+        // 2. Projecte (Obra)
+        const pRef = doc(collection(firestore, 'projects'));
+        batch.set(pRef, {
+            name: "Carolina - Avda Nacions Unides 35",
+            customerId: cRef.id,
+            customerName: "Blue&Blue, slu",
+            status: 'active',
+            createdAt: new Date('2026-03-03T08:00:00').toISOString()
+        });
+
+        // 3. Registre de Treball
+        const sRef = doc(collection(firestore, `employees/${user.uid}/serviceRecords`));
+        const serviceData: Omit<ServiceRecord, 'id'> = {
+            employeeId: user.uid,
+            employeeName: "Tino Seixas",
+            arrivalDateTime: new Date('2026-03-03T08:00:00').toISOString(),
+            departureDateTime: new Date('2026-03-03T18:01:00').toISOString(), // 9h 1m efectives (menys 1h dinar)
+            description: "Instalar uma pista de cortina LED com perfil cinzento\nCriar uma nova ligação a duas tomadas\nCriar quatro saídas de cabo para apliques de parede\nInstalar dois focos adicionais para o cliente",
+            projectName: "Carolina - Avda Nacions Unides 35",
+            projectId: pRef.id,
+            pendingTasks: "",
+            customerId: cRef.id,
+            customerName: "Blue&Blue, slu",
+            serviceHourlyRate: 30,
+            media: [],
+            albarans: [],
+            materials: [
+                { description: "Barra perfil superfície", quantity: 5, unitPrice: 15.20 },
+                { description: "Barra difusor", quantity: 5, unitPrice: 8.30 },
+                { description: "Tira LED Infinity 3000k 230v", quantity: 10, unitPrice: 22.00 },
+                { description: "Mecanisme tomada Siemens", quantity: 2, unitPrice: 9.50 },
+                { description: "Marco duplo Siemens", quantity: 1, unitPrice: 14.00 },
+                { description: "Tapa schuko Siemens", quantity: 2, unitPrice: 6.70 },
+                { description: "Tira LED 2700k 230v", quantity: 10, unitPrice: 22.00 },
+                { description: "Pequenos materials", quantity: 1, unitPrice: 28.00 }
+            ],
+            customerSignatureName: "Carolina Luanes (autoritzat pel client)",
+            customerSignatureDataUrl: "", // S'hauria de signar manualment
+            createdAt: new Date('2026-03-03T18:01:00').toISOString(),
+            isLunchSubtracted: true
+        };
+        batch.set(sRef, serviceData);
+
+        await batch.commit();
+        toast({ title: "Registre creat!", description: "L'obra de Carolina ja està disponible al Dashboard." });
+        router.push('/dashboard');
+    } catch (error) {
+        console.error(error);
+        toast({ variant: 'destructive', title: "Error" });
+    } finally {
+        setIsSeeding(false);
     }
   };
 
@@ -436,20 +509,38 @@ export default function UsersPage() {
                             </div>
                         </div>
 
-                        <div className="p-6 bg-amber-50 rounded-3xl border-2 border-amber-200 shadow-sm space-y-4">
-                            <div className="flex items-start gap-4">
-                                <div className="bg-amber-100 p-2 rounded-xl">
-                                    <FileWarning className="h-6 w-6 text-amber-600" />
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="p-6 bg-amber-50 rounded-3xl border-2 border-amber-200 shadow-sm space-y-4">
+                                <div className="flex items-start gap-4">
+                                    <div className="bg-amber-100 p-2 rounded-xl">
+                                        <FileWarning className="h-6 w-6 text-amber-600" />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <p className="font-black text-amber-800 uppercase text-xs">Dades de Prova Corporatives</p>
+                                        <p className="text-[10px] text-amber-600 font-bold uppercase">Càrrega de 5 clients i obres d'exemple.</p>
+                                    </div>
                                 </div>
-                                <div className="space-y-1">
-                                    <p className="font-black text-amber-800 uppercase text-xs">Emergència: Dades de Prova</p>
-                                    <p className="text-[10px] text-amber-600 font-bold uppercase">Només si la base està buida i vols carregar exemples.</p>
-                                </div>
+                                <Button variant="outline" onClick={handleRestoreSampleData} disabled={isSeeding} className="w-full h-12 border-amber-300 text-amber-700 font-black uppercase tracking-widest rounded-xl hover:bg-amber-100">
+                                    {isSeeding ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <RefreshCw className="h-4 w-4 mr-2" />}
+                                    CARREGAR MOSTRA
+                                </Button>
                             </div>
-                            <Button variant="outline" onClick={handleRestoreSampleData} disabled={isSeeding} className="w-full h-12 border-amber-300 text-amber-700 font-black uppercase tracking-widest rounded-xl hover:bg-amber-100">
-                                {isSeeding ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <RefreshCw className="h-4 w-4 mr-2" />}
-                                CARREGAR MOSTRA COMPLETA
-                            </Button>
+
+                            <div className="p-6 bg-blue-50 rounded-3xl border-2 border-blue-200 shadow-sm space-y-4">
+                                <div className="flex items-start gap-4">
+                                    <div className="bg-blue-100 p-2 rounded-xl text-blue-600">
+                                        <Star className="h-6 w-6" />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <p className="font-black text-blue-800 uppercase text-xs">Registre Blue&Blue (Carolina)</p>
+                                        <p className="text-[10px] text-blue-600 font-bold uppercase">Carrega el registre específic del 03/03/2026.</p>
+                                    </div>
+                                </div>
+                                <Button variant="outline" onClick={handleLoadBlueBlueRecord} disabled={isSeeding} className="w-full h-12 border-blue-300 text-blue-700 font-black uppercase tracking-widest rounded-xl hover:bg-blue-100">
+                                    {isSeeding ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Plus className="h-4 w-4 mr-2" />}
+                                    CARREGAR REGISTRE BLUE&BLUE
+                                </Button>
+                            </div>
                         </div>
 
                         <div className="bg-slate-900 border-2 border-primary p-4 rounded-2xl flex gap-3 shadow-inner">
