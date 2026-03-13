@@ -1,7 +1,7 @@
 
 'use client'
 
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useState, useRef, useEffect, useCallback, Suspense } from 'react'
 import { useRouter, useParams, useSearchParams } from 'next/navigation'
 import { useDoc, useUser, useFirestore, useMemoFirebase, deleteDocumentNonBlocking, useCollection } from '@/firebase'
 import { doc, collection, query, getDocs, collectionGroup, getDoc, updateDoc } from 'firebase/firestore'
@@ -39,7 +39,7 @@ import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { sendDocumentEmail } from '@/ai/flows/send-email'
 
-export default function InvoiceDetailPage() {
+function InvoiceDetailContent() {
     const firestore = useFirestore()
     const router = useRouter()
     const params = useParams()
@@ -222,5 +222,13 @@ export default function InvoiceDetailPage() {
                 </Card>
             </div>
         </AdminGate>
+    )
+}
+
+export default function InvoiceDetailPage() {
+    return (
+        <Suspense fallback={<div className="text-center p-12 h-[60vh] flex flex-col items-center justify-center"><Loader2 className="h-12 w-12 animate-spin text-primary" /><p className="mt-4 font-black uppercase text-slate-400">Carregant...</p></div>}>
+            <InvoiceDetailContent />
+        </Suspense>
     )
 }

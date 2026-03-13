@@ -1,7 +1,7 @@
 
 'use client'
 
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useState, useRef, useEffect, useCallback, Suspense } from 'react'
 import { useRouter, useParams, useSearchParams } from 'next/navigation'
 import { useDoc, useUser, useFirestore, useMemoFirebase, deleteDocumentNonBlocking, useCollection, updateDocumentNonBlocking } from '@/firebase'
 import { collection, query, getDocs, doc, collectionGroup, getDoc, updateDoc } from 'firebase/firestore'
@@ -40,7 +40,7 @@ import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { sendDocumentEmail } from '@/ai/flows/send-email'
 
-export default function AlbaranDetailPage() {
+function AlbaranDetailContent() {
     const firestore = useFirestore()
     const router = useRouter()
     const params = useParams()
@@ -236,7 +236,7 @@ export default function AlbaranDetailPage() {
                             </DialogContent>
                         </Dialog>
 
-                        <Button onClick={handleExportPDF} disabled={isGenerating} className="bg-slate-900 h-12 px-8 rounded-xl font-black uppercase text-xs shadow-xl">
+                        <Button onClick={handleExportPDF} disabled={isGenerating} className="bg-slate-900 h-12 px-8 rounded-xl font-black uppercase text-xs text-white shadow-xl">
                             {isGenerating ? <Loader2 className="animate-spin mr-2" /> : <FileDown className="mr-2 h-4 w-4" />} EXPORTAR PDF
                         </Button>
                     </div>
@@ -269,5 +269,13 @@ export default function AlbaranDetailPage() {
                 </Card>
             </div>
         </AdminGate>
+    )
+}
+
+export default function AlbaranDetailPage() {
+    return (
+        <Suspense fallback={<div className="text-center p-12 h-[60vh] flex flex-col items-center justify-center"><Loader2 className="h-12 w-12 animate-spin text-primary" /><p className="mt-4 font-black uppercase tracking-widest text-slate-400">Carregant...</p></div>}>
+            <AlbaranDetailContent />
+        </Suspense>
     )
 }

@@ -1,7 +1,7 @@
 
 'use client'
 
-import { useState, useMemo, useRef, useEffect } from 'react'
+import { useState, useMemo, useRef, useEffect, Suspense } from 'react'
 import { useRouter, useParams, useSearchParams } from 'next/navigation'
 import { useDoc, useUser, useFirestore, useMemoFirebase, deleteDocumentNonBlocking, useCollection } from '@/firebase'
 import { collection, query, doc, runTransaction, setDoc, updateDoc } from 'firebase/firestore'
@@ -38,7 +38,7 @@ import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { sendDocumentEmail } from '@/ai/flows/send-email'
 
-export default function QuoteDetailPage() {
+function QuoteDetailContent() {
     const firestore = useFirestore()
     const router = useRouter()
     const params = useParams()
@@ -120,17 +120,17 @@ export default function QuoteDetailPage() {
 
     const handleExportPDF = async () => {
         setIsGenerating(true);
-        toast({ title: 'Gerando PDF...', description: 'Isso pode demorar um momento.' });
+        toast({ title: 'Generant PDF...', description: 'Això pot trigar un moment.' });
 
         try {
             const pdf = await generatePDF();
             if (pdf) {
                 pdf.save(`Pressupost-${String(quote?.quoteNumber).padStart(4, '0')}.pdf`);
-                toast({ title: 'PDF Gerado!', description: "A exportação foi concluída com sucesso." });
+                toast({ title: 'PDF Generat!', description: "L'exportació s'ha completat correctament." });
             }
         } catch (error) {
             console.error("Error en generar el PDF:", error);
-            toast({ variant: 'destructive', title: 'Erro', description: "Não foi possível gerar o PDF." });
+            toast({ variant: 'destructive', title: 'Error', description: "No s'ha pogut generar el PDF." });
         } finally {
             setIsGenerating(false);
         }
@@ -138,54 +138,53 @@ export default function QuoteDetailPage() {
 
     const handleSendEmail = async () => {
         if (!recipientEmail.trim() || !recipientEmail.includes('@')) {
-            toast({ variant: 'destructive', title: 'E-mail inválido', description: 'Por favor, insira um endereço de e-mail válido.' });
+            toast({ variant: 'destructive', title: 'E-mail invàlid', description: 'Si us plau, introdueix una adreça de correu vàlida.' });
             return;
         }
 
         setIsSendingEmail(true);
-        toast({ title: 'Enviando e-mail...', description: 'Gerando anexo e processando envio.' });
+        toast({ title: 'Enviant correu...', description: 'Generant adjunt i processant enviament.' });
 
         try {
             const pdf = await generatePDF();
-            if (!pdf) throw new Error("Não foi possível gerar o PDF");
+            if (!pdf) throw new Error("No s'ha pogut generar el PDF");
 
             const pdfBase64 = pdf.output('datauristring');
             
             const result = await sendDocumentEmail({
                 to: recipientEmail.trim(),
-                subject: `Orçamento TS Serveis: ${quote?.projectName}`,
+                subject: `Pressupost TS Serveis: ${quote?.projectName}`,
                 html: `
                     <div style="font-family: sans-serif; color: #333;">
-                        <h2>Bom dia,</h2>
-                        <p>Anexamos o orçamento correspondente à obra: <strong>${quote?.projectName}</strong>.</p>
-                        <p>Ficamos à disposição para qualquer dúvida.</p>
+                        <h2>Bon dia,</h2>
+                        <p>Adjuntem el pressupost corresponent a l'obra: <strong>${quote?.projectName}</strong>.</p>
+                        <p>Restem a la vostra disposició per a qualsevol dubte.</p>
                         <br/>
                         <p><strong>TS Serveis</strong><br/>Solucions Tècniques i Manteniment</p>
                     </div>
                 `,
                 attachments: [{
-                    filename: `Orcament-${String(quote?.quoteNumber).padStart(4, '0')}.pdf`,
+                    filename: `Pressupost-${String(quote?.quoteNumber).padStart(4, '0')}.pdf`,
                     content: pdfBase64
                 }]
             });
 
             if (result.success) {
-                // Actualitzar e-mail a la fitxa de client si era buit
                 if (customer && !customer.email && firestore) {
                     const customerRef = doc(firestore, 'customers', customer.id);
                     await updateDoc(customerRef, { email: recipientEmail.trim() });
                     setCustomer({ ...customer, email: recipientEmail.trim() });
-                    toast({ title: 'E-mail guardado', description: 'O e-mail foi atualizado na ficha do cliente.' });
+                    toast({ title: 'E-mail guardat', description: 'El correu s\'ha actualitzat a la fitxa del client.' });
                 }
 
-                toast({ title: 'E-mail enviado!', description: `O orçamento foi enviado para ${recipientEmail}.` });
+                toast({ title: 'E-mail enviat!', description: `El pressupost s'ha enviat a ${recipientEmail}.` });
                 setIsEmailDialogOpen(false);
             } else {
-                toast({ variant: 'destructive', title: 'Erro no envio', description: result.error });
+                toast({ variant: 'destructive', title: 'Error en l\'enviament', description: result.error });
             }
         } catch (error) {
             console.error("Error enviant email:", error);
-            toast({ variant: 'destructive', title: 'Erro', description: "Não foi possível enviar o e-mail." });
+            toast({ variant: 'destructive', title: 'Error', description: "No s'ha pogut enviar el correu electrònic." });
         } finally {
             setIsSendingEmail(false);
         }
@@ -263,26 +262,26 @@ export default function QuoteDetailPage() {
     }
     
     if (isLoading) {
-        return <div className="text-center p-8"><Loader2 className="h-8 w-8 animate-spin mx-auto" /> Carregant dades del pressupost...</div>
+        return <div className="text-center p-8"><Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" /> <p className="mt-4 font-black uppercase text-slate-400">Carregant Pressupost...</p></div>
     }
     
     if (!quote) {
-        return <p>No s'ha trobat el pressupost.</p>
+        return <p className="p-12 text-center font-bold">No s'ha trobat el pressupost.</p>
     }
 
     return (
         <AdminGate pageTitle="Detall del Pressupost" pageDescription="Aquesta secció està protegida.">
-            <div className="space-y-8 max-w-5xl mx-auto">
+            <div className="space-y-8 max-w-5xl mx-auto pb-20">
                 <div className="flex justify-between items-center flex-wrap gap-4">
-                    <Button variant="ghost" onClick={() => router.push('/dashboard/quotes/history')}>
-                        <ArrowLeft className="mr-2 h-4 w-4" />
-                        Tornar a l'historial
+                    <Button variant="ghost" onClick={() => router.push('/dashboard/quotes/history')} className="font-bold uppercase text-xs">
+                        <ArrowLeft className="mr-2 h-4 w-4" /> Historial
                     </Button>
                     <div className="flex items-center gap-2 flex-wrap justify-end">
                         <Button
                             variant="outline"
                             onClick={handleDuplicateQuote}
                             disabled={isDuplicating}
+                            className="font-bold rounded-xl h-12"
                         >
                             {isDuplicating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Copy className="mr-2 h-4 w-4" />}
                             Duplicar
@@ -291,38 +290,34 @@ export default function QuoteDetailPage() {
                         {/* Email Dialog */}
                         <Dialog open={isEmailDialogOpen} onOpenChange={setIsEmailDialogOpen}>
                             <DialogTrigger asChild>
-                                <Button variant="outline" className="font-bold border-primary text-primary hover:bg-primary/5">
+                                <Button variant="outline" className="font-bold h-12 rounded-xl border-2 text-primary border-primary/20">
                                     <Mail className="mr-2 h-4 w-4" /> Correu
                                 </Button>
                             </DialogTrigger>
-                            <DialogContent>
+                            <DialogContent className="rounded-3xl">
                                 <DialogHeader>
-                                    <DialogTitle>Enviar Orçamento por E-mail</DialogTitle>
-                                    <DialogDescription>O PDF será enviado como anexo para o cliente.</DialogDescription>
+                                    <DialogTitle>Enviar Pressupost per Correu</DialogTitle>
+                                    <DialogDescription>El PDF s'enviarà com a adjunt per al client.</DialogDescription>
                                 </DialogHeader>
                                 <div className="py-4 space-y-4">
                                     <div className="space-y-2">
-                                        <Label>E-mail do destinatário</Label>
+                                        <Label>E-mail del destinatari</Label>
                                         <Input 
                                             type="email" 
-                                            placeholder="cliente@exemplo.com" 
+                                            placeholder="client@exemple.com" 
                                             value={recipientEmail} 
                                             onChange={(e) => setRecipientEmail(e.target.value)} 
+                                            className="h-12 rounded-xl font-bold"
                                         />
                                         {!customer?.email && (
-                                            <p className="text-[10px] text-amber-600 font-bold">Nota: Este cliente não possui e-mail cadastrado. O endereço inserido será salvo na ficha do cliente.</p>
+                                            <p className="text-[10px] text-amber-600 font-bold uppercase">Nota: Aquest client no té e-mail a la fitxa. El correu s'actualitzarà automàticament.</p>
                                         )}
                                     </div>
                                 </div>
                                 <DialogFooter>
-                                    <Button variant="outline" onClick={() => setIsEmailDialogOpen(false)}>Cancelar</Button>
-                                    <Button 
-                                        onClick={handleSendEmail} 
-                                        disabled={isSendingEmail} 
-                                        className="bg-primary font-bold"
-                                    >
+                                    <Button onClick={handleSendEmail} disabled={isSendingEmail} className="bg-primary font-bold h-12 w-full">
                                         {isSendingEmail ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
-                                        Enviar Orçamento
+                                        Enviar Pressupost
                                     </Button>
                                 </DialogFooter>
                             </DialogContent>
@@ -330,20 +325,20 @@ export default function QuoteDetailPage() {
 
                         <AlertDialog>
                             <AlertDialogTrigger asChild>
-                                <Button variant="destructive">
-                                    <Trash2 className="mr-2 h-4 w-4" /> Eliminar Pressupost
+                                <Button variant="ghost" className="text-red-500 font-bold h-12 rounded-xl">
+                                    <Trash2 className="mr-2 h-4 w-4" /> Eliminar
                                 </Button>
                             </AlertDialogTrigger>
-                            <AlertDialogContent>
+                            <AlertDialogContent className="rounded-[2.5rem] p-10">
                                 <AlertDialogHeader>
-                                <AlertDialogTitle>Estàs segur que vols eliminar el pressupost?</AlertDialogTitle>
-                                <AlertDialogDescription>
+                                <AlertDialogTitle className="text-2xl font-black uppercase">Eliminar Pressupost?</AlertDialogTitle>
+                                <AlertDialogDescription className="text-base font-medium">
                                     Aquesta acció no es pot desfer. S'eliminarà el pressupost <strong>#{quote.quoteNumber}</strong> de l'historial.
                                 </AlertDialogDescription>
                                 </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                <AlertDialogCancel>Cancel·lar</AlertDialogCancel>
-                                <AlertDialogAction onClick={handleDeleteQuote} className="bg-destructive hover:bg-destructive/90">Eliminar</AlertDialogAction>
+                                <AlertDialogFooter className="pt-6">
+                                <AlertDialogCancel className="h-14 rounded-2xl font-bold border-2">Enrere</AlertDialogCancel>
+                                <AlertDialogAction onClick={handleDeleteQuote} className="bg-red-600 h-14 rounded-2xl font-black uppercase tracking-widest px-8">Confirmar</AlertDialogAction>
                                 </AlertDialogFooter>
                             </AlertDialogContent>
                         </AlertDialog>
@@ -351,19 +346,20 @@ export default function QuoteDetailPage() {
                         <Button
                             onClick={handleExportPDF}
                             disabled={isGenerating}
+                            className="bg-slate-900 h-12 px-8 rounded-xl font-black uppercase text-xs text-white shadow-xl"
                         >
                             {isGenerating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileDown className="mr-2 h-4 w-4" />}
-                            Exportar PDF
+                            EXPORTAR PDF
                         </Button>
                     </div>
                 </div>
                 
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Pressupost #{String(quote.quoteNumber).padStart(4, '0')}</CardTitle>
-                        <CardDescription>Generat per a l'obra "{quote.projectName}" per al client "{quote.customerName}".</CardDescription>
+                <Card className="shadow-2xl border-none rounded-[2.5rem] overflow-hidden">
+                    <CardHeader className="bg-slate-900 text-white p-8">
+                        <CardTitle className="text-3xl font-black uppercase tracking-tight">Pressupost #{String(quote.quoteNumber).padStart(4, '0')}</CardTitle>
+                        <CardDescription className="text-slate-400 font-medium">Projecte: {quote.projectName}</CardDescription>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent className="p-0 bg-slate-100">
                         <QuotePreview
                             ref={quotePreviewRef}
                             customer={customer}
@@ -371,10 +367,19 @@ export default function QuoteDetailPage() {
                             items={quote.items}
                             labor={quote.labor}
                             quoteNumber={quote.quoteNumber}
+                            notes={quote.notes}
                         />
                     </CardContent>
                 </Card>
             </div>
         </AdminGate>
+    )
+}
+
+export default function QuoteDetailPage() {
+    return (
+        <Suspense fallback={<div className="text-center p-12 h-[60vh] flex flex-col items-center justify-center"><Loader2 className="h-12 w-12 animate-spin text-primary" /><p className="mt-4 font-black uppercase tracking-widest text-slate-400">Carregant...</p></div>}>
+            <QuoteDetailContent />
+        </Suspense>
     )
 }

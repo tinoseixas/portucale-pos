@@ -1,6 +1,7 @@
+
 'use client'
 
-import { useEffect, useState, useMemo, useRef } from 'react'
+import { useEffect, useState, useMemo, useRef, Suspense } from 'react'
 import { useRouter, useParams, useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -76,7 +77,7 @@ function resizeAndCompressImage(file: File): Promise<string> {
     });
 }
 
-export default function EditServicePage() {
+function EditServiceContent() {
   const router = useRouter()
   const params = useParams()
   const searchParams = useSearchParams()
@@ -508,4 +509,12 @@ export default function EditServicePage() {
         </Card>
       </div>
   );
+}
+
+export default function EditServicePage() {
+    return (
+        <Suspense fallback={<div className="p-12 text-center h-[80vh] flex flex-col items-center justify-center"><Loader2 className="h-16 w-16 animate-spin mx-auto text-primary" /><p className="mt-6 font-black uppercase tracking-widest text-slate-400">Carregant...</p></div>}>
+            <EditServiceContent />
+        </Suspense>
+    );
 }

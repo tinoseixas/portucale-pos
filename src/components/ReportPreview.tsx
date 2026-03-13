@@ -30,12 +30,14 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
     const totalTimeFormatted = `${Math.floor(totalHours)}h ${Math.round((totalHours % 1) * 60)}m`;
 
     const allMaterials = useMemo(() => {
+        if (!sortedServices) return [];
         return sortedServices.flatMap(service => service.materials || []).filter(material => 
-            material.description.trim() !== ''
+            material && material.description && material.description.trim() !== ''
         );
     }, [sortedServices]);
 
     const allImages = useMemo(() => {
+        if (!sortedServices) return [];
         return sortedServices.flatMap(service => service.media || []).filter(m => m.type === 'image');
     }, [sortedServices]);
 
@@ -136,12 +138,42 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
                 </table>
             </section>
 
+            {/* TAULA DE MATERIALS */}
+            {allMaterials.length > 0 && (
+                <section className="space-y-4 break-inside-avoid">
+                    <h3 className="text-sm font-black uppercase tracking-[0.2em] text-primary border-l-4 border-primary pl-3">02. Materials utilitzats</h3>
+                    <table className="w-full border-collapse rounded-xl overflow-hidden shadow-sm border border-slate-100">
+                        <thead className="bg-slate-800 text-white text-[10px] uppercase tracking-widest">
+                            <tr>
+                                <th className="py-3 px-4 text-left font-black">Descripció del material</th>
+                                <th className="py-3 px-4 text-right font-black w-24">Qt.</th>
+                                {showPricing && <th className="py-3 px-4 text-right font-black w-28">Preu Unit.</th>}
+                                {showPricing && <th className="py-3 px-4 text-right font-black w-32">Import</th>}
+                            </tr>
+                        </thead>
+                        <tbody className="text-xs">
+                            {allMaterials.map((m, i) => {
+                                const lineTotal = m.quantity * m.unitPrice;
+                                return (
+                                    <tr key={i} className={`${i % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'} border-b border-slate-100`}>
+                                        <td className="py-3 px-4 font-medium text-slate-700">{m.description}</td>
+                                        <td className="py-3 px-4 text-right tabular-nums font-bold text-slate-900">{m.quantity.toFixed(2)}</td>
+                                        {showPricing && <td className="py-3 px-4 text-right tabular-nums text-slate-400">{m.unitPrice.toFixed(2)} €</td>}
+                                        {showPricing && <td className="py-3 px-4 text-right font-black tabular-nums text-primary">{lineTotal.toFixed(2)} €</td>}
+                                    </tr>
+                                );
+                            })}
+                        </tbody>
+                    </table>
+                </section>
+            )}
+
             {/* TOTALS SI SHOWPRICING */}
             {showPricing && (
                 <div className="flex justify-end break-inside-avoid">
                     <div className="w-80 bg-primary text-white p-6 rounded-2xl space-y-3 shadow-xl border-t-4 border-accent">
                         <div className="flex justify-between text-[10px] font-black uppercase text-slate-300 tracking-widest">
-                            <span>Suma Treballs</span>
+                            <span>Suma Treballs i Mat.</span>
                             <span className="tabular-nums">{subtotal.toFixed(2)} €</span>
                         </div>
                         <div className="flex justify-between text-[10px] font-black uppercase text-slate-300 tracking-widest">
