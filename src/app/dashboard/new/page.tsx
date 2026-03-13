@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { LogIn, MapPin, Users, Loader2, Briefcase, Plus, FileText } from 'lucide-react'
+import { LogIn, MapPin, Users, Loader2, Briefcase, Plus, FileText, Sparkles } from 'lucide-react'
 import { useToast } from "@/hooks/use-toast"
 import { useUser, useFirestore, useDoc, useCollection, useMemoFirebase } from '@/firebase'
 import { addDoc, collection, doc, query, orderBy, where } from 'firebase/firestore'
@@ -15,11 +15,13 @@ import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { translateToCatalan } from '@/ai/flows/translate-service-record'
 
 export default function NewServicePage() {
   const router = useRouter()
   const { toast } = useToast()
   const [isStarting, setIsStarting] = useState(false);
+  const [isTranslating, setIsTranslating] = useState(false);
   const { user, isUserLoading } = useUser()
   const firestore = useFirestore()
   
@@ -100,6 +102,20 @@ export default function NewServicePage() {
       } finally {
           setIsCreatingProject(false);
       }
+  };
+
+  const handleTranslate = async () => {
+    if (!description.trim()) return;
+    setIsTranslating(true);
+    try {
+        const result = await translateToCatalan({ text: description });
+        setDescription(result.translatedText);
+        toast({ title: "Traducció completada" });
+    } catch (e) {
+        toast({ variant: 'destructive', title: "Error en la traducció" });
+    } finally {
+        setIsTranslating(false);
+    }
   };
 
   const handleStartService = async () => {
@@ -241,6 +257,17 @@ export default function NewServicePage() {
                 <div className="space-y-2">
                     <div className="flex justify-between items-center px-1">
                         <Label htmlFor="description" className="flex items-center gap-2 font-black uppercase text-[10px] text-slate-400 tracking-widest"><FileText className="h-3 w-3" /> Què faràs? (Opcional)</Label>
+                        <Button 
+                            type="button" 
+                            variant="ghost" 
+                            size="sm" 
+                            onClick={handleTranslate} 
+                            disabled={isTranslating || !description.trim()}
+                            className="text-primary hover:text-primary/80 font-black text-[10px] uppercase gap-1.5"
+                        >
+                            {isTranslating ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+                            Traduir (IA)
+                        </Button>
                     </div>
                     <Textarea 
                         id="description"

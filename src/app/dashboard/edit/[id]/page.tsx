@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Clock, Camera, ArrowLeft, Save, Trash2, Plus, X, Video, Calendar as CalendarIcon, Briefcase, Users, Package, Euro, ImagePlus, PenTool, Loader2, Trash, Edit, Utensils } from 'lucide-react'
+import { Clock, Camera, ArrowLeft, Save, Trash2, Plus, X, Video, Calendar as CalendarIcon, Briefcase, Users, Package, Euro, ImagePlus, PenTool, Loader2, Trash, Edit, Utensils, Sparkles } from 'lucide-react'
 import { useToast } from "@/hooks/use-toast"
 import { useFirestore, useUser, useDoc, useMemoFirebase, useCollection, updateDocumentNonBlocking } from '@/firebase'
 import { doc, collection, query, orderBy, setDoc, where, addDoc } from 'firebase/firestore'
@@ -34,6 +34,7 @@ import { ServiceConfirmationDialog } from '@/components/ServiceConfirmationDialo
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Switch } from '@/components/ui/switch'
+import { translateToCatalan } from '@/ai/flows/translate-service-record'
 
 type MediaFile = {
   type: 'image' | 'video';
@@ -86,6 +87,7 @@ export default function EditServicePage() {
   const galleryInputRef = useRef<HTMLInputElement>(null);
   
   const [isSaving, setIsSaving] = useState(false);
+  const [isTranslating, setIsTranslating] = useState(false);
   const [hasInitialized, setHasInitialized] = useState(false);
 
   const recordOwnerId = searchParams.get('ownerId');
@@ -191,6 +193,20 @@ export default function EditServicePage() {
       } finally {
           setIsCreatingProject(false);
       }
+  };
+
+  const handleTranslate = async () => {
+    if (!description.trim()) return;
+    setIsTranslating(true);
+    try {
+        const result = await translateToCatalan({ text: description });
+        setDescription(result.translatedText);
+        toast({ title: "Traducció completada" });
+    } catch (e) {
+        toast({ variant: 'destructive', title: "Error en la traducció" });
+    } finally {
+        setIsTranslating(false);
+    }
   };
 
   const handleGalleryUpload = async (input: React.ChangeEvent<HTMLInputElement>) => {
@@ -380,7 +396,20 @@ export default function EditServicePage() {
               </div>
               
               <div className="space-y-3">
-                <Label className="font-black text-xs uppercase tracking-[0.2em] text-slate-400">Treballs realitzats</Label>
+                <div className="flex justify-between items-center px-1">
+                    <Label className="font-black text-xs uppercase tracking-[0.2em] text-slate-400">Treballs realitzats</Label>
+                    <Button 
+                        type="button" 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={handleTranslate} 
+                        disabled={isTranslating || !description.trim()}
+                        className="text-primary hover:text-primary/80 font-black text-[10px] uppercase gap-1.5"
+                    >
+                        {isTranslating ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+                        Traduir (IA)
+                    </Button>
+                </div>
                 <Textarea 
                     placeholder="Descriu la teva feina..." 
                     value={description} 
