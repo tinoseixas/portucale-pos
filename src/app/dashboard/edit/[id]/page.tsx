@@ -1,4 +1,3 @@
-
 'use client'
 
 import { useEffect, useState, useMemo, useRef, Suspense } from 'react'
@@ -166,7 +165,6 @@ function EditServiceContent() {
       setMedia(service.media || [])
       setMaterials(service.materials?.length ? service.materials : [{ description: '', quantity: 1, unitPrice: 0 }]);
       
-      // Carregar Altres costos estructurats o convertir llegat
       if (service.additionalCosts?.length) {
           setAdditionalCosts(service.additionalCosts);
       } else if (service.extraCosts) {
@@ -250,14 +248,12 @@ function EditServiceContent() {
         const arrivalDateTime = new Date(`${selectedDateStr}T${startTime}`).toISOString();
         const departureDateTime = new Date(`${selectedDateStr}T${endTime}`).toISOString();
         const selectedCustomer = customers?.find(c => c.id === customerId);
-        const selectedProject = activeProjects?.find(p => p.id === projectId);
-        const finalProjectName = selectedProject?.name || projectName;
-
+        
         const updatedData: Partial<ServiceRecord> = {
             arrivalDateTime,
             departureDateTime,
             description: description || "Servei realitzat",
-            projectName: finalProjectName.trim(),
+            projectName: projectName.trim(),
             projectId: projectId || '',
             pendingTasks: pendingTasks || '',
             customerId: customerId || '',
@@ -307,7 +303,7 @@ function EditServiceContent() {
           open={isCustomerDialogOpen}
           onOpenChange={setIsCustomerDialogOpen}
           customers={customers || []}
-          onCustomerSelect={(c) => { setCustomerId(c.id); setProjectId('none'); setIsCustomerDialogOpen(false); }}
+          onCustomerSelect={(c) => { setCustomerId(c.id); setProjectId('none'); setProjectName(''); setIsCustomerDialogOpen(false); }}
         />
 
         <ServiceConfirmationDialog
@@ -379,7 +375,12 @@ function EditServiceContent() {
                 {customerId && customerId !== 'none' && (
                     <div className="flex gap-2">
                         <div className="flex-1">
-                            <Select value={projectId} onValueChange={setProjectId}>
+                            <Select value={projectId} onValueChange={(val) => {
+                                setProjectId(val);
+                                const p = activeProjects?.find(x => x.id === val);
+                                if (p) setProjectName(p.name);
+                                else if (val === 'none') setProjectName('');
+                            }}>
                                 <SelectTrigger className="h-16 rounded-2xl border-2 font-black text-lg bg-slate-50">
                                     <SelectValue placeholder="Selecciona obra activa" />
                                 </SelectTrigger>
@@ -460,7 +461,6 @@ function EditServiceContent() {
                   <Button type="button" variant="ghost" onClick={() => setMaterials([...materials, { description: '', quantity: 1, unitPrice: 0 }])} className="w-full h-16 border-4 border-dashed border-slate-200 rounded-3xl font-black text-slate-400 uppercase text-xs">+ AFEGIR ARTICLE</Button>
               </div>
 
-              {/* Secció Altres Costos Estructurada */}
               <div className="space-y-6 rounded-[2.5rem] border-2 border-slate-100 p-6 sm:p-8 bg-slate-50/50 shadow-inner">
                   <Label className="font-black text-slate-900 flex items-center gap-3 uppercase tracking-tighter text-xl"><ReceiptText className="h-6 w-6 text-primary" /> Altres costos</Label>
                   <div className="space-y-4">
@@ -536,7 +536,7 @@ function EditServiceContent() {
                     </AlertDialogContent>
                 </AlertDialog>
                 <Button type="submit" className="bg-primary px-10 sm:px-20 h-20 text-xl sm:text-2xl font-black shadow-2xl uppercase tracking-tighter hover:scale-[1.02] transition-all rounded-3xl w-full sm:w-auto" disabled={isSaving}>
-                    {isSaving ? <Loader2 className="mr-2 sm:mr-4 h-6 sm:h-8 w-6 sm:w-8 animate-spin" /> : <Save className="mr-2 sm:mr-4 h-6 sm:h-8 w-6 sm:w-8" />}
+                    {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
                     GUARDAR TREBALL
                 </Button>
               </div>

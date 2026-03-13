@@ -27,6 +27,7 @@ export default function NewServicePage() {
   
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>('none');
   const [selectedProjectId, setSelectedProjectId] = useState<string>('none');
+  const [projectName, setProjectName] = useState<string>('');
   const [description, setDescription] = useState('');
   
   const [isNewProjectDialogOpen, setIsNewProjectDialogOpen] = useState(false);
@@ -67,13 +68,15 @@ export default function NewServicePage() {
       setIsCreatingProject(true);
       try {
           const customer = customers?.find(c => c.id === selectedCustomerId);
-          await addDoc(collection(firestore, 'projects'), {
+          const docRef = await addDoc(collection(firestore, 'projects'), {
               name: newProjectName.trim(),
               customerId: selectedCustomerId,
               customerName: customer?.name || 'N/A',
               status: 'active',
               createdAt: new Date().toISOString()
           });
+          setSelectedProjectId(docRef.id);
+          setProjectName(newProjectName.trim());
           toast({ title: "Obra creada" });
           setIsNewProjectDialogOpen(false);
           setNewProjectName('');
@@ -105,7 +108,6 @@ export default function NewServicePage() {
     setIsStarting(true);
     try {
         const selectedCustomer = customers?.find(c => c.id === selectedCustomerId);
-        const selectedProject = activeProjects?.find(p => p.id === selectedProjectId);
         const now = new Date();
         const serviceRecord: Omit<ServiceRecord, 'id'> = {
             employeeId: currentEmployee.id,
@@ -113,7 +115,7 @@ export default function NewServicePage() {
             arrivalDateTime: now.toISOString(),
             departureDateTime: now.toISOString(), 
             description: description.trim() || "Servei en curs...",
-            projectName: selectedProject?.name.trim() || '',
+            projectName: projectName.trim(),
             projectId: selectedProjectId !== 'none' ? selectedProjectId : '',
             pendingTasks: '',
             customerId: selectedCustomerId !== 'none' ? selectedCustomerId : '',
@@ -147,7 +149,7 @@ export default function NewServicePage() {
               <div className="space-y-6">
                 <div className="space-y-2">
                     <Label className="flex items-center gap-2 font-bold text-[10px] text-slate-400 tracking-tight pl-1"><Users className="h-3 w-3" /> Client</Label>
-                    <Select value={selectedCustomerId} onValueChange={(val) => { setSelectedCustomerId(val); setSelectedProjectId('none'); }}>
+                    <Select value={selectedCustomerId} onValueChange={(val) => { setSelectedCustomerId(val); setSelectedProjectId('none'); setProjectName(''); }}>
                         <SelectTrigger className="h-14 rounded-2xl border-2 font-bold bg-slate-50">
                             <SelectValue placeholder="Selecciona un client" />
                         </SelectTrigger>
@@ -171,7 +173,12 @@ export default function NewServicePage() {
                                 </DialogContent>
                             </Dialog>
                         </div>
-                        <Select value={selectedProjectId} onValueChange={setSelectedProjectId}>
+                        <Select value={selectedProjectId} onValueChange={(val) => {
+                            setSelectedProjectId(val);
+                            const p = activeProjects.find(x => x.id === val);
+                            if (p) setProjectName(p.name);
+                            else if (val === 'none') setProjectName('');
+                        }}>
                             <SelectTrigger className="h-14 rounded-2xl border-2 font-bold bg-slate-50">
                                 <SelectValue placeholder="Selecciona obra..." />
                             </SelectTrigger>
