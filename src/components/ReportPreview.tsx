@@ -1,3 +1,4 @@
+
 'use client'
 import React, { forwardRef, useMemo } from 'react';
 import Image from 'next/image';
@@ -33,6 +34,17 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
         return sortedServices.flatMap(service => service.materials || []).filter(material => 
             material && material.description && material.description.trim() !== ''
         );
+    }, [sortedServices]);
+
+    const allAdditionalCosts = useMemo(() => {
+        if (!sortedServices) return [];
+        return sortedServices.flatMap(service => {
+            const list = service.additionalCosts || [];
+            if (service.extraCosts) {
+                list.push({ description: 'Altres costos (llegat)', quantity: 1, unitPrice: service.extraCosts });
+            }
+            return list;
+        }).filter(c => c.description.trim() !== '');
     }, [sortedServices]);
 
     const allImages = useMemo(() => {
@@ -158,16 +170,16 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
                                 {showPricing && <td className="py-3 px-4 text-right font-black tabular-nums text-primary">{(m.quantity * m.unitPrice).toFixed(2)} €</td>}
                             </tr>
                         ))}
-                        {extraCostsTotal > 0 && (
-                            <tr className="bg-slate-100/50 border-b border-slate-200">
+                        {allAdditionalCosts.map((c, i) => (
+                            <tr key={`extra-${i}`} className="bg-slate-100/50 border-b border-slate-200">
                                 <td className="py-3 px-4 font-black text-slate-900 flex items-center gap-2">
-                                    <ReceiptText className="h-3 w-3 text-slate-400" /> Altres costos i despeses operatives
+                                    <ReceiptText className="h-3 w-3 text-slate-400" /> {c.description}
                                 </td>
-                                <td className="py-3 px-4 text-right tabular-nums">1.00</td>
-                                {showPricing && <td className="py-3 px-4 text-right tabular-nums">{extraCostsTotal.toFixed(2)} €</td>}
-                                {showPricing && <td className="py-3 px-4 text-right font-black tabular-nums text-primary">{extraCostsTotal.toFixed(2)} €</td>}
+                                <td className="py-3 px-4 text-right tabular-nums font-bold text-slate-900">{c.quantity.toFixed(2)}</td>
+                                {showPricing && <td className="py-3 px-4 text-right tabular-nums text-slate-400">{c.unitPrice.toFixed(2)} €</td>}
+                                {showPricing && <td className="py-3 px-4 text-right font-black tabular-nums text-primary">{(c.quantity * c.unitPrice).toFixed(2)} €</td>}
                             </tr>
-                        )}
+                        ))}
                     </tbody>
                 </table>
             </section>
@@ -196,7 +208,7 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
             <section className="grid grid-cols-2 gap-12 mt-auto break-inside-avoid">
                 <div className="space-y-4">
                     <p className="text-[10px] font-bold tracking-tight text-slate-400 border-b pb-2">Signatura tècnic</p>
-                    <div className="h-24 flex items-center justify-center italic text-slate-300 text-xs font-bold">TS SERVEIS</div>
+                    <div className="h-24 flex items-center justify-center italic text-slate-300 text-xs font-bold uppercase">TS Serveis</div>
                 </div>
                 <div className="space-y-4">
                     <p className="text-[10px] font-bold tracking-tight text-slate-400 border-b pb-2">Conformitat del client</p>

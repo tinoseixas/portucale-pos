@@ -1,4 +1,10 @@
 
+export interface ExtraCostItem {
+  description: string;
+  quantity: number;
+  unitPrice: number;
+}
+
 export interface ServiceRecord {
   id: string;
   employeeId: string;
@@ -12,7 +18,8 @@ export interface ServiceRecord {
   projectId?: string;
   pendingTasks: string;
   serviceHourlyRate?: number;
-  extraCosts?: number; // Nou camp per a altres costos
+  extraCosts?: number; // Mantingut per compatibilitat llegat
+  additionalCosts?: ExtraCostItem[]; // Nou camp estructurat
   media: { type: 'image' | 'video'; dataUrl: string }[];
   albarans: string[];
   materials?: {

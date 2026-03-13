@@ -12,7 +12,7 @@ import { Clock, Camera, ArrowLeft, Save, Trash2, Plus, X, Video, Calendar as Cal
 import { useToast } from "@/hooks/use-toast"
 import { useFirestore, useUser, useDoc, useMemoFirebase, useCollection, updateDocumentNonBlocking } from '@/firebase'
 import { doc, collection, query, orderBy, setDoc, where, addDoc } from 'firebase/firestore'
-import type { ServiceRecord, Customer, Employee, Project } from '@/lib/types'
+import type { ServiceRecord, Customer, Employee, Project, ExtraCostItem } from '@/lib/types'
 import Image from 'next/image'
 import {
   AlertDialog,
@@ -67,7 +67,7 @@ function resizeAndCompressImage(file: File): Promise<string> {
                 canvas.width = width;
                 canvas.height = height;
                 const ctx = canvas.getContext('2d');
-                if (!ctx) return reject(new Error('Error al Canvas'));
+                if (!ctx) return reject(new Error('Error al canvas'));
                 ctx.drawImage(img, 0, 0, width, height);
                 resolve(canvas.toDataURL('image/jpeg', IMAGE_QUALITY));
             };
@@ -112,13 +112,13 @@ function EditServiceContent() {
   const [pendingTasks, setPendingTasks] = useState('');
   const [media, setMedia] = useState<MediaFile[]>([])
   const [materials, setMaterials] = useState<Material[]>([{ description: '', quantity: 1, unitPrice: 0 }]);
+  const [additionalCosts, setAdditionalCosts] = useState<ExtraCostItem[]>([{ description: '', quantity: 1, unitPrice: 0 }]);
   const [showCamera, setShowCamera] = useState(false);
   const [customerId, setCustomerId] = useState<string>('');
   const [employeeId, setEmployeeId] = useState<string>('');
   const [isCustomerDialogOpen, setIsCustomerDialogOpen] = useState(false)
   const [isSignatureDialogOpen, setIsSignatureDialogOpen] = useState(false)
   const [serviceHourlyRate, setServiceHourlyRate] = useState<number | ''>('');
-  const [extraCosts, setExtraCosts] = useState<number | ''>('');
   const [customerSignatureName, setCustomerSignatureName] = useState('');
   const [customerSignatureDataUrl, setCustomerSignatureDataUrl] = useState('');
   const [isLunchSubtracted, setIsLunchSubtracted] = useState(true);
@@ -165,10 +165,19 @@ function EditServiceContent() {
       setEmployeeId(service.employeeId || '');
       setMedia(service.media || [])
       setMaterials(service.materials?.length ? service.materials : [{ description: '', quantity: 1, unitPrice: 0 }]);
+      
+      // Carregar Altres costos estructurats o convertir llegat
+      if (service.additionalCosts?.length) {
+          setAdditionalCosts(service.additionalCosts);
+      } else if (service.extraCosts) {
+          setAdditionalCosts([{ description: 'Altres costos (llegat)', quantity: 1, unitPrice: service.extraCosts }]);
+      } else {
+          setAdditionalCosts([{ description: '', quantity: 1, unitPrice: 0 }]);
+      }
+
       setCustomerSignatureName(service.customerSignatureName || '');
       setCustomerSignatureDataUrl(service.customerSignatureDataUrl || '');
       setServiceHourlyRate(service.serviceHourlyRate ?? '');
-      setExtraCosts(service.extraCosts ?? '');
       setIsLunchSubtracted(service.isLunchSubtracted ?? true);
       setHasInitialized(true);
     }
@@ -256,9 +265,9 @@ function EditServiceContent() {
             employeeId: employeeId || service?.employeeId || '',
             employeeName: service?.employeeName || '',
             serviceHourlyRate: typeof serviceHourlyRate === 'number' ? serviceHourlyRate : (service?.serviceHourlyRate || 0),
-            extraCosts: typeof extraCosts === 'number' ? extraCosts : 0,
             media: media || [],
             materials: materials.filter(m => m.description.trim() !== ''),
+            additionalCosts: additionalCosts.filter(c => c.description.trim() !== ''),
             customerSignatureName: customerSignatureName || '',
             customerSignatureDataUrl: customerSignatureDataUrl || '',
             updatedAt: new Date().toISOString(),
@@ -312,7 +321,7 @@ function EditServiceContent() {
           <CardHeader className="bg-slate-900 text-white p-6 sm:p-8">
             <div className="flex justify-between items-center">
                 <div className="space-y-1">
-                    <CardTitle className="text-2xl sm:text-3xl font-black uppercase tracking-tighter">Informe de Treball</CardTitle>
+                    <CardTitle className="text-2xl sm:text-3xl font-black uppercase tracking-tighter">Informe de treball</CardTitle>
                     <CardDescription className="text-slate-400 font-medium">Tècnic: {service.employeeName || '...'}</CardDescription>
                 </div>
                 <div className="bg-primary/20 p-3 rounded-2xl hidden sm:block">
@@ -361,7 +370,7 @@ function EditServiceContent() {
               </div>
 
               <div className="space-y-4">
-                <Label className="font-black text-xs uppercase tracking-[0.2em] text-slate-400">Client i Obra</Label>
+                <Label className="font-black text-xs uppercase tracking-[0.2em] text-slate-400">Client i obra</Label>
                 <Button type="button" variant="outline" onClick={() => setIsCustomerDialogOpen(true)} className="h-16 w-full justify-start px-6 rounded-2xl border-2 font-black text-lg bg-slate-50 overflow-hidden text-slate-700">
                     <Users className="mr-4 h-6 w-6 text-primary shrink-0" />
                     <span className="truncate">{customers?.find(c => c.id === customerId)?.name || 'Selecciona un client'}</span>
@@ -386,7 +395,7 @@ function EditServiceContent() {
                             </DialogTrigger>
                             <DialogContent className="rounded-3xl">
                                 <DialogHeader>
-                                    <DialogTitle>Nova Obra</DialogTitle>
+                                    <DialogTitle>Nova obra</DialogTitle>
                                     <DialogDescription>Afegeix una nova obra activa per a aquest client.</DialogDescription>
                                 </DialogHeader>
                                 <div className="py-4"><Input placeholder="Nom de l'obra" value={newProjectName} onChange={(e) => setNewProjectName(e.target.value)} className="h-12 rounded-xl font-bold" /></div>
@@ -435,7 +444,7 @@ function EditServiceContent() {
                       {materials.map((m, i) => (
                           <div key={i} className="bg-white p-6 rounded-3xl border-2 shadow-sm space-y-4">
                               <div className="flex gap-3">
-                                <Input placeholder="Descripció" value={m.description} onChange={(e) => { const nm = [...materials]; nm[i].description = e.target.value; setMaterials(nm); }} className="border-none shadow-none font-black text-lg h-12 px-0 focus-visible:ring-0" />
+                                <Input placeholder="Descripció de l'article" value={m.description} onChange={(e) => { const nm = [...materials]; nm[i].description = e.target.value; setMaterials(nm); }} className="border-none shadow-none font-black text-lg h-12 px-0 focus-visible:ring-0" />
                                 <Button type="button" variant="ghost" size="icon" onClick={() => setMaterials(materials.filter((_, idx) => idx !== i))} className="text-red-400"><Trash className="h-6 w-6" /></Button>
                               </div>
                               <div className="grid grid-cols-2 gap-6">
@@ -451,20 +460,28 @@ function EditServiceContent() {
                   <Button type="button" variant="ghost" onClick={() => setMaterials([...materials, { description: '', quantity: 1, unitPrice: 0 }])} className="w-full h-16 border-4 border-dashed border-slate-200 rounded-3xl font-black text-slate-400 uppercase text-xs">+ AFEGIR ARTICLE</Button>
               </div>
 
-              {/* Secció Altres Costos */}
-              <div className="space-y-4 rounded-[2.5rem] border-2 border-slate-100 p-6 sm:p-8 bg-slate-50/50 shadow-inner">
-                  <Label className="font-black text-slate-900 flex items-center gap-3 uppercase tracking-tighter text-xl"><ReceiptText className="h-6 w-6 text-primary" /> Altres Costos</Label>
-                  <div className="relative">
-                      <Input 
-                        type="number" 
-                        placeholder="Ex: 50.00 (Peatges, Dietes, etc.)" 
-                        value={extraCosts} 
-                        onChange={(e) => setExtraCosts(e.target.value === '' ? '' : Number(e.target.value))} 
-                        className="h-16 pl-12 rounded-2xl border-2 font-black text-xl bg-white" 
-                      />
-                      <Euro className="absolute left-4 top-1/2 -translate-y-1/2 h-6 w-6 text-slate-400" />
+              {/* Secció Altres Costos Estructurada */}
+              <div className="space-y-6 rounded-[2.5rem] border-2 border-slate-100 p-6 sm:p-8 bg-slate-50/50 shadow-inner">
+                  <Label className="font-black text-slate-900 flex items-center gap-3 uppercase tracking-tighter text-xl"><ReceiptText className="h-6 w-6 text-primary" /> Altres costos</Label>
+                  <div className="space-y-4">
+                      {additionalCosts.map((c, i) => (
+                          <div key={i} className="bg-white p-6 rounded-3xl border-2 shadow-sm space-y-4">
+                              <div className="flex gap-3">
+                                <Input placeholder="Descripció (Peatges, dietes, etc.)" value={c.description} onChange={(e) => { const nc = [...additionalCosts]; nc[i].description = e.target.value; setAdditionalCosts(nc); }} className="border-none shadow-none font-black text-lg h-12 px-0 focus-visible:ring-0" />
+                                <Button type="button" variant="ghost" size="icon" onClick={() => setAdditionalCosts(additionalCosts.filter((_, idx) => idx !== i))} className="text-red-400"><Trash className="h-6 w-6" /></Button>
+                              </div>
+                              <div className="grid grid-cols-2 gap-6">
+                                <Input type="number" placeholder="Quant." value={c.quantity} onChange={(e) => { const nc = [...additionalCosts]; nc[i].quantity = Number(e.target.value); setAdditionalCosts(nc); }} className="h-16 rounded-2xl bg-slate-50 border-none font-black text-xl text-center" />
+                                <div className="relative">
+                                    <Input type="number" placeholder="Preu" value={c.unitPrice} onChange={(e) => { const nc = [...additionalCosts]; nc[i].unitPrice = Number(e.target.value); setAdditionalCosts(nc); }} className="h-16 pl-6 rounded-2xl bg-slate-50 border-none font-black text-xl" />
+                                    <Euro className="absolute right-6 top-1/2 -translate-y-1/2 h-6 w-6 text-slate-400" />
+                                </div>
+                              </div>
+                          </div>
+                      ))}
                   </div>
-                  <p className="text-[10px] text-slate-400 font-bold uppercase pl-1">Aquest valor es sumarà al subtotal net de l'albarà.</p>
+                  <Button type="button" variant="ghost" onClick={() => setAdditionalCosts([...additionalCosts, { description: '', quantity: 1, unitPrice: 0 }])} className="w-full h-16 border-4 border-dashed border-slate-200 rounded-3xl font-black text-slate-400 uppercase text-xs">+ AFEGIR CONCEPTE</Button>
+                  <p className="text-[10px] text-slate-400 font-bold uppercase pl-1">Aquests costos es sumaran al subtotal net del document.</p>
               </div>
 
               <div className="space-y-6">
@@ -499,7 +516,7 @@ function EditServiceContent() {
                     </div>
                   ) : (
                     <Button type="button" variant="outline" onClick={() => setIsSignatureDialogOpen(true)} className="w-full h-24 border-dashed border-4 border-primary/20 text-primary font-black shadow-sm rounded-3xl text-sm">
-                        <PenTool className="mr-2 sm:mr-4 h-6 sm:h-8 w-6 sm:w-8" /> Recollir Signatura
+                        <PenTool className="mr-2 sm:mr-4 h-6 sm:h-8 w-6 sm:w-8" /> Recollir signatura
                     </Button>
                   )}
               </div>
@@ -507,10 +524,10 @@ function EditServiceContent() {
               <div className="flex flex-col sm:flex-row justify-between items-center pt-12 border-t-2 border-slate-100 gap-6">
                 <AlertDialog>
                     <AlertDialogTrigger asChild>
-                        <Button type="button" variant="ghost" className="text-red-500 font-bold h-16 w-full sm:w-auto rounded-2xl px-8 transition-colors">Esborrar Registre</Button>
+                        <Button type="button" variant="ghost" className="text-red-500 font-bold h-16 w-full sm:w-auto rounded-2xl px-8 transition-colors">Esborrar registre</Button>
                     </AlertDialogTrigger>
                     <AlertDialogContent className="rounded-[2.5rem] p-10">
-                        <AlertDialogHeader><AlertDialogTitle className="text-2xl font-black uppercase">Moure a la Paperera?</AlertDialogTitle></AlertDialogHeader>
+                        <AlertDialogHeader><AlertDialogTitle className="text-2xl font-black uppercase">Moure a la paperera?</AlertDialogTitle></AlertDialogHeader>
                         <AlertDialogDescription>El registre no s'esborrarà per sempre, podràs recuperar-lo a la paperera del dashboard.</AlertDialogDescription>
                         <AlertDialogFooter className="pt-6">
                             <AlertDialogCancel className="rounded-2xl h-14 font-bold border-2">Enrere</AlertDialogCancel>

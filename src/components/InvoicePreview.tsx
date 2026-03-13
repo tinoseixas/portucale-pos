@@ -1,3 +1,4 @@
+
 'use client'
 import React, { forwardRef, useMemo } from 'react';
 import type { Customer, ServiceRecord, Employee } from '@/lib/types';
@@ -28,6 +29,16 @@ export const InvoicePreview = forwardRef<HTMLDivElement, InvoicePreviewProps>((p
     
     const allMaterials = useMemo(() => {
         return (services || []).flatMap(s => s.materials || []).filter(m => m.description.trim() !== '');
+    }, [services]);
+
+    const allAdditionalCosts = useMemo(() => {
+        return (services || []).flatMap(service => {
+            const list = service.additionalCosts || [];
+            if (service.extraCosts) {
+                list.push({ description: 'Altres costos (llegat)', quantity: 1, unitPrice: service.extraCosts });
+            }
+            return list;
+        }).filter(c => c.description.trim() !== '');
     }, [services]);
 
     return (
@@ -106,17 +117,17 @@ export const InvoicePreview = forwardRef<HTMLDivElement, InvoicePreviewProps>((p
                             </tr>
                         ))}
 
-                        {/* Altres costos */}
-                        {extraCostsTotal > 0 && (
-                            <tr className="border-b-2 border-slate-100 bg-slate-100/30">
+                        {/* Altres costos estructurats */}
+                        {allAdditionalCosts.map((c, i) => (
+                            <tr key={`extra-${i}`} className="border-b-2 border-slate-100 bg-slate-100/30">
                                 <td className="py-4 px-6 font-black text-slate-900 flex items-center gap-2">
-                                    <ReceiptText className="h-4 w-4 text-primary" /> Altres costos operatius i despeses vàries
+                                    <ReceiptText className="h-4 w-4 text-primary" /> {c.description}
                                 </td>
-                                <td className="py-4 px-6 text-right tabular-nums">1.00</td>
-                                <td className="py-4 px-6 text-right tabular-nums">{extraCostsTotal.toFixed(2)} €</td>
-                                <td className="py-4 px-6 text-right font-black tabular-nums">{extraCostsTotal.toFixed(2)} €</td>
+                                <td className="py-4 px-6 text-right tabular-nums">{c.quantity.toFixed(2)}</td>
+                                <td className="py-4 px-6 text-right tabular-nums">{c.unitPrice.toFixed(2)} €</td>
+                                <td className="py-4 px-6 text-right font-black tabular-nums">{(c.quantity * c.unitPrice).toFixed(2)} €</td>
                             </tr>
-                        )}
+                        ))}
                     </tbody>
                 </table>
             </div>

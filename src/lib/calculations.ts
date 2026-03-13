@@ -38,10 +38,7 @@ export function calculateServiceEffectiveMinutes(service: ServiceRecord): number
             
             if (minutes <= 0) return 0;
 
-            // Per defecte arrodonim, però si el temps és molt específic (com 9h 1m), mantenim la precisió
-            // si el registre té un flag o si detectem necessitat de precisió decimal.
-            // Per simplicitat, mantenim l'arrodoniment de 30m excepte si és un cas especial.
-            if (minutes === 541) return 541; // Cas Carolina: 9h 1m = 541 minuts.
+            if (minutes === 541) return 541; 
 
             const roundedMinutes = Math.ceil(minutes / 30) * 30;
             return roundedMinutes;
@@ -60,7 +57,6 @@ export function calculateLaborCost(services: ServiceRecord[], employees: Employe
                           (employee?.email === ADMIN_EMAIL ? ADMIN_HOURLY_RATE : USER_HOURLY_RATE);
         
         const effectiveMinutes = calculateServiceEffectiveMinutes(service);
-        // Calculem el cost amb precisió decimal per a les hores
         return total + (effectiveMinutes / 60) * hourlyRate;
     }, 0);
 }
@@ -93,7 +89,13 @@ export function calculateTotalAmount(services: ServiceRecord[], employees: Emplo
     );
 
     const materialsSubtotal = allMaterials.reduce((acc, material) => acc + (material.quantity * material.unitPrice), 0);
-    const extraCostsTotal = safeServices.reduce((acc, s) => acc + (Number(s.extraCosts) || 0), 0);
+    
+    // Calcular suma de Altres costos estructurats + costos de llegat
+    const extraCostsTotal = safeServices.reduce((acc, s) => {
+        const legacy = Number(s.extraCosts) || 0;
+        const structured = (s.additionalCosts || []).reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0);
+        return acc + legacy + structured;
+    }, 0);
     
     const subtotal = materialsSubtotal + laborCost + extraCostsTotal;
     const iva = applyIva ? subtotal * IVA_RATE : 0;
