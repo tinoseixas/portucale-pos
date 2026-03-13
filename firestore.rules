@@ -25,6 +25,12 @@ service cloud.firestore {
       }
     }
 
+    // AUTORITZACIÓ PER QUERIES DE GRUP (collectionGroup)
+    // Necessari per al Dashboard d'admin, Informes, Albarans i Paperera
+    match /{path=**}/serviceRecords/{recordId} {
+      allow read: if isAdmin();
+    }
+
     // Clients i Obres: Tots els empleats els poden veure per registrar feina, només admin els gestiona
     match /customers/{customerId} {
       allow read: if request.auth != null;
