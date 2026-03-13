@@ -32,17 +32,29 @@ import { calculateTotalAmount } from '@/lib/calculations'
 
 export default function AlbaransHistoryPage() {
   const { toast } = useToast()
-  const { isUserLoading } = useUser()
+  const { user, isUserLoading } = useUser()
   const firestore = useFirestore()
   const [isSyncing, setIsSyncing] = useState(false)
   
   const [filterCustomer, setFilterCustomer] = useState<string>('all')
   const [searchProject, setSearchProject] = useState<string>('')
 
+  // Obtenir dades de l'usuari actual per saber si és admin
+  const employeeDocRef = useMemoFirebase(() => {
+    if (!user || !firestore) return null;
+    return doc(firestore, 'employees', user.uid);
+  }, [firestore, user]);
+  const { data: currentEmployee } = useDoc<any>(employeeDocRef);
+  const isAdmin = currentEmployee?.role === 'admin';
+
   const albaransQuery = useMemoFirebase(() => {
-    if (!firestore) return null
-    return query(collection(firestore, 'albarans'), orderBy('albaranNumber', 'desc'))
-  }, [firestore])
+    if (!firestore || !user) return null
+    if (isAdmin) {
+        return query(collection(firestore, 'albarans'), orderBy('albaranNumber', 'desc'))
+    } else {
+        return query(collection(firestore, 'albarans'), where('employeeId', '==', user.uid), orderBy('albaranNumber', 'desc'))
+    }
+  }, [firestore, user, isAdmin])
 
   const { data: albarans, isLoading: isLoadingAlbarans } = useCollection<Albaran>(albaransQuery)
 
@@ -84,15 +96,22 @@ export default function AlbaransHistoryPage() {
   }
 
   const handleSyncAlbarans = async () => {
-    if (!firestore) return;
+    if (!firestore || !user) return;
     setIsSyncing(true);
-    toast({ title: 'Sincronitzant obres...', description: 'Consolidant la feina de tot l\'equip.' });
+    toast({ title: 'Sincronitzant obres...', description: 'Consolidant la feina nova.' });
 
     try {
         const employeesSnap = await getDocs(collection(firestore, 'employees'));
         const employees = employeesSnap.docs.map(d => ({ id: d.id, ...d.data() } as Employee));
         
-        const servicesSnap = await getDocs(collectionGroup(firestore, 'serviceRecords'));
+        let servicesQuery;
+        if (isAdmin) {
+            servicesQuery = query(collectionGroup(firestore, 'serviceRecords'));
+        } else {
+            servicesQuery = query(collection(firestore, `employees/${user.uid}/serviceRecords`));
+        }
+        
+        const servicesSnap = await getDocs(servicesQuery);
         const allServices = servicesSnap.docs.map(d => ({ id: d.id, ...d.data() } as ServiceRecord));
         
         const latestAlbaransSnap = await getDocs(collection(firestore, 'albarans'));
@@ -128,7 +147,8 @@ export default function AlbaransHistoryPage() {
         const counterSnap = await getDocs(query(collection(firestore, "counters"), where("__name__", "==", "albarans")));
         let nextNum = !counterSnap.empty ? (counterSnap.docs[0].data().lastNumber || 0) : 0;
 
-        latestAlbarans.filter(a => a.status === 'pendent').forEach(a => {
+        // Eliminar només els albarans pendents que pertanyen a l'usuari actual (si no és admin)
+        latestAlbarans.filter(a => a.status === 'pendent' && (isAdmin || a.employeeId === user.uid)).forEach(a => {
             batch.delete(doc(firestore, 'albarans', a.id));
         });
 
@@ -137,7 +157,6 @@ export default function AlbaransHistoryPage() {
             const projectServices = groupedByProject[key];
             const firstService = projectServices[0];
             
-            // Buscar si l'obra està arxivada
             const project = projects.find(p => 
                 p.customerId === firstService.customerId && 
                 p.name.trim().toLowerCase().replace(/\s+/g, ' ') === firstService.projectName?.trim().toLowerCase().replace(/\s+/g, ' ')
@@ -160,7 +179,8 @@ export default function AlbaransHistoryPage() {
                 serviceRecordIds: projectServices.map(s => s.id),
                 totalAmount: totalGeneral,
                 status: project?.status === 'finished' ? 'arxivat' : 'pendent',
-                employeeName: technicianNames
+                employeeName: technicianNames,
+                employeeId: isAdmin ? firstService.employeeId : user.uid // Assignem la propietat
             };
 
             batch.set(albaranRef, albaranData);

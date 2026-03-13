@@ -3,8 +3,8 @@
 
 import { useMemo, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { useCollection, useUser, useFirestore, useMemoFirebase, deleteDocumentNonBlocking } from '@/firebase'
-import { collection, query, orderBy, doc } from 'firebase/firestore'
+import { useCollection, useUser, useFirestore, useMemoFirebase, deleteDocumentNonBlocking, useDoc } from '@/firebase'
+import { collection, query, orderBy, doc, where } from 'firebase/firestore'
 import type { Invoice } from '@/lib/types'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
@@ -34,16 +34,21 @@ export default function InvoicesHistoryPage() {
   const firestore = useFirestore()
   const { toast } = useToast()
 
-  useEffect(() => {
-    if (!isUserLoading && !user) {
-      router.push('/')
-    }
-  }, [isUserLoading, user, router])
+  const employeeDocRef = useMemoFirebase(() => {
+    if (!user || !firestore) return null;
+    return doc(firestore, 'employees', user.uid);
+  }, [firestore, user]);
+  const { data: currentEmployee } = useDoc<any>(employeeDocRef);
+  const isAdmin = currentEmployee?.role === 'admin';
 
   const invoicesQuery = useMemoFirebase(() => {
-    if (!firestore) return null
-    return query(collection(firestore, 'invoices'), orderBy('invoiceNumber', 'desc'))
-  }, [firestore])
+    if (!firestore || !user) return null
+    if (isAdmin) {
+        return query(collection(firestore, 'invoices'), orderBy('invoiceNumber', 'desc'))
+    } else {
+        return query(collection(firestore, 'invoices'), where('employeeId', '==', user.uid), orderBy('invoiceNumber', 'desc'))
+    }
+  }, [firestore, user, isAdmin])
 
   const { data: invoices, isLoading: isLoadingInvoices } = useCollection<Invoice>(invoicesQuery)
 

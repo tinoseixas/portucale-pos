@@ -87,6 +87,7 @@ export interface Quote {
     customerId: string;
     customerName: string;
     projectName: string;
+    employeeId?: string;
     items: {
         description: string;
         quantity: number;
@@ -120,6 +121,7 @@ export interface Invoice {
     customerId: string;
     customerName: string;
     projectName: string;
+    employeeId?: string;
     items: InvoiceItem[];
     labor: {
         description: string;
@@ -141,6 +143,7 @@ export interface Receipt {
   invoiceNumber: number;
   customerId: string;
   customerName: string;
+  employeeId?: string;
   paymentDate: string;
   amountPaid: number;
   paymentMethod: string;

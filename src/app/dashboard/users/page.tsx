@@ -1,10 +1,11 @@
+
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useCollection, useUser, useFirestore, useMemoFirebase, useDoc } from '@/firebase'
-import { collection, query, doc, getDocs, writeBatch, collectionGroup, orderBy, limit } from 'firebase/firestore'
+import { collection, query, doc, getDocs, writeBatch, collectionGroup, orderBy, limit, where } from 'firebase/firestore'
 import type { Employee, ServiceRecord } from '@/lib/types'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
@@ -43,23 +44,28 @@ export default function UsersPage() {
   const [isImporting, setIsImporting] = useState(false);
   const [restoringId, setRestoringId] = useState<string | null>(null);
 
-  const employeesQuery = useMemoFirebase(() => {
-    if (!user || !firestore) return null;
-    return query(collection(firestore, 'employees'))
-  }, [firestore, user])
-
-  const { data: employees, isLoading: isLoadingEmployees } = useCollection<Employee>(employeesQuery)
-
   const employeeDocRef = useMemoFirebase(() => {
     if (!user || !firestore) return null;
     return doc(firestore, 'employees', user.uid);
   }, [firestore, user]);
-  const { data: currentEmployee } = useDoc<Employee>(employeeDocRef);
+  const { data: currentEmployee } = useDoc<any>(employeeDocRef);
+  const isAdmin = currentEmployee?.role === 'admin';
+
+  const employeesQuery = useMemoFirebase(() => {
+    if (!user || !firestore) return null;
+    if (isAdmin) {
+        return query(collection(firestore, 'employees'))
+    } else {
+        return query(collection(firestore, 'employees'), where('id', '==', user.uid))
+    }
+  }, [firestore, user, isAdmin])
+
+  const { data: employees, isLoading: isLoadingEmployees } = useCollection<Employee>(employeesQuery)
 
   const backupsQuery = useMemoFirebase(() => {
-    if (!user || !firestore) return null;
+    if (!user || !firestore || !isAdmin) return null;
     return query(collection(firestore, 'backups'), orderBy('createdAt', 'desc'), limit(10))
-  }, [firestore, user]);
+  }, [firestore, user, isAdmin]);
 
   const { data: cloudBackups, isLoading: isLoadingBackups } = useCollection<any>(backupsQuery);
   
@@ -215,7 +221,6 @@ export default function UsersPage() {
   }
   
   const isLoading = isUserLoading || isLoadingEmployees;
-  const isUserAdmin = currentEmployee?.role === 'admin';
   
   if (isLoading) return <p className="p-12 text-center font-bold uppercase tracking-widest">Carregant...</p>
   if (!user) return null;
@@ -226,7 +231,7 @@ export default function UsersPage() {
         <Card className="border-none shadow-xl rounded-3xl overflow-hidden">
             <CardHeader className="bg-slate-900 text-white">
                 <CardTitle className="text-2xl font-black uppercase tracking-tight">Gestió d'Usuaris</CardTitle>
-                <CardDescription className="text-slate-400">Visualitza i gestiona tots els empleats registrats.</CardDescription>
+                <CardDescription className="text-slate-400">Visualitza i gestiona els perfils.</CardDescription>
             </CardHeader>
             <CardContent className="p-0">
             <div className="overflow-x-auto">
@@ -279,7 +284,7 @@ export default function UsersPage() {
             </CardContent>
         </Card>
 
-        {isUserAdmin && (
+        {isAdmin && (
             <div className="space-y-10">
                 <Card className="border-none shadow-2xl bg-blue-50/50 rounded-[2.5rem] overflow-hidden">
                     <CardHeader className="bg-primary text-white p-8">

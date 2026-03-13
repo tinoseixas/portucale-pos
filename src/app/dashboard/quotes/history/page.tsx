@@ -1,9 +1,10 @@
+
 'use client'
 
 import { useMemo, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { useCollection, useUser, useFirestore, useMemoFirebase, deleteDocumentNonBlocking } from '@/firebase'
-import { collection, query, orderBy, doc, runTransaction, setDoc } from 'firebase/firestore'
+import { useCollection, useUser, useFirestore, useMemoFirebase, deleteDocumentNonBlocking, useDoc } from '@/firebase'
+import { collection, query, orderBy, doc, runTransaction, setDoc, where } from 'firebase/firestore'
 import type { Quote } from '@/lib/types'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
@@ -33,16 +34,21 @@ export default function QuotesHistoryPage() {
   const { toast } = useToast()
   const [isDuplicating, setIsDuplicating] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!isUserLoading && !user) {
-      router.push('/')
-    }
-  }, [isUserLoading, user, router])
+  const employeeDocRef = useMemoFirebase(() => {
+    if (!user || !firestore) return null;
+    return doc(firestore, 'employees', user.uid);
+  }, [firestore, user]);
+  const { data: currentEmployee } = useDoc<any>(employeeDocRef);
+  const isAdmin = currentEmployee?.role === 'admin';
 
   const quotesQuery = useMemoFirebase(() => {
-    if (!firestore) return null
-    return query(collection(firestore, 'quotes'), orderBy('quoteNumber', 'desc'))
-  }, [firestore])
+    if (!firestore || !user) return null
+    if (isAdmin) {
+        return query(collection(firestore, 'quotes'), orderBy('quoteNumber', 'desc'))
+    } else {
+        return query(collection(firestore, 'quotes'), where('employeeId', '==', user.uid), orderBy('quoteNumber', 'desc'))
+    }
+  }, [firestore, user, isAdmin])
 
   const { data: quotes, isLoading: isLoadingQuotes } = useCollection<Quote>(quotesQuery)
 
@@ -59,7 +65,7 @@ export default function QuotesHistoryPage() {
   };
 
   const handleDuplicateQuote = async (quote: Quote) => {
-    if (!firestore) return;
+    if (!firestore || !user) return;
     setIsDuplicating(quote.id);
     
     try {
@@ -81,7 +87,8 @@ export default function QuotesHistoryPage() {
             id: newQuoteRef.id,
             quoteNumber: newQuoteNumber,
             createdAt: new Date().toISOString(),
-            projectName: quote.projectName + " (Còpia)"
+            projectName: quote.projectName + " (Còpia)",
+            employeeId: user.uid
         };
 
         await setDoc(newQuoteRef, newQuoteData);
@@ -114,7 +121,7 @@ export default function QuotesHistoryPage() {
   }
 
   return (
-    <AdminGate pageTitle="Historial de Pressupostos" pageDescription="Aquesta secció està protegida.">
+    <AdminGate pageTitle="Historial de Pressupostos" pageDescription="Consulta els pressupostos generats.">
         <div className="max-w-6xl mx-auto">
         <Card>
             <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center sm:justify-between gap-4">

@@ -26,12 +26,11 @@ service cloud.firestore {
     }
 
     // AUTORITZACIÓ PER QUERIES DE GRUP (collectionGroup)
-    // Necessari per al Dashboard d'admin, Informes, Albarans i Paperera
     match /{path=**}/serviceRecords/{recordId} {
-      allow read: if isAdmin();
+      allow read: if isAdmin() || (request.auth != null && resource.data.employeeId == request.auth.uid);
     }
 
-    // Clients i Obres: Tots els empleats els poden veure per registrar feina, només admin els gestiona
+    // Clients i Obres: Tots els empleats els poden veure per registrar feina
     match /customers/{customerId} {
       allow read: if request.auth != null;
       allow write: if isAdmin();
@@ -39,27 +38,31 @@ service cloud.firestore {
 
     match /projects/{projectId} {
       allow read: if request.auth != null;
-      allow write: if isAdmin();
+      allow write: if request.auth != null; // Permetem crear obres noves a tots els empleats
     }
 
-    // Documents financers: NOMÉS accessibilitat per a administradors
+    // Documents financers: Admin veu tot, Usuari veu el seu (employeeId)
     match /albarans/{id} {
-      allow read, write: if isAdmin();
+      allow read: if isAdmin() || (request.auth != null && resource.data.employeeId == request.auth.uid);
+      allow write: if isAdmin() || (request.auth != null && (resource == null || resource.data.employeeId == request.auth.uid));
     }
     
     match /invoices/{id} {
-      allow read, write: if isAdmin();
+      allow read: if isAdmin() || (request.auth != null && resource.data.employeeId == request.auth.uid);
+      allow write: if isAdmin() || (request.auth != null && (resource == null || resource.data.employeeId == request.auth.uid));
     }
     
     match /quotes/{id} {
-      allow read, write: if isAdmin();
+      allow read: if isAdmin() || (request.auth != null && resource.data.employeeId == request.auth.uid);
+      allow write: if isAdmin() || (request.auth != null && (resource == null || resource.data.employeeId == request.auth.uid));
     }
     
     match /receipts/{id} {
-      allow read, write: if isAdmin();
+      allow read: if isAdmin() || (request.auth != null && resource.data.employeeId == request.auth.uid);
+      allow write: if isAdmin() || (request.auth != null && (resource == null || resource.data.employeeId == request.auth.uid));
     }
     
-    // Comptadors i Backups: Prohibit per a usuaris de proves
+    // Comptadors i Backups
     match /counters/{id} {
       allow read, write: if request.auth != null;
     }

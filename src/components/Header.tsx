@@ -1,3 +1,4 @@
+
 'use client'
 
 import Link from 'next/link'
@@ -78,6 +79,10 @@ export function Header() {
                     <Building className="mr-2 h-4 w-4" />
                     Clients
                 </Button>
+                <Button variant="ghost" size="sm" onClick={() => router.push('/dashboard/users')} className="font-bold">
+                    <Users className="mr-2 h-4 w-4" />
+                    Gestió
+                </Button>
               </div>
 
             <Button 
@@ -106,7 +111,7 @@ export function Header() {
                     <UserIcon className="mr-2 h-4 w-4" />
                     <span>Perfil</span>
                 </DropdownMenuItem>
-                <DropdownMenuItem className="lg:hidden" onClick={() => router.push('/dashboard/users')}>
+                <DropdownMenuItem onClick={() => router.push('/dashboard/users')}>
                     <Users className="mr-2 h-4 w-4" />
                     <span>Gestió</span>
                 </DropdownMenuItem>

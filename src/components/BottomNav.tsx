@@ -26,11 +26,11 @@ export function BottomNav() {
     { href: '/dashboard', icon: LayoutDashboard, label: 'Serveis' },
     { href: '/dashboard/activity-report', icon: LineChart, label: 'Hores' },
     { href: '/dashboard/projects', icon: Briefcase, label: 'Obres' },
-    { href: '/dashboard/quotes', icon: FileSignature, label: 'Presu.', adminOnly: true },
-    { href: '/dashboard/invoices/history', icon: Receipt, label: 'Factures', adminOnly: true },
-    { href: '/dashboard/albarans', icon: FileArchive, label: 'Albarans', adminOnly: true },
+    { href: '/dashboard/quotes/history', icon: FileSignature, label: 'Presu.' },
+    { href: '/dashboard/invoices/history', icon: Receipt, label: 'Factures' },
+    { href: '/dashboard/albarans', icon: FileArchive, label: 'Albarans' },
     { href: '/dashboard/customers', icon: Building, label: 'Clients' },
-    { href: '/dashboard/users', icon: Users, label: 'Gestió', adminOnly: true },
+    { href: '/dashboard/users', icon: Users, label: 'Gestió' },
     { href: '/dashboard/profile', icon: UserIcon, label: 'Perfil' },
   ];
 
@@ -53,14 +53,7 @@ export function BottomNav() {
     <nav className="fixed bottom-0 left-0 right-0 z-40 border-t bg-white/95 backdrop-blur-xl supports-[backdrop-filter]:bg-white/60 md:hidden shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
       <div className="container flex h-20 w-full items-center justify-start overflow-x-auto gap-1 px-4 scrollbar-hide">
         {navItems.map((item) => {
-          // Si és adminOnly i l'usuari no és admin, no mostrem l'ítem
-          if (item.adminOnly && !isAdmin) return null;
-
           const isActive = pathname.startsWith(item.href) && (item.href !== '/dashboard' || pathname === '/dashboard');
-           
-           if (item.href === '/dashboard/quotes' && (pathname.startsWith('/dashboard/quotes/history') || pathname.startsWith('/dashboard/quotes/edit') || /^\/dashboard\/quotes\/[^/]+$/.test(pathname))) {
-             return null;
-           }
            
           return (
             <Link
