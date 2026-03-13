@@ -1,14 +1,13 @@
-
 'use client'
 
 import { useState, useMemo, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
-import { PlusCircle, Calendar as CalendarIcon, User, Edit, Trash2, Briefcase, Filter, History, Search, X, Download, AlertTriangle, Loader2, RefreshCw, Star, Sparkles } from 'lucide-react'
-import type { ServiceRecord, Employee, Customer, Project } from '@/lib/types'
+import { PlusCircle, Calendar as CalendarIcon, User, Edit, Trash2, Briefcase, Filter, History, Search, X, Download, AlertTriangle, Loader2, RefreshCw } from 'lucide-react'
+import type { ServiceRecord, Employee } from '@/lib/types'
 import { useUser, useFirestore, updateDocumentNonBlocking, useDoc, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy, getDocs, collectionGroup, doc, getDoc, setDoc, writeBatch, addDoc } from 'firebase/firestore';
+import { collection, query, orderBy, getDocs, collectionGroup, doc } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton'
 import { Card, CardHeader, CardContent, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
@@ -57,7 +56,6 @@ export default function DashboardPage() {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [isLoadingData, setIsLoadingData] = useState(true);
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
-  const [isSyncing, setIsSyncing] = useState(false);
 
   const [selectedUser, setSelectedUser] = useState<string>('all');
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
@@ -139,89 +137,6 @@ export default function DashboardPage() {
     toast({ title: "Enviat a la paperera" });
   };
 
-  const handleLoadCarolina = async () => {
-    if (!firestore || !user || !currentEmployee) return;
-    setIsSyncing(true);
-    toast({ title: "Carregant dades de Carolina...", description: "Creant client, obra i registre." });
-
-    try {
-        const batch = writeBatch(firestore);
-        
-        // 1. Crear Client
-        const customerId = "blue-blue-carolina";
-        const customerRef = doc(firestore, "customers", customerId);
-        batch.set(customerRef, {
-            name: "Blue&Blue, slu",
-            nrt: "L-703322-J",
-            street: "antic camí ral, 22 Baixos",
-            city: "Andorra la Vella",
-            email: "welcomebluemoreblue@gmail.com",
-            postalCode: "AD500"
-        }, { merge: true });
-
-        // 2. Crear Obra
-        const projectId = "carolina-obra-unides";
-        const projectRef = doc(firestore, "projects", projectId);
-        batch.set(projectRef, {
-            name: "Carolina",
-            customerId: customerId,
-            customerName: "Blue&Blue, slu",
-            status: "active",
-            createdAt: new Date().toISOString()
-        }, { merge: true });
-
-        // 3. Crear Registre de Treball amb precisió per arribar a 943.01€
-        // Materials Sum: 631.90€
-        // Labor: 9h 1m (541 minuts) * 30€/h = 270.50€
-        // Subtotal: 631.90 + 270.50 = 902.40€
-        // Total amb IGI 4.5%: 902.40 * 1.045 = 943.008 -> 943.01€
-        const serviceId = "carolina-service-32";
-        const arrival = "2026-03-03T08:00:00.000Z";
-        const departure = "2026-03-03T18:01:00.000Z"; // 10h 1m - 1h dinar = 9h 1m (541 minuts)
-        
-        const serviceRef = doc(firestore, `employees/${currentEmployee.id}/serviceRecords`, serviceId);
-        const serviceData: Omit<ServiceRecord, 'id'> = {
-            employeeId: currentEmployee.id,
-            employeeName: `${currentEmployee.firstName} ${currentEmployee.lastName}`,
-            customerId: customerId,
-            customerName: "Blue&Blue, slu",
-            projectName: "Carolina",
-            projectId: projectId,
-            arrivalDateTime: arrival,
-            departureDateTime: departure,
-            isLunchSubtracted: true,
-            description: "Instal·lar una pista de cortina LED amb perfil cinzento. Criar una nova ligação a duas tomadas. Criar quatro saídas de cabo para apliques de parede. Instalar dois focos adicionais para o cliente.",
-            pendingTasks: "",
-            serviceHourlyRate: 30,
-            media: [],
-            albarans: [],
-            materials: [
-                { description: "Barra perfil superfície", quantity: 5, unitPrice: 15.20 },
-                { description: "Barra difusor", quantity: 5, unitPrice: 8.30 },
-                { description: "Tira LED Infinity 3000k 230v", quantity: 10, unitPrice: 22.00 },
-                { description: "Mecanismo tomada Siemens", quantity: 2, unitPrice: 9.50 },
-                { description: "Marco duplo Siemens", quantity: 1, unitPrice: 14.00 },
-                { description: "Tapa schuko Siemens", quantity: 2, unitPrice: 6.70 },
-                { description: "Tira LED 2700k 230v", quantity: 10, unitPrice: 22.00 },
-                { description: "Pequenos materials", quantity: 1, unitPrice: 28.00 }
-            ],
-            customerSignatureName: "Carolina Luanes",
-            customerSignatureDataUrl: "", // Signatura opcional
-            createdAt: new Date().toISOString()
-        };
-        batch.set(serviceRef, serviceData, { merge: true });
-
-        await batch.commit();
-        toast({ title: "Dades de Carolina carregades!", description: "Ja pots veure el registre al dashboard." });
-        setRefreshTrigger(prev => prev + 1);
-    } catch (e) {
-        console.error(e);
-        toast({ variant: 'destructive', title: "Error en carregar Carolina" });
-    } finally {
-        setIsSyncing(false);
-    }
-  };
-
   if (isUserLoading || isLoadingData) return <div className="max-w-7xl mx-auto p-8"><Skeleton className="h-40 w-full rounded-3xl" /></div>;
   if (!user) { router.push('/'); return null; }
 
@@ -233,9 +148,6 @@ export default function DashboardPage() {
           <p className="text-slate-400 font-bold uppercase text-[10px] tracking-[0.2em] pl-1">Supervisió detallada dels serveis realitzats per l'equip.</p>
         </div>
         <div className="flex flex-wrap gap-3 w-full md:w-auto">
-            <Button onClick={handleLoadCarolina} disabled={isSyncing} variant="outline" className="h-14 border-2 border-primary/20 text-primary font-black uppercase tracking-widest rounded-2xl text-[10px] px-6 hover:bg-primary/5">
-                {isSyncing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}Carregar Carolina
-            </Button>
             <Button onClick={() => setRefreshTrigger(prev => prev + 1)} variant="outline" className="h-14 border-2 border-slate-200 text-slate-500 font-black uppercase tracking-widest rounded-2xl text-[10px] px-6">
                 <RefreshCw className="mr-2 h-4 w-4" />Actualitzar
             </Button>
