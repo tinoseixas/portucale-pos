@@ -1,3 +1,4 @@
+
 'use client'
 
 import Link from 'next/link'
@@ -18,7 +19,7 @@ export function BottomNav() {
     { href: '/dashboard/invoices/history', icon: Receipt, label: 'Factures' },
     { href: '/dashboard/albarans', icon: FileArchive, label: 'Albarans' },
     { href: '/dashboard/customers', icon: Building, label: 'Clients' },
-    { href: '/dashboard/users', icon: Users, label: 'Usuaris' },
+    { href: '/dashboard/users', icon: Users, label: 'Gestió' },
     { href: '/dashboard/profile', icon: UserIcon, label: 'Perfil' },
   ];
 
@@ -39,7 +40,7 @@ export function BottomNav() {
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-40 border-t bg-white/95 backdrop-blur-xl supports-[backdrop-filter]:bg-white/60 md:hidden shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
-      <div className="container flex h-20 w-full items-center justify-between overflow-x-auto gap-1 px-4 scrollbar-hide">
+      <div className="container flex h-20 w-full items-center justify-start overflow-x-auto gap-1 px-4 scrollbar-hide">
         {navItems.map((item) => {
           const isActive = pathname.startsWith(item.href) && (item.href !== '/dashboard' || pathname === '/dashboard');
            
@@ -52,7 +53,7 @@ export function BottomNav() {
               key={item.href}
               href={item.href}
               className={cn(
-                'flex flex-col items-center justify-center gap-1.5 transition-all p-2 rounded-2xl min-w-[65px] h-16',
+                'flex flex-col items-center justify-center gap-1.5 transition-all p-2 rounded-2xl min-w-[70px] h-16',
                 isActive 
                   ? 'text-primary bg-primary/10 font-black scale-105 shadow-inner' 
                   : 'text-slate-400 hover:text-slate-600 hover:bg-slate-50'

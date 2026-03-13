@@ -4,9 +4,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useCollection, useUser, useFirestore, useMemoFirebase } from '@/firebase'
-import { collection, query, doc, getDocs, writeBatch, collectionGroup, addDoc, setDoc, orderBy, limit } from 'firebase/firestore'
-import type { Employee, Customer, ServiceRecord, Albaran, Invoice, Quote, Project, Receipt } from '@/lib/types'
+import { useCollection, useUser, useFirestore, useMemoFirebase, useDoc } from '@/firebase'
+import { collection, query, doc, getDocs, writeBatch, collectionGroup, orderBy, limit } from 'firebase/firestore'
+import type { Employee, ServiceRecord } from '@/lib/types'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -51,6 +51,12 @@ export default function UsersPage() {
   }, [firestore, user])
 
   const { data: employees, isLoading: isLoadingEmployees } = useCollection<Employee>(employeesQuery)
+
+  const employeeDocRef = useMemoFirebase(() => {
+    if (!user || !firestore) return null;
+    return doc(firestore, 'employees', user.uid);
+  }, [firestore, user]);
+  const { data: currentEmployee } = useDoc<Employee>(employeeDocRef);
 
   const backupsQuery = useMemoFirebase(() => {
     if (!user || !firestore) return null;
@@ -148,7 +154,6 @@ export default function UsersPage() {
     try {
         const batch = writeBatch(firestore);
         
-        // 1. Client
         const cRef = doc(collection(firestore, 'customers'));
         batch.set(cRef, {
             name: "Blue&Blue, slu",
@@ -158,7 +163,6 @@ export default function UsersPage() {
             email: "welcomebluemoreblue@gmail.com"
         });
 
-        // 2. Projecte (Obra)
         const pRef = doc(collection(firestore, 'projects'));
         batch.set(pRef, {
             name: "Carolina - Avda Nacions Unides 35",
@@ -168,13 +172,12 @@ export default function UsersPage() {
             createdAt: new Date('2026-03-03T08:00:00').toISOString()
         });
 
-        // 3. Registre de Treball
         const sRef = doc(collection(firestore, `employees/${user.uid}/serviceRecords`));
         const serviceData: Omit<ServiceRecord, 'id'> = {
             employeeId: user.uid,
-            employeeName: "Tino Seixas",
+            employeeName: currentEmployee ? `${currentEmployee.firstName} ${currentEmployee.lastName}` : "Tino Seixas",
             arrivalDateTime: new Date('2026-03-03T08:00:00').toISOString(),
-            departureDateTime: new Date('2026-03-03T18:01:00').toISOString(), // 9h 1m efectives (menys 1h dinar)
+            departureDateTime: new Date('2026-03-03T18:01:00').toISOString(), 
             description: "Instalar uma pista de cortina LED com perfil cinzento\nCriar uma nova ligação a duas tomadas\nCriar quatro saídas de cabo para apliques de parede\nInstalar dois focos adicionais para o cliente",
             projectName: "Carolina - Avda Nacions Unides 35",
             projectId: pRef.id,
@@ -195,7 +198,7 @@ export default function UsersPage() {
                 { description: "Pequenos materials", quantity: 1, unitPrice: 28.00 }
             ],
             customerSignatureName: "Carolina Luanes (autoritzat pel client)",
-            customerSignatureDataUrl: "", // S'hauria de signar manualment
+            customerSignatureDataUrl: "", 
             createdAt: new Date('2026-03-03T18:01:00').toISOString(),
             isLunchSubtracted: true
         };
@@ -207,69 +210,6 @@ export default function UsersPage() {
     } catch (error) {
         console.error(error);
         toast({ variant: 'destructive', title: "Error" });
-    } finally {
-        setIsSeeding(false);
-    }
-  };
-
-  const handleRestoreSampleData = async () => {
-    if (!firestore || !user) return;
-    setIsSeeding(true);
-    toast({ title: "Restaurant dades...", description: "S'està creant el contingut de prova complet." });
-
-    try {
-        const batch = writeBatch(firestore);
-        
-        const customers = [
-            { name: "Comunitat Edifici Font de Ferro", address: "AD200 Encamp", nrt: "L-706521-X", email: "info@fontferro.ad" },
-            { name: "Hotel Roc de Caldes", address: "Ctra. d'Engolasters, Escaldes-Engordany", nrt: "F-123456-Z", email: "recepcio@rocdescaldes.ad" },
-            { name: "Comú d'Encamp - Dept. Obres", address: "Plaça dels Arinsols, Encamp", nrt: "G-000001-A", email: "obres@encamp.ad" },
-            { name: "Residencial Les Terrasses", address: "Av. Príncep Benlloch, Andorra la Vella", nrt: "L-998877-B", email: "admin@terrasses.ad" },
-            { name: "Restaurant L'Era d'en Jaume", address: "Carrer Major, Ordino", nrt: "F-554433-C", email: "reserves@erajaume.ad" }
-        ];
-
-        for (const cust of customers) {
-            const cRef = doc(collection(firestore, 'customers'));
-            batch.set(cRef, cust);
-            
-            const pRef = doc(collection(firestore, 'projects'));
-            const projectData = {
-                name: `Manteniment Preventiu - ${cust.name}`,
-                customerId: cRef.id,
-                customerName: cust.name,
-                status: 'active' as const,
-                createdAt: new Date().toISOString()
-            };
-            batch.set(pRef, projectData);
-
-            const sRef = doc(collection(firestore, `employees/${user.uid}/serviceRecords`));
-            const serviceData: Omit<ServiceRecord, 'id'> = {
-                employeeId: user.uid,
-                employeeName: user.displayName || user.email?.split('@')[0] || 'Tècnic',
-                arrivalDateTime: new Date().toISOString(),
-                departureDateTime: new Date(Date.now() + 7200000).toISOString(), 
-                description: `Revisió general de instal·lacions i verificació de punts crítics a ${cust.name}.`,
-                projectName: projectData.name,
-                projectId: pRef.id,
-                pendingTasks: "",
-                customerId: cRef.id,
-                customerName: cust.name,
-                serviceHourlyRate: 30,
-                media: [],
-                albarans: [],
-                materials: [{ description: "Material divers de revisió", quantity: 1, unitPrice: 15 }],
-                createdAt: new Date().toISOString(),
-                isLunchSubtracted: true
-            };
-            batch.set(sRef, serviceData);
-        }
-
-        await batch.commit();
-        toast({ title: "Dades restaurades", description: "S'han afegit 5 clients corporatius i les seves obres." });
-        router.push('/dashboard');
-    } catch (error) {
-        console.error(error);
-        toast({ variant: 'destructive', title: "Error", description: "No s'han pogut carregar les dades." });
     } finally {
         setIsSeeding(false);
     }
@@ -346,7 +286,7 @@ export default function UsersPage() {
   }
   
   const isLoading = isUserLoading || isLoadingEmployees;
-  const isAdmin = user?.email === 'tinoseixas@gmail.com';
+  const isUserAdmin = currentEmployee?.role === 'admin';
   
   if (isLoading) return <p className="p-12 text-center font-bold uppercase tracking-widest">Carregant usuaris...</p>
   if (!user) return null;
@@ -410,7 +350,7 @@ export default function UsersPage() {
             </CardContent>
         </Card>
 
-        {isAdmin && (
+        {isUserAdmin && (
             <div className="space-y-10">
                 <Card className="border-none shadow-2xl bg-blue-50/50 rounded-[2.5rem] overflow-hidden">
                     <CardHeader className="bg-primary text-white p-8">
@@ -510,22 +450,6 @@ export default function UsersPage() {
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div className="p-6 bg-amber-50 rounded-3xl border-2 border-amber-200 shadow-sm space-y-4">
-                                <div className="flex items-start gap-4">
-                                    <div className="bg-amber-100 p-2 rounded-xl">
-                                        <FileWarning className="h-6 w-6 text-amber-600" />
-                                    </div>
-                                    <div className="space-y-1">
-                                        <p className="font-black text-amber-800 uppercase text-xs">Dades de Prova Corporatives</p>
-                                        <p className="text-[10px] text-amber-600 font-bold uppercase">Càrrega de 5 clients i obres d'exemple.</p>
-                                    </div>
-                                </div>
-                                <Button variant="outline" onClick={handleRestoreSampleData} disabled={isSeeding} className="w-full h-12 border-amber-300 text-amber-700 font-black uppercase tracking-widest rounded-xl hover:bg-amber-100">
-                                    {isSeeding ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <RefreshCw className="h-4 w-4 mr-2" />}
-                                    CARREGAR MOSTRA
-                                </Button>
-                            </div>
-
                             <div className="p-6 bg-blue-50 rounded-3xl border-2 border-blue-200 shadow-sm space-y-4">
                                 <div className="flex items-start gap-4">
                                     <div className="bg-blue-100 p-2 rounded-xl text-blue-600">
@@ -536,9 +460,9 @@ export default function UsersPage() {
                                         <p className="text-[10px] text-blue-600 font-bold uppercase">Carrega el registre específic del 03/03/2026.</p>
                                     </div>
                                 </div>
-                                <Button variant="outline" onClick={handleLoadBlueBlueRecord} disabled={isSeeding} className="w-full h-12 border-blue-300 text-blue-700 font-black uppercase tracking-widest rounded-xl hover:bg-blue-100">
+                                <Button variant="outline" onClick={handleLoadBlueBlueRecord} disabled={isSeeding} className="w-full h-12 border-blue-300 text-blue-700 font-black uppercase tracking-widest rounded-2xl hover:bg-blue-100">
                                     {isSeeding ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Plus className="h-4 w-4 mr-2" />}
-                                    CARREGAR REGISTRE BLUE&BLUE
+                                    CARREGAR ARA
                                 </Button>
                             </div>
                         </div>
