@@ -5,7 +5,7 @@ import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useCollection, useUser, useFirestore, useMemoFirebase, deleteDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase'
 import { collection, query, orderBy, doc, getDocs, collectionGroup, writeBatch, where } from 'firebase/firestore'
-import type { Albaran, ServiceRecord, Employee, Customer } from '@/lib/types'
+import type { Albaran, ServiceRecord, Employee, Customer, Project } from '@/lib/types'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
@@ -98,6 +98,9 @@ export default function AlbaransHistoryPage() {
         const latestAlbaransSnap = await getDocs(collection(firestore, 'albarans'));
         const latestAlbarans = latestAlbaransSnap.docs.map(d => ({ id: d.id, ...d.data() } as Albaran));
 
+        const projectsSnap = await getDocs(collection(firestore, 'projects'));
+        const projects = projectsSnap.docs.map(d => ({ id: d.id, ...d.data() } as Project));
+
         const handledServiceIds = new Set(
             latestAlbarans.filter(a => a.status === 'facturat' || a.status === 'arxivat')
                      .flatMap(a => a.serviceRecordIds)
@@ -133,6 +136,13 @@ export default function AlbaransHistoryPage() {
         for (const key in groupedByProject) {
             const projectServices = groupedByProject[key];
             const firstService = projectServices[0];
+            
+            // Buscar si l'obra està arxivada
+            const project = projects.find(p => 
+                p.customerId === firstService.customerId && 
+                p.name.trim().toLowerCase().replace(/\s+/g, ' ') === firstService.projectName?.trim().toLowerCase().replace(/\s+/g, ' ')
+            );
+
             nextNum++;
             
             const { totalGeneral } = calculateTotalAmount(projectServices, employees);
@@ -148,7 +158,7 @@ export default function AlbaransHistoryPage() {
                 projectName: firstService.projectName.trim(),
                 serviceRecordIds: projectServices.map(s => s.id),
                 totalAmount: totalGeneral,
-                status: 'pendent',
+                status: project?.status === 'finished' ? 'arxivat' : 'pendent',
                 employeeName: technicianNames
             };
 
@@ -180,8 +190,8 @@ export default function AlbaransHistoryPage() {
       <div className="max-w-full mx-auto space-y-8">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
             <div className="space-y-1">
-                <h1 className="text-4xl font-black tracking-tighter flex items-center gap-3 text-primary">
-                    <FileArchive className="h-10 w-10" /> Historial d'albarans
+                <h1 className="text-3xl font-black tracking-tighter flex items-center gap-3 text-primary">
+                    <FileArchive className="h-8 w-8" /> Historial d'albarans
                 </h1>
                 <p className="text-muted-foreground font-medium">Control i generació de documents per obra.</p>
             </div>
@@ -229,13 +239,13 @@ export default function AlbaransHistoryPage() {
 
         <Tabs defaultValue="pendents" className="w-full">
           <TabsList className="grid w-full grid-cols-3 max-w-xl mb-10 bg-slate-200/50 p-1.5 rounded-2xl h-16">
-            <TabsTrigger value="pendents" className="font-bold gap-2 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-xl rounded-xl transition-all">
+            <TabsTrigger value="pendents" className="font-bold gap-2 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-xl rounded-xl transition-all text-xs">
                 <Clock className="h-4 w-4" /> Pendents {pendingAlbarans.length > 0 && <Badge variant="destructive" className="ml-1 rounded-md px-1.5 h-5 bg-red-500">{pendingAlbarans.length}</Badge>}
             </TabsTrigger>
-            <TabsTrigger value="historial" className="font-bold gap-2 data-[state=active]:bg-white data-[state=active]:text-green-600 data-[state=active]:shadow-xl rounded-xl transition-all">
+            <TabsTrigger value="historial" className="font-bold gap-2 data-[state=active]:bg-white data-[state=active]:text-green-600 data-[state=active]:shadow-xl rounded-xl transition-all text-xs">
                 <CheckCircle2 className="h-4 w-4" /> Facturats
             </TabsTrigger>
-            <TabsTrigger value="arxivats" className="font-bold gap-2 data-[state=active]:bg-white data-[state=active]:text-slate-600 data-[state=active]:shadow-xl rounded-xl transition-all">
+            <TabsTrigger value="arxivats" className="font-bold gap-2 data-[state=active]:bg-white data-[state=active]:text-slate-600 data-[state=active]:shadow-xl rounded-xl transition-all text-xs">
                 <Archive className="h-4 w-4" /> Arxivats
             </TabsTrigger>
           </TabsList>
@@ -251,11 +261,11 @@ export default function AlbaransHistoryPage() {
                     <Table>
                         <TableHeader>
                             <TableRow className="bg-slate-50/50">
-                                <TableHead className="px-8 font-bold text-xs">Nº Albarà</TableHead>
-                                <TableHead className="font-bold text-xs">Obra / Projecte</TableHead>
-                                <TableHead className="font-bold text-xs">Client</TableHead>
-                                <TableHead className="font-bold text-xs">Import estimat</TableHead>
-                                <TableHead className="text-right px-8 font-bold text-xs">Accions</TableHead>
+                                <TableHead className="px-8 font-bold text-xs text-slate-400">Nº Albarà</TableHead>
+                                <TableHead className="font-bold text-xs text-slate-400">Obra / Projecte</TableHead>
+                                <TableHead className="font-bold text-xs text-slate-400">Client</TableHead>
+                                <TableHead className="font-bold text-xs text-slate-400">Import estimat</TableHead>
+                                <TableHead className="text-right px-8 font-bold text-xs text-slate-400">Accions</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -300,7 +310,7 @@ export default function AlbaransHistoryPage() {
                                                 </AlertDialogHeader>
                                                 <AlertDialogFooter className="pt-6">
                                                     <AlertDialogCancel className="h-14 rounded-2xl font-bold border-2 px-8">Enrere</AlertDialogCancel>
-                                                    <AlertDialogAction onClick={() => handleDeleteAlbaran(albaran.id, albaran.albaranNumber)} className="bg-red-600 h-14 rounded-2xl font-bold px-8">Confirmar</AlertDialogAction>
+                                                    <AlertDialogAction onClick={() => handleDeleteAlbaran(albaran.id, albaran.albaranNumber)} className="bg-red-600 h-14 rounded-2xl font-bold px-8 text-white">Confirmar</AlertDialogAction>
                                                 </AlertDialogFooter>
                                             </AlertDialogContent>
                                         </AlertDialog>
@@ -339,11 +349,11 @@ export default function AlbaransHistoryPage() {
                     <Table>
                         <TableHeader>
                             <TableRow className="bg-slate-50/50">
-                                <TableHead className="px-8 font-bold text-xs">Nº Albarà</TableHead>
-                                <TableHead className="font-bold text-xs">Obra</TableHead>
-                                <TableHead className="font-bold text-xs">Client</TableHead>
-                                <TableHead className="font-bold text-xs">Total</TableHead>
-                                <TableHead className="text-right px-8 font-bold text-xs">Accions</TableHead>
+                                <TableHead className="px-8 font-bold text-xs text-slate-400">Nº Albarà</TableHead>
+                                <TableHead className="font-bold text-xs text-slate-400">Obra</TableHead>
+                                <TableHead className="font-bold text-xs text-slate-400">Client</TableHead>
+                                <TableHead className="font-bold text-xs text-slate-400">Total</TableHead>
+                                <TableHead className="text-right px-8 font-bold text-xs text-slate-400">Accions</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -385,18 +395,18 @@ export default function AlbaransHistoryPage() {
                     <Table>
                         <TableHeader>
                             <TableRow className="bg-slate-50/50">
-                                <TableHead className="px-8 font-bold text-xs">Nº Albarà</TableHead>
-                                <TableHead className="font-bold text-xs">Obra</TableHead>
-                                <TableHead className="font-bold text-xs">Client</TableHead>
-                                <TableHead className="text-right px-8 font-bold text-xs">Accions</TableHead>
+                                <TableHead className="px-8 font-bold text-xs text-slate-400">Nº Albarà</TableHead>
+                                <TableHead className="font-bold text-xs text-slate-400">Obra</TableHead>
+                                <TableHead className="font-bold text-xs text-slate-400">Client</TableHead>
+                                <TableHead className="text-right px-8 font-bold text-xs text-slate-400">Accions</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {archivedAlbarans.map(albaran => (
-                                <TableRow key={albaran.id} className="opacity-60 bg-slate-50/20 grayscale">
-                                    <TableCell className="px-8 font-bold">#{String(albaran.albaranNumber).padStart(4, '0')}</TableCell>
+                                <TableRow key={albaran.id} className="opacity-60 bg-slate-50/20">
+                                    <TableCell className="px-8 font-bold text-slate-400">#{String(albaran.albaranNumber).padStart(4, '0')}</TableCell>
                                     <TableCell className="font-medium text-xs">{albaran.projectName}</TableCell>
-                                    <TableCell className="text-xs">{albaran.customerName}</TableCell>
+                                    <TableCell className="text-xs text-slate-500">{albaran.customerName}</TableCell>
                                     <TableCell className="text-right px-8">
                                         <div className="flex justify-end gap-2">
                                             <Button variant="outline" size="sm" onClick={() => updateDocumentNonBlocking(doc(firestore!, 'albarans', albaran.id), { status: 'pendent' })} className="h-9 px-4 font-bold text-xs border-2 rounded-xl hover:bg-primary hover:text-white transition-all">

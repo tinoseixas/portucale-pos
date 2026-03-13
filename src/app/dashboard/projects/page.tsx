@@ -1,3 +1,4 @@
+
 'use client'
 
 import { useState, useMemo } from 'react'
@@ -11,11 +12,12 @@ import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Briefcase, CheckCircle2, Archive, Loader2, Plus, Users, Search, Trash2 } from 'lucide-react'
+import { Briefcase, CheckCircle2, Archive, Loader2, Plus, Users, Search, Trash2, Clock, CheckCircle } from 'lucide-react'
 import { AdminGate } from '@/components/AdminGate'
 import { format, parseISO } from 'date-fns'
 import { ca } from 'date-fns/locale'
 import { useToast } from '@/hooks/use-toast'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -51,7 +53,6 @@ export default function ProjectsManagementPage() {
 
     const { data: customers } = useCollection<Customer>(customersQuery);
 
-    // Deduplicate customers for the select list using aggressive normalization
     const uniqueCustomers = useMemo(() => {
         if (!customers) return [];
         const seen = new Set();
@@ -71,12 +72,15 @@ export default function ProjectsManagementPage() {
         );
     }, [projects, searchTerm]);
 
+    const activeProjects = useMemo(() => filteredProjects.filter(p => p.status === 'active'), [filteredProjects]);
+    const archivedProjects = useMemo(() => filteredProjects.filter(p => p.status === 'finished'), [filteredProjects]);
+
     const handleArchiveProject = async (projectId: string, currentStatus: string) => {
         if (!firestore) return;
         const newStatus = currentStatus === 'active' ? 'finished' : 'active';
         try {
             await updateDoc(doc(firestore, 'projects', projectId), { status: newStatus });
-            toast({ title: newStatus === 'finished' ? 'Obra finalitzada' : 'Obra reactivada' });
+            toast({ title: newStatus === 'finished' ? 'Obra arxivada' : 'Obra reactivada' });
         } catch (e) {
             toast({ variant: 'destructive', title: 'Error', description: 'No s\'ha pogut canviar l\'estat.' });
         }
@@ -120,15 +124,15 @@ export default function ProjectsManagementPage() {
         <AdminGate pageTitle="Gestió d'Obres" pageDescription="Administra el llistat d'obres actives i finalitzades.">
             <div className="space-y-8 max-w-6xl mx-auto pb-10">
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                    <h1 className="text-4xl font-black uppercase tracking-tight flex items-center gap-3 text-primary">
-                        <Briefcase className="h-10 w-10" /> Gestió d'Obres
+                    <h1 className="text-3xl font-black uppercase tracking-tight flex items-center gap-3 text-primary">
+                        <Briefcase className="h-8 w-8" /> Gestió d'Obres
                     </h1>
                 </div>
 
                 <Card className="border-none shadow-2xl bg-slate-900 text-white rounded-3xl overflow-hidden">
                     <CardHeader className="p-8">
                         <CardTitle className="text-xl font-black uppercase tracking-widest flex items-center gap-2">
-                            <Plus className="h-5 w-5 text-accent" /> Nova Obra / Projecte
+                            <Plus className="h-5 w-5 text-accent" /> Nova Obra
                         </CardTitle>
                         <CardDescription className="text-slate-400">Defineix una obra per un client per poder-la seleccionar als registres.</CardDescription>
                     </CardHeader>
@@ -167,97 +171,112 @@ export default function ProjectsManagementPage() {
                     </CardContent>
                 </Card>
 
-                <Card className="border-none shadow-2xl rounded-3xl overflow-hidden bg-white">
-                    <CardHeader className="bg-slate-50 border-b p-8">
-                        <div className="flex flex-col sm:flex-row justify-between items-center gap-6">
-                            <CardTitle className="text-xl font-black uppercase tracking-widest flex items-center gap-3">
-                                Llistat d'Obres
-                                <Badge className="bg-primary text-white font-black">{filteredProjects.length}</Badge>
-                            </CardTitle>
-                            <div className="relative w-full sm:w-80">
-                                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
-                                <Input 
-                                    placeholder="Cerca obra o client..." 
-                                    value={searchTerm}
-                                    onChange={(e) => setSearchTerm(e.target.value)}
-                                    className="pl-12 h-12 bg-white border-2 rounded-xl font-bold"
-                                />
-                            </div>
+                <Tabs defaultValue="actives" className="w-full">
+                    <div className="flex flex-col sm:flex-row justify-between items-center gap-6 mb-6">
+                        <TabsList className="bg-slate-200/50 p-1 rounded-2xl h-14">
+                            <TabsTrigger value="actives" className="font-bold gap-2 px-6 rounded-xl data-[state=active]:bg-white data-[state=active]:shadow-lg">
+                                <Clock className="h-4 w-4" /> Actives ({activeProjects.length})
+                            </TabsTrigger>
+                            <TabsTrigger value="arxivades" className="font-bold gap-2 px-6 rounded-xl data-[state=active]:bg-white data-[state=active]:shadow-lg">
+                                <Archive className="h-4 w-4" /> Arxivades ({archivedProjects.length})
+                            </TabsTrigger>
+                        </TabsList>
+                        <div className="relative w-full sm:w-80">
+                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+                            <Input 
+                                placeholder="Cerca obra o client..." 
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                className="pl-12 h-12 bg-white border-2 rounded-xl font-bold"
+                            />
                         </div>
-                    </CardHeader>
-                    <CardContent className="p-0">
-                        <div className="overflow-x-auto">
-                            <Table>
-                                <TableHeader>
-                                    <TableRow className="bg-slate-50/50">
-                                        <TableHead className="px-8 py-4 font-black uppercase text-[10px] tracking-widest">Obra / Projecte</TableHead>
-                                        <TableHead className="font-black uppercase text-[10px] tracking-widest">Client</TableHead>
-                                        <TableHead className="font-black uppercase text-[10px] tracking-widest">Estat</TableHead>
-                                        <TableHead className="font-black uppercase text-[10px] tracking-widest">Data Creació</TableHead>
-                                        <TableHead className="text-right px-8 font-black uppercase text-[10px] tracking-widest">Accions</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {filteredProjects.map(project => (
-                                        <TableRow key={project.id} className="hover:bg-slate-50 transition-colors border-b-2 border-slate-50">
-                                            <TableCell className="px-8 py-6">
-                                                <div className="font-black text-slate-900 uppercase tracking-tight text-sm">{project.name}</div>
-                                            </TableCell>
-                                            <TableCell className="text-slate-600 font-bold">{project.customerName}</TableCell>
-                                            <TableCell>
-                                                <Badge variant={project.status === 'active' ? 'default' : 'outline'} className={project.status === 'active' ? "uppercase font-black text-[10px] bg-green-600" : "uppercase font-black text-[10px] border-slate-300 text-slate-400"}>
-                                                    {project.status === 'active' ? 'ACTIVA' : 'FINALITZADA'}
-                                                </Badge>
-                                            </TableCell>
-                                            <TableCell className="text-xs text-slate-400 font-bold">{format(parseISO(project.createdAt), 'dd/MM/yyyy', { locale: ca })}</TableCell>
-                                            <TableCell className="text-right px-8">
-                                                <div className="flex justify-end gap-3">
-                                                    <Button 
-                                                        variant="outline" 
-                                                        size="sm" 
-                                                        onClick={() => handleArchiveProject(project.id, project.status)}
-                                                        className={project.status === 'active' ? 'text-green-600 border-green-200 hover:bg-green-50 rounded-xl font-bold h-10 px-4' : 'text-primary border-primary/20 hover:bg-primary/5 rounded-xl font-bold h-10 px-4'}
-                                                    >
-                                                        {project.status === 'active' ? <CheckCircle2 className="h-4 w-4 mr-2" /> : <Archive className="h-4 w-4 mr-2" />}
-                                                        {project.status === 'active' ? 'Enllestir' : 'Reactivar'}
-                                                    </Button>
-                                                    <AlertDialog>
-                                                        <AlertDialogTrigger asChild>
-                                                            <Button variant="ghost" size="icon" className="h-10 w-10 text-red-300 hover:text-red-600 hover:bg-red-50 rounded-xl">
-                                                                <Trash2 className="h-4 w-4" />
-                                                            </Button>
-                                                        </AlertDialogTrigger>
-                                                        <AlertDialogContent className="rounded-[2.5rem] p-10">
-                                                            <AlertDialogHeader>
-                                                                <AlertDialogTitle className="text-2xl font-black uppercase">Eliminar Obra?</AlertDialogTitle>
-                                                                <AlertDialogDescription className="text-base font-medium">Si l'elimines, deixarà d'aparèixer als selectors. Els registres de treball ja creats no es veuran afectats.</AlertDialogDescription>
-                                                            </AlertDialogHeader>
-                                                            <AlertDialogFooter className="pt-6">
-                                                                <AlertDialogCancel className="h-14 rounded-2xl font-bold border-2 px-8">Cancel·lar</AlertDialogCancel>
-                                                                <AlertDialogAction onClick={() => handleDeleteProject(project.id)} className="bg-red-600 h-14 rounded-2xl font-black uppercase tracking-widest px-8">Eliminar</AlertDialogAction>
-                                                            </AlertDialogFooter>
-                                                        </AlertDialogContent>
-                                                    </AlertDialog>
-                                                </div>
-                                            </TableCell>
-                                        </TableRow>
-                                    ))}
-                                    {filteredProjects.length === 0 && (
-                                        <TableRow>
-                                            <TableCell colSpan={5} className="h-48 text-center">
-                                                <div className="flex flex-col items-center justify-center text-slate-300 space-y-2">
-                                                    <Briefcase className="h-12 w-12 opacity-20" />
-                                                    <p className="font-black uppercase text-[10px] tracking-widest">No s'han trobat obres</p>
-                                                </div>
-                                            </TableCell>
-                                        </TableRow>
-                                    )}
-                                </TableBody>
-                            </Table>
-                        </div>
-                    </CardContent>
-                </Card>
+                    </div>
+
+                    <TabsContent value="actives">
+                        <Card className="border-none shadow-xl rounded-3xl overflow-hidden bg-white">
+                            <CardContent className="p-0">
+                                <ProjectTable projects={activeProjects} onArchive={handleArchiveProject} onDelete={handleDeleteProject} />
+                            </CardContent>
+                        </Card>
+                    </TabsContent>
+
+                    <TabsContent value="arxivades">
+                        <Card className="border-none shadow-xl rounded-3xl overflow-hidden bg-white opacity-80">
+                            <CardContent className="p-0">
+                                <ProjectTable projects={archivedProjects} onArchive={handleArchiveProject} onDelete={handleDeleteProject} />
+                            </CardContent>
+                        </Card>
+                    </TabsContent>
+                </Tabs>
             </div>
         </AdminGate>
+    )
+}
+
+function ProjectTable({ projects, onArchive, onDelete }: { projects: Project[], onArchive: any, onDelete: any }) {
+    return (
+        <div className="overflow-x-auto">
+            <Table>
+                <TableHeader>
+                    <TableRow className="bg-slate-50/50">
+                        <TableHead className="px-8 py-4 font-black uppercase text-[10px] tracking-widest text-slate-400">Obra / Projecte</TableHead>
+                        <TableHead className="font-black uppercase text-[10px] tracking-widest text-slate-400">Client</TableHead>
+                        <TableHead className="font-black uppercase text-[10px] tracking-widest text-slate-400">Data Creació</TableHead>
+                        <TableHead className="text-right px-8 font-black uppercase text-[10px] tracking-widest text-slate-400">Accions</TableHead>
+                    </TableRow>
+                </TableHeader>
+                <TableBody>
+                    {projects.map(project => (
+                        <TableRow key={project.id} className="hover:bg-slate-50 transition-colors border-b-2 border-slate-50">
+                            <TableCell className="px-8 py-6">
+                                <div className="font-black text-slate-900 uppercase tracking-tight text-sm">{project.name}</div>
+                            </TableCell>
+                            <TableCell className="text-slate-600 font-bold">{project.customerName}</TableCell>
+                            <TableCell className="text-xs text-slate-400 font-bold">{format(parseISO(project.createdAt), 'dd/MM/yyyy', { locale: ca })}</TableCell>
+                            <TableCell className="text-right px-8">
+                                <div className="flex justify-end gap-3">
+                                    <Button 
+                                        variant="outline" 
+                                        size="sm" 
+                                        onClick={() => onArchive(project.id, project.status)}
+                                        className={project.status === 'active' ? 'text-slate-500 border-slate-200 hover:bg-slate-50 rounded-xl font-bold h-10 px-4' : 'text-primary border-primary/20 hover:bg-primary/5 rounded-xl font-bold h-10 px-4'}
+                                    >
+                                        {project.status === 'active' ? <Archive className="h-4 w-4 mr-2" /> : <Clock className="h-4 w-4 mr-2" />}
+                                        {project.status === 'active' ? 'Arxivar' : 'Reactivar'}
+                                    </Button>
+                                    <AlertDialog>
+                                        <AlertDialogTrigger asChild>
+                                            <Button variant="ghost" size="icon" className="h-10 w-10 text-red-300 hover:text-red-600 hover:bg-red-50 rounded-xl">
+                                                <Trash2 className="h-4 w-4" />
+                                            </Button>
+                                        </AlertDialogTrigger>
+                                        <AlertDialogContent className="rounded-[2.5rem] p-10">
+                                            <AlertDialogHeader>
+                                                <AlertDialogTitle className="text-2xl font-black uppercase">Eliminar Obra?</AlertDialogTitle>
+                                                <AlertDialogDescription className="text-base font-medium">Aquesta acció es permanent i no es pot desfer.</AlertDialogDescription>
+                                            </AlertDialogHeader>
+                                            <AlertDialogFooter className="pt-6">
+                                                <AlertDialogCancel className="h-14 rounded-2xl font-bold border-2 px-8">Cancel·lar</AlertDialogCancel>
+                                                <AlertDialogAction onClick={() => onDelete(project.id)} className="bg-red-600 h-14 rounded-2xl font-black uppercase tracking-widest px-8">Eliminar</AlertDialogAction>
+                                            </AlertDialogFooter>
+                                        </AlertDialogContent>
+                                    </AlertDialog>
+                                </div>
+                            </TableCell>
+                        </TableRow>
+                    ))}
+                    {projects.length === 0 && (
+                        <TableRow>
+                            <TableCell colSpan={4} className="h-48 text-center">
+                                <div className="flex flex-col items-center justify-center text-slate-300 space-y-2">
+                                    <Briefcase className="h-12 w-12 opacity-20" />
+                                    <p className="font-black uppercase text-[10px] tracking-widest italic">Sense dades per mostrar</p>
+                                </div>
+                            </TableCell>
+                        </TableRow>
+                    )}
+                </TableBody>
+            </Table>
+        </div>
     )
 }

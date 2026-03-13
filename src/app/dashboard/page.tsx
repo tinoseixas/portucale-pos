@@ -1,3 +1,4 @@
+
 'use client'
 
 import { useState, useMemo, useEffect, useCallback } from 'react'
@@ -144,7 +145,7 @@ export default function DashboardPage() {
     <div className="max-w-7xl mx-auto space-y-8 md:space-y-12 px-4 md:px-8 pb-20">
       <div className="flex flex-col md:flex-row items-start md:items-end justify-between gap-6">
         <div className="space-y-1">
-          <h1 className="text-4xl md:text-6xl font-black tracking-tighter leading-none text-primary">Registres de<br /><span className="text-accent">treball</span></h1>
+          <h1 className="text-2xl md:text-4xl font-black tracking-tighter leading-none text-primary">Registres de<br /><span className="text-accent">treball</span></h1>
           <p className="text-slate-400 font-bold text-[10px] tracking-tight pl-1">Supervisió detallada dels serveis realitzats per l'equip.</p>
         </div>
         <div className="flex flex-wrap gap-3 w-full md:w-auto">
