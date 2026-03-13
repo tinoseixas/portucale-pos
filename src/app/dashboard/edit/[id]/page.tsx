@@ -203,6 +203,7 @@ export default function EditServicePage() {
         setDescription(result.translatedText);
         toast({ title: "Traducció completada" });
     } catch (e) {
+        console.error(e);
         toast({ variant: 'destructive', title: "Error en la traducció" });
     } finally {
         setIsTranslating(false);
