@@ -1,3 +1,4 @@
+
 'use client'
 
 import { useState, useEffect } from 'react'
@@ -13,6 +14,8 @@ import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'fire
 import { doc, setDoc, getDoc } from 'firebase/firestore'
 import { Logo } from '@/components/Logo'
 import { BRANDING } from '@/lib/branding'
+
+const ADMIN_EMAIL = 'tinoseixas@gmail.com';
 
 export default function Home() {
   const router = useRouter()
@@ -41,13 +44,17 @@ export default function Home() {
       const employeeRef = doc(firestore, 'employees', loggedInUser.uid);
       const employeeSnap = await getDoc(employeeRef);
 
+      // Si l'usuari ja existeix, mantenim el seu rol. Si no, és 'user' excepte si és l'email mestre.
+      const existingRole = employeeSnap.exists() ? employeeSnap.data().role : null;
+      const isMasterAdmin = loggedInUser.email?.toLowerCase() === ADMIN_EMAIL;
+
       await setDoc(employeeRef, {
           id: loggedInUser.uid,
           employeeId: employeeSnap.exists() ? (employeeSnap.data().employeeId || loggedInUser.uid.substring(0, 8)) : loggedInUser.uid.substring(0, 8),
           firstName: employeeSnap.exists() ? (employeeSnap.data().firstName || loggedInUser.email?.split('@')[0]) : (loggedInUser.email?.split('@')[0] || 'Usuari'),
           lastName: employeeSnap.exists() ? (employeeSnap.data().lastName || 'TS') : 'TS',
           email: loggedInUser.email?.toLowerCase(),
-          role: 'admin', 
+          role: existingRole || (isMasterAdmin ? 'admin' : 'user'), 
           hourlyRate: employeeSnap.exists() ? (employeeSnap.data()?.hourlyRate || 30) : 30,
       }, { merge: true });
 
@@ -74,6 +81,8 @@ export default function Home() {
       const userCredential = await createUserWithEmailAndPassword(auth, cleanEmail, password);
       const newUser = userCredential.user;
       
+      const isMasterAdmin = cleanEmail === ADMIN_EMAIL;
+      
       const employeeRef = doc(firestore, 'employees', newUser.uid);
       await setDoc(employeeRef, {
         id: newUser.uid,
@@ -82,7 +91,7 @@ export default function Home() {
         lastName: 'Usuari',
         email: cleanEmail,
         phoneNumber: '',
-        role: 'admin',
+        role: isMasterAdmin ? 'admin' : 'user', // Per defecte és usuari sense privilegis
         hourlyRate: 30,
       }, { merge: true });
 
@@ -116,8 +125,8 @@ export default function Home() {
         </div>
         <Card className="shadow-2xl border-none overflow-hidden rounded-[2rem] md:rounded-[2.5rem] bg-white/95 backdrop-blur-xl">
           <CardHeader className="text-center space-y-2 bg-slate-900 text-white p-6 md:p-10">
-            <CardTitle className="text-2xl md:text-3xl font-black tracking-tight">Portal Corporatiu</CardTitle>
-            <CardDescription className="text-slate-400 font-medium">{BRANDING.companyName} - Gestió de Serveis</CardDescription>
+            <CardTitle className="text-2xl md:text-3xl font-black tracking-tight">Portal corporatiu</CardTitle>
+            <CardDescription className="text-slate-400 font-medium">{BRANDING.companyName} - Gestió de serveis</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6 pt-8 md:pt-12 px-6 md:px-10">
             <div className="space-y-3">

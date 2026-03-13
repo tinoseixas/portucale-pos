@@ -2,11 +2,64 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // ACESSO TOTAL E IRRESTRITO: 
-    // Removemos todos os bloqueios para garantir que nenhum utilizador receba erro de permissão.
-    // Todos os utilizadores autenticados ou não podem ler e escrever.
-    match /{document=**} {
-      allow read, write: if true;
+    // Funció per verificar si l'usuari és administrador
+    function isAdmin() {
+      return request.auth != null && 
+             get(/databases/$(database)/documents/employees/$(request.auth.uid)).data.role == 'admin';
+    }
+    
+    // Funció per verificar si l'usuari és el propietari de la dada
+    function isOwner(userId) {
+      return request.auth != null && request.auth.uid == userId;
+    }
+
+    // Perfils d'empleat: Tots els logats llegeixen (per noms), només owner/admin escriu
+    match /employees/{userId} {
+      allow read: if request.auth != null;
+      allow write: if isOwner(userId) || isAdmin();
+      
+      // Registres de servei: Propietari veu i escriu el seu, admin veu tot
+      match /serviceRecords/{recordId} {
+        allow read: if isOwner(userId) || isAdmin();
+        allow write: if isOwner(userId) || isAdmin();
+      }
+    }
+
+    // Clients i Obres: Tots els empleats els poden veure per registrar feina, només admin els gestiona
+    match /customers/{customerId} {
+      allow read: if request.auth != null;
+      allow write: if isAdmin();
+    }
+
+    match /projects/{projectId} {
+      allow read: if request.auth != null;
+      allow write: if isAdmin();
+    }
+
+    // Documents financers: NOMÉS accessibilitat per a administradors
+    match /albarans/{id} {
+      allow read, write: if isAdmin();
+    }
+    
+    match /invoices/{id} {
+      allow read, write: if isAdmin();
+    }
+    
+    match /quotes/{id} {
+      allow read, write: if isAdmin();
+    }
+    
+    match /receipts/{id} {
+      allow read, write: if isAdmin();
+    }
+    
+    // Comptadors i Backups: Prohibit per a usuaris de proves
+    match /counters/{id} {
+      allow read, write: if request.auth != null;
+    }
+    
+    match /backups/{id} {
+      allow read, write: if isAdmin();
     }
   }
 }

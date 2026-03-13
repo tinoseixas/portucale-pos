@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button'
 import { PlusCircle, Calendar as CalendarIcon, User, Edit, Trash2, Briefcase, Filter, History, Search, X, Download, AlertTriangle, Loader2, RefreshCw } from 'lucide-react'
 import type { ServiceRecord, Employee } from '@/lib/types'
 import { useUser, useFirestore, updateDocumentNonBlocking, useDoc, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy, getDocs, collectionGroup, doc } from 'firebase/firestore';
+import { collection, query, orderBy, getDocs, collectionGroup, doc, where } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton'
 import { Card, CardHeader, CardContent, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
@@ -70,15 +70,25 @@ export default function DashboardPage() {
   }, [firestore, user]);
   const { data: currentEmployee } = useDoc<Employee>(employeeDocRef);
 
+  const isAdmin = currentEmployee?.role === 'admin';
+
   const fetchData = useCallback(async () => {
     if (!firestore || !user) return;
     setIsLoadingData(true);
     try {
+        // Obtenir empleats
         const employeeSnapshot = await getDocs(query(collection(firestore, 'employees')));
         const employeesData = employeeSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Employee));
         setEmployees(employeesData);
 
-        const servicesQuery = query(collectionGroup(firestore, 'serviceRecords'), orderBy('arrivalDateTime', 'desc'));
+        // Obtenir serveis: Si no és admin, només demana els seus propis
+        let servicesQuery;
+        if (isAdmin) {
+            servicesQuery = query(collectionGroup(firestore, 'serviceRecords'), orderBy('arrivalDateTime', 'desc'));
+        } else {
+            servicesQuery = query(collection(firestore, `employees/${user.uid}/serviceRecords`), orderBy('arrivalDateTime', 'desc'));
+        }
+        
         const serviceSnapshot = await getDocs(servicesQuery);
         const servicesData = serviceSnapshot.docs
             .map(doc => ({ id: doc.id, ...doc.data() } as ServiceRecord))
@@ -90,11 +100,13 @@ export default function DashboardPage() {
     } finally {
         setIsLoadingData(false);
     }
-  }, [firestore, user, toast]);
+  }, [firestore, user, toast, isAdmin]);
 
   useEffect(() => {
-    fetchData();
-  }, [fetchData, refreshTrigger]);
+    if (currentEmployee) {
+        fetchData();
+    }
+  }, [fetchData, refreshTrigger, currentEmployee]);
 
   const projectNames = useMemo(() => {
     const names = allServices.map(s => s.projectName?.trim()).filter(Boolean);
@@ -104,7 +116,8 @@ export default function DashboardPage() {
 
   const filteredServices = useMemo(() => {
     let filtered = allServices.filter(service => {
-        const userMatch = selectedUser === 'all' || service.employeeId === selectedUser;
+        // Filtre d'usuari només si és admin (els altres ja reben dades filtrades)
+        const userMatch = !isAdmin || selectedUser === 'all' || service.employeeId === selectedUser;
         const dateMatch = !selectedDate || isSameDay(parseISO(service.arrivalDateTime), selectedDate);
         const projectMatch = selectedProject === 'all' || (service.projectName?.trim() === selectedProject);
         return userMatch && dateMatch && projectMatch;
@@ -122,7 +135,7 @@ export default function DashboardPage() {
         lastDate = serviceDay;
         return { ...service, rowColor: dayColors[currentColorIndex] } as ServiceRecordWithColor;
     });
-  }, [allServices, selectedUser, selectedDate, selectedProject]);
+  }, [allServices, selectedUser, selectedDate, selectedProject, isAdmin]);
   
   const handleMoveToTrash = () => {
     if (!firestore) return;
@@ -145,7 +158,7 @@ export default function DashboardPage() {
     <div className="max-w-7xl mx-auto space-y-8 md:space-y-12 px-4 md:px-8 pb-20">
       <div className="flex flex-col md:flex-row items-start md:items-end justify-between gap-6">
         <div className="space-y-1">
-          <h1 className="text-xl md:text-3xl font-black tracking-tighter leading-none text-primary">Registres de<br /><span className="text-accent">treball</span></h1>
+          <h1 className="text-xl md:text-3xl font-black tracking-tighter leading-none text-primary">Registres de treball</h1>
           <p className="text-slate-400 font-bold text-[10px] tracking-tight pl-1">Supervisió detallada dels serveis realitzats per l'equip.</p>
         </div>
         <div className="flex flex-wrap gap-3 w-full md:w-auto">
@@ -168,7 +181,7 @@ export default function DashboardPage() {
                       <Filter className="h-6 w-6" />
                       <CardTitle className="text-xl font-black tracking-tight">Filtres de control</CardTitle>
                   </div>
-                  {selectedRows.length > 0 && (
+                  {isAdmin && selectedRows.length > 0 && (
                       <AlertDialog>
                           <AlertDialogTrigger asChild>
                               <Button variant="destructive" className="font-bold h-10 px-6 rounded-xl shadow-lg text-[10px] bg-destructive hover:bg-destructive/90">
@@ -189,19 +202,21 @@ export default function DashboardPage() {
                   )}
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  <div className="space-y-1.5">
-                      <label className="text-[10px] font-bold text-slate-400 tracking-tight pl-1">Tècnic responsable</label>
-                      <Select value={selectedUser} onValueChange={setSelectedUser}>
-                          <SelectTrigger className="h-14 rounded-2xl border-2 font-bold bg-white text-xs text-primary">
-                              <User className="mr-2 h-4 w-4 text-slate-300" />
-                              <SelectValue placeholder="Tots els tècnics" />
-                          </SelectTrigger>
-                          <SelectContent>
-                              <SelectItem value="all">Tots els tècnics</SelectItem>
-                              {employees.map(e => <SelectItem key={e.id} value={e.id}>{e.firstName} {e.lastName}</SelectItem>)}
-                          </SelectContent>
-                      </Select>
-                  </div>
+                  {isAdmin && (
+                    <div className="space-y-1.5">
+                        <label className="text-[10px] font-bold text-slate-400 tracking-tight pl-1">Tècnic responsable</label>
+                        <Select value={selectedUser} onValueChange={setSelectedUser}>
+                            <SelectTrigger className="h-14 rounded-2xl border-2 font-bold bg-white text-xs text-primary">
+                                <User className="mr-2 h-4 w-4 text-slate-300" />
+                                <SelectValue placeholder="Tots els tècnics" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">Tots els tècnics</SelectItem>
+                                {employees.map(e => <SelectItem key={e.id} value={e.id}>{e.firstName} {e.lastName}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                  )}
                   <div className="space-y-1.5">
                       <label className="text-[10px] font-bold text-slate-400 tracking-tight pl-1">Data de realització</label>
                       <Popover>
@@ -235,10 +250,12 @@ export default function DashboardPage() {
                       <TableHeader className="bg-slate-50/30">
                           <TableRow className="border-b-2 border-slate-50">
                               <TableHead className="w-16 px-8 py-6">
-                                  <Checkbox 
-                                      checked={selectedRows.length > 0 && selectedRows.length === filteredServices.length}
-                                      onCheckedChange={c => setSelectedRows(c ? filteredServices.map(s => s.id) : [])}
-                                  />
+                                  {isAdmin && (
+                                    <Checkbox 
+                                        checked={selectedRows.length > 0 && selectedRows.length === filteredServices.length}
+                                        onCheckedChange={c => setSelectedRows(c ? filteredServices.map(s => s.id) : [])}
+                                    />
+                                  )}
                               </TableHead>
                               <TableHead className="font-bold text-[10px] tracking-tight text-slate-400">Tècnic</TableHead>
                               <TableHead className="font-bold text-[10px] tracking-tight text-slate-400">Data i hora</TableHead>
@@ -249,7 +266,7 @@ export default function DashboardPage() {
                       <TableBody>
                           {filteredServices.map(service => (
                               <TableRow key={service.id} className={cn(service.rowColor, "hover:bg-primary/5 transition-colors border-b border-slate-50")}>
-                                  <TableCell className="px-8"><Checkbox checked={selectedRows.includes(service.id)} onCheckedChange={c => setSelectedRows(prev => c ? [...prev, service.id] : prev.filter(id => id !== service.id))} /></TableCell>
+                                  <TableCell className="px-8">{isAdmin && <Checkbox checked={selectedRows.includes(service.id)} onCheckedChange={c => setSelectedRows(prev => c ? [...prev, service.id] : prev.filter(id => id !== service.id))} />}</TableCell>
                                   <TableCell>
                                       <div className="flex items-center gap-3">
                                           <div className="h-3 w-3 rounded-full shadow-sm border border-black/10" style={{ backgroundColor: getUserColor(service.employeeId) }} />

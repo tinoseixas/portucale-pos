@@ -1,8 +1,9 @@
+
 'use client'
 
 import { useState, useMemo, useEffect } from 'react'
-import { useCollection, useUser, useFirestore, useMemoFirebase } from '@/firebase'
-import { collection, query, orderBy, collectionGroup } from 'firebase/firestore'
+import { useCollection, useUser, useFirestore, useMemoFirebase, useDoc } from '@/firebase'
+import { collection, query, orderBy, collectionGroup, doc } from 'firebase/firestore'
 import type { ServiceRecord, Employee } from '@/lib/types'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -31,18 +32,38 @@ export default function ActivityReportPage() {
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>('all')
   const [dateRange, setDateRange] = useState<DateRange | undefined>()
 
+  // Obtenir dades de l'usuari actual
+  const employeeDocRef = useMemoFirebase(() => {
+    if (!user || !firestore) return null;
+    return doc(firestore, 'employees', user.uid);
+  }, [firestore, user]);
+  const { data: currentEmployee } = useDoc<Employee>(employeeDocRef);
+
+  const isAdmin = currentEmployee?.role === 'admin';
+
   // Data fetching
   const employeesQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'employees'), orderBy('firstName')) : null, [firestore])
   const { data: employees, isLoading: isLoadingEmployees } = useCollection<Employee>(employeesQuery)
 
-  const servicesQuery = useMemoFirebase(() => firestore ? query(collectionGroup(firestore, 'serviceRecords'), orderBy('arrivalDateTime', 'desc')) : null, [firestore])
+  const servicesQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    // Si és admin pot demanar tot, si no només els seus
+    if (isAdmin) {
+        return query(collectionGroup(firestore, 'serviceRecords'), orderBy('arrivalDateTime', 'desc'));
+    } else if (user) {
+        return query(collection(firestore, `employees/${user.uid}/serviceRecords`), orderBy('arrivalDateTime', 'desc'));
+    }
+    return null;
+  }, [firestore, isAdmin, user])
+  
   const { data: allServices, isLoading: isLoadingServices } = useCollection<ServiceRecord>(servicesQuery)
 
   // Filtering logic
   const filteredServices = useMemo(() => {
     if (!allServices) return []
     return allServices.filter(service => {
-      const employeeMatch = selectedEmployeeId === 'all' || service.employeeId === selectedEmployeeId
+      // Si és usuari normal, el filtre d'empleat és forçat al seu propi ID
+      const employeeMatch = !isAdmin ? service.employeeId === user?.uid : (selectedEmployeeId === 'all' || service.employeeId === selectedEmployeeId)
       if (!employeeMatch) return false
 
       if (dateRange?.from && dateRange?.to) {
@@ -55,7 +76,7 @@ export default function ActivityReportPage() {
 
       return false
     })
-  }, [allServices, selectedEmployeeId, dateRange])
+  }, [allServices, selectedEmployeeId, dateRange, isAdmin, user])
 
   // Calculation logic
   const calculations = useMemo(() => {
@@ -106,34 +127,36 @@ export default function ActivityReportPage() {
   const isLoading = isLoadingEmployees || isLoadingServices || isUserLoading
 
   return (
-    <AdminGate pageTitle="Informe d'Activitat" pageDescription="Anàlisi detallada de les hores treballades.">
+    <AdminGate pageTitle="Informe d'activitat" pageDescription="Anàlisi detallada de les hores treballades.">
       <div className="space-y-8">
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
                 <LineChart className="h-6 w-6" />
-                Informe d'Activitat dels Treballadors
+                Informe d'activitat {isAdmin ? 'dels treballadors' : 'personal'}
             </CardTitle>
-            <CardDescription>Filtra per treballador i interval de dates per veure el total d'hores treballades. (Descomptant descans 13h-14h)</CardDescription>
+            <CardDescription>Consulta el total d'hores treballades. (Descomptant descans 13h-14h)</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
              <div className="flex flex-col sm:flex-row gap-4 flex-wrap">
+                {isAdmin && (
+                    <div className="flex-1 space-y-2">
+                        <label className="text-sm font-medium flex items-center gap-2"><User className="h-4 w-4" /> Treballador</label>
+                        <Select value={selectedEmployeeId} onValueChange={setSelectedEmployeeId} disabled={isLoadingEmployees}>
+                        <SelectTrigger>
+                            <SelectValue placeholder="Carregant treballadors..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">Tots els treballadors</SelectItem>
+                            {employees?.map(emp => (
+                            <SelectItem key={emp.id} value={emp.id}>{emp.firstName} {emp.lastName}</SelectItem>
+                            ))}
+                        </SelectContent>
+                        </Select>
+                    </div>
+                )}
                 <div className="flex-1 space-y-2">
-                    <label className="text-sm font-medium flex items-center gap-2"><User className="h-4 w-4" /> Treballador</label>
-                    <Select value={selectedEmployeeId} onValueChange={setSelectedEmployeeId} disabled={isLoadingEmployees}>
-                      <SelectTrigger>
-                          <SelectValue placeholder="Carregant treballadors..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                          <SelectItem value="all">Tots els Treballadors</SelectItem>
-                          {employees?.map(emp => (
-                          <SelectItem key={emp.id} value={emp.id}>{emp.firstName} {emp.lastName}</SelectItem>
-                          ))}
-                      </SelectContent>
-                    </Select>
-                </div>
-                <div className="flex-1 space-y-2">
-                     <label className="text-sm font-medium flex items-center gap-2"><CalendarIcon className="h-4 w-4" /> Interval de Dates</label>
+                     <label className="text-sm font-medium flex items-center gap-2"><CalendarIcon className="h-4 w-4" /> Interval de dates</label>
                     <Popover>
                         <PopoverTrigger asChild>
                         <Button
@@ -174,7 +197,7 @@ export default function ActivityReportPage() {
                  <div className="flex items-end">
                     <Button variant="ghost" onClick={clearFilters} className="w-full sm:w-auto">
                         <X className="mr-2 h-4 w-4" />
-                        Netejar Filtres
+                        Netejar filtres
                     </Button>
                 </div>
             </div>
@@ -187,7 +210,7 @@ export default function ActivityReportPage() {
           <>
             <Card>
                 <CardHeader>
-                    <CardTitle>Resum Total</CardTitle>
+                    <CardTitle>Resum total</CardTitle>
                 </CardHeader>
                 <CardContent>
                     <div className="text-4xl font-bold text-primary">{calculations.total.toFixed(2)}</div>
@@ -199,7 +222,7 @@ export default function ActivityReportPage() {
                 {/* Daily */}
                 <Card className="flex flex-col">
                     <CardHeader>
-                        <CardTitle>Horas per Dia</CardTitle>
+                        <CardTitle>Hores per dia</CardTitle>
                     </CardHeader>
                     <CardContent className="flex-1 overflow-y-auto">
                        {Object.keys(calculations.daily).length > 0 ? (
@@ -218,7 +241,7 @@ export default function ActivityReportPage() {
                 {/* Weekly */}
                 <Card className="flex flex-col">
                     <CardHeader>
-                        <CardTitle>Horas per Setmana</CardTitle>
+                        <CardTitle>Hores per setmana</CardTitle>
                     </CardHeader>
                      <CardContent className="flex-1 overflow-y-auto">
                        {Object.keys(calculations.weekly).length > 0 ? (
@@ -237,7 +260,7 @@ export default function ActivityReportPage() {
                 {/* Monthly */}
                 <Card className="flex flex-col">
                     <CardHeader>
-                        <CardTitle>Horas per Mes</CardTitle>
+                        <CardTitle>Hores per mes</CardTitle>
                     </CardHeader>
                     <CardContent className="flex-1 overflow-y-auto">
                        {Object.keys(calculations.monthly).length > 0 ? (
