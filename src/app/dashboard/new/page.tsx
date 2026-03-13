@@ -1,4 +1,3 @@
-
 'use client'
 
 import { useState, useMemo, useEffect } from 'react'
@@ -135,19 +134,19 @@ export default function NewServicePage() {
     }
   };
   
-  if (!user && !isUserLoading) return <div className="p-12 text-center"><Button asChild><Link href="/">Anar al Login</Link></Button></div>;
+  if (!user && !isUserLoading) return <div className="p-12 text-center"><Button asChild><Link href="/">Anar al login</Link></Button></div>;
 
   return (
       <div className="max-w-2xl mx-auto flex items-center justify-center min-h-[80vh] py-10 px-4">
         <Card className="w-full shadow-2xl border-none rounded-3xl overflow-hidden">
           <CardHeader className="bg-slate-900 text-white p-8 text-center space-y-2">
-            <CardTitle className="text-3xl font-black uppercase tracking-tight">Nou Registre</CardTitle>
+            <CardTitle className="text-3xl font-black tracking-tight">Nou registre</CardTitle>
             <CardDescription className="text-slate-400 font-medium">Comença un nou treball.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-8 pt-10 px-6 sm:px-10">
               <div className="space-y-6">
                 <div className="space-y-2">
-                    <Label className="flex items-center gap-2 font-black uppercase text-[10px] text-slate-400 tracking-widest pl-1"><Users className="h-3 w-3" /> Client</Label>
+                    <Label className="flex items-center gap-2 font-bold text-[10px] text-slate-400 tracking-tight pl-1"><Users className="h-3 w-3" /> Client</Label>
                     <Select value={selectedCustomerId} onValueChange={(val) => { setSelectedCustomerId(val); setSelectedProjectId('none'); }}>
                         <SelectTrigger className="h-14 rounded-2xl border-2 font-bold bg-slate-50">
                             <SelectValue placeholder="Selecciona un client" />
@@ -162,11 +161,11 @@ export default function NewServicePage() {
                 {selectedCustomerId !== 'none' && (
                     <div className="space-y-2">
                         <div className="flex justify-between items-center px-1">
-                            <Label className="flex items-center gap-2 font-black uppercase text-[10px] text-slate-400 tracking-widest"><Briefcase className="h-3 w-3" /> Obra / Projecte</Label>
+                            <Label className="flex items-center gap-2 font-bold text-[10px] text-slate-400 tracking-tight"><Briefcase className="h-3 w-3" /> Obra / projecte</Label>
                             <Dialog open={isNewProjectDialogOpen} onOpenChange={setIsNewProjectDialogOpen}>
-                                <DialogTrigger asChild><button className="text-[10px] font-black text-primary hover:underline uppercase">+ NOVA OBRA</button></DialogTrigger>
+                                <DialogTrigger asChild><button className="text-[10px] font-bold text-primary hover:underline">+ Nova obra</button></DialogTrigger>
                                 <DialogContent className="rounded-3xl">
-                                    <DialogHeader><DialogTitle>Nova Obra</DialogTitle></DialogHeader>
+                                    <DialogHeader><DialogTitle>Nova obra</DialogTitle></DialogHeader>
                                     <div className="py-4"><Input placeholder="Nom de l'obra" value={newProjectName} onChange={(e) => setNewProjectName(e.target.value)} className="h-12 rounded-xl font-bold" /></div>
                                     <DialogFooter><Button onClick={handleCreateProject} disabled={isCreatingProject || !newProjectName.trim()} className="bg-primary font-bold">Crear</Button></DialogFooter>
                                 </DialogContent>
@@ -186,8 +185,8 @@ export default function NewServicePage() {
 
                 <div className="space-y-2">
                     <div className="flex justify-between items-center px-1">
-                        <Label className="flex items-center gap-2 font-black uppercase text-[10px] text-slate-400 tracking-widest"><FileText className="h-3 w-3" /> Descripció del treball</Label>
-                        <Button type="button" variant="ghost" size="sm" onClick={handleTranslate} disabled={isTranslating || !description.trim()} className="text-primary font-black text-[10px] uppercase gap-1">
+                        <Label className="flex items-center gap-2 font-bold text-[10px] text-slate-400 tracking-tight"><FileText className="h-3 w-3" /> Descripció del treball</Label>
+                        <Button type="button" variant="ghost" size="sm" onClick={handleTranslate} disabled={isTranslating || !description.trim()} className="text-primary font-bold text-[10px] gap-1">
                             {isTranslating ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />} Traduir (IA)
                         </Button>
                     </div>
@@ -195,9 +194,9 @@ export default function NewServicePage() {
                 </div>
               </div>
 
-              <Button size="lg" className="w-full h-20 text-xl font-black uppercase tracking-tight bg-accent hover:bg-accent/90 text-accent-foreground rounded-3xl shadow-xl hover:scale-[1.02] transition-transform" onClick={handleStartService} disabled={isStarting || isLoadingEmployee}>
+              <Button size="lg" className="w-full h-20 text-xl font-black tracking-tight bg-accent hover:bg-accent/90 text-primary rounded-3xl shadow-xl hover:scale-[1.02] transition-transform" onClick={handleStartService} disabled={isStarting || isLoadingEmployee}>
                   {isStarting ? <Loader2 className="mr-3 h-8 w-8 animate-spin" /> : <MapPin className="mr-3 h-8 w-8" />}
-                  INICIAR SERVEI
+                  Iniciar servei
               </Button>
           </CardContent>
         </Card>

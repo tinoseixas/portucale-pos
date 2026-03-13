@@ -103,7 +103,7 @@ export default function Home() {
     return (
       <main className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
-        <p className="mt-4 text-primary font-black uppercase tracking-widest animate-pulse">Iniciant {BRANDING.companyName}...</p>
+        <p className="mt-4 text-primary font-bold tracking-tight animate-pulse">Iniciant {BRANDING.companyName}...</p>
       </main>
     );
   }
@@ -116,12 +116,12 @@ export default function Home() {
         </div>
         <Card className="shadow-2xl border-none overflow-hidden rounded-[2rem] md:rounded-[2.5rem] bg-white/95 backdrop-blur-xl">
           <CardHeader className="text-center space-y-2 bg-slate-900 text-white p-6 md:p-10">
-            <CardTitle className="text-2xl md:text-3xl font-black tracking-tight uppercase">Portal Corporatiu</CardTitle>
+            <CardTitle className="text-2xl md:text-3xl font-black tracking-tight">Portal Corporatiu</CardTitle>
             <CardDescription className="text-slate-400 font-medium">{BRANDING.companyName} - Gestió de Serveis</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6 pt-8 md:pt-12 px-6 md:px-10">
             <div className="space-y-3">
-              <Label htmlFor="email" className="flex items-center gap-2 font-black uppercase text-[10px] text-slate-400 tracking-widest">
+              <Label htmlFor="email" className="flex items-center gap-2 font-bold text-xs text-slate-400 tracking-tight">
                 <Mail className="h-3 w-3" /> Correu electrònic
               </Label>
               <Input 
@@ -135,7 +135,7 @@ export default function Home() {
               />
             </div>
             <div className="space-y-3">
-              <Label htmlFor="password" className="flex items-center gap-2 font-black uppercase text-[10px] text-slate-400 tracking-widest">
+              <Label htmlFor="password" className="flex items-center gap-2 font-bold text-xs text-slate-400 tracking-tight">
                 <Lock className="h-3 w-3" /> Contrasenya
               </Label>
               <Input 
@@ -150,15 +150,15 @@ export default function Home() {
             </div>
           </CardContent>
           <CardFooter className="flex flex-col gap-4 pb-8 md:pb-12 px-6 md:px-10">
-            <Button onClick={handleSignIn} className="w-full h-16 text-lg font-black uppercase tracking-tight shadow-xl bg-primary hover:bg-primary/90 rounded-2xl hover:scale-[1.02] transition-transform" disabled={isAuthenticating}>
+            <Button onClick={handleSignIn} className="w-full h-16 text-lg font-black tracking-tight shadow-xl bg-primary hover:bg-primary/90 rounded-2xl hover:scale-[1.02] transition-transform" disabled={isAuthenticating}>
               {isAuthenticating ? <Loader2 className="mr-3 h-6 w-6 animate-spin" /> : null}
-              Entrar al Sistema
+              Entrar al sistema
             </Button>
             <div className="relative w-full py-4">
                 <div className="absolute inset-0 flex items-center">
                     <span className="w-full border-t border-slate-100"></span>
                 </div>
-                <div className="relative flex justify-center text-[10px] uppercase font-black tracking-widest">
+                <div className="relative flex justify-center text-[10px] font-bold tracking-tight">
                     <span className="bg-white/95 px-4 text-slate-300 italic">Accés restringit a l'equip</span>
                 </div>
             </div>
@@ -167,7 +167,7 @@ export default function Home() {
             </Button>
           </CardFooter>
         </Card>
-        <p className="text-center mt-10 text-[10px] text-white/40 uppercase font-black tracking-[0.4em]">{BRANDING.companyName} © 2024</p>
+        <p className="text-center mt-10 text-[10px] text-white/40 font-bold tracking-widest">{BRANDING.companyName} © 2024</p>
       </div>
     </main>
   )
