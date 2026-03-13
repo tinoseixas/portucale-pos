@@ -1,3 +1,4 @@
+
 'use client'
 
 import { useState, useMemo, useEffect } from 'react'
@@ -63,20 +64,32 @@ export default function NewServicePage() {
       return allProjects.filter(p => p.status === 'active').sort((a, b) => a.name.localeCompare(b.name, 'ca'));
   }, [allProjects]);
 
+  // Sync project name when ID changes via Select
+  useEffect(() => {
+    if (selectedProjectId !== 'none') {
+        const p = activeProjects.find(x => x.id === selectedProjectId);
+        if (p) setProjectName(p.name);
+    }
+  }, [selectedProjectId, activeProjects]);
+
   const handleCreateProject = async () => {
       if (!firestore || !newProjectName.trim() || selectedCustomerId === 'none') return;
       setIsCreatingProject(true);
       try {
           const customer = customers?.find(c => c.id === selectedCustomerId);
+          const nameToSave = newProjectName.trim();
           const docRef = await addDoc(collection(firestore, 'projects'), {
-              name: newProjectName.trim(),
+              name: nameToSave,
               customerId: selectedCustomerId,
               customerName: customer?.name || 'N/A',
               status: 'active',
               createdAt: new Date().toISOString()
           });
+          
+          // Capturar el nom immediatament abans que el Select pugui buidar-lo
+          setProjectName(nameToSave);
           setSelectedProjectId(docRef.id);
-          setProjectName(newProjectName.trim());
+          
           toast({ title: "Obra creada" });
           setIsNewProjectDialogOpen(false);
           setNewProjectName('');
@@ -105,6 +118,14 @@ export default function NewServicePage() {
 
   const handleStartService = async () => {
     if (!user || !firestore || !currentEmployee) return;
+    
+    // Validació bàsica
+    if (!projectName.trim() && selectedProjectId !== 'none') {
+        // Intentar recuperar el nom si l'estat està buit però hi ha ID
+        const p = activeProjects.find(x => x.id === selectedProjectId);
+        if (p) setProjectName(p.name);
+    }
+
     setIsStarting(true);
     try {
         const selectedCustomer = customers?.find(c => c.id === selectedCustomerId);
@@ -115,7 +136,7 @@ export default function NewServicePage() {
             arrivalDateTime: now.toISOString(),
             departureDateTime: now.toISOString(), 
             description: description.trim() || "Servei en curs...",
-            projectName: projectName.trim(),
+            projectName: projectName.trim() || "Obra sense nom",
             projectId: selectedProjectId !== 'none' ? selectedProjectId : '',
             pendingTasks: '',
             customerId: selectedCustomerId !== 'none' ? selectedCustomerId : '',
@@ -173,12 +194,7 @@ export default function NewServicePage() {
                                 </DialogContent>
                             </Dialog>
                         </div>
-                        <Select value={selectedProjectId} onValueChange={(val) => {
-                            setSelectedProjectId(val);
-                            const p = activeProjects.find(x => x.id === val);
-                            if (p) setProjectName(p.name);
-                            else if (val === 'none') setProjectName('');
-                        }}>
+                        <Select value={selectedProjectId} onValueChange={setSelectedProjectId}>
                             <SelectTrigger className="h-14 rounded-2xl border-2 font-bold bg-slate-50">
                                 <SelectValue placeholder="Selecciona obra..." />
                             </SelectTrigger>

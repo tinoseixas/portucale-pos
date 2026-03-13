@@ -1,3 +1,4 @@
+
 'use client'
 
 import { useEffect, useState, useMemo, useRef, Suspense } from 'react'
@@ -181,20 +182,32 @@ function EditServiceContent() {
     }
   }, [service, hasInitialized]);
 
+  // Sync project name when ID changes via Select
+  useEffect(() => {
+    if (projectId && projectId !== 'none') {
+        const p = activeProjects.find(x => x.id === projectId);
+        if (p) setProjectName(p.name);
+    }
+  }, [projectId, activeProjects]);
+
   const handleCreateProject = async () => {
       if (!firestore || !newProjectName.trim() || !customerId) return;
       setIsCreatingProject(true);
       try {
           const customer = customers?.find(c => c.id === customerId);
+          const nameToSave = newProjectName.trim();
           const projectRef = await addDoc(collection(firestore, 'projects'), {
-              name: newProjectName.trim(),
+              name: nameToSave,
               customerId: customerId,
               customerName: customer?.name || 'N/A',
               status: 'active',
               createdAt: new Date().toISOString()
           });
+          
+          // Capturar el nom immediatament
+          setProjectName(nameToSave);
           setProjectId(projectRef.id);
-          setProjectName(newProjectName.trim());
+          
           setIsNewProjectDialogOpen(false);
           setNewProjectName('');
           toast({ title: "Obra creada" });
@@ -241,6 +254,13 @@ function EditServiceContent() {
         return;
     }
 
+    // Doble comprovació del nom de l'obra
+    let finalProjectName = projectName.trim();
+    if (!finalProjectName && projectId !== 'none') {
+        const p = activeProjects.find(x => x.id === projectId);
+        if (p) finalProjectName = p.name;
+    }
+
     setIsSaving(true);
     
     try {
@@ -253,7 +273,7 @@ function EditServiceContent() {
             arrivalDateTime,
             departureDateTime,
             description: description || "Servei realitzat",
-            projectName: projectName.trim(),
+            projectName: finalProjectName || "Obra sense nom",
             projectId: projectId || '',
             pendingTasks: pendingTasks || '',
             customerId: customerId || '',
@@ -375,12 +395,7 @@ function EditServiceContent() {
                 {customerId && customerId !== 'none' && (
                     <div className="flex gap-2">
                         <div className="flex-1">
-                            <Select value={projectId} onValueChange={(val) => {
-                                setProjectId(val);
-                                const p = activeProjects?.find(x => x.id === val);
-                                if (p) setProjectName(p.name);
-                                else if (val === 'none') setProjectName('');
-                            }}>
+                            <Select value={projectId} onValueChange={setProjectId}>
                                 <SelectTrigger className="h-16 rounded-2xl border-2 font-black text-lg bg-slate-50">
                                     <SelectValue placeholder="Selecciona obra activa" />
                                 </SelectTrigger>
