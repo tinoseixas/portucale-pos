@@ -52,7 +52,7 @@ export function Header() {
                 <div className="h-8 w-8 rounded-full bg-muted animate-pulse" />
             </div>
         ) : user && (
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 md:gap-4">
              <div className="hidden lg:flex items-center gap-2 flex-wrap justify-end">
                 <Button variant="ghost" size="sm" onClick={() => router.push('/dashboard/activity-report')} className="font-bold">
                     <LineChart className="mr-2 h-4 w-4" />
@@ -79,6 +79,17 @@ export function Header() {
                     Clients
                 </Button>
               </div>
+
+            <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={handleLogout} 
+                className="font-bold text-destructive hover:bg-destructive/5 rounded-xl h-10 px-3 transition-colors"
+            >
+                <LogOut className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Tancar sessió</span>
+            </Button>
+
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                  <Button variant="ghost" className="relative h-10 w-10 rounded-full border-2 border-primary/20">
@@ -97,7 +108,7 @@ export function Header() {
                 </DropdownMenuItem>
                 <DropdownMenuItem className="lg:hidden" onClick={() => router.push('/dashboard/users')}>
                     <Users className="mr-2 h-4 w-4" />
-                    <span>Gestió Usuaris</span>
+                    <span>Gestió</span>
                 </DropdownMenuItem>
                  <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:bg-destructive focus:text-destructive-foreground">
                     <LogOut className="mr-2 h-4 w-4" />
