@@ -1,4 +1,3 @@
-
 'use client'
 
 import { useMemo, useState } from 'react'
@@ -52,7 +51,6 @@ export default function AlbaransHistoryPage() {
   }, [firestore]);
   const { data: customers } = useCollection<Customer>(customersQuery);
 
-  // DEDUPLICAÇÃO DE CLIENTES PARA O FILTRO
   const uniqueCustomers = useMemo(() => {
     if (!customers) return [];
     const seen = new Set();
@@ -81,23 +79,20 @@ export default function AlbaransHistoryPage() {
     if (!firestore) return;
     const albaranRef = doc(firestore, 'albarans', albaranId);
     deleteDocumentNonBlocking(albaranRef);
-    toast({ 
-        title: 'Document esborrat', 
-        description: `L'albarà #${albaranNumber} s'ha eliminat de la llista.` 
-    });
+    toast({ title: 'Document esborrat', description: `L'albarà #${albaranNumber} s'ha eliminat.` });
   }
 
   const handleArchiveAlbaran = (albaranId: string) => {
     if (!firestore) return;
     const albaranRef = doc(firestore, 'albarans', albaranId);
     updateDocumentNonBlocking(albaranRef, { status: 'arxivat' });
-    toast({ title: 'Albarà arxivat', description: 'El document s\'ha mogut a la pestanya d\'arxiu.' });
+    toast({ title: 'Albarà arxivat' });
   }
 
   const handleSyncAlbarans = async () => {
     if (!firestore) return;
     setIsSyncing(true);
-    toast({ title: 'Agrupant serveis...', description: 'Consolidant la feina de tot l\'equip per obra.' });
+    toast({ title: 'Sincronitzant obres...', description: 'Consolidant la feina de tot l\'equip.' });
 
     try {
         const employeesSnap = await getDocs(collection(firestore, 'employees'));
@@ -106,22 +101,20 @@ export default function AlbaransHistoryPage() {
         const servicesSnap = await getDocs(collectionGroup(firestore, 'serviceRecords'));
         const allServices = servicesSnap.docs.map(d => ({ id: d.id, ...d.data() } as ServiceRecord));
         
+        const latestAlbaransSnap = await getDocs(collection(firestore, 'albarans'));
+        const latestAlbarans = latestAlbaransSnap.docs.map(d => ({ id: d.id, ...d.data() } as Albaran));
+
         const handledServiceIds = new Set(
-            albarans?.filter(a => a.status === 'facturat' || a.status === 'arxivat')
-                     .flatMap(a => a.serviceRecordIds) || []
+            latestAlbarans.filter(a => a.status === 'facturat' || a.status === 'arxivat')
+                     .flatMap(a => a.serviceRecordIds)
         );
         
         const pendingServices = allServices.filter(s => 
             !handledServiceIds.has(s.id) && 
+            !s.deleted &&
             s.customerId && s.projectName &&
             s.projectName.trim() !== ""
         );
-
-        if (pendingServices.length === 0 && albarans?.filter(a => a.status === 'pendent').length === 0) {
-            toast({ title: 'Sense canvis', description: 'No hi ha nous serveis per agrupar.' });
-            setIsSyncing(false);
-            return;
-        }
 
         const groupedByProject: Record<string, ServiceRecord[]> = {};
         pendingServices.forEach(s => {
@@ -138,7 +131,7 @@ export default function AlbaransHistoryPage() {
         const counterSnap = await getDocs(query(collection(firestore, "counters"), where("__name__", "==", "albarans")));
         let nextNum = !counterSnap.empty ? (counterSnap.docs[0].data().lastNumber || 0) : 0;
 
-        albarans?.filter(a => a.status === 'pendent').forEach(a => {
+        latestAlbarans.filter(a => a.status === 'pendent').forEach(a => {
             batch.delete(doc(firestore, 'albarans', a.id));
         });
 
@@ -172,13 +165,10 @@ export default function AlbaransHistoryPage() {
         batch.set(counterRef, { lastNumber: nextNum }, { merge: true });
         await batch.commit();
 
-        toast({ 
-            title: 'Sincronització completada', 
-            description: `S'han generat ${createdCount} albarans d'obra actualitzats.` 
-        });
+        toast({ title: 'Sincronització enllestida', description: `S'han generat ${createdCount} obres actualitzades.` });
     } catch (error) {
         console.error(error);
-        toast({ variant: 'destructive', title: 'Error', description: 'No s\'ha pogut realitzar l\'agrupació.' });
+        toast({ variant: 'destructive', title: 'Error en la sincronització' });
     } finally {
         setIsSyncing(false);
     }
@@ -203,7 +193,7 @@ export default function AlbaransHistoryPage() {
             </div>
             <Button variant="default" onClick={handleSyncAlbarans} disabled={isSyncing} className="w-full sm:w-auto bg-primary hover:bg-primary/90 shadow-xl font-black uppercase tracking-widest h-14 px-8 rounded-2xl hover:scale-[1.02] transition-all">
                 {isSyncing ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <RefreshCw className="mr-2 h-5 w-5" />}
-                Actualitzar Albarans de l'Equip
+                Actualitzar Obres de l'Equip
             </Button>
         </div>
 
@@ -330,8 +320,8 @@ export default function AlbaransHistoryPage() {
                                     <div className="flex flex-col items-center justify-center text-slate-300 space-y-4">
                                         <AlertCircle className="h-16 w-16 opacity-20" />
                                         <div className="space-y-1">
-                                            <p className="font-black uppercase tracking-widest">Sense albarans pendents</p>
-                                            <p className="text-sm font-medium italic">Prova de carregar en "Actualitzar Albarans" per veure si hi ha feina nova.</p>
+                                            <p className="font-black uppercase tracking-widest">Sense obres pendents</p>
+                                            <p className="text-sm font-medium italic">Fes clic a "Actualitzar Obres" per carregar la feina nova.</p>
                                         </div>
                                     </div>
                                 </TableCell>

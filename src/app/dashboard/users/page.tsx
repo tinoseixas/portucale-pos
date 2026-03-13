@@ -1,4 +1,3 @@
-
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
@@ -41,7 +40,6 @@ export default function UsersPage() {
   const { toast } = useToast()
   const { user, isUserLoading } = useUser()
   const firestore = useFirestore()
-  const [isSeeding, setIsSeeding] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [restoringId, setRestoringId] = useState<string | null>(null);
 
@@ -130,88 +128,19 @@ export default function UsersPage() {
   const handleRestoreFromCloud = async (backup: any) => {
     if (!firestore) return;
     setRestoringId(backup.id);
-    toast({ title: "Restaurant dades...", description: "Això pot trigar uns segons depenent del volum de dades." });
+    toast({ title: "Restaurant dades...", description: "Això pot trigar uns segons." });
 
     try {
         const data = JSON.parse(backup.data);
         await processImportData(data);
         
-        toast({ title: "Restauració completada", description: "Tots els registres s'han recuperat correctament." });
+        toast({ title: "Restauració completada" });
         window.location.reload();
     } catch (e) {
         console.error(e);
-        toast({ variant: 'destructive', title: "Error en restaurar", description: "No s'ha pogut processar el backup del núvol." });
+        toast({ variant: 'destructive', title: "Error en restaurar" });
     } finally {
         setRestoringId(null);
-    }
-  };
-
-  const handleLoadBlueBlueRecord = async () => {
-    if (!firestore || !user) return;
-    setIsSeeding(true);
-    toast({ title: "Creant registre Blue&Blue...", description: "S'estan afegint tots els detalls tècnics." });
-
-    try {
-        const batch = writeBatch(firestore);
-        
-        const cRef = doc(collection(firestore, 'customers'));
-        batch.set(cRef, {
-            name: "Blue&Blue, slu",
-            street: "antic camí ral, 22 Baixos",
-            city: "Andorra la Vella",
-            nrt: "L-703322-J",
-            email: "welcomebluemoreblue@gmail.com"
-        });
-
-        const pRef = doc(collection(firestore, 'projects'));
-        batch.set(pRef, {
-            name: "Carolina - Avda Nacions Unides 35",
-            customerId: cRef.id,
-            customerName: "Blue&Blue, slu",
-            status: 'active',
-            createdAt: new Date('2026-03-03T08:00:00').toISOString()
-        });
-
-        const sRef = doc(collection(firestore, `employees/${user.uid}/serviceRecords`));
-        const serviceData: Omit<ServiceRecord, 'id'> = {
-            employeeId: user.uid,
-            employeeName: currentEmployee ? `${currentEmployee.firstName} ${currentEmployee.lastName}` : "Tino Seixas",
-            arrivalDateTime: new Date('2026-03-03T08:00:00').toISOString(),
-            departureDateTime: new Date('2026-03-03T18:01:00').toISOString(), 
-            description: "Instalar uma pista de cortina LED com perfil cinzento\nCriar uma nova ligação a duas tomadas\nCriar quatro saídas de cabo para apliques de parede\nInstalar dois focos adicionais para o cliente",
-            projectName: "Carolina - Avda Nacions Unides 35",
-            projectId: pRef.id,
-            pendingTasks: "",
-            customerId: cRef.id,
-            customerName: "Blue&Blue, slu",
-            serviceHourlyRate: 30,
-            media: [],
-            albarans: [],
-            materials: [
-                { description: "Barra perfil superfície", quantity: 5, unitPrice: 15.20 },
-                { description: "Barra difusor", quantity: 5, unitPrice: 8.30 },
-                { description: "Tira LED Infinity 3000k 230v", quantity: 10, unitPrice: 22.00 },
-                { description: "Mecanisme tomada Siemens", quantity: 2, unitPrice: 9.50 },
-                { description: "Marco duplo Siemens", quantity: 1, unitPrice: 14.00 },
-                { description: "Tapa schuko Siemens", quantity: 2, unitPrice: 6.70 },
-                { description: "Tira LED 2700k 230v", quantity: 10, unitPrice: 22.00 },
-                { description: "Pequenos materials", quantity: 1, unitPrice: 28.00 }
-            ],
-            customerSignatureName: "Carolina Luanes (autoritzat pel client)",
-            customerSignatureDataUrl: "", 
-            createdAt: new Date('2026-03-03T18:01:00').toISOString(),
-            isLunchSubtracted: true
-        };
-        batch.set(sRef, serviceData);
-
-        await batch.commit();
-        toast({ title: "Registre creat!", description: "L'obra de Carolina ja està disponible al Dashboard." });
-        router.push('/dashboard');
-    } catch (error) {
-        console.error(error);
-        toast({ variant: 'destructive', title: "Error" });
-    } finally {
-        setIsSeeding(false);
     }
   };
 
@@ -247,10 +176,10 @@ export default function UsersPage() {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `TS-Serveis-Full-Backup-${format(new Date(), 'yyyy-MM-dd')}.json`;
+        a.download = `TS-Serveis-Backup-${format(new Date(), 'yyyy-MM-dd')}.json`;
         a.click();
         
-        toast({ title: "Backup completat", description: "El fitxer s'ha descarregat correctament." });
+        toast({ title: "Backup completat" });
     } catch (e) {
         toast({ variant: 'destructive', title: "Error exportant" });
     }
@@ -266,11 +195,11 @@ export default function UsersPage() {
         try {
             const data = JSON.parse(evt.target?.result as string);
             await processImportData(data);
-            toast({ title: "Importació Finalitzada", description: "Totes les dades s'han restaurat correctament." });
+            toast({ title: "Importació Finalitzada" });
             window.location.reload();
         } catch (err) {
             console.error(err);
-            toast({ variant: 'destructive', title: "Error en importar", description: "El fitxer no és un backup vàlid." });
+            toast({ variant: 'destructive', title: "Error en importar" });
         } finally {
             setIsImporting(false);
         }
@@ -288,7 +217,7 @@ export default function UsersPage() {
   const isLoading = isUserLoading || isLoadingEmployees;
   const isUserAdmin = currentEmployee?.role === 'admin';
   
-  if (isLoading) return <p className="p-12 text-center font-bold uppercase tracking-widest">Carregant usuaris...</p>
+  if (isLoading) return <p className="p-12 text-center font-bold uppercase tracking-widest">Carregant...</p>
   if (!user) return null;
 
   return (
@@ -358,7 +287,7 @@ export default function UsersPage() {
                             <Cloud className="h-6 w-6" />
                             Còpies de Seguretat al Firebase
                         </CardTitle>
-                        <CardDescription className="text-blue-100 font-medium italic">Historial de backups automàtics. Pots restaurar registres perduts des d'aquí.</CardDescription>
+                        <CardDescription className="text-blue-100 font-medium italic">Historial de backups automàtics.</CardDescription>
                     </CardHeader>
                     <CardContent className="p-0 bg-white">
                         <div className="overflow-x-auto">
@@ -389,22 +318,21 @@ export default function UsersPage() {
                                                     </AlertDialogTrigger>
                                                     <AlertDialogContent className="rounded-[2.5rem] p-10">
                                                         <AlertDialogHeader>
-                                                            <AlertDialogTitle className="text-2xl font-black uppercase">Restaurar aquesta versió?</AlertDialogTitle>
+                                                            <AlertDialogTitle className="text-2xl font-black uppercase">Restaurar versió?</AlertDialogTitle>
                                                             <AlertDialogDescription className="text-base font-medium">
-                                                                Aquesta acció sobreescriurà les dades actuals amb la versió del dia <strong>{format(parseISO(backup.createdAt), 'dd/MM/yyyy')}</strong>.
-                                                                Tots els registres creats després d'aquesta data podrien perdre's.
+                                                                Això sobreescriurà les dades actuals amb la versió del dia <strong>{format(parseISO(backup.createdAt), 'dd/MM/yyyy')}</strong>.
                                                             </AlertDialogDescription>
                                                         </AlertDialogHeader>
                                                         <AlertDialogFooter className="pt-6">
                                                             <AlertDialogCancel className="h-14 rounded-2xl font-bold px-8 border-2">Cancel·lar</AlertDialogCancel>
-                                                            <AlertDialogAction onClick={() => handleRestoreFromCloud(backup)} className="bg-primary h-14 rounded-2xl font-black uppercase px-8 text-white">SÍ, RESTAURAR TOT</AlertDialogAction>
+                                                            <AlertDialogAction onClick={() => handleRestoreFromCloud(backup)} className="bg-primary h-14 rounded-2xl font-black uppercase px-8 text-white">RESTAURAR TOT</AlertDialogAction>
                                                         </AlertDialogFooter>
                                                     </AlertDialogContent>
                                                 </AlertDialog>
                                             </TableCell>
                                         </TableRow>
                                     )) : (
-                                        <TableRow><TableCell colSpan={3} className="text-center py-8 text-slate-400 italic">No hi ha backups al núvol encara.</TableCell></TableRow>
+                                        <TableRow><TableCell colSpan={3} className="text-center py-8 text-slate-400 italic">No hi ha backups encara.</TableCell></TableRow>
                                     )}
                                 </TableBody>
                             </Table>
@@ -418,14 +346,14 @@ export default function UsersPage() {
                             <ShieldAlert className="h-6 w-6 text-primary" />
                             Zona de Recuperació Manual
                         </CardTitle>
-                        <CardDescription className="text-slate-400 font-medium italic">Accions per restaurar o exportar dades al teu ordinador.</CardDescription>
+                        <CardDescription className="text-slate-400 font-medium italic">Exportació i restauració de dades.</CardDescription>
                     </CardHeader>
                     <CardContent className="p-8 space-y-6">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div className="p-6 bg-white rounded-3xl border-2 border-primary/10 shadow-sm space-y-4">
                                 <div className="space-y-1">
-                                    <p className="font-black text-primary uppercase text-xs">Còpia de Seguretat Local</p>
-                                    <p className="text-[10px] text-slate-400 font-bold uppercase">Descarrega TOTS els registres en format .json.</p>
+                                    <p className="font-black text-primary uppercase text-xs">Còpia Local</p>
+                                    <p className="text-[10px] text-slate-400 font-bold uppercase">Descarrega en format .json.</p>
                                 </div>
                                 <Button variant="outline" onClick={handleExportData} className="w-full h-12 border-primary text-primary font-black uppercase tracking-widest rounded-xl hover:bg-primary/5">
                                     <Download className="h-4 w-4 mr-2" />
@@ -435,7 +363,7 @@ export default function UsersPage() {
                             <div className="p-6 bg-white rounded-3xl border-2 border-primary/10 shadow-sm space-y-4">
                                 <div className="space-y-1">
                                     <p className="font-black text-primary uppercase text-xs">Restaurar des de Fitxer</p>
-                                    <p className="text-[10px] text-slate-400 font-bold uppercase">Carrega un fitxer .json prèviament exportat.</p>
+                                    <p className="text-[10px] text-slate-400 font-bold uppercase">Carrega un fitxer .json exportat.</p>
                                 </div>
                                 <div className="relative">
                                     <input type="file" accept=".json" onChange={handleImportData} className="hidden" id="import-json" />
@@ -449,29 +377,11 @@ export default function UsersPage() {
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div className="p-6 bg-blue-50 rounded-3xl border-2 border-blue-200 shadow-sm space-y-4">
-                                <div className="flex items-start gap-4">
-                                    <div className="bg-blue-100 p-2 rounded-xl text-blue-600">
-                                        <Star className="h-6 w-6" />
-                                    </div>
-                                    <div className="space-y-1">
-                                        <p className="font-black text-blue-800 uppercase text-xs">Registre Blue&Blue (Carolina)</p>
-                                        <p className="text-[10px] text-blue-600 font-bold uppercase">Carrega el registre específic del 03/03/2026.</p>
-                                    </div>
-                                </div>
-                                <Button variant="outline" onClick={handleLoadBlueBlueRecord} disabled={isSeeding} className="w-full h-12 border-blue-300 text-blue-700 font-black uppercase tracking-widest rounded-2xl hover:bg-blue-100">
-                                    {isSeeding ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Plus className="h-4 w-4 mr-2" />}
-                                    CARREGAR ARA
-                                </Button>
-                            </div>
-                        </div>
-
                         <div className="bg-slate-900 border-2 border-primary p-4 rounded-2xl flex gap-3 shadow-inner">
                             <AlertCircle className="h-6 w-6 text-primary shrink-0" />
                             <div className="text-[10px] font-bold text-slate-400 uppercase leading-relaxed">
-                                <span className="text-white">RECOMANACIÓ:</span> El sistema fa backups automàtics cada dia al Firebase. 
-                                En cas de pèrdua massiva, contacta amb suport per restaurar una versió de l'historial del núvol.
+                                <span className="text-white">NOTA:</span> El sistema fa backups automàtics cada dia. 
+                                Utilitza aquestes funcions només per a emergències o trasllat de dades.
                             </div>
                         </div>
                     </CardContent>

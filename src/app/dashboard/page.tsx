@@ -1,4 +1,3 @@
-
 'use client'
 
 import { useState, useMemo, useEffect, useCallback } from 'react'
@@ -62,7 +61,6 @@ export default function DashboardPage() {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
   const [selectedProject, setSelectedProject] = useState<string>('all');
   
-  const [isSeeding, setIsSeeding] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   const employeeDocRef = useMemoFirebase(() => {
@@ -97,75 +95,6 @@ export default function DashboardPage() {
     fetchData();
   }, [fetchData, refreshTrigger]);
 
-  const handleLoadBlueBlueRecord = async () => {
-    if (!firestore || !user) return;
-    setIsSeeding(true);
-    toast({ title: "Creant registre Blue&Blue...", description: "S'estan afegint tots els detalls tècnics." });
-
-    try {
-        const batch = writeBatch(firestore);
-        
-        const cRef = doc(collection(firestore, 'customers'));
-        batch.set(cRef, {
-            name: "Blue&Blue, slu",
-            street: "antic camí ral, 22 Baixos",
-            city: "Andorra la Vella",
-            nrt: "L-703322-J",
-            email: "welcomebluemoreblue@gmail.com"
-        });
-
-        const pRef = doc(collection(firestore, 'projects'));
-        batch.set(pRef, {
-            name: "Carolina - Avda Nacions Unides 35",
-            customerId: cRef.id,
-            customerName: "Blue&Blue, slu",
-            status: 'active',
-            createdAt: new Date('2026-03-03T08:00:00').toISOString()
-        });
-
-        const sRef = doc(collection(firestore, `employees/${user.uid}/serviceRecords`));
-        const serviceData: Omit<ServiceRecord, 'id'> = {
-            employeeId: user.uid,
-            employeeName: currentEmployee ? `${currentEmployee.firstName} ${currentEmployee.lastName}` : "Tino Seixas",
-            arrivalDateTime: new Date('2026-03-03T08:00:00').toISOString(),
-            departureDateTime: new Date('2026-03-03T18:01:00').toISOString(),
-            description: "Instalar uma pista de cortina LED com perfil cinzento\nCriar uma nova ligação a duas tomadas\nCriar quatro saídas de cabo para apliques de parede\nInstalar dois focos adicionais para o cliente",
-            projectName: "Carolina - Avda Nacions Unides 35",
-            projectId: pRef.id,
-            pendingTasks: "",
-            customerId: cRef.id,
-            customerName: "Blue&Blue, slu",
-            serviceHourlyRate: 30,
-            media: [],
-            albarans: [],
-            materials: [
-                { description: "Barra perfil superfície", quantity: 5, unitPrice: 15.20 },
-                { description: "Barra difusor", quantity: 5, unitPrice: 8.30 },
-                { description: "Tira LED Infinity 3000k 230v", quantity: 10, unitPrice: 22.00 },
-                { description: "Mecanisme tomada Siemens", quantity: 2, unitPrice: 9.50 },
-                { description: "Marco duplo Siemens", quantity: 1, unitPrice: 14.00 },
-                { description: "Tapa schuko Siemens", quantity: 2, unitPrice: 6.70 },
-                { description: "Tira LED 2700k 230v", quantity: 10, unitPrice: 22.00 },
-                { description: "Pequenos materials", quantity: 1, unitPrice: 28.00 }
-            ],
-            customerSignatureName: "Carolina Luanes (autoritzat pel client)",
-            customerSignatureDataUrl: "", 
-            createdAt: new Date('2026-03-03T18:01:00').toISOString(),
-            isLunchSubtracted: true
-        };
-        batch.set(sRef, serviceData);
-
-        await batch.commit();
-        toast({ title: "Registre creat!", description: "L'obra de Carolina ja està disponible." });
-        setRefreshTrigger(prev => prev + 1);
-    } catch (error) {
-        console.error(error);
-        toast({ variant: 'destructive', title: "Error" });
-    } finally {
-        setIsSeeding(false);
-    }
-  };
-  
   const projectNames = useMemo(() => {
     const names = allServices.map(s => s.projectName?.trim()).filter(Boolean);
     const unique = Array.from(new Set(names));
@@ -219,9 +148,6 @@ export default function DashboardPage() {
           <p className="text-slate-400 font-bold uppercase text-[10px] tracking-[0.2em] pl-1">Supervisió detallada dels serveis realitzats per l'equip.</p>
         </div>
         <div className="flex flex-wrap gap-3 w-full md:w-auto">
-            <Button onClick={handleLoadBlueBlueRecord} disabled={isSeeding} variant="outline" className="h-14 border-2 border-blue-200 text-blue-600 font-black uppercase tracking-widest rounded-2xl text-[10px] px-6 bg-blue-50/50 hover:bg-blue-100">
-                {isSeeding ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Star className="mr-2 h-4 w-4 fill-current" />} Carregar Carolina
-            </Button>
             <Button onClick={() => setRefreshTrigger(prev => prev + 1)} variant="outline" className="h-14 border-2 border-slate-200 text-slate-500 font-black uppercase tracking-widest rounded-2xl text-[10px] px-6">
                 <RefreshCw className="mr-2 h-4 w-4" />Actualitzar
             </Button>
