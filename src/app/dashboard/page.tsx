@@ -129,7 +129,7 @@ export default function DashboardPage() {
         setIsLoadingData(true);
         try {
             const employeeSnapshot = await getDocs(query(collection(firestore, 'employees')));
-            const employeesData = employeeSnapshot.docs.map(doc => ({ id: d.id, ...doc.data() } as Employee));
+            const employeesData = employeeSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Employee));
             setEmployees(employeesData);
 
             const servicesQuery = query(collectionGroup(firestore, 'serviceRecords'), orderBy('arrivalDateTime', 'desc'));
@@ -171,7 +171,6 @@ export default function DashboardPage() {
             }
         }
     });
-    // FIX: unique is a string array, sort directly without .name
     return unique.sort((a, b) => a.localeCompare(b, 'ca'));
   }, [allServices]);
 
