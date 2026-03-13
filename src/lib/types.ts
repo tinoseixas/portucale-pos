@@ -9,25 +9,26 @@ export interface ServiceRecord {
   departureDateTime: string;
   description: string;
   projectName: string;
-  projectId?: string; // ID of the linked project
+  projectId?: string;
   pendingTasks: string;
-  serviceHourlyRate?: number; // Specific rate for this service
+  serviceHourlyRate?: number;
+  extraCosts?: number; // Nou camp per a altres costos
   media: { type: 'image' | 'video'; dataUrl: string }[];
   albarans: string[];
   materials?: {
     description: string;
     quantity: number;
     unitPrice: number;
-    imageDataUrl?: string; // New field for material image
+    imageDataUrl?: string;
   }[];
   updatedAt?: string;
   createdAt?: string; 
-  albaranNumber?: number; // Unique albaran number assigned to this record
-  status?: 'pendent' | 'facturat'; // Invoicing status
-  customerSignatureName?: string; // Name of the person who signed
-  customerSignatureDataUrl?: string; // Base64 signature image
-  isLunchSubtracted?: boolean; // Whether to subtract the 13h-14h break (default true)
-  deleted?: boolean; // For soft-delete/recycle bin
+  albaranNumber?: number;
+  status?: 'pendent' | 'facturat';
+  customerSignatureName?: string;
+  customerSignatureDataUrl?: string;
+  isLunchSubtracted?: boolean;
+  deleted?: boolean;
   deletedAt?: string;
 }
 
@@ -40,7 +41,7 @@ export interface Employee {
   email?: string;
   phoneNumber?: string;
   role?: 'admin' | 'user';
-  hourlyRate: number; // Default hourly rate
+  hourlyRate: number;
 }
 
 export interface Customer {
@@ -51,7 +52,7 @@ export interface Customer {
   postalCode?: string;
   contact?: string;
   email?: string;
-  nrt?: string; // Tax ID number
+  nrt?: string;
 }
 
 export interface Project {
@@ -90,8 +91,8 @@ export interface Quote {
         quantity: number;
         unitPrice: number;
         imageDataUrl?: string;
-        discount?: number; // Discount in percentage
-        category?: string; // Optional category for grouping
+        discount?: number;
+        category?: string;
     }[];
     labor: {
         description: string;
@@ -107,8 +108,8 @@ export interface InvoiceItem {
     unitPrice: number;
     imageDataUrl?: string;
     discount?: number;
-    albaranId?: string; // To trace back to the source albaran
-    albaranNumber?: number; // For display purposes
+    albaranId?: string;
+    albaranNumber?: number;
 }
 
 export interface Invoice {
@@ -124,7 +125,7 @@ export interface Invoice {
         cost: number;
     };
     totalAmount: number;
-    sourceId?: string; // ID of the albaran or quote it was created from
+    sourceId?: string;
     sourceType?: 'albaran' | 'quote';
     status: 'pendent' | 'pagada' | 'parcialment pagada';
     paymentDate?: string;

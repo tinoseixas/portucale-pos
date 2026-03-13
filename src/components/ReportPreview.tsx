@@ -1,7 +1,8 @@
+
 'use client'
 import React, { forwardRef, useMemo } from 'react';
 import Image from 'next/image';
-import { Calendar as CalendarIcon, Clock, User, CheckCircle, Package, MapPin, Phone } from 'lucide-react';
+import { Calendar as CalendarIcon, Clock, User, CheckCircle, Package, MapPin, Phone, ReceiptText } from 'lucide-react';
 import type { ServiceRecord, Customer, Employee } from '@/lib/types';
 import { format, parseISO } from 'date-fns';
 import { ca } from 'date-fns/locale';
@@ -25,7 +26,7 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
         return [...services].sort((a,b) => parseISO(a.arrivalDateTime).getTime() - parseISO(b.arrivalDateTime).getTime());
     }, [services]);
     
-    const { subtotal, iva, totalGeneral, totalHours, laborCost } = calculateTotalAmount(sortedServices, employees);
+    const { subtotal, iva, totalGeneral, totalHours, laborCost, extraCostsTotal } = calculateTotalAmount(sortedServices, employees);
     const totalTimeFormatted = `${Math.floor(totalHours)}h ${Math.round((totalHours % 1) * 60)}m`;
 
     const allMaterials = useMemo(() => {
@@ -137,35 +138,40 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
                 </table>
             </section>
 
-            {/* TAULA DE MATERIALS */}
-            {allMaterials.length > 0 && (
-                <section className="space-y-4 break-inside-avoid">
-                    <h3 className="text-sm font-black uppercase tracking-[0.2em] text-primary border-l-4 border-primary pl-3">02. Materials utilitzats</h3>
-                    <table className="w-full border-collapse rounded-xl overflow-hidden shadow-sm border border-slate-100">
-                        <thead className="bg-slate-800 text-white text-[10px] uppercase tracking-widest">
-                            <tr>
-                                <th className="py-3 px-4 text-left font-black">Descripció del material</th>
-                                <th className="py-3 px-4 text-right font-black w-24">Qt.</th>
-                                {showPricing && <th className="py-3 px-4 text-right font-black w-28">Preu Unit.</th>}
-                                {showPricing && <th className="py-3 px-4 text-right font-black w-32">Import</th>}
+            {/* TAULA DE MATERIALS I EXTRA */}
+            <section className="space-y-4 break-inside-avoid">
+                <h3 className="text-sm font-black uppercase tracking-[0.2em] text-primary border-l-4 border-primary pl-3">02. Materials i Altres Conceptes</h3>
+                <table className="w-full border-collapse rounded-xl overflow-hidden shadow-sm border border-slate-100">
+                    <thead className="bg-slate-800 text-white text-[10px] uppercase tracking-widest">
+                        <tr>
+                            <th className="py-3 px-4 text-left font-black">Concepte / Descripció</th>
+                            <th className="py-3 px-4 text-right font-black w-24">Qt.</th>
+                            {showPricing && <th className="py-3 px-4 text-right font-black w-28">Preu Unit.</th>}
+                            {showPricing && <th className="py-3 px-4 text-right font-black w-32">Import</th>}
+                        </tr>
+                    </thead>
+                    <tbody className="text-xs">
+                        {allMaterials.map((m, i) => (
+                            <tr key={i} className={`${i % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'} border-b border-slate-100`}>
+                                <td className="py-3 px-4 font-medium text-slate-700">{m.description}</td>
+                                <td className="py-3 px-4 text-right tabular-nums font-bold text-slate-900">{m.quantity.toFixed(2)}</td>
+                                {showPricing && <td className="py-3 px-4 text-right tabular-nums text-slate-400">{m.unitPrice.toFixed(2)} €</td>}
+                                {showPricing && <td className="py-3 px-4 text-right font-black tabular-nums text-primary">{(m.quantity * m.unitPrice).toFixed(2)} €</td>}
                             </tr>
-                        </thead>
-                        <tbody className="text-xs">
-                            {allMaterials.map((m, i) => {
-                                const lineTotal = m.quantity * m.unitPrice;
-                                return (
-                                    <tr key={i} className={`${i % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'} border-b border-slate-100`}>
-                                        <td className="py-3 px-4 font-medium text-slate-700">{m.description}</td>
-                                        <td className="py-3 px-4 text-right tabular-nums font-bold text-slate-900">{m.quantity.toFixed(2)}</td>
-                                        {showPricing && <td className="py-3 px-4 text-right tabular-nums text-slate-400">{m.unitPrice.toFixed(2)} €</td>}
-                                        {showPricing && <td className="py-3 px-4 text-right font-black tabular-nums text-primary">{lineTotal.toFixed(2)} €</td>}
-                                    </tr>
-                                );
-                            })}
-                        </tbody>
-                    </table>
-                </section>
-            )}
+                        ))}
+                        {extraCostsTotal > 0 && (
+                            <tr className="bg-slate-100/50 border-b border-slate-200">
+                                <td className="py-3 px-4 font-black text-slate-900 flex items-center gap-2">
+                                    <ReceiptText className="h-3 w-3 text-slate-400" /> Altres costos i despeses operatives
+                                </td>
+                                <td className="py-3 px-4 text-right tabular-nums">1.00</td>
+                                {showPricing && <td className="py-3 px-4 text-right tabular-nums">{extraCostsTotal.toFixed(2)} €</td>}
+                                {showPricing && <td className="py-3 px-4 text-right font-black tabular-nums text-primary">{extraCostsTotal.toFixed(2)} €</td>}
+                            </tr>
+                        )}
+                    </tbody>
+                </table>
+            </section>
 
             {/* TOTALS SI SHOWPRICING */}
             {showPricing && (

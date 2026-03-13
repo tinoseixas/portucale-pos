@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Clock, Camera, ArrowLeft, Save, Trash2, Plus, X, Video, Calendar as CalendarIcon, Briefcase, Users, Package, Euro, ImagePlus, PenTool, Loader2, Trash, Edit, Utensils, Sparkles } from 'lucide-react'
+import { Clock, Camera, ArrowLeft, Save, Trash2, Plus, X, Video, Calendar as CalendarIcon, Briefcase, Users, Package, Euro, ImagePlus, PenTool, Loader2, Trash, Edit, Utensils, Sparkles, ReceiptText } from 'lucide-react'
 import { useToast } from "@/hooks/use-toast"
 import { useFirestore, useUser, useDoc, useMemoFirebase, useCollection, updateDocumentNonBlocking } from '@/firebase'
 import { doc, collection, query, orderBy, setDoc, where, addDoc } from 'firebase/firestore'
@@ -118,6 +118,7 @@ function EditServiceContent() {
   const [isCustomerDialogOpen, setIsCustomerDialogOpen] = useState(false)
   const [isSignatureDialogOpen, setIsSignatureDialogOpen] = useState(false)
   const [serviceHourlyRate, setServiceHourlyRate] = useState<number | ''>('');
+  const [extraCosts, setExtraCosts] = useState<number | ''>('');
   const [customerSignatureName, setCustomerSignatureName] = useState('');
   const [customerSignatureDataUrl, setCustomerSignatureDataUrl] = useState('');
   const [isLunchSubtracted, setIsLunchSubtracted] = useState(true);
@@ -167,6 +168,7 @@ function EditServiceContent() {
       setCustomerSignatureName(service.customerSignatureName || '');
       setCustomerSignatureDataUrl(service.customerSignatureDataUrl || '');
       setServiceHourlyRate(service.serviceHourlyRate ?? '');
+      setExtraCosts(service.extraCosts ?? '');
       setIsLunchSubtracted(service.isLunchSubtracted ?? true);
       setHasInitialized(true);
     }
@@ -254,6 +256,7 @@ function EditServiceContent() {
             employeeId: employeeId || service?.employeeId || '',
             employeeName: service?.employeeName || '',
             serviceHourlyRate: typeof serviceHourlyRate === 'number' ? serviceHourlyRate : (service?.serviceHourlyRate || 0),
+            extraCosts: typeof extraCosts === 'number' ? extraCosts : 0,
             media: media || [],
             materials: materials.filter(m => m.description.trim() !== ''),
             customerSignatureName: customerSignatureName || '',
@@ -446,6 +449,22 @@ function EditServiceContent() {
                       ))}
                   </div>
                   <Button type="button" variant="ghost" onClick={() => setMaterials([...materials, { description: '', quantity: 1, unitPrice: 0 }])} className="w-full h-16 border-4 border-dashed border-slate-200 rounded-3xl font-black text-slate-400 uppercase text-xs">+ AFEGIR ARTICLE</Button>
+              </div>
+
+              {/* Secció Altres Costos */}
+              <div className="space-y-4 rounded-[2.5rem] border-2 border-slate-100 p-6 sm:p-8 bg-slate-50/50 shadow-inner">
+                  <Label className="font-black text-slate-900 flex items-center gap-3 uppercase tracking-tighter text-xl"><ReceiptText className="h-6 w-6 text-primary" /> Altres Costos</Label>
+                  <div className="relative">
+                      <Input 
+                        type="number" 
+                        placeholder="Ex: 50.00 (Peatges, Dietes, etc.)" 
+                        value={extraCosts} 
+                        onChange={(e) => setExtraCosts(e.target.value === '' ? '' : Number(e.target.value))} 
+                        className="h-16 pl-12 rounded-2xl border-2 font-black text-xl bg-white" 
+                      />
+                      <Euro className="absolute left-4 top-1/2 -translate-y-1/2 h-6 w-6 text-slate-400" />
+                  </div>
+                  <p className="text-[10px] text-slate-400 font-bold uppercase pl-1">Aquest valor es sumarà al subtotal net de l'albarà.</p>
               </div>
 
               <div className="space-y-6">

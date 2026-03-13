@@ -1,3 +1,4 @@
+
 'use client'
 import React, { forwardRef, useMemo } from 'react';
 import type { Customer, ServiceRecord, Employee } from '@/lib/types';
@@ -6,6 +7,7 @@ import { ca } from 'date-fns/locale';
 import { calculateTotalAmount } from '@/lib/calculations';
 import { Logo } from '@/components/Logo';
 import { BRANDING } from '@/lib/branding';
+import { ReceiptText } from 'lucide-react';
 
 interface InvoicePreviewProps {
   customer: Customer | undefined;
@@ -23,7 +25,7 @@ export const InvoicePreview = forwardRef<HTMLDivElement, InvoicePreviewProps>((p
         return calculateTotalAmount(services, employees, applyIva);
     }, [services, employees, applyIva]);
     
-    const { subtotal, iva, totalGeneral, totalHours, laborCost } = totals;
+    const { subtotal, iva, totalGeneral, totalHours, laborCost, extraCostsTotal } = totals;
     
     const allMaterials = useMemo(() => {
         return (services || []).flatMap(s => s.materials || []).filter(m => m.description.trim() !== '');
@@ -104,6 +106,18 @@ export const InvoicePreview = forwardRef<HTMLDivElement, InvoicePreviewProps>((p
                                 <td className="py-4 px-6 text-right font-bold tabular-nums text-slate-900">{(m.quantity * m.unitPrice).toFixed(2)} €</td>
                             </tr>
                         ))}
+
+                        {/* ALTRE COSTOS */}
+                        {extraCostsTotal > 0 && (
+                            <tr className="border-b-2 border-slate-100 bg-slate-100/30">
+                                <td className="py-4 px-6 font-black text-slate-900 flex items-center gap-2">
+                                    <ReceiptText className="h-4 w-4 text-primary" /> Altres costos operatius i despeses vàries
+                                </td>
+                                <td className="py-4 px-6 text-right tabular-nums">1.00</td>
+                                <td className="py-4 px-6 text-right tabular-nums">{extraCostsTotal.toFixed(2)} €</td>
+                                <td className="py-4 px-6 text-right font-black tabular-nums">{extraCostsTotal.toFixed(2)} €</td>
+                            </tr>
+                        )}
                     </tbody>
                 </table>
             </div>

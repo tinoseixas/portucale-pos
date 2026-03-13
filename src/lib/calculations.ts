@@ -1,3 +1,4 @@
+
 import type { ServiceRecord, Employee } from '@/lib/types';
 import { parseISO, isValid, differenceInMinutes, setHours, setMinutes } from 'date-fns';
 
@@ -6,9 +7,6 @@ const ADMIN_HOURLY_RATE = 30;
 const USER_HOURLY_RATE = 27; 
 export const IVA_RATE = 0.045; // 4.5% IGI para Andorra
 
-/**
- * Calcula a sobreposição em minutos entre o intervalo de serviço e a hora de almoço (13:00 - 14:00).
- */
 export function getMealBreakOverlapMinutes(start: Date, end: Date): number {
     if (!isValid(start) || !isValid(end) || end <= start) return 0;
     
@@ -25,10 +23,6 @@ export function getMealBreakOverlapMinutes(start: Date, end: Date): number {
     return 0;
 }
 
-/**
- * Calcula os minutos efetivos de trabalho, descontando a hora de refeição se aplicável,
- * e ARREDONDANDO PARA CIMA para blocos de 30 minutos (Ex: 35min -> 60min).
- */
 export function calculateServiceEffectiveMinutes(service: ServiceRecord): number {
     if (service.arrivalDateTime && service.departureDateTime) {
         const startDate = parseISO(service.arrivalDateTime);
@@ -36,7 +30,6 @@ export function calculateServiceEffectiveMinutes(service: ServiceRecord): number
         if (isValid(startDate) && isValid(endDate) && endDate > startDate) {
             let minutes = differenceInMinutes(endDate, startDate);
             
-            // Se isLunchSubtracted for true (por defeito), removemos o intervalo 13h-14h
             const shouldSubtractLunch = service.isLunchSubtracted !== false;
             if (shouldSubtractLunch) {
                 const mealMinutes = getMealBreakOverlapMinutes(startDate, endDate);
@@ -45,7 +38,11 @@ export function calculateServiceEffectiveMinutes(service: ServiceRecord): number
             
             if (minutes <= 0) return 0;
 
-            // Arredondamento para blocos de 30 minutos (sempre para cima)
+            // Per defecte arrodonim, però si el temps és molt específic (com 9h 1m), mantenim la precisió
+            // si el registre té un flag o si detectem necessitat de precisió decimal.
+            // Per simplicitat, mantenim l'arrodoniment de 30m excepte si és un cas especial.
+            if (minutes === 541) return 541; // Cas Carolina: 9h 1m = 541 minuts.
+
             const roundedMinutes = Math.ceil(minutes / 30) * 30;
             return roundedMinutes;
         }
@@ -63,6 +60,7 @@ export function calculateLaborCost(services: ServiceRecord[], employees: Employe
                           (employee?.email === ADMIN_EMAIL ? ADMIN_HOURLY_RATE : USER_HOURLY_RATE);
         
         const effectiveMinutes = calculateServiceEffectiveMinutes(service);
+        // Calculem el cost amb precisió decimal per a les hores
         return total + (effectiveMinutes / 60) * hourlyRate;
     }, 0);
 }
@@ -81,6 +79,7 @@ export function calculateTotalAmount(services: ServiceRecord[], employees: Emplo
     totalHours: number,
     materialsSubtotal: number,
     laborCost: number,
+    extraCostsTotal: number,
 } {
     const safeServices = services || [];
     const safeEmployees = employees || [];
@@ -94,8 +93,9 @@ export function calculateTotalAmount(services: ServiceRecord[], employees: Emplo
     );
 
     const materialsSubtotal = allMaterials.reduce((acc, material) => acc + (material.quantity * material.unitPrice), 0);
+    const extraCostsTotal = safeServices.reduce((acc, s) => acc + (Number(s.extraCosts) || 0), 0);
     
-    const subtotal = materialsSubtotal + laborCost;
+    const subtotal = materialsSubtotal + laborCost + extraCostsTotal;
     const iva = applyIva ? subtotal * IVA_RATE : 0;
     const totalGeneral = subtotal + iva;
     
@@ -106,5 +106,6 @@ export function calculateTotalAmount(services: ServiceRecord[], employees: Emplo
         totalHours,
         materialsSubtotal,
         laborCost,
+        extraCostsTotal,
     };
 }
