@@ -4,7 +4,7 @@ import React, { forwardRef, useMemo } from 'react';
 import type { Customer, ServiceRecord, Employee } from '@/lib/types';
 import { format, parseISO } from 'date-fns';
 import { ca } from 'date-fns/locale';
-import { calculateTotalAmount, calculateServiceEffectiveMinutes, getMealBreakOverlapMinutes } from '@/lib/calculations';
+import { calculateTotalAmount, calculateServiceEffectiveMinutes, IVA_RATE } from '@/lib/calculations';
 import { Logo } from '@/components/Logo';
 import { BRANDING } from '@/lib/branding';
 
@@ -26,175 +26,122 @@ export const InvoicePreview = forwardRef<HTMLDivElement, InvoicePreviewProps>((p
     
     const { subtotal, iva, totalGeneral, totalHours, laborCost } = totals;
     
-    const getEmployeeName = (service: ServiceRecord) => {
-        const employee = employees.find(e => e.id === service.employeeId);
-        return employee ? `${employee.firstName} ${employee.lastName}` : (service.employeeName || 'Tècnic');
-    };
-
-    const groupedByAlbaran = useMemo(() => {
-        const grouped: { [key: number]: { services: ServiceRecord[], items: any[] } } = {};
-        const safeServices = services || [];
-        
-        safeServices.forEach(service => {
-            const albaranNum = service.albaranNumber || 0;
-            if (!grouped[albaranNum]) {
-                grouped[albaranNum] = { services: [], items: [] };
-            }
-            grouped[albaranNum].services.push(service);
-            if (service.materials) {
-                grouped[albaranNum].items.push(...service.materials);
-            }
-        });
-
-        return Object.entries(grouped)
-            .sort(([numA], [numB]) => Number(numA) - Number(numB));
-
+    const allMaterials = useMemo(() => {
+        return (services || []).flatMap(s => s.materials || []).filter(m => m.description.trim() !== '');
     }, [services]);
 
-    const hourlyRateDisplay = totalHours > 0 ? (laborCost / totalHours).toFixed(2) : "0.00";
-
     return (
-        <div ref={ref} className="bg-white p-12 font-sans text-gray-900 printable-area mx-auto flex flex-col" style={{ width: '210mm', minHeight: '297mm' }}>
-            <header className="flex justify-between items-center border-b-2 border-slate-900 pb-8 mb-8 break-inside-avoid">
-                <div className="flex flex-col gap-4">
+        <div ref={ref} className="bg-white p-12 font-sans text-slate-900 printable-area mx-auto flex flex-col gap-12" style={{ width: '210mm', minHeight: '297mm' }}>
+            {/* HEADER CORPORATIU */}
+            <header className="flex justify-between items-start border-b-4 border-slate-900 pb-10 break-inside-avoid">
+                <div className="space-y-6">
                     <Logo className="h-24 w-auto" />
-                    <div className="text-sm text-gray-600">
-                        <p className="font-bold text-gray-900">NRT: {BRANDING.nrt}</p>
+                    <div className="text-[11px] leading-relaxed text-slate-500 font-bold uppercase tracking-widest">
+                        <p className="text-slate-900 font-black mb-1">NRT: {BRANDING.nrt}</p>
                         <p>{BRANDING.address}</p>
                         <p>{BRANDING.location}</p>
-                        <p>Tel: {BRANDING.phone} | {BRANDING.email}</p>
+                        <p>TEL: {BRANDING.phone} | {BRANDING.email}</p>
                     </div>
                 </div>
-                <div className="text-right">
-                    <h1 className="text-4xl font-black text-gray-900 uppercase tracking-tighter">Factura</h1>
-                     {invoiceNumber && invoiceNumber > 0 && <p className="text-xl text-primary font-black mt-2">Nº: {String(invoiceNumber).padStart(4, '0')}</p>}
-                    <p className="text-sm text-gray-500 mt-1">Data: {format(new Date(), 'dd MMMM yyyy', { locale: ca })}</p>
+                <div className="text-right space-y-2">
+                    <h1 className="text-6xl font-black uppercase tracking-tighter text-slate-900 leading-none">Factura</h1>
+                    <div className="bg-slate-900 text-white px-6 py-2 rounded inline-block text-2xl font-black">
+                        #{String(invoiceNumber || 0).padStart(4, '0')}
+                    </div>
+                    <p className="text-slate-400 font-bold text-sm uppercase tracking-widest">
+                        {format(new Date(), 'dd MMMM yyyy', { locale: ca })}
+                    </p>
                 </div>
             </header>
 
-            <section className="flex justify-between gap-8 my-8 break-inside-avoid">
-                <div className="flex-1">
-                    <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-2">DADES DEL CLIENT</h3>
-                    {customer ? (
-                        <div className="space-y-1 text-base">
-                             <p className="font-black text-xl">{customer.name}</p>
-                             <p className="text-gray-600">{customer.address || ''}</p>
-                             <p className="text-gray-600">NIF: {customer.nrt || '-'}</p>
-                        </div>
-                    ) : <p className="text-gray-600 italic">No especificat</p>}
-                </div>
-                 <div className="flex-1 text-right">
-                    <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-2">PROJECTE / OBRA</h3>
-                    <p className="font-black text-xl text-primary uppercase">{projectName || 'No especificada'}</p>
-                 </div>
-            </section>
-            
-            <section className="space-y-8 flex-grow">
-                <h3 className="font-black text-lg mb-4 border-b-2 pb-2 uppercase tracking-tight">Detall de Treballs i Materials</h3>
-                
-                {groupedByAlbaran.map(([albaranNum, { services: albaranServices, items: albaranItems }]) => (
-                    <div key={albaranNum} className="mb-8 break-inside-avoid">
-                        {Number(albaranNum) > 0 && (
-                            <h4 className="font-bold text-sm mb-3 bg-slate-100 p-2 rounded border-l-4 border-primary">Albarà de Referència #{String(albaranNum).padStart(4, '0')}</h4>
-                        )}
-                        
-                        {albaranServices.length > 0 && (
-                             <table className="w-full text-xs mb-4 border-collapse">
-                                <thead className="bg-slate-50">
-                                    <tr className="border-b-2 border-gray-300">
-                                        <th className="text-left py-2 px-3 font-bold text-gray-600 uppercase">Data</th>
-                                        <th className="text-left py-2 px-3 font-bold text-gray-600 uppercase">Tècnic</th>
-                                        <th className="text-left py-2 px-3 font-bold text-gray-600 uppercase">Descripció</th>
-                                        <th className="text-right py-2 px-3 font-bold text-gray-600 uppercase">Hores</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {albaranServices.map(service => {
-                                        const arrival = parseISO(service.arrivalDateTime);
-                                        const departure = parseISO(service.departureDateTime);
-                                        const effectiveMinutes = calculateServiceEffectiveMinutes(service);
-                                        const mealMinutes = service.isLunchSubtracted !== false ? getMealBreakOverlapMinutes(arrival, departure) : 0;
-                                        const hours = (effectiveMinutes / 60).toFixed(2);
-                                        return (
-                                            <tr key={service.id} className="border-b border-gray-100 break-inside-avoid">
-                                                <td className="py-2 px-3 align-top whitespace-nowrap font-medium text-gray-500">{format(arrival, 'dd/MM/yy')}</td>
-                                                <td className="py-2 px-3 align-top font-bold">{getEmployeeName(service)}</td>
-                                                <td className="py-2 px-3 align-top text-gray-700">{service.description}</td>
-                                                <td className="py-2 px-3 align-top text-right font-bold tabular-nums">
-                                                    {hours} h
-                                                    {mealMinutes > 0 && <span className="block text-[8px] text-gray-400 font-bold mt-0.5">-(refecció)</span>}
-                                                </td>
-                                            </tr>
-                                        );
-                                    })}
-                                </tbody>
-                            </table>
-                        )}
-                        
-                        {albaranItems.length > 0 && (
-                        <table className="w-full text-xs border-collapse">
-                            <thead className="bg-slate-50">
-                                <tr className="border-b-2 border-gray-300">
-                                    <th className="text-left py-2 px-3 font-bold text-gray-600 uppercase">Material</th>
-                                    <th className="text-right py-2 px-3 font-bold text-gray-600 w-20 uppercase">Qt.</th>
-                                    <th className="text-right py-2 px-3 font-bold text-gray-600 w-24 uppercase">PVP</th>
-                                    <th className="text-right py-2 px-3 font-bold text-gray-600 w-24 uppercase">Total</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {albaranItems.map((item, index) => {
-                                    const itemTotal = item.quantity * item.unitPrice;
-                                    return (
-                                        <tr key={`item-${index}`} className="border-b border-gray-100 break-inside-avoid">
-                                            <td className="py-2 px-3 font-medium">{item.description}</td>
-                                            <td className="text-right py-2 px-3 tabular-nums">{item.quantity.toFixed(2)}</td>
-                                            <td className="text-right py-2 px-3 tabular-nums">{item.unitPrice.toFixed(2)} €</td>
-                                            <td className="text-right py-2 px-3 font-bold tabular-nums text-gray-900">{itemTotal.toFixed(2)} €</td>
-                                        </tr>
-                                    );
-                                })}
-                            </tbody>
-                        </table>
-                        )}
-                    </div>
-                ))}
-                
-                <div className="mt-12 pt-6 border-t-2 border-slate-100 break-inside-avoid">
-                    <div className="flex justify-between items-center bg-slate-50 p-6 rounded-xl border border-slate-200">
-                        <div>
-                            <p className="text-sm font-black text-slate-900 uppercase tracking-tight">Mà d'obra i Treball Tècnic</p>
-                            <p className="text-xs text-slate-500 mt-1 italic">Hores facturables: <strong>{totalHours.toFixed(2)} h</strong> | Valor hora: <strong>{hourlyRateDisplay} €/h</strong></p>
-                        </div>
-                        <div className="text-right">
-                            <p className="text-xl font-black text-slate-900">{laborCost.toFixed(2)} €</p>
-                        </div>
+            {/* DADES CLIENT I OBRA */}
+            <div className="grid grid-cols-2 gap-16 break-inside-avoid">
+                <div className="space-y-4">
+                    <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] border-b-2 pb-2">Client Facturat</h3>
+                    <div className="px-2">
+                        <p className="font-black text-2xl text-slate-900 uppercase">{customer?.name || '---'}</p>
+                        <p className="text-base text-slate-500 mt-2 font-medium">{customer?.street || customer?.city || '---'}</p>
+                        <p className="text-sm text-slate-400 font-bold mt-1">NIF/NRT: {customer?.nrt || '---'}</p>
                     </div>
                 </div>
+                <div className="text-right space-y-4">
+                    <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] border-b-2 pb-2">Projecte de Referència</h3>
+                    <div className="px-2">
+                        <p className="font-black text-2xl text-primary uppercase leading-tight">{projectName || 'Obra sense nom'}</p>
+                        <p className="text-xs text-slate-400 font-bold mt-2 uppercase tracking-widest">Treballs i Materials inclosos</p>
+                    </div>
+                </div>
+            </div>
 
-                <div className="flex justify-end mt-12 pb-12 break-inside-avoid">
-                    <div className="w-80 space-y-3 bg-slate-900 text-white p-8 rounded-2xl shadow-xl border-4 border-primary/20">
-                        <div className="flex justify-between text-sm font-bold uppercase tracking-wider text-slate-400">
-                            <span>Subtotal:</span>
-                            <span className="tabular-nums">{subtotal.toFixed(2)} €</span>
+            {/* TAULA DE CONCEPTES */}
+            <div className="flex-grow">
+                <table className="w-full border-collapse">
+                    <thead>
+                        <tr className="bg-slate-900 text-white text-[10px] font-black uppercase tracking-widest">
+                            <th className="py-4 px-6 text-left">Concepte / Descripció</th>
+                            <th className="py-4 px-6 text-right w-24">Qt.</th>
+                            <th className="py-4 px-6 text-right w-32">Preu Unit.</th>
+                            <th className="py-4 px-6 text-right w-32">Import</th>
+                        </tr>
+                    </thead>
+                    <tbody className="text-sm">
+                        {/* MÀ D'OBRA UNITÀRIA */}
+                        <tr className="border-b-2 border-slate-100 font-bold bg-slate-50/50">
+                            <td className="py-6 px-6">
+                                <p className="font-black text-slate-900 uppercase">Mà d'obra i Treball Tècnic</p>
+                                <p className="text-[10px] text-slate-400 uppercase tracking-tight mt-1 font-medium italic">Inclou hores de desplaçament i execució del projecte</p>
+                            </td>
+                            <td className="py-6 px-6 text-right tabular-nums text-slate-500">{totalHours.toFixed(2)} h</td>
+                            <td className="py-6 px-6 text-right tabular-nums text-slate-500">{(laborCost / (totalHours || 1)).toFixed(2)} €</td>
+                            <td className="py-6 px-6 text-right font-black tabular-nums">{laborCost.toFixed(2)} €</td>
+                        </tr>
+
+                        {/* MATERIALS */}
+                        {allMaterials.map((m, i) => (
+                            <tr key={i} className="border-b border-slate-50 hover:bg-slate-50/30 transition-colors">
+                                <td className="py-4 px-6 text-slate-700 font-medium">{m.description}</td>
+                                <td className="py-4 px-6 text-right tabular-nums text-slate-400">{m.quantity.toFixed(2)}</td>
+                                <td className="py-4 px-6 text-right tabular-nums text-slate-400">{m.unitPrice.toFixed(2)} €</td>
+                                <td className="py-4 px-6 text-right font-bold tabular-nums text-slate-900">{(m.quantity * m.unitPrice).toFixed(2)} €</td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+
+            {/* RESUM FINANCER */}
+            <div className="flex justify-end pb-12 break-inside-avoid">
+                <div className="w-96 bg-slate-900 text-white p-8 rounded-[2rem] shadow-2xl space-y-4 border-4 border-primary/20">
+                    <div className="flex justify-between text-[11px] font-black uppercase text-slate-400 tracking-[0.2em]">
+                        <span>Base Imposable</span>
+                        <span className="tabular-nums">{subtotal.toFixed(2)} €</span>
+                    </div>
+                    {applyIva && (
+                        <div className="flex justify-between text-[11px] font-black uppercase text-slate-400 tracking-[0.2em]">
+                            <span>IGI (4.5%)</span>
+                            <span className="tabular-nums">{iva.toFixed(2)} €</span>
                         </div>
-                        {applyIva && (
-                            <div className="flex justify-between text-sm font-bold uppercase tracking-wider text-slate-400">
-                                <span>IGI (4.5%):</span>
-                                <span className="tabular-nums">{iva.toFixed(2)} €</span>
-                            </div>
-                        )}
-                        <div className="pt-4 border-t border-slate-700 flex justify-between items-center">
-                            <span className="text-lg font-black uppercase tracking-tighter text-primary">Total Factura</span>
-                            <span className="text-3xl font-black tabular-nums">{totalGeneral.toFixed(2)} €</span>
-                        </div>
+                    )}
+                    <div className="pt-6 border-t border-slate-700 flex justify-between items-center">
+                        <span className="text-xl font-black uppercase tracking-tighter text-primary">Total Factura</span>
+                        <span className="text-4xl font-black tabular-nums">{totalGeneral.toFixed(2)} €</span>
                     </div>
                 </div>
-            </section>
+            </div>
 
-             <footer className="mt-auto pt-8 border-t text-center text-[10px] text-gray-400 uppercase tracking-widest font-bold break-inside-avoid">
-                <p>{BRANDING.companyName} - {BRANDING.slogan}</p>
-                <p className="mt-2 text-slate-300 font-bold">HORARI DE DINAR (13H-14H) EXCLÒS QUAN S'APLICA | ARREDONIMENT CADA 30 MIN</p>
-                <p className="mt-1">{BRANDING.subSlogan}</p>
+            {/* PEU DE PÀGINA */}
+            <footer className="mt-auto border-t-2 border-slate-100 pt-8 flex justify-between items-end break-inside-avoid">
+                <div className="text-[10px] text-slate-400 font-bold uppercase tracking-widest leading-relaxed">
+                    <p>{BRANDING.companyName} - {BRANDING.slogan}</p>
+                    <p className="mt-1">Condicions de pagament segons contracte previ</p>
+                </div>
+                <div className="text-right">
+                    <p className="text-[10px] font-black text-slate-900 uppercase tracking-[0.3em]">Gràcies per la seva confiança</p>
+                    <div className="flex gap-1 justify-end mt-2">
+                        <div className="w-8 h-1 bg-primary rounded-full"></div>
+                        <div className="w-4 h-1 bg-accent rounded-full"></div>
+                    </div>
+                </div>
             </footer>
         </div>
     );

@@ -4,7 +4,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useRouter, useParams, useSearchParams } from 'next/navigation'
 import { useDoc, useUser, useFirestore, useMemoFirebase, deleteDocumentNonBlocking, useCollection } from '@/firebase'
-import { doc, collection, query, getDocs, collectionGroup, where, getDoc, updateDoc } from 'firebase/firestore'
+import { doc, collection, query, getDocs, collectionGroup, getDoc, updateDoc } from 'firebase/firestore'
 import type { Customer, Invoice, ServiceRecord, Employee } from '@/lib/types'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -49,13 +49,13 @@ export default function InvoiceDetailPage() {
 
     const { user, isUserLoading } = useUser()
     const [isGenerating, setIsGenerating] = useState(false)
-    const reportRef = useRef<HTMLDivElement>(null)
+    const invoiceRef = useRef<HTMLDivElement>(null)
     const [services, setServices] = useState<ServiceRecord[]>([])
     const [employees, setEmployees] = useState<Employee[]>([]);
+    const [customer, setCustomer] = useState<Customer | undefined>();
     const [isLoadingData, setIsLoadingData] = useState(false);
     const [hasLoaded, setHasLoaded] = useState(false);
 
-    // Email states
     const [isEmailDialogOpen, setIsEmailDialogOpen] = useState(false)
     const [recipientEmail, setRecipientEmail] = useState('')
     const [isSendingEmail, setIsSendingEmail] = useState(false)
@@ -63,26 +63,14 @@ export default function InvoiceDetailPage() {
     const invoiceDocRef = useMemoFirebase(() => firestore && invoiceId ? doc(firestore, 'invoices', invoiceId) : null, [firestore, invoiceId])
     const { data: invoice, isLoading: isLoadingInvoice } = useDoc<Invoice>(invoiceDocRef)
     
-    const [customer, setCustomer] = useState<Customer | undefined>();
-
-    const shouldExport = searchParams.get('export') === 'true';
-
-    useEffect(() => {
-        if (customer?.email) setRecipientEmail(customer.email);
-    }, [customer]);
-
     const fetchData = useCallback(async () => {
         if (!firestore || !invoice || hasLoaded) return;
-
         setIsLoadingData(true);
-        
         try {
-            // 1. Carregar Empleats
             const employeesSnap = await getDocs(query(collection(firestore, 'employees')));
             const allEmployees = employeesSnap.docs.map(d => ({ id: d.id, ...d.data() } as Employee));
             setEmployees(allEmployees);
 
-            // 2. Carregar Client
             if (invoice.customerId) {
                 const customerSnap = await getDoc(doc(firestore, 'customers', invoice.customerId));
                 if (customerSnap.exists()) {
@@ -92,88 +80,63 @@ export default function InvoiceDetailPage() {
                 }
             }
 
-            // 3. Carregar Serveis
             const servicesSnapshot = await getDocs(collectionGroup(firestore, 'serviceRecords'));
             const allServicesData = servicesSnapshot.docs.map(d => ({ id: d.id, ...d.data() } as ServiceRecord));
             
             if (invoice.sourceId) {
-                const sourceAlbaranIds = invoice.sourceId.split(',');
+                const sourceIds = invoice.sourceId.split(',');
                 const albaransSnapshot = await getDocs(query(collection(firestore, 'albarans')));
-                const filteredAlbarans = albaransSnapshot.docs
-                    .filter(doc => sourceAlbaranIds.includes(doc.id))
-                    .map(doc => doc.data());
-                
-                const serviceRecordIdsFromAlbarans = filteredAlbarans.flatMap(a => (a as any).serviceRecordIds || []);
-                
-                setServices(allServicesData.filter(s => serviceRecordIdsFromAlbarans.includes(s.id)));
+                const filteredAlbarans = albaransSnapshot.docs.filter(doc => sourceIds.includes(doc.id)).map(doc => doc.data());
+                const recordIds = filteredAlbarans.flatMap(a => (a as any).serviceRecordIds || []);
+                setServices(allServicesData.filter(s => recordIds.includes(s.id)));
             } else {
-                setServices(allServicesData.filter(s => 
-                    s.customerId === invoice.customerId && 
-                    s.projectName === invoice.projectName
-                ));
+                setServices(allServicesData.filter(s => s.customerId === invoice.customerId && s.projectName === invoice.projectName));
             }
             setHasLoaded(true);
         } catch (e) {
-            console.error("Error fetching details:", e);
-            toast({ variant: 'destructive', title: 'Error', description: 'No s\'han pogut carregar les dades de la factura.' });
+            toast({ variant: 'destructive', title: 'Error càrrega' });
         } finally {
             setIsLoadingData(false);
         }
     }, [invoice, firestore, toast, hasLoaded]);
 
     useEffect(() => {
-        if (invoice && !hasLoaded) {
-            fetchData();
-        }
+        if (invoice && !hasLoaded) fetchData();
     }, [invoice, fetchData, hasLoaded]);
 
-
     const generatePDF = async () => {
-        const reportElement = reportRef.current;
-        if (!reportElement) return null;
-
-        const canvas = await html2canvas(reportElement, {
-            scale: 1.0,
-            useCORS: true,
-            logging: false,
-        });
-
-        const imgData = canvas.toDataURL('image/jpeg', 0.4);
-        const pdf = new jsPDF('p', 'mm', 'a4');
+        const element = invoiceRef.current;
+        if (!element) return null;
+        const canvas = await html2canvas(element, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
+        const imgData = canvas.toDataURL('image/jpeg', 0.85);
+        const pdf = new jsPDF('p', 'mm', 'a4', true);
         const pdfWidth = pdf.internal.pageSize.getWidth();
         const pdfHeight = pdf.internal.pageSize.getHeight();
-        const imgWidth = pdfWidth;
-        const imgHeight = (canvas.height * imgWidth) / canvas.width;
-
+        const imgHeight = (canvas.height * pdfWidth) / canvas.width;
         let heightLeft = imgHeight;
         let position = 0;
-
-        pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight, undefined, 'FAST');
+        pdf.addImage(imgData, 'JPEG', 0, position, pdfWidth, imgHeight, undefined, 'FAST');
         heightLeft -= pdfHeight;
-
         while (heightLeft > 0) {
             position = heightLeft - imgHeight;
             pdf.addPage();
-            pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight, undefined, 'FAST');
+            pdf.addImage(imgData, 'JPEG', 0, position, pdfWidth, imgHeight, undefined, 'FAST');
             heightLeft -= pdfHeight;
         }
-
         return pdf;
     };
 
     const handleExportPDF = async () => {
         setIsGenerating(true);
-        toast({ title: 'Generant PDF...', description: 'Processant document.' });
-
+        toast({ title: 'Preparant Factura...' });
         try {
             const pdf = await generatePDF();
             if (pdf) {
-                pdf.save(`Factura-${String(invoice?.invoiceNumber).padStart(4, '0')}.pdf`);
-                toast({ title: 'PDF Generat!', description: 'Exportació finalitzada.' });
+                pdf.save(`Factura-${invoice?.invoiceNumber}-${invoice?.customerName.replace(/\s+/g, '-')}.pdf`);
+                toast({ title: 'Factura generada correctament' });
             }
         } catch (error) {
-            console.error("Error PDF:", error);
-            toast({ variant: 'destructive', title: 'Error', description: 'No s\'ha pogut crear el PDF.' });
+            toast({ variant: 'destructive', title: 'Error PDF' });
         } finally {
             setIsGenerating(false);
         }
@@ -181,202 +144,79 @@ export default function InvoiceDetailPage() {
 
     const handleSendEmail = async () => {
         if (!recipientEmail.trim() || !recipientEmail.includes('@')) {
-            toast({ variant: 'destructive', title: 'E-mail inválido', description: 'Por favor, insira um endereço de e-mail válido.' });
+            toast({ variant: 'destructive', title: 'E-mail invàlid' });
             return;
         }
-
         setIsSendingEmail(true);
-        toast({ title: 'Enviando e-mail...', description: 'Gerando fatura e processando envio.' });
-
         try {
             const pdf = await generatePDF();
-            if (!pdf) throw new Error("Não foi possível gerar o PDF");
-
+            if (!pdf) throw new Error("No s'ha pogut generar");
             const pdfBase64 = pdf.output('datauristring');
-            
             const result = await sendDocumentEmail({
                 to: recipientEmail.trim(),
-                subject: `Factura TS Serveis: #${String(invoice?.invoiceNumber).padStart(4, '0')}`,
-                html: `
-                    <div style="font-family: sans-serif; color: #333;">
-                        <h2>Bon dia,</h2>
-                        <p>Adjuntem la factura corresponent als serveis prestats a l'obra: <strong>${invoice?.projectName}</strong>.</p>
-                        <p>L'import total de la factura és de <strong>${invoice?.totalAmount.toFixed(2)} €</strong>.</p>
-                        <p>Gràcies per la seva confiança.</p>
-                        <br/>
-                        <p><strong>TS Serveis</strong><br/>Solucions Tècniques i Manteniment</p>
-                    </div>
-                `,
-                attachments: [{
-                    filename: `Factura-${String(invoice?.invoiceNumber).padStart(4, '0')}.pdf`,
-                    content: pdfBase64
-                }]
+                subject: `Factura TS Serveis: #${invoice?.invoiceNumber}`,
+                html: `<div style="font-family: sans-serif;"><h2>Factura TS Serveis</h2><p>Adjuntem la factura corresponent als serveis de: <strong>${invoice?.projectName}</strong>.</p><p>Total: <strong>${invoice?.totalAmount.toFixed(2)} €</strong></p><p>Gràcies!</p></div>`,
+                attachments: [{ filename: `Factura-${invoice?.invoiceNumber}.pdf`, content: pdfBase64 }]
             });
-
             if (result.success) {
-                // Actualitzar e-mail a la fitxa de client si era buit
-                if (customer && !customer.email && firestore) {
-                    const customerRef = doc(firestore, 'customers', customer.id);
-                    await updateDoc(customerRef, { email: recipientEmail.trim() });
-                    setCustomer({ ...customer, email: recipientEmail.trim() });
-                    toast({ title: 'E-mail guardado', description: 'O e-mail foi atualizado na ficha do cliente.' });
-                }
-
-                toast({ title: 'E-mail enviado!', description: `A fatura foi enviada para ${recipientEmail}.` });
+                toast({ title: 'Factura enviada!' });
                 setIsEmailDialogOpen(false);
             } else {
-                toast({ variant: 'destructive', title: 'Erro no envio', description: result.error });
+                toast({ variant: 'destructive', title: 'Error', description: result.error });
             }
         } catch (error) {
-            console.error("Error enviant email:", error);
-            toast({ variant: 'destructive', title: 'Erro', description: "Não foi possível enviar o e-mail." });
+            toast({ variant: 'destructive', title: 'Error enviament' });
         } finally {
             setIsSendingEmail(false);
         }
     };
-    
-    useEffect(() => {
-        if (shouldExport && hasLoaded && !isLoadingData && !isGenerating && invoice) {
-            handleExportPDF();
-            router.replace(`/dashboard/invoices/${invoiceId}`, { scroll: false });
-        }
-         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [shouldExport, hasLoaded, isLoadingData, isGenerating, invoice?.id, invoiceId, router]);
 
-
-    const handleDeleteInvoice = () => {
-        if (!invoiceDocRef) return;
-        deleteDocumentNonBlocking(invoiceDocRef);
-        toast({ title: 'Factura eliminada', description: 'S\'ha esborrat correctament.' });
-        router.push('/dashboard/invoices/history');
-    }
-
-    const getStatusVariant = (status: Invoice['status']) => {
-        switch (status) {
-          case 'pagada': return 'default'
-          case 'pendent': return 'destructive'
-          case 'parcialment pagada': return 'secondary'
-          default: return 'outline'
-        }
-    }
-    
-    const isLoading = isUserLoading || isLoadingInvoice || (isLoadingData && !hasLoaded);
-
-    if (isLoading) {
-        return <div className="text-center p-12 flex flex-col items-center justify-center h-[60vh]"><Loader2 className="h-12 w-12 animate-spin text-primary" /><p className="mt-4 text-muted-foreground font-medium">Carregant factura...</p></div>
-    }
-    
-    if (!invoice) {
-        return <p className="p-8 text-center">No s'ha trobat la factura demanada.</p>
+    if (isUserLoading || isLoadingInvoice || (isLoadingData && !hasLoaded)) {
+        return <div className="text-center p-12 h-[60vh] flex flex-col items-center justify-center"><Loader2 className="h-12 w-12 animate-spin text-primary" /><p className="mt-4 font-black uppercase text-slate-400">Carregant Factura...</p></div>
     }
 
     return (
-        <AdminGate pageTitle="Detall de la Factura" pageDescription="Document oficial de facturació.">
-            <div className="space-y-8 max-w-5xl mx-auto pb-10">
+        <AdminGate pageTitle="Detall de la Factura" pageDescription="Gestió oficial de facturació.">
+            <div className="space-y-8 max-w-5xl mx-auto pb-20">
                 <div className="flex justify-between items-center flex-wrap gap-4">
-                    <Button variant="ghost" onClick={() => router.push('/dashboard/invoices/history')} className="font-bold">
-                        <ArrowLeft className="mr-2 h-4 w-4" />
-                        Historial
+                    <Button variant="ghost" onClick={() => router.push('/dashboard/invoices/history')} className="font-bold uppercase text-xs">
+                        <ArrowLeft className="mr-2 h-4 w-4" /> Historial
                     </Button>
                     <div className="flex items-center gap-2 flex-wrap justify-end">
                         <Dialog open={isEmailDialogOpen} onOpenChange={setIsEmailDialogOpen}>
-                            <DialogTrigger asChild>
-                                <Button variant="outline" className="font-bold border-primary text-primary hover:bg-primary/5">
-                                    <Mail className="mr-2 h-4 w-4" /> Correu
-                                </Button>
-                            </DialogTrigger>
-                            <DialogContent>
-                                <DialogHeader>
-                                    <DialogTitle>Enviar Factura por E-mail</DialogTitle>
-                                    <DialogDescription>O PDF será gerado e enviado automaticamente para o cliente.</DialogDescription>
-                                </DialogHeader>
+                            <DialogTrigger asChild><Button variant="outline" className="h-12 rounded-xl border-2 font-bold text-primary border-primary/20"><Mail className="mr-2 h-4 w-4" /> Enviar PDF</Button></DialogTrigger>
+                            <DialogContent className="rounded-3xl">
+                                <DialogHeader><DialogTitle>Enviar Factura</DialogTitle></DialogHeader>
                                 <div className="py-4 space-y-4">
-                                    <div className="space-y-2">
-                                        <Label>E-mail do destinatário</Label>
-                                        <Input 
-                                            type="email" 
-                                            placeholder="cliente@exemplo.com" 
-                                            value={recipientEmail} 
-                                            onChange={(e) => setRecipientEmail(e.target.value)} 
-                                        />
-                                        {!customer?.email && (
-                                            <p className="text-[10px] text-amber-600 font-bold">Nota: Este cliente não possui e-mail cadastrado. O endereço inserido será salvo na ficha do cliente.</p>
-                                        )}
-                                    </div>
+                                    <Label>E-mail del destinatari</Label>
+                                    <Input type="email" value={recipientEmail} onChange={(e) => setRecipientEmail(e.target.value)} className="h-12 rounded-xl font-bold" />
                                 </div>
-                                <DialogFooter>
-                                    <Button variant="outline" onClick={() => setIsEmailDialogOpen(false)}>Cancelar</Button>
-                                    <Button 
-                                        onClick={handleSendEmail} 
-                                        disabled={isSendingEmail} 
-                                        className="bg-primary font-bold"
-                                    >
-                                        {isSendingEmail ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
-                                        Enviar Factura
-                                    </Button>
-                                </DialogFooter>
+                                <DialogFooter><Button onClick={handleSendEmail} disabled={isSendingEmail} className="bg-primary font-bold h-12 w-full">{isSendingEmail ? <Loader2 className="animate-spin mr-2" /> : <Send className="mr-2 h-4 w-4" />} Enviar</Button></DialogFooter>
                             </DialogContent>
                         </Dialog>
 
-                        <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                                <Button variant="destructive" className="font-bold">
-                                    <Trash2 className="mr-2 h-4 w-4" /> Eliminar
-                                </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                                <AlertDialogHeader>
-                                <AlertDialogTitle>Vols eliminar la factura?</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                    Aquesta acció esborrarà la factura #{invoice.invoiceNumber} de forma permanent.
-                                </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                <AlertDialogCancel>Cancel·lar</AlertDialogCancel>
-                                <AlertDialogAction onClick={handleDeleteInvoice} className="bg-destructive">Eliminar definitivament</AlertDialogAction>
-                                </AlertDialogFooter>
-                            </AlertDialogContent>
-                        </AlertDialog>
-                        
-                         {invoice.status !== 'pagada' && (
-                            <Button variant="outline" onClick={() => router.push(`/dashboard/receipts/new?invoiceId=${invoice.id}`)} className="font-bold">
-                                <CreditCard className="mr-2 h-4 w-4" />
-                                Pagar
-                            </Button>
-                        )}
-
-                        <Button
-                            onClick={handleExportPDF}
-                            disabled={isGenerating || isLoading}
-                            className="bg-primary font-bold"
-                        >
-                            {isGenerating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileDown className="mr-2 h-4 w-4" />}
-                            PDF LLEUGER
+                        <Button onClick={handleExportPDF} disabled={isGenerating} className="bg-slate-900 h-12 px-8 rounded-xl font-black uppercase text-xs text-white shadow-xl">
+                            {isGenerating ? <Loader2 className="animate-spin mr-2" /> : <FileDown className="mr-2 h-4 w-4" />} EXPORTAR PDF
                         </Button>
                     </div>
                 </div>
                 
-                <Card className="shadow-xl border-none">
-                    <CardHeader className="bg-slate-900 text-white rounded-t-lg">
-                        <div className="flex justify-between items-start">
-                            <div>
-                                <CardTitle className="text-2xl">Factura #{String(invoice.invoiceNumber).padStart(4, '0')}</CardTitle>
-                                <CardDescription className="text-slate-400">Obra: {invoice.projectName}</CardDescription>
-                            </div>
-                            <Badge variant={getStatusVariant(invoice.status)} className="capitalize text-sm px-4">
-                                {invoice.status}
-                            </Badge>
+                <Card className="shadow-2xl border-none rounded-[2.5rem] overflow-hidden">
+                    <CardHeader className="bg-slate-900 text-white p-8">
+                        <div className="flex justify-between items-center">
+                            <CardTitle className="text-3xl font-black uppercase tracking-tight">Factura #{String(invoice?.invoiceNumber).padStart(4, '0')}</CardTitle>
+                            <Badge className="bg-green-600 uppercase font-black px-4">{invoice?.status}</Badge>
                         </div>
                     </CardHeader>
-                    <CardContent className="p-0">
+                    <CardContent className="p-0 bg-slate-100">
                         <InvoicePreview
-                            ref={reportRef}
+                            ref={invoiceRef}
                             customer={customer}
-                            projectName={invoice.projectName}
-                            invoiceNumber={invoice.invoiceNumber}
+                            projectName={invoice?.projectName || ''}
+                            invoiceNumber={invoice?.invoiceNumber}
                             services={services}
                             employees={employees}
-                            applyIva={invoice.applyIva}
+                            applyIva={invoice?.applyIva}
                         />
                     </CardContent>
                 </Card>

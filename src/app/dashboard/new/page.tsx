@@ -1,3 +1,4 @@
+
 'use client'
 
 import { useState, useMemo, useEffect } from 'react'
@@ -59,46 +60,26 @@ export default function NewServicePage() {
 
   const activeProjects = useMemo(() => {
       if (!allProjects) return [];
-      const filtered = allProjects.filter(p => p.status === 'active');
-      const seen = new Set();
-      return filtered.filter(p => {
-          const nameKey = p.name.toLowerCase().trim().replace(/\s+/g, ' ');
-          if (seen.has(nameKey)) return false;
-          seen.add(nameKey);
-          return true;
-      }).sort((a, b) => a.name.localeCompare(b.name));
+      return allProjects.filter(p => p.status === 'active').sort((a, b) => a.name.localeCompare(b.name, 'ca'));
   }, [allProjects]);
-
-  const uniqueCustomers = useMemo(() => {
-    if (!customers) return [];
-    const seen = new Set();
-    return customers.filter(c => {
-      const nameKey = c.name.toLowerCase().trim().replace(/[^a-z0-9]/g, '');
-      if (seen.has(nameKey)) return false;
-      seen.add(nameKey);
-      return true;
-    }).sort((a, b) => a.name.localeCompare(b.name));
-  }, [customers]);
 
   const handleCreateProject = async () => {
       if (!firestore || !newProjectName.trim() || selectedCustomerId === 'none') return;
       setIsCreatingProject(true);
       try {
-          const customer = uniqueCustomers.find(c => c.id === selectedCustomerId);
-          const projectRef = await addDoc(collection(firestore, 'projects'), {
+          const customer = customers?.find(c => c.id === selectedCustomerId);
+          await addDoc(collection(firestore, 'projects'), {
               name: newProjectName.trim(),
               customerId: selectedCustomerId,
               customerName: customer?.name || 'N/A',
               status: 'active',
               createdAt: new Date().toISOString()
           });
-          toast({ title: "Obra creada", description: "S'ha afegit la nova obra correctament." });
-          setSelectedProjectId(projectRef.id);
+          toast({ title: "Obra creada" });
           setIsNewProjectDialogOpen(false);
           setNewProjectName('');
       } catch (e) {
-          console.error(e);
-          toast({ variant: 'destructive', title: "Error", description: "No s'ha pogut crear l'obra." });
+          toast({ variant: 'destructive', title: "Error" });
       } finally {
           setIsCreatingProject(false);
       }
@@ -109,28 +90,23 @@ export default function NewServicePage() {
     setIsTranslating(true);
     try {
         const result = await translateToCatalan({ text: description });
-        setDescription(result.translatedText);
-        toast({ title: "Traducció completada" });
+        if (result && result.translatedText) {
+            setDescription(result.translatedText);
+            toast({ title: "Traducció feta" });
+        }
     } catch (e) {
-        console.error(e);
-        toast({ variant: 'destructive', title: "Error en la traducció" });
+        toast({ variant: 'destructive', title: "Error traducció" });
     } finally {
         setIsTranslating(false);
     }
   };
 
   const handleStartService = async () => {
-    if (!user || !firestore || !currentEmployee) {
-        toast({ variant: "destructive", title: "Error", description: "No s'han pogut carregar les dades de l'usuari." });
-        return;
-    }
-    
+    if (!user || !firestore || !currentEmployee) return;
     setIsStarting(true);
-
     try {
-        const selectedCustomer = uniqueCustomers?.find(c => c.id === selectedCustomerId);
+        const selectedCustomer = customers?.find(c => c.id === selectedCustomerId);
         const selectedProject = activeProjects?.find(p => p.id === selectedProjectId);
-        
         const now = new Date();
         const serviceRecord: Omit<ServiceRecord, 'id'> = {
             employeeId: currentEmployee.id,
@@ -141,8 +117,8 @@ export default function NewServicePage() {
             projectName: selectedProject?.name.trim() || '',
             projectId: selectedProjectId !== 'none' ? selectedProjectId : '',
             pendingTasks: '',
-            customerId: selectedCustomerId !== 'none' ? selectedCustomer?.id || '' : '',
-            customerName: selectedCustomerId !== 'none' ? selectedCustomer?.name || '' : '',
+            customerId: selectedCustomerId !== 'none' ? selectedCustomerId : '',
+            customerName: selectedCustomer?.name || '',
             serviceHourlyRate: currentEmployee.hourlyRate,
             media: [],
             albarans: [],
@@ -150,106 +126,59 @@ export default function NewServicePage() {
             createdAt: now.toISOString(),
             isLunchSubtracted: true
         };
-        
-        const serviceRecordsCollection = collection(firestore, `employees/${currentEmployee.id}/serviceRecords`);
-        const docRef = await addDoc(serviceRecordsCollection, serviceRecord);
-        
-        toast({ 
-            title: `Servei iniciat!`,
-            description: "S'ha obert un nou registre de treball.",
-        });
-        
+        const docRef = await addDoc(collection(firestore, `employees/${currentEmployee.id}/serviceRecords`), serviceRecord);
+        toast({ title: "Servei iniciat" });
         router.push(`/dashboard/edit/${docRef.id}?ownerId=${currentEmployee.id}`);
-
     } catch (error) {
-        console.error("Error al crear el registre:", error);
         setIsStarting(false);
-        toast({ variant: "destructive", title: "Error", description: "No s'ha pogut iniciar el servei." });
+        toast({ variant: "destructive", title: "Error" });
     }
   };
   
-  const isDataLoading = isUserLoading || isLoadingEmployee || isLoadingCustomers;
-
-  if (!user && !isUserLoading) {
-    return (
-      <div className="max-w-2xl mx-auto flex items-center justify-center h-[70vh] px-4">
-        <Card className="text-center w-full shadow-lg rounded-3xl overflow-hidden">
-          <CardHeader className="p-8 bg-slate-900 text-white">
-            <CardTitle>Inicia Sessió</CardTitle>
-            <CardDescription>Necessites accés per registrar serveis.</CardDescription>
-          </CardHeader>
-          <CardContent className="p-10">
-             <Button asChild className="bg-primary text-white h-14 px-10 rounded-2xl font-black uppercase tracking-tight">
-                <Link href="/">Anar al Portal</Link>
-              </Button>
-          </CardContent>
-        </Card>
-      </div>
-    )
-  }
+  if (!user && !isUserLoading) return <div className="p-12 text-center"><Button asChild><Link href="/">Anar al Login</Link></Button></div>;
 
   return (
       <div className="max-w-2xl mx-auto flex items-center justify-center min-h-[80vh] py-10 px-4">
         <Card className="w-full shadow-2xl border-none rounded-3xl overflow-hidden">
-          <CardHeader className="bg-slate-900 text-white p-6 sm:p-8 text-center">
-            <CardTitle className="text-2xl sm:text-3xl font-black uppercase tracking-tight">Nou Registre</CardTitle>
-            <CardDescription className="text-slate-400 font-medium">Comença un nou treball per a un client.</CardDescription>
+          <CardHeader className="bg-slate-900 text-white p-8 text-center space-y-2">
+            <CardTitle className="text-3xl font-black uppercase tracking-tight">Nou Registre</CardTitle>
+            <CardDescription className="text-slate-400 font-medium">Comença un nou treball.</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-8 pt-8 sm:pt-10 px-6 sm:p-10">
+          <CardContent className="space-y-8 pt-10 px-6 sm:px-10">
               <div className="space-y-6">
                 <div className="space-y-2">
-                    <Label htmlFor="customerId" className="flex items-center gap-2 font-black uppercase text-[10px] text-slate-400 tracking-widest pl-1"><Users className="h-3 w-3" /> Client</Label>
+                    <Label className="flex items-center gap-2 font-black uppercase text-[10px] text-slate-400 tracking-widest pl-1"><Users className="h-3 w-3" /> Client</Label>
                     <Select value={selectedCustomerId} onValueChange={(val) => { setSelectedCustomerId(val); setSelectedProjectId('none'); }}>
-                    <SelectTrigger id="customerId" className="h-14 rounded-2xl border-2 font-bold bg-slate-50">
-                        <SelectValue placeholder={isLoadingCustomers ? "Carregant..." : "Selecciona un client"} />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="none">Cap client</SelectItem>
-                        {uniqueCustomers?.map(c => (
-                        <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                        ))}
-                    </SelectContent>
+                        <SelectTrigger className="h-14 rounded-2xl border-2 font-bold bg-slate-50">
+                            <SelectValue placeholder="Selecciona un client" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="none">Cap client</SelectItem>
+                            {customers?.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                        </SelectContent>
                     </Select>
                 </div>
 
                 {selectedCustomerId !== 'none' && (
                     <div className="space-y-2">
                         <div className="flex justify-between items-center px-1">
-                            <Label htmlFor="projectId" className="flex items-center gap-2 font-black uppercase text-[10px] text-slate-400 tracking-widest"><Briefcase className="h-3 w-3" /> Obra / Projecte</Label>
+                            <Label className="flex items-center gap-2 font-black uppercase text-[10px] text-slate-400 tracking-widest"><Briefcase className="h-3 w-3" /> Obra / Projecte</Label>
                             <Dialog open={isNewProjectDialogOpen} onOpenChange={setIsNewProjectDialogOpen}>
-                                <DialogTrigger asChild>
-                                    <button className="text-[10px] font-black text-primary hover:underline uppercase">+ NOVA OBRA</button>
-                                </DialogTrigger>
+                                <DialogTrigger asChild><button className="text-[10px] font-black text-primary hover:underline uppercase">+ NOVA OBRA</button></DialogTrigger>
                                 <DialogContent className="rounded-3xl">
-                                    <DialogHeader>
-                                        <DialogTitle>Nova Obra</DialogTitle>
-                                        <DialogDescription>Afegeix una nova obra activa per a aquest client.</DialogDescription>
-                                    </DialogHeader>
-                                    <div className="py-4">
-                                        <Input 
-                                            placeholder="Nom de l'obra" 
-                                            value={newProjectName}
-                                            onChange={(e) => setNewProjectName(e.target.value)}
-                                            className="h-12 rounded-xl font-bold"
-                                        />
-                                    </div>
-                                    <DialogFooter>
-                                        <Button variant="outline" onClick={() => setIsNewProjectDialogOpen(false)}>Enrere</Button>
-                                        <Button onClick={handleCreateProject} disabled={isCreatingProject || !newProjectName.trim()} className="bg-primary font-bold">Crear Obra</Button>
-                                    </DialogFooter>
+                                    <DialogHeader><DialogTitle>Nova Obra</DialogTitle></DialogHeader>
+                                    <div className="py-4"><Input placeholder="Nom de l'obra" value={newProjectName} onChange={(e) => setNewProjectName(e.target.value)} className="h-12 rounded-xl font-bold" /></div>
+                                    <DialogFooter><Button onClick={handleCreateProject} disabled={isCreatingProject || !newProjectName.trim()} className="bg-primary font-bold">Crear</Button></DialogFooter>
                                 </DialogContent>
                             </Dialog>
                         </div>
-                        <Select value={selectedProjectId} onValueChange={setSelectedProjectId} disabled={isLoadingProjects}>
-                            <SelectTrigger id="projectId" className="h-14 rounded-2xl border-2 font-bold bg-slate-50">
-                                <SelectValue placeholder={isLoadingProjects ? "Carregant obres..." : "Selecciona una obra activa"} />
+                        <Select value={selectedProjectId} onValueChange={setSelectedProjectId}>
+                            <SelectTrigger className="h-14 rounded-2xl border-2 font-bold bg-slate-50">
+                                <SelectValue placeholder="Selecciona obra..." />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="none">Selecciona una obra...</SelectItem>
-                                {activeProjects?.map(p => (
-                                    <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                                ))}
-                                {activeProjects?.length === 0 && <SelectItem value="none" disabled>No hi ha obres actives</SelectItem>}
+                                <SelectItem value="none">Cap obra seleccionada</SelectItem>
+                                {activeProjects.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
                             </SelectContent>
                         </Select>
                     </div>
@@ -257,37 +186,18 @@ export default function NewServicePage() {
 
                 <div className="space-y-2">
                     <div className="flex justify-between items-center px-1">
-                        <Label htmlFor="description" className="flex items-center gap-2 font-black uppercase text-[10px] text-slate-400 tracking-widest"><FileText className="h-3 w-3" /> Què faràs? (Opcional)</Label>
-                        <Button 
-                            type="button" 
-                            variant="ghost" 
-                            size="sm" 
-                            onClick={handleTranslate} 
-                            disabled={isTranslating || !description.trim()}
-                            className="text-primary hover:text-primary/80 font-black text-[10px] uppercase gap-1.5"
-                        >
-                            {isTranslating ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
-                            Traduir (IA)
+                        <Label className="flex items-center gap-2 font-black uppercase text-[10px] text-slate-400 tracking-widest"><FileText className="h-3 w-3" /> Descripció del treball</Label>
+                        <Button type="button" variant="ghost" size="sm" onClick={handleTranslate} disabled={isTranslating || !description.trim()} className="text-primary font-black text-[10px] uppercase gap-1">
+                            {isTranslating ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />} Traduir (IA)
                         </Button>
                     </div>
-                    <Textarea 
-                        id="description"
-                        placeholder="Ex: Instal·lació de caldera, revisió de tubs..." 
-                        value={description}
-                        onChange={(e) => setDescription(e.target.value)}
-                        className="rounded-2xl border-2 font-medium bg-slate-50 min-h-[100px]"
-                    />
+                    <Textarea placeholder="Què has de fer avui?" value={description} onChange={(e) => setDescription(e.target.value)} className="rounded-2xl border-2 font-medium bg-slate-50 min-h-[120px] text-lg" />
                 </div>
               </div>
 
-              <Button 
-                  size="lg" 
-                  className="w-full h-20 text-xl font-black uppercase tracking-tighter bg-accent hover:bg-accent/90 text-accent-foreground rounded-[2rem] shadow-xl hover:scale-[1.02] transition-transform mt-4"
-                  onClick={handleStartService}
-                  disabled={isDataLoading || isStarting}
-              >
-                  {isDataLoading ? <Loader2 className="mr-3 h-8 w-8 animate-spin" /> : <MapPin className="mr-3 h-8 w-8" />}
-                  {isDataLoading ? "CARREGANT..." : (isStarting ? "INICIANT..." : "INICIAR SERVEI")}
+              <Button size="lg" className="w-full h-20 text-xl font-black uppercase tracking-tight bg-accent hover:bg-accent/90 text-accent-foreground rounded-3xl shadow-xl hover:scale-[1.02] transition-transform" onClick={handleStartService} disabled={isStarting || isLoadingEmployee}>
+                  {isStarting ? <Loader2 className="mr-3 h-8 w-8 animate-spin" /> : <MapPin className="mr-3 h-8 w-8" />}
+                  INICIAR SERVEI
               </Button>
           </CardContent>
         </Card>
