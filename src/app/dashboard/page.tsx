@@ -5,7 +5,7 @@ import { useState, useMemo, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
-import { PlusCircle, Calendar as CalendarIcon, User, Edit, Trash2, Briefcase, Filter, History, Search, X, Download, AlertTriangle, ShieldCheck, Loader2 } from 'lucide-react'
+import { PlusCircle, Calendar as CalendarIcon, User, Edit, Trash2, Briefcase, Filter, History, Search, X, Download, AlertTriangle, Loader2 } from 'lucide-react'
 import type { ServiceRecord, Employee } from '@/lib/types'
 import { useUser, useFirestore, updateDocumentNonBlocking, useDoc, useMemoFirebase } from '@/firebase';
 import { collection, query, orderBy, getDocs, collectionGroup, doc, getDoc, setDoc } from 'firebase/firestore';
@@ -33,7 +33,7 @@ import {
 import { useToast } from "@/hooks/use-toast"
 
 const userColors = [
-  '#3b82f6', '#ef4444', '#10b981', '#f97316', '#8b5cf6', '#ec4899', '#f59e0b', '#14b8a6'
+  '#005691', '#E31E24', '#10b981', '#f97316', '#8b5cf6', '#ec4899', '#FFD700', '#14b8a6'
 ];
 
 const getUserColor = (userId: string) => {
@@ -109,7 +109,7 @@ export default function DashboardPage() {
             createdAt: new Date().toISOString(),
             data: JSON.stringify(data),
             createdBy: user.uid
-        });
+        }, { merge: true });
 
         localStorage.setItem('last_backup_date', today);
         setNeedsBackup(false);
@@ -159,7 +159,10 @@ export default function DashboardPage() {
   const projectNames = useMemo(() => {
     const names = allServices.map(s => s.projectName?.trim()).filter(Boolean);
     const unique = Array.from(new Set(names));
-    return unique.sort((a, b) => a.localeCompare(b, 'ca'));
+    return unique.sort((a, b) => {
+        if (!a || !b) return 0;
+        return a.localeCompare(b, 'ca');
+    });
   }, [allServices]);
 
   const filteredServices = useMemo(() => {
@@ -231,12 +234,12 @@ export default function DashboardPage() {
   return (
     <div className="max-w-7xl mx-auto space-y-8 md:space-y-12 px-4 md:px-8 pb-20">
       {needsBackup && (
-          <div className="bg-accent/15 border-2 border-accent/30 p-6 rounded-3xl flex flex-col md:flex-row items-center justify-between gap-6 shadow-xl animate-in slide-in-from-top">
+          <div className="bg-accent/10 border-2 border-accent p-6 rounded-[2.5rem] flex flex-col md:flex-row items-center justify-between gap-6 shadow-xl animate-in slide-in-from-top">
               <div className="flex items-center gap-4">
-                  <div className="bg-accent p-3 rounded-2xl shadow-lg"><AlertTriangle className="h-6 w-6 text-accent-foreground" /></div>
+                  <div className="bg-accent p-3 rounded-2xl shadow-lg"><AlertTriangle className="h-6 w-6 text-primary" /></div>
                   <div>
-                      <p className="font-black text-slate-900 uppercase">Còpia de Seguretat Recomanada</p>
-                      <p className="text-xs text-slate-500 font-bold uppercase">S'ha detectat activitat nova. Descarrega una còpia local.</p>
+                      <p className="font-black text-primary uppercase text-sm">Còpia de Seguretat Recomanada</p>
+                      <p className="text-[10px] text-slate-500 font-bold uppercase">S'ha detectat activitat nova. Descarrega una còpia local ara mateix.</p>
                   </div>
               </div>
               <Button onClick={handleBackup} disabled={isExporting} className="bg-primary h-14 px-10 rounded-2xl shadow-xl font-black uppercase text-xs">
@@ -248,41 +251,41 @@ export default function DashboardPage() {
 
       <div className="flex flex-col md:flex-row items-start md:items-end justify-between gap-6">
         <div className="space-y-1">
-          <h1 className="text-4xl md:text-6xl font-black tracking-tighter leading-none text-slate-900 uppercase">REGISTRES DE<br />TREBALL</h1>
-          <p className="text-slate-400 font-bold uppercase text-[10px] tracking-[0.2em]">Supervisió de serveis realitzats per l'equip.</p>
+          <h1 className="text-4xl md:text-6xl font-black tracking-tighter leading-none text-primary uppercase">REGISTRES DE<br /><span className="text-accent">TREBALL</span></h1>
+          <p className="text-slate-400 font-bold uppercase text-[10px] tracking-[0.2em] pl-1">Supervisió detallada dels serveis realitzats per l'equip.</p>
         </div>
-        <div className="flex gap-2 w-full md:w-auto">
-            <Button asChild variant="outline" className="h-14 border-2 border-slate-200 text-slate-500 font-black uppercase tracking-widest rounded-2xl text-xs px-6">
+        <div className="flex gap-3 w-full md:w-auto">
+            <Button asChild variant="outline" className="h-14 border-2 border-slate-200 text-slate-500 font-black uppercase tracking-widest rounded-2xl text-[10px] px-6">
                 <Link href="/dashboard/trash"><History className="mr-2 h-4 w-4" />Paperera</Link>
             </Button>
-            <Button asChild className="h-14 bg-accent hover:bg-accent/90 text-accent-foreground flex-1 md:flex-none font-black uppercase tracking-widest rounded-2xl shadow-xl text-xs px-8">
-                <Link href="/dashboard/new"><PlusCircle className="mr-2 h-5 w-5" />Nou Servei</Link>
+            <Button asChild className="h-14 bg-accent hover:bg-accent/90 text-primary flex-1 md:flex-none font-black uppercase tracking-widest rounded-2xl shadow-xl text-[10px] px-8 border-b-4 border-primary/20">
+                <Link href="/dashboard/new"><PlusCircle className="mr-2 h-5 w-5" />Nou Registre</Link>
             </Button>
         </div>
       </div>
       
-      <Card className="border-none shadow-2xl rounded-[2.5rem] bg-white overflow-hidden">
+      <Card className="border-none shadow-2xl rounded-[2.5rem] bg-white overflow-hidden border-t-8 border-primary">
           <CardHeader className="bg-slate-50/50 p-8 border-b border-slate-100 space-y-6">
               <div className="flex justify-between items-center">
-                  <div className="flex items-center gap-3 text-slate-900">
-                      <Filter className="h-6 w-6 text-primary" />
-                      <CardTitle className="text-xl font-black uppercase tracking-tight">Filtres de Supervisió</CardTitle>
+                  <div className="flex items-center gap-3 text-primary">
+                      <Filter className="h-6 w-6" />
+                      <CardTitle className="text-xl font-black uppercase tracking-tight">Filtres de Control</CardTitle>
                   </div>
                   {selectedRows.length > 0 && (
                       <AlertDialog>
                           <AlertDialogTrigger asChild>
-                              <Button variant="destructive" className="font-black uppercase h-10 px-6 rounded-xl shadow-lg text-[10px]">
+                              <Button variant="destructive" className="font-black uppercase h-10 px-6 rounded-xl shadow-lg text-[10px] bg-destructive hover:bg-destructive/90">
                                   <Trash2 className="mr-2 h-4 w-4" /> Esborrar ({selectedRows.length})
                               </Button>
                           </AlertDialogTrigger>
                           <AlertDialogContent className="rounded-[2.5rem] p-10">
                               <AlertDialogHeader>
-                                  <AlertDialogTitle className="text-2xl font-black uppercase">Moure a la paperera?</AlertDialogTitle>
-                                  <AlertDialogDescription className="font-medium text-base">Podràs recuperar aquests registres més tard si cal.</AlertDialogDescription>
+                                  <AlertDialogTitle className="text-2xl font-black uppercase text-primary">Moure a la paperera?</AlertDialogTitle>
+                                  <AlertDialogDescription className="font-medium text-base text-slate-500">Aquests registres podran ser recuperats més tard si cal.</AlertDialogDescription>
                               </AlertDialogHeader>
                               <AlertDialogFooter className="pt-6">
                                   <AlertDialogCancel className="h-14 rounded-2xl font-bold border-2">Enrere</AlertDialogCancel>
-                                  <AlertDialogAction onClick={handleMoveToTrash} className="bg-red-600 h-14 rounded-2xl font-black uppercase tracking-widest px-8">Confirmar</AlertDialogAction>
+                                  <AlertDialogAction onClick={handleMoveToTrash} className="bg-destructive h-14 rounded-2xl font-black uppercase tracking-widest px-8">Confirmar</AlertDialogAction>
                               </AlertDialogFooter>
                           </AlertDialogContent>
                       </AlertDialog>
@@ -290,9 +293,9 @@ export default function DashboardPage() {
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                   <div className="space-y-1.5">
-                      <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-1">Tècnic</label>
+                      <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-1">Tècnic Responsable</label>
                       <Select value={selectedUser} onValueChange={setSelectedUser}>
-                          <SelectTrigger className="h-14 rounded-2xl border-2 font-bold bg-white text-xs">
+                          <SelectTrigger className="h-14 rounded-2xl border-2 font-bold bg-white text-xs text-primary">
                               <User className="mr-2 h-4 w-4 text-slate-300" />
                               <SelectValue placeholder="Tots els Tècnics" />
                           </SelectTrigger>
@@ -303,10 +306,10 @@ export default function DashboardPage() {
                       </Select>
                   </div>
                   <div className="space-y-1.5">
-                      <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-1">Data de Servei</label>
+                      <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-1">Data de Realització</label>
                       <Popover>
                           <PopoverTrigger asChild>
-                              <Button variant="outline" className="w-full justify-start text-left font-bold border-2 h-14 rounded-2xl bg-white text-xs">
+                              <Button variant="outline" className="w-full justify-start text-left font-bold border-2 h-14 rounded-2xl bg-white text-xs text-primary">
                                   <CalendarIcon className="mr-2 h-4 w-4 text-slate-300" />
                                   {selectedDate ? format(selectedDate, "PPP", { locale: ca }) : <span>Tria una data</span>}
                               </Button>
@@ -315,9 +318,9 @@ export default function DashboardPage() {
                       </Popover>
                   </div>
                   <div className="space-y-1.5">
-                      <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-1">Obra / Projecte</label>
+                      <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-1">Projecte / Obra</label>
                       <Select value={selectedProject} onValueChange={setSelectedProject}>
-                          <SelectTrigger className="h-14 rounded-2xl border-2 font-bold bg-white text-xs">
+                          <SelectTrigger className="h-14 rounded-2xl border-2 font-bold bg-white text-xs text-primary">
                               <Briefcase className="mr-2 h-4 w-4 text-slate-300" />
                               <SelectValue placeholder="Totes les Obres" />
                           </SelectTrigger>
@@ -352,21 +355,21 @@ export default function DashboardPage() {
                                   <TableCell className="px-8"><Checkbox checked={selectedRows.includes(service.id)} onCheckedChange={c => setSelectedRows(prev => c ? [...prev, service.id] : prev.filter(id => id !== service.id))} /></TableCell>
                                   <TableCell>
                                       <div className="flex items-center gap-3">
-                                          <div className="h-3 w-3 rounded-full shadow-sm" style={{ backgroundColor: getUserColor(service.employeeId) }} />
+                                          <div className="h-3 w-3 rounded-full shadow-sm border border-black/10" style={{ backgroundColor: getUserColor(service.employeeId) }} />
                                           <span className="font-black text-xs text-slate-900 uppercase tracking-tight">{service.employeeName || 'Tècnic'}</span>
                                       </div>
                                   </TableCell>
                                   <TableCell className="font-bold text-slate-500 text-xs">{format(parseISO(service.arrivalDateTime), 'dd/MM/yy HH:mm')}</TableCell>
-                                  <TableCell className="font-black text-slate-900 uppercase text-xs truncate max-w-[200px]">{service.projectName || 'SENSE NOM'}</TableCell>
+                                  <TableCell className="font-black text-primary uppercase text-xs truncate max-w-[200px]">{service.projectName || 'SENSE NOM'}</TableCell>
                                   <TableCell className="text-right px-8">
-                                      <Button variant="outline" size="sm" asChild className="h-10 px-5 border-2 rounded-xl font-black uppercase text-[10px] tracking-widest hover:border-primary hover:text-primary transition-all">
+                                      <Button variant="outline" size="sm" asChild className="h-10 px-5 border-2 rounded-xl font-black uppercase text-[10px] tracking-widest border-primary/20 text-primary hover:bg-primary hover:text-white transition-all">
                                           <Link href={`/dashboard/edit/${service.id}?ownerId=${service.employeeId}`}><Edit className="h-3.5 w-3.5 mr-2" />Editar</Link>
                                       </Button>
                                   </TableCell>
                               </TableRow>
                           ))}
                           {filteredServices.length === 0 && (
-                              <TableRow><TableCell colSpan={5} className="h-64 text-center opacity-30 grayscale"><Search className="h-12 w-12 mx-auto mb-4" /><p className="font-black uppercase text-xs italic">No s'han trobat registres.</p></TableCell></TableRow>
+                              <TableRow><TableCell colSpan={5} className="h-64 text-center opacity-30 grayscale"><Search className="h-12 w-12 mx-auto mb-4" /><p className="font-black uppercase text-xs italic">No s'han trobat registres segons els filtres.</p></TableCell></TableRow>
                           )}
                       </TableBody>
                   </Table>

@@ -15,5 +15,6 @@ export const BRANDING = {
   email: "eg.ad.tecnica@gmail.com",
   logoPath: "/logo.png",
   primaryColor: "#005691", // Azul Corporativo
-  accentColor: "#FFD700"   // Amarelo Vibrante
+  accentColor: "#FFD700",  // Amarelo Vibrante
+  secondaryColor: "#E31E24" // Vermelho Corporativo
 };
