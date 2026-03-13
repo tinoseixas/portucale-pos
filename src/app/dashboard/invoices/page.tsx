@@ -1,3 +1,4 @@
+
 'use client'
 
 import { useMemo, useState, useEffect, useCallback, Suspense } from 'react'
@@ -42,7 +43,6 @@ function InvoicesPageContent() {
     const employeesQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'employees'), orderBy('firstName', 'asc')) : null, [firestore]);
     const { data: employees, isLoading: isLoadingEmployees } = useCollection<Employee>(employeesQuery);
 
-    // Deduplicate customers by name for the select list
     const uniqueCustomers = useMemo(() => {
         if (!customers) return [];
         const seen = new Set();
@@ -178,7 +178,7 @@ function InvoicesPageContent() {
             await batch.commit();
 
             toast({
-                title: "Factura Generada",
+                title: "Factura generada",
                 description: `L'obra ha estat facturada correctament.`,
             });
             
@@ -203,16 +203,16 @@ function InvoicesPageContent() {
     }
 
     return (
-        <AdminGate pageTitle="Generador de Factures" pageDescription="Crea factures oficials a partir d'albarans d'obra.">
+        <AdminGate pageTitle="Generador de factures" pageDescription="Crea factures oficials a partir d'albarans d'obra.">
             <div className="space-y-8 max-w-7xl mx-auto">
                  <Card className="shadow-lg">
                     <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center sm:justify-between gap-4 border-b bg-slate-50/50">
                         <div>
-                            <CardTitle className="text-2xl font-bold">Generador de Factures</CardTitle>
+                            <CardTitle className="text-2xl font-bold">Generador de factures</CardTitle>
                             <CardDescription>Selecciona un client i els albarans pendents.</CardDescription>
                         </div>
                          <Button variant="outline" onClick={() => router.push('/dashboard/invoices/history')} className="font-bold">
-                            <FileArchive className="mr-2 h-4 w-4" /> Historial de Factures
+                            <FileArchive className="mr-2 h-4 w-4" /> Historial de factures
                         </Button>
                     </CardHeader>
                     <CardContent className="space-y-6 pt-6">
@@ -230,7 +230,7 @@ function InvoicesPageContent() {
                                 </Select>
                             </div>
                             <div className="space-y-2">
-                                <Label className="flex items-center gap-2 font-bold"><Briefcase className="h-4 w-4 text-primary" /> Nom de l'Obra</Label>
+                                <Label className="flex items-center gap-2 font-bold"><Briefcase className="h-4 w-4 text-primary" /> Nom de l'obra</Label>
                                 <Input 
                                     placeholder="Nom del projecte"
                                     value={projectName}
@@ -287,11 +287,11 @@ function InvoicesPageContent() {
                         <div className="flex justify-end pt-4 gap-3 flex-wrap">
                              <Button onClick={() => handleSaveInvoice(false)} disabled={isSaving || servicesForInvoice.length === 0} variant="outline" className="h-12 px-6 font-bold">
                                 {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                                Desar Factura
+                                Desar factura
                             </Button>
-                             <Button onClick={() => handleSaveInvoice(true)} disabled={isSaving || servicesForInvoice.length === 0} className="bg-primary hover:bg-primary/90 h-12 px-8 font-black shadow-lg">
+                             <Button onClick={() => handleSaveInvoice(true)} disabled={isSaving || servicesForInvoice.length === 0} className="bg-primary hover:bg-primary/90 h-12 px-8 font-bold shadow-lg">
                                 {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileDown className="mr-2 h-4 w-4" />}
-                                Generar i Exportar PDF
+                                Generar i exportar PDF
                             </Button>
                         </div>
                     </CardContent>
@@ -300,7 +300,7 @@ function InvoicesPageContent() {
                 {servicesForInvoice.length > 0 && (
                     <Card className="border-2 border-primary/10 shadow-xl overflow-hidden">
                         <CardHeader className="bg-slate-900 text-white">
-                            <CardTitle className="text-lg">Previsualització del Document</CardTitle>
+                            <CardTitle className="text-lg">Previsualització del document</CardTitle>
                         </CardHeader>
                         <CardContent className="p-0 bg-slate-100">
                            <InvoicePreview
