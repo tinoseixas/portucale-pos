@@ -1,3 +1,4 @@
+
 'use client'
 
 import { useMemo, useState } from 'react'
@@ -80,13 +81,6 @@ export default function AlbaransHistoryPage() {
     const albaranRef = doc(firestore, 'albarans', albaranId);
     deleteDocumentNonBlocking(albaranRef);
     toast({ title: 'Document esborrat', description: `L'albarà #${albaranNumber} s'ha eliminat.` });
-  }
-
-  const handleArchiveAlbaran = (albaranId: string) => {
-    if (!firestore) return;
-    const albaranRef = doc(firestore, 'albarans', albaranId);
-    updateDocumentNonBlocking(albaranRef, { status: 'arxivat' });
-    toast({ title: 'Albarà arxivat' });
   }
 
   const handleSyncAlbarans = async () => {
