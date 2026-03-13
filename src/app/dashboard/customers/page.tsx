@@ -1,10 +1,11 @@
+
 'use client'
 
 import { useMemo, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { useCollection, useUser, useFirestore, useMemoFirebase } from '@/firebase'
 import { collection, query, doc, writeBatch, orderBy } from 'firebase/firestore'
-import type { Customer } from '@/lib/types'
+import type { Customer, Invoice } from '@/lib/types'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
@@ -58,7 +59,33 @@ export default function CustomersPage() {
   }, [firestore, user])
 
   const { data: customers, isLoading: isLoadingCustomers } = useCollection<Customer>(customersQuery)
+
+  const invoicesQuery = useMemoFirebase(() => {
+    if (!firestore || !user) return null;
+    return query(collection(firestore, 'invoices'));
+  }, [firestore, user])
+
+  const { data: invoices } = useCollection<Invoice>(invoicesQuery);
   
+  const customerImportance = useMemo(() => {
+    if (!invoices || !customers) return {};
+    const totals: Record<string, number> = {};
+    invoices.forEach(inv => {
+        if (inv.customerId) {
+            totals[inv.customerId] = (totals[inv.customerId] || 0) + (inv.totalAmount || 0);
+        }
+    });
+    const values = Object.values(totals);
+    const max = values.length > 0 ? Math.max(...values) : 0;
+    
+    const importance: Record<string, number> = {};
+    customers.forEach(c => {
+        const total = totals[c.id] || 0;
+        importance[c.id] = max > 0 ? (total / max) * 100 : 0;
+    });
+    return importance;
+  }, [invoices, customers]);
+
   const displayCustomers = useMemo(() => {
     if (!customers) return [];
     const sorted = [...customers].sort((a, b) => a.name.localeCompare(b.name, 'ca'));
@@ -191,7 +218,7 @@ export default function CustomersPage() {
                 <h1 className="text-4xl md:text-5xl font-black uppercase tracking-tighter text-slate-900 flex items-center gap-3">
                     <Building className="h-8 w-8 md:h-10 md:w-10 text-primary" /> Base de Clients
                 </h1>
-                <p className="text-slate-400 font-bold uppercase text-[9px] md:text-[10px] tracking-widest pl-1">Ordre de 7 columnes (Nom, NRT, Rua, Ciutat, CP, Tel, Email).</p>
+                <p className="text-slate-400 font-bold uppercase text-[9px] md:text-[10px] tracking-widest pl-1">Indicador visual d'importància basat en la facturació.</p>
             </div>
             <div className="flex flex-wrap gap-2 w-full md:w-auto">
                 <Dialog open={isBulkDialogOpen} onOpenChange={setIsBulkDialogOpen}>
@@ -213,7 +240,7 @@ export default function CustomersPage() {
                                     <div className="flex items-center gap-3 md:gap-4">
                                         <CheckSquare className="h-6 w-6 md:h-8 md:w-8 text-green-600" />
                                         <div>
-                                            <p className="font-black text-green-800 uppercase text-xs md:text-sm">{excelCustomers.length} Registres Detectats</p>
+                                            <p className="font-black text-green-800 uppercase text-xs md:sm">{excelCustomers.length} Registres Detectats</p>
                                             <p className="text-[9px] md:text-[10px] text-green-600 font-bold uppercase">Pronts per carregar.</p>
                                         </div>
                                     </div>
@@ -303,65 +330,76 @@ export default function CustomersPage() {
                     </TableRow>
                     </TableHeader>
                     <TableBody>
-                    {displayCustomers.map(customer => (
-                        <TableRow key={customer.id} className={`${selectedRows.includes(customer.id) ? 'bg-primary/5' : ''} hover:bg-slate-50 transition-colors border-b border-slate-50`}>
-                        <TableCell className="px-4 md:px-8 py-4 md:py-6">
-                            <Checkbox 
-                                checked={selectedRows.includes(customer.id)} 
-                                onCheckedChange={(c) => setSelectedRows(prev => c ? [...prev, customer.id] : prev.filter(x => x !== customer.id))} 
-                            />
-                        </TableCell>
-                        <TableCell>
-                            <div className="flex items-center gap-2">
-                                <span className="font-black text-slate-900 uppercase text-[11px] md:text-sm tracking-tight truncate max-w-[150px] md:max-w-none">{customer.name}</span>
-                                {customer.isDuplicate && <Badge variant="outline" className="bg-amber-50 text-amber-600 border-amber-200 text-[7px] md:text-[8px] font-black uppercase">Duplicat</Badge>}
-                            </div>
-                        </TableCell>
-                        <TableCell>
-                            <Badge variant="outline" className="font-black text-[9px] md:text-[10px] border-slate-200 text-slate-500 bg-white">
-                                {customer.nrt || 'N/A'}
-                            </Badge>
-                        </TableCell>
-                        <TableCell>
-                            <div className="text-[9px] md:text-[10px] font-bold text-slate-500 uppercase leading-relaxed">
-                                <p className="text-slate-900 font-black truncate max-w-[150px] md:max-w-[220px]">{customer.street || '---'}</p>
-                                <p className="flex items-center gap-1">
-                                    <MapPin className="h-2 w-2 text-primary" /> {customer.postalCode} {customer.city}
-                                </p>
-                            </div>
-                        </TableCell>
-                        <TableCell>
-                            <div className="space-y-1 text-[9px] md:text-[10px] font-bold text-slate-500">
-                                {customer.email && <p className="flex items-center gap-1.5 text-primary font-black uppercase tracking-tight truncate max-w-[140px] md:max-w-[180px]"><Mail className="h-2.5 w-2.5" /> {customer.email}</p>}
-                                {customer.contact && <p className="flex items-center gap-1.5 text-slate-400"><Phone className="h-2.5 w-2.5" /> {customer.contact}</p>}
-                            </div>
-                        </TableCell>
-                        <TableCell className="text-right px-4 md:px-8">
-                            <div className="flex justify-end gap-2 md:gap-3">
-                                <Button variant="outline" size="icon" onClick={() => router.push(`/dashboard/customers/edit/${customer.id}`)} className="h-8 w-8 md:h-10 md:w-10 border-2 rounded-xl text-primary border-primary/20 hover:bg-primary hover:text-white transition-all shadow-sm">
-                                    <Edit className="h-3.5 w-3.5 md:h-4 md:w-4" />
-                                </Button>
-                                <AlertDialog>
-                                    <AlertDialogTrigger asChild>
-                                        <Button variant="ghost" size="icon" className="h-8 w-8 md:h-10 md:w-10 text-red-300 hover:text-red-600 hover:bg-red-50 rounded-xl">
-                                            <Trash2 className="h-3.5 w-3.5 md:h-4 md:w-4" />
+                    {displayCustomers.map(customer => {
+                        const importance = customerImportance[customer.id] || 0;
+                        return (
+                            <TableRow 
+                                key={customer.id} 
+                                className={`${selectedRows.includes(customer.id) ? 'bg-primary/5' : ''} hover:bg-slate-50 transition-colors border-b border-slate-50 relative group`}
+                            >
+                                {/* Barra d'importància (degradat vermell a verd) */}
+                                <div 
+                                    className="absolute inset-y-0 left-0 bg-gradient-to-r from-red-500/10 to-green-500/10 pointer-events-none transition-all duration-1000 opacity-40 group-hover:opacity-60"
+                                    style={{ width: `${importance}%` }}
+                                />
+                                <TableCell className="px-4 md:px-8 py-4 md:py-6 relative z-10">
+                                    <Checkbox 
+                                        checked={selectedRows.includes(customer.id)} 
+                                        onCheckedChange={(c) => setSelectedRows(prev => c ? [...prev, customer.id] : prev.filter(x => x !== customer.id))} 
+                                    />
+                                </TableCell>
+                                <TableCell className="relative z-10">
+                                    <div className="flex items-center gap-2">
+                                        <span className="font-black text-slate-900 uppercase text-[11px] md:text-sm tracking-tight truncate max-w-[150px] md:max-w-none">{customer.name}</span>
+                                        {customer.isDuplicate && <Badge variant="outline" className="bg-amber-50 text-amber-600 border-amber-200 text-[7px] md:text-[8px] font-black uppercase">Duplicat</Badge>}
+                                    </div>
+                                </TableCell>
+                                <TableCell className="relative z-10">
+                                    <Badge variant="outline" className="font-black text-[9px] md:text-[10px] border-slate-200 text-slate-500 bg-white">
+                                        {customer.nrt || 'N/A'}
+                                    </Badge>
+                                </TableCell>
+                                <TableCell className="relative z-10">
+                                    <div className="text-[9px] md:text-[10px] font-bold text-slate-500 uppercase leading-relaxed">
+                                        <p className="text-slate-900 font-black truncate max-w-[150px] md:max-w-[220px]">{customer.street || '---'}</p>
+                                        <p className="flex items-center gap-1">
+                                            <MapPin className="h-2 w-2 text-primary" /> {customer.postalCode} {customer.city}
+                                        </p>
+                                    </div>
+                                </TableCell>
+                                <TableCell className="relative z-10">
+                                    <div className="space-y-1 text-[9px] md:text-[10px] font-bold text-slate-500">
+                                        {customer.email && <p className="flex items-center gap-1.5 text-primary font-black uppercase tracking-tight truncate max-w-[140px] md:max-w-[180px]"><Mail className="h-2.5 w-2.5" /> {customer.email}</p>}
+                                        {customer.contact && <p className="flex items-center gap-1.5 text-slate-400"><Phone className="h-2.5 w-2.5" /> {customer.contact}</p>}
+                                    </div>
+                                </TableCell>
+                                <TableCell className="text-right px-4 md:px-8 relative z-10">
+                                    <div className="flex justify-end gap-2 md:gap-3">
+                                        <Button variant="outline" size="icon" onClick={() => router.push(`/dashboard/customers/edit/${customer.id}`)} className="h-8 w-8 md:h-10 md:w-10 border-2 rounded-xl text-primary border-primary/20 hover:bg-primary hover:text-white transition-all shadow-sm">
+                                            <Edit className="h-3.5 w-3.5 md:h-4 md:w-4" />
                                         </Button>
-                                    </AlertDialogTrigger>
-                                    <AlertDialogContent className="rounded-[2rem] p-8 md:p-10 max-w-[90vw] md:max-w-lg">
-                                        <AlertDialogHeader>
-                                            <AlertDialogTitle className="text-xl md:text-2xl font-black uppercase">Eliminar Client?</AlertDialogTitle>
-                                            <AlertDialogDescription className="text-sm md:text-base">Aquesta acció no es pot desfer.</AlertDialogDescription>
-                                        </AlertDialogHeader>
-                                        <AlertDialogFooter className="pt-6 flex flex-col md:flex-row gap-3">
-                                            <AlertDialogCancel className="h-12 md:h-14 rounded-2xl font-bold px-8 border-2 w-full md:w-auto">Cancel·lar</AlertDialogCancel>
-                                            <AlertDialogAction onClick={() => handleDeleteCustomer(customer.id)} className="bg-red-600 h-12 md:h-14 rounded-2xl font-black uppercase px-8 w-full md:w-auto">Confirmar</AlertDialogAction>
-                                        </AlertDialogFooter>
-                                    </AlertDialogContent>
-                                </AlertDialog>
-                            </div>
-                        </TableCell>
-                        </TableRow>
-                    ))}
+                                        <AlertDialog>
+                                            <AlertDialogTrigger asChild>
+                                                <Button variant="ghost" size="icon" className="h-8 w-8 md:h-10 md:w-10 text-red-300 hover:text-red-600 hover:bg-red-50 rounded-xl">
+                                                    <Trash2 className="h-3.5 w-3.5 md:h-4 md:w-4" />
+                                                </Button>
+                                            </AlertDialogTrigger>
+                                            <AlertDialogContent className="rounded-[2rem] p-8 md:p-10 max-w-[90vw] md:max-w-lg">
+                                                <AlertDialogHeader>
+                                                    <AlertDialogTitle className="text-xl md:text-2xl font-black uppercase">Eliminar Client?</AlertDialogTitle>
+                                                    <AlertDialogDescription className="text-sm md:text-base">Aquesta acció no es pot desfer.</AlertDialogDescription>
+                                                </AlertDialogHeader>
+                                                <AlertDialogFooter className="pt-6 flex flex-col md:flex-row gap-3">
+                                                    <AlertDialogCancel className="h-12 md:h-14 rounded-2xl font-bold px-8 border-2 w-full md:w-auto">Cancel·lar</AlertDialogCancel>
+                                                    <AlertDialogAction onClick={() => handleDeleteCustomer(customer.id)} className="bg-red-600 h-12 md:h-14 rounded-2xl font-black uppercase px-8 w-full md:w-auto">Confirmar</AlertDialogAction>
+                                                </AlertDialogFooter>
+                                            </AlertDialogContent>
+                                        </AlertDialog>
+                                    </div>
+                                </TableCell>
+                            </TableRow>
+                        );
+                    })}
                     {displayCustomers.length === 0 && (
                         <TableRow>
                             <TableCell colSpan={6} className="h-64 text-center">

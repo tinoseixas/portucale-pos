@@ -5,7 +5,7 @@ import { useState, useMemo, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
-import { PlusCircle, Calendar as CalendarIcon, User, Edit, Trash2, Briefcase, Filter, History, Search, X, Download, AlertTriangle, Loader2 } from 'lucide-react'
+import { PlusCircle, Calendar as CalendarIcon, User, Edit, Trash2, Briefcase, Filter, History, Search, X, Download, AlertTriangle, Loader2, RefreshCw } from 'lucide-react'
 import type { ServiceRecord, Employee } from '@/lib/types'
 import { useUser, useFirestore, updateDocumentNonBlocking, useDoc, useMemoFirebase } from '@/firebase';
 import { collection, query, orderBy, getDocs, collectionGroup, doc, getDoc, setDoc } from 'firebase/firestore';
@@ -64,6 +64,7 @@ export default function DashboardPage() {
   
   const [needsBackup, setNeedsBackup] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   const employeeDocRef = useMemoFirebase(() => {
     if (!user || !firestore) return null;
@@ -71,90 +72,39 @@ export default function DashboardPage() {
   }, [firestore, user]);
   const { data: currentEmployee } = useDoc<Employee>(employeeDocRef);
 
-  const handleCloudBackup = useCallback(async () => {
+  const fetchData = useCallback(async () => {
     if (!firestore || !user) return;
-    const today = format(new Date(), 'yyyy-MM-dd');
-    const backupId = `daily_${today}`;
-    const backupRef = doc(firestore, 'backups', backupId);
-
+    setIsLoadingData(true);
     try {
-        const backupSnap = await getDoc(backupRef);
-        if (backupSnap.exists()) return;
+        const employeeSnapshot = await getDocs(query(collection(firestore, 'employees')));
+        const employeesData = employeeSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Employee));
+        setEmployees(employeesData);
 
-        const data: any = {
-            customers: [],
-            projects: [],
-            albarans: [],
-            invoices: [],
-            quotes: [],
-            receipts: [],
-            serviceRecords: []
-        };
+        const servicesQuery = query(collectionGroup(firestore, 'serviceRecords'), orderBy('arrivalDateTime', 'desc'));
+        const serviceSnapshot = await getDocs(servicesQuery);
+        const servicesData = serviceSnapshot.docs
+            .map(doc => ({ id: doc.id, ...doc.data() } as ServiceRecord))
+            .filter(s => !s.deleted); 
+        setAllServices(servicesData);
 
-        const collections = ['customers', 'projects', 'albarans', 'invoices', 'quotes', 'receipts', 'employees'];
-        for (const colName of collections) {
-            const snap = await getDocs(collection(firestore, colName));
-            data[colName] = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        if (currentEmployee?.role === 'admin') {
+            const lastBackup = localStorage.getItem('last_backup_date');
+            const today = format(new Date(), 'yyyy-MM-dd');
+            if (lastBackup !== today) {
+                setNeedsBackup(true);
+            }
         }
-
-        const servicesSnap = await getDocs(collectionGroup(firestore, 'serviceRecords'));
-        data.serviceRecords = servicesSnap.docs.map(d => ({ 
-            id: d.id, 
-            parentPath: d.ref.parent.path, 
-            ...d.data() 
-        }));
-
-        await setDoc(backupRef, {
-            id: backupId,
-            createdAt: new Date().toISOString(),
-            data: JSON.stringify(data),
-            createdBy: user.uid
-        }, { merge: true });
-
-        localStorage.setItem('last_backup_date', today);
-        setNeedsBackup(false);
-    } catch (e) {
-        console.error("Error en backup:", e);
+    } catch (error) {
+        console.error("Error carregar dades:", error);
+        toast({ variant: 'destructive', title: "Error", description: "No s'han pogut carregar els registres." });
+    } finally {
+        setIsLoadingData(false);
     }
-  }, [firestore, user]);
+  }, [firestore, user, currentEmployee?.role, toast]);
 
   useEffect(() => {
-    if (isUserLoading || !firestore || !user) {
-      if (!isUserLoading && !user) setIsLoadingData(false);
-      return;
-    }
-    
-    const fetchData = async () => {
-        setIsLoadingData(true);
-        try {
-            const employeeSnapshot = await getDocs(query(collection(firestore, 'employees')));
-            const employeesData = employeeSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Employee));
-            setEmployees(employeesData);
-
-            const servicesQuery = query(collectionGroup(firestore, 'serviceRecords'), orderBy('arrivalDateTime', 'desc'));
-            const serviceSnapshot = await getDocs(servicesQuery);
-            const servicesData = serviceSnapshot.docs
-                .map(doc => ({ id: doc.id, ...doc.data() } as ServiceRecord))
-                .filter(s => !s.deleted); 
-            setAllServices(servicesData);
-
-            if (currentEmployee?.role === 'admin') {
-                const lastBackup = localStorage.getItem('last_backup_date');
-                const today = format(new Date(), 'yyyy-MM-dd');
-                if (lastBackup !== today) {
-                    setNeedsBackup(true);
-                    handleCloudBackup();
-                }
-            }
-        } catch (error) {
-            console.error("Error carregar dades:", error);
-        } finally {
-            setIsLoadingData(false);
-        }
-    };
-    
     fetchData();
-  }, [firestore, isUserLoading, user, currentEmployee?.role, handleCloudBackup]);
+  }, [fetchData, refreshTrigger]);
   
   const projectNames = useMemo(() => {
     const names = allServices.map(s => s.projectName?.trim()).filter(Boolean);
@@ -198,60 +148,20 @@ export default function DashboardPage() {
     toast({ title: "Enviat a la paperera" });
   };
 
-  const handleBackup = async () => {
-    if (!firestore) return;
-    setIsExporting(true);
-    try {
-        const data: any = { customers: [], projects: [], albarans: [], invoices: [], quotes: [], receipts: [], serviceRecords: [], employees: [] };
-        const collections = ['customers', 'projects', 'albarans', 'invoices', 'quotes', 'receipts', 'employees'];
-        for (const colName of collections) {
-            const snap = await getDocs(collection(firestore, colName));
-            data[colName] = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-        }
-        const servicesSnap = await getDocs(collectionGroup(firestore, 'serviceRecords'));
-        data.serviceRecords = servicesSnap.docs.map(d => ({ id: d.id, parentPath: d.ref.parent.path, ...d.data() }));
-
-        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(blob);
-        a.download = `TS-Backup-${format(new Date(), 'yyyy-MM-dd')}.json`;
-        a.click();
-        setNeedsBackup(false);
-        toast({ title: "Còpia descarregada" });
-    } catch (e) {
-        toast({ variant: 'destructive', title: "Error en backup" });
-    } finally {
-        setIsExporting(false);
-    }
-  };
-  
-  if (isUserLoading) return <div className="max-w-7xl mx-auto p-8"><Skeleton className="h-40 w-full rounded-3xl" /></div>;
+  if (isUserLoading || isLoadingData) return <div className="max-w-7xl mx-auto p-8"><Skeleton className="h-40 w-full rounded-3xl" /></div>;
   if (!user) { router.push('/'); return null; }
 
   return (
     <div className="max-w-7xl mx-auto space-y-8 md:space-y-12 px-4 md:px-8 pb-20">
-      {needsBackup && (
-          <div className="bg-accent/10 border-2 border-accent p-6 rounded-[2.5rem] flex flex-col md:flex-row items-center justify-between gap-6 shadow-xl animate-in slide-in-from-top">
-              <div className="flex items-center gap-4">
-                  <div className="bg-accent p-3 rounded-2xl shadow-lg"><AlertTriangle className="h-6 w-6 text-primary" /></div>
-                  <div>
-                      <p className="font-black text-primary uppercase text-sm">Còpia de Seguretat Recomanada</p>
-                      <p className="text-[10px] text-slate-500 font-bold uppercase">S'ha detectat activitat nova. Descarrega una còpia local ara mateix.</p>
-                  </div>
-              </div>
-              <Button onClick={handleBackup} disabled={isExporting} className="bg-primary h-14 px-10 rounded-2xl shadow-xl font-black uppercase text-xs">
-                  {isExporting ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : <Download className="mr-2 h-4 w-4" />}
-                  DESCARREGAR ARA
-              </Button>
-          </div>
-      )}
-
       <div className="flex flex-col md:flex-row items-start md:items-end justify-between gap-6">
         <div className="space-y-1">
           <h1 className="text-4xl md:text-6xl font-black tracking-tighter leading-none text-primary uppercase">REGISTRES DE<br /><span className="text-accent">TREBALL</span></h1>
           <p className="text-slate-400 font-bold uppercase text-[10px] tracking-[0.2em] pl-1">Supervisió detallada dels serveis realitzats per l'equip.</p>
         </div>
         <div className="flex gap-3 w-full md:w-auto">
+            <Button onClick={() => setRefreshTrigger(prev => prev + 1)} variant="outline" className="h-14 border-2 border-slate-200 text-slate-500 font-black uppercase tracking-widest rounded-2xl text-[10px] px-6">
+                <RefreshCw className="mr-2 h-4 w-4" />Actualitzar
+            </Button>
             <Button asChild variant="outline" className="h-14 border-2 border-slate-200 text-slate-500 font-black uppercase tracking-widest rounded-2xl text-[10px] px-6">
                 <Link href="/dashboard/trash"><History className="mr-2 h-4 w-4" />Paperera</Link>
             </Button>
@@ -343,7 +253,7 @@ export default function DashboardPage() {
                               <TableHead className="font-black uppercase text-[10px] tracking-widest text-slate-400">Tècnic</TableHead>
                               <TableHead className="font-black uppercase text-[10px] tracking-widest text-slate-400">Data i Hora</TableHead>
                               <TableHead className="font-black uppercase text-[10px] tracking-widest text-slate-400">Obra</TableHead>
-                              <TableHead className="text-right px-8 font-black uppercase text-[10px] tracking-widest text-slate-400">Acció</TableHead>
+                              <TableHead className="text-right px-8 font-black uppercase text-[10px] tracking-widest">Acció</TableHead>
                           </TableRow>
                       </TableHeader>
                       <TableBody>
