@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -42,8 +41,8 @@ export function Logo({ className, variant = 'dark' }: LogoProps) {
     >
       <path d="M20 15 L55 5 L90 15 L90 55 C90 80 55 95 55 95 C55 95 20 80 20 55 Z" fill={primaryColor} />
       <path d="M40 50 L55 65 L80 35" fill="none" stroke={accentColor} strokeWidth="8" strokeLinecap="round" strokeLinejoin="round" />
-      <text x="110" y="55" fontFamily="Inter, sans-serif" fontWeight="900" fontSize="42" fill={primaryColor}>{BRANDING.companyName}</text>
-      <text x="110" y="82" fontFamily="Inter, sans-serif" fontWeight="700" fontSize="14" fill="#64748b">{BRANDING.subSlogan}</text>
+      <text x="110" y="55" fontFamily="Outfit, sans-serif" fontWeight="900" fontSize="42" fill={primaryColor}>{BRANDING.companyName}</text>
+      <text x="110" y="82" fontFamily="Outfit, sans-serif" fontWeight="700" fontSize="14" fill="#64748b">{BRANDING.subSlogan}</text>
     </svg>
   );
 }
