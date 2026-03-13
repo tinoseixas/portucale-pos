@@ -156,6 +156,7 @@ export default function AlbaransHistoryPage() {
                 customerId: firstService.customerId || '',
                 customerName: firstService.customerName || 'N/A',
                 projectName: firstService.projectName.trim(),
+                projectId: project?.id || '',
                 serviceRecordIds: projectServices.map(s => s.id),
                 totalAmount: totalGeneral,
                 status: project?.status === 'finished' ? 'arxivat' : 'pendent',

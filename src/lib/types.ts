@@ -71,6 +71,7 @@ export interface Albaran {
   customerId: string;
   customerName: string;
   projectName: string;
+  projectId?: string;
   serviceRecordIds: string[];
   totalAmount: number;
   status: 'pendent' | 'facturat' | 'arxivat';

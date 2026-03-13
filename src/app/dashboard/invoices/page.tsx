@@ -170,16 +170,29 @@ function InvoicesPageContent() {
             const batch = writeBatch(firestore);
             batch.set(invoiceRef, { ...invoiceData, id: invoiceRef.id });
 
+            const projectIdsToArchive = new Set<string>();
+
             selectedAlbaranIds.forEach(id => {
                 const albaranRef = doc(firestore, 'albarans', id);
                 batch.update(albaranRef, { status: 'facturat' });
+                
+                const alb = albarans?.find(a => a.id === id);
+                if (alb && alb.projectId) {
+                    projectIdsToArchive.add(alb.projectId);
+                }
+            });
+
+            // Arxivar les obres associades
+            projectIdsToArchive.forEach(pId => {
+                const projectRef = doc(firestore, 'projects', pId);
+                batch.update(projectRef, { status: 'finished' });
             });
 
             await batch.commit();
 
             toast({
                 title: "Factura generada",
-                description: `L'obra ha estat facturada correctament.`,
+                description: `L'obra ha estat facturada i arxivada correctament.`,
             });
             
             if (exportAfter) {
