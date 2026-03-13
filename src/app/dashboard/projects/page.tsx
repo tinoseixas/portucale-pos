@@ -12,7 +12,7 @@ import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Briefcase, CheckCircle2, Archive, Loader2, Plus, Users, Search, Trash2, Clock, CheckCircle } from 'lucide-react'
+import { Briefcase, Archive, Loader2, Plus, Users, Search, Trash2, Clock, RotateCcw } from 'lucide-react'
 import { AdminGate } from '@/components/AdminGate'
 import { format, parseISO } from 'date-fns'
 import { ca } from 'date-fns/locale'
@@ -118,30 +118,30 @@ export default function ProjectsManagementPage() {
         }
     };
 
-    if (isLoadingProjects) return <div className="p-12 text-center h-[60vh] flex flex-col items-center justify-center"><Loader2 className="h-16 w-16 animate-spin text-primary" /><p className="mt-6 text-primary font-black uppercase tracking-widest">Carregant obres...</p></div>
+    if (isLoadingProjects) return <div className="p-12 text-center h-[60vh] flex flex-col items-center justify-center"><Loader2 className="h-16 w-16 animate-spin text-primary" /><p className="mt-6 text-primary font-black tracking-widest">Carregant obres...</p></div>
 
     return (
-        <AdminGate pageTitle="Gestió d'Obres" pageDescription="Administra el llistat d'obres actives i finalitzades.">
+        <AdminGate pageTitle="Gestió d'obres" pageDescription="Administra el llistat d'obres actives i finalitzades.">
             <div className="space-y-8 max-w-6xl mx-auto pb-10">
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                    <h1 className="text-3xl font-black uppercase tracking-tight flex items-center gap-3 text-primary">
-                        <Briefcase className="h-8 w-8" /> Gestió d'Obres
+                    <h1 className="text-3xl font-black tracking-tight flex items-center gap-3 text-primary">
+                        <Briefcase className="h-8 w-8" /> Gestió d'obres
                     </h1>
                 </div>
 
                 <Card className="border-none shadow-2xl bg-slate-900 text-white rounded-3xl overflow-hidden">
                     <CardHeader className="p-8">
-                        <CardTitle className="text-xl font-black uppercase tracking-widest flex items-center gap-2">
-                            <Plus className="h-5 w-5 text-accent" /> Nova Obra
+                        <CardTitle className="text-xl font-black flex items-center gap-2">
+                            <Plus className="h-5 w-5 text-accent" /> Nova obra
                         </CardTitle>
                         <CardDescription className="text-slate-400">Defineix una obra per un client per poder-la seleccionar als registres.</CardDescription>
                     </CardHeader>
                     <CardContent className="p-8 pt-0 grid grid-cols-1 md:grid-cols-3 gap-6">
                         <div className="space-y-2">
-                            <Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-1">Client Associat</Label>
+                            <Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-1">Client associat</Label>
                             <Select value={selectedCustomerId} onValueChange={setSelectedCustomerId}>
                                 <SelectTrigger className="h-14 bg-slate-800 border-none text-white font-bold rounded-2xl">
-                                    <SelectValue placeholder="Selecciona client" />
+                                    <SelectValue placeholder="Selecciona client..." />
                                 </SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="none">Escull un client...</SelectItem>
@@ -150,9 +150,9 @@ export default function ProjectsManagementPage() {
                             </Select>
                         </div>
                         <div className="space-y-2">
-                            <Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-1">Nom de l'Obra</Label>
+                            <Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-1">Nom de l'obra</Label>
                             <Input 
-                                placeholder="Ex: Reforma Cuina C/Major" 
+                                placeholder="Ex: Reforma cuina C/Major" 
                                 value={newProjectName}
                                 onChange={(e) => setNewProjectName(e.target.value)}
                                 className="h-14 bg-slate-800 border-none text-white font-bold rounded-2xl"
@@ -162,10 +162,10 @@ export default function ProjectsManagementPage() {
                             <Button 
                                 onClick={handleCreateProject} 
                                 disabled={isSaving || !newProjectName.trim() || selectedCustomerId === 'none'}
-                                className="w-full h-14 bg-accent hover:bg-accent/90 text-accent-foreground font-black uppercase tracking-widest rounded-2xl shadow-xl hover:scale-[1.02] transition-all"
+                                className="w-full h-14 bg-accent hover:bg-accent/90 text-accent-foreground font-black tracking-widest rounded-2xl shadow-xl hover:scale-[1.02] transition-all"
                             >
                                 {isSaving ? <Loader2 className="animate-spin h-5 w-5 mr-2" /> : <Plus className="h-5 w-5 mr-2" />}
-                                CREAR OBRA
+                                Crear obra
                             </Button>
                         </div>
                     </CardContent>
@@ -221,7 +221,7 @@ function ProjectTable({ projects, onArchive, onDelete }: { projects: Project[], 
                     <TableRow className="bg-slate-50/50">
                         <TableHead className="px-8 py-4 font-black uppercase text-[10px] tracking-widest text-slate-400">Obra / Projecte</TableHead>
                         <TableHead className="font-black uppercase text-[10px] tracking-widest text-slate-400">Client</TableHead>
-                        <TableHead className="font-black uppercase text-[10px] tracking-widest text-slate-400">Data Creació</TableHead>
+                        <TableHead className="font-black uppercase text-[10px] tracking-widest text-slate-400">Data creació</TableHead>
                         <TableHead className="text-right px-8 font-black uppercase text-[10px] tracking-widest text-slate-400">Accions</TableHead>
                     </TableRow>
                 </TableHeader>
@@ -229,20 +229,22 @@ function ProjectTable({ projects, onArchive, onDelete }: { projects: Project[], 
                     {projects.map(project => (
                         <TableRow key={project.id} className="hover:bg-slate-50 transition-colors border-b-2 border-slate-50">
                             <TableCell className="px-8 py-6">
-                                <div className="font-black text-slate-900 uppercase tracking-tight text-sm">{project.name}</div>
+                                <div className="font-black text-slate-900 tracking-tight text-sm">{project.name}</div>
                             </TableCell>
                             <TableCell className="text-slate-600 font-bold">{project.customerName}</TableCell>
                             <TableCell className="text-xs text-slate-400 font-bold">{format(parseISO(project.createdAt), 'dd/MM/yyyy', { locale: ca })}</TableCell>
                             <TableCell className="text-right px-8">
                                 <div className="flex justify-end gap-3">
                                     <Button 
-                                        variant="outline" 
-                                        size="sm" 
+                                        variant="ghost" 
+                                        size="icon" 
                                         onClick={() => onArchive(project.id, project.status)}
-                                        className={project.status === 'active' ? 'text-slate-500 border-slate-200 hover:bg-slate-50 rounded-xl font-bold h-10 px-4' : 'text-primary border-primary/20 hover:bg-primary/5 rounded-xl font-bold h-10 px-4'}
+                                        className={project.status === 'active' 
+                                            ? 'h-10 w-10 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-colors' 
+                                            : 'h-10 w-10 text-primary hover:text-primary hover:bg-primary/10 rounded-xl transition-colors'}
+                                        title={project.status === 'active' ? 'Arxivar obra' : 'Reactivar obra'}
                                     >
-                                        {project.status === 'active' ? <Archive className="h-4 w-4 mr-2" /> : <Clock className="h-4 w-4 mr-2" />}
-                                        {project.status === 'active' ? 'Arxivar' : 'Reactivar'}
+                                        {project.status === 'active' ? <Archive className="h-4 w-4" /> : <RotateCcw className="h-4 w-4" />}
                                     </Button>
                                     <AlertDialog>
                                         <AlertDialogTrigger asChild>
@@ -252,12 +254,12 @@ function ProjectTable({ projects, onArchive, onDelete }: { projects: Project[], 
                                         </AlertDialogTrigger>
                                         <AlertDialogContent className="rounded-[2.5rem] p-10">
                                             <AlertDialogHeader>
-                                                <AlertDialogTitle className="text-2xl font-black uppercase">Eliminar Obra?</AlertDialogTitle>
-                                                <AlertDialogDescription className="text-base font-medium">Aquesta acció es permanent i no es pot desfer.</AlertDialogDescription>
+                                                <AlertDialogTitle className="text-2xl font-black">Eliminar obra?</AlertDialogTitle>
+                                                <AlertDialogDescription className="text-base font-medium">Aquesta acció és permanent i no es pot desfer.</AlertDialogDescription>
                                             </AlertDialogHeader>
                                             <AlertDialogFooter className="pt-6">
                                                 <AlertDialogCancel className="h-14 rounded-2xl font-bold border-2 px-8">Cancel·lar</AlertDialogCancel>
-                                                <AlertDialogAction onClick={() => onDelete(project.id)} className="bg-red-600 h-14 rounded-2xl font-black uppercase tracking-widest px-8">Eliminar</AlertDialogAction>
+                                                <AlertDialogAction onClick={() => onDelete(project.id)} className="bg-red-600 h-14 rounded-2xl font-black px-8 text-white">Eliminar</AlertDialogAction>
                                             </AlertDialogFooter>
                                         </AlertDialogContent>
                                     </AlertDialog>
