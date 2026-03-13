@@ -159,10 +159,7 @@ export default function DashboardPage() {
   const projectNames = useMemo(() => {
     const names = allServices.map(s => s.projectName?.trim()).filter(Boolean);
     const unique = Array.from(new Set(names));
-    return unique.sort((a, b) => {
-        if (!a || !b) return 0;
-        return a.localeCompare(b, 'ca');
-    });
+    return (unique as string[]).sort((a, b) => a.localeCompare(b, 'ca'));
   }, [allServices]);
 
   const filteredServices = useMemo(() => {

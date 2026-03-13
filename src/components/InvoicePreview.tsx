@@ -2,9 +2,9 @@
 'use client'
 import React, { forwardRef, useMemo } from 'react';
 import type { Customer, ServiceRecord, Employee } from '@/lib/types';
-import { format, parseISO } from 'date-fns';
+import { format } from 'date-fns';
 import { ca } from 'date-fns/locale';
-import { calculateTotalAmount, calculateServiceEffectiveMinutes, IVA_RATE } from '@/lib/calculations';
+import { calculateTotalAmount } from '@/lib/calculations';
 import { Logo } from '@/components/Logo';
 import { BRANDING } from '@/lib/branding';
 
