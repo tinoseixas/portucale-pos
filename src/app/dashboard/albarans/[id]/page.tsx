@@ -4,7 +4,7 @@
 import { useState, useRef, useEffect, useCallback, Suspense } from 'react'
 import { useRouter, useParams, useSearchParams } from 'next/navigation'
 import { useDoc, useUser, useFirestore, useMemoFirebase, deleteDocumentNonBlocking, useCollection, updateDocumentNonBlocking } from '@/firebase'
-import { collection, query, getDocs, doc, collectionGroup, getDoc, updateDoc } from 'firebase/firestore'
+import { collection, query, getDocs, doc, collectionGroup, getDoc, updateDoc, where } from 'firebase/firestore'
 import type { Customer, ServiceRecord, Albaran, Employee } from '@/lib/types'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -67,6 +67,13 @@ function AlbaranDetailContent() {
     const albaranDocRef = useMemoFirebase(() => firestore && albaranId ? doc(firestore, 'albarans', albaranId) : null, [firestore, albaranId])
     const { data: albaran, isLoading: isLoadingAlbaran } = useDoc<Albaran>(albaranDocRef)
 
+    const employeeDocRef = useMemoFirebase(() => {
+        if (!user || !firestore) return null;
+        return doc(firestore, 'employees', user.uid);
+    }, [firestore, user]);
+    const { data: currentEmployee } = useDoc<Employee>(employeeDocRef);
+    const isAdmin = currentEmployee?.role === 'admin';
+
     const employeesQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'employees')) : null, [firestore]);
     const { data: employees } = useCollection<Employee>(employeesQuery);
     
@@ -79,7 +86,7 @@ function AlbaranDetailContent() {
     }, [albaran]);
 
     const fetchData = useCallback(async () => {
-        if (!firestore || !albaran || !employees || hasLoaded) return
+        if (!firestore || !albaran || !employees || currentEmployee === undefined || hasLoaded) return
 
         setIsLoadingData(true)
         
@@ -94,7 +101,15 @@ function AlbaranDetailContent() {
             }
             
             if (albaran.serviceRecordIds && albaran.serviceRecordIds.length > 0) {
-                const servicesSnapshot = await getDocs(collectionGroup(firestore, 'serviceRecords'));
+                // Per a consultes de grup hem d'aplicar el filtre d'usuari si no és admin
+                let servicesQuery;
+                if (isAdmin) {
+                    servicesQuery = collectionGroup(firestore, 'serviceRecords');
+                } else {
+                    servicesQuery = query(collectionGroup(firestore, 'serviceRecords'), where('employeeId', '==', user?.uid));
+                }
+                
+                const servicesSnapshot = await getDocs(servicesQuery);
                 const fetchedServices = servicesSnapshot.docs
                     .map(doc => ({ id: doc.id, ...doc.data() } as ServiceRecord))
                     .filter(s => albaran.serviceRecordIds.includes(s.id))
@@ -110,15 +125,15 @@ function AlbaranDetailContent() {
             setHasLoaded(true);
         } catch (e) {
             console.error("Error carregant dades:", e);
-            toast({ variant: 'destructive', title: 'Error', description: 'No s\'han pogut carregar els detalls.' });
+            toast({ variant: 'destructive', title: 'Error', description: 'No s\'han pogut carregar els detalls de l\'albarà.' });
         } finally {
             setIsLoadingData(false)
         }
-    }, [albaran, firestore, employees, toast, hasLoaded]);
+    }, [albaran, firestore, employees, user, isAdmin, currentEmployee, toast, hasLoaded]);
 
     useEffect(() => {
-        if (albaran && employees && !hasLoaded) fetchData();
-    }, [albaran, employees, fetchData, hasLoaded]);
+        if (albaran && employees && currentEmployee !== undefined && !hasLoaded) fetchData();
+    }, [albaran, employees, currentEmployee, fetchData, hasLoaded]);
 
     const generatePDF = async () => {
         const reportElement = reportRef.current;
@@ -200,7 +215,7 @@ function AlbaranDetailContent() {
         }
     };
     
-    if (isUserLoading || isLoadingAlbaran || (isLoadingData && !hasLoaded)) {
+    if (isUserLoading || isLoadingAlbaran || currentEmployee === undefined || (isLoadingData && !hasLoaded)) {
         return <div className="text-center p-12 h-[60vh] flex flex-col items-center justify-center"><Loader2 className="h-12 w-12 animate-spin text-primary" /><p className="mt-4 font-black uppercase tracking-widest text-slate-400">Preparant Albarà...</p></div>
     }
     
@@ -232,7 +247,7 @@ function AlbaranDetailContent() {
                                     <Label>E-mail del client</Label>
                                     <Input type="email" value={recipientEmail} onChange={(e) => setRecipientEmail(e.target.value)} className="h-12 rounded-xl font-bold" />
                                 </div>
-                                <DialogFooter><Button onClick={handleSendEmail} disabled={isSendingEmail} className="bg-primary font-bold h-12 px-8 w-full">{isSendingEmail ? <Loader2 className="animate-spin mr-2" /> : <Send className="mr-2 h-4 w-4" />} Enviar Ara</Button></DialogFooter>
+                                <DialogFooter><Button onClick={handleSendEmail} disabled={isSendingEmail} className="bg-primary font-bold h-12 w-full">{isSendingEmail ? <Loader2 className="animate-spin mr-2" /> : <Send className="mr-2 h-4 w-4" />} Enviar Ara</Button></DialogFooter>
                             </DialogContent>
                         </Dialog>
 

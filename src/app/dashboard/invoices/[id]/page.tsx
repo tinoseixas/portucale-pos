@@ -4,7 +4,7 @@
 import { useState, useRef, useEffect, useCallback, Suspense } from 'react'
 import { useRouter, useParams, useSearchParams } from 'next/navigation'
 import { useDoc, useUser, useFirestore, useMemoFirebase, deleteDocumentNonBlocking, useCollection } from '@/firebase'
-import { doc, collection, query, getDocs, collectionGroup, getDoc, updateDoc } from 'firebase/firestore'
+import { collection, query, getDocs, doc, collectionGroup, getDoc, updateDoc, where } from 'firebase/firestore'
 import type { Customer, Invoice, ServiceRecord, Employee } from '@/lib/types'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -62,9 +62,16 @@ function InvoiceDetailContent() {
 
     const invoiceDocRef = useMemoFirebase(() => firestore && invoiceId ? doc(firestore, 'invoices', invoiceId) : null, [firestore, invoiceId])
     const { data: invoice, isLoading: isLoadingInvoice } = useDoc<Invoice>(invoiceDocRef)
+
+    const employeeDocRef = useMemoFirebase(() => {
+        if (!user || !firestore) return null;
+        return doc(firestore, 'employees', user.uid);
+    }, [firestore, user]);
+    const { data: currentEmployee } = useDoc<Employee>(employeeDocRef);
+    const isAdmin = currentEmployee?.role === 'admin';
     
     const fetchData = useCallback(async () => {
-        if (!firestore || !invoice || hasLoaded) return;
+        if (!firestore || !invoice || currentEmployee === undefined || hasLoaded) return;
         setIsLoadingData(true);
         try {
             const employeesSnap = await getDocs(query(collection(firestore, 'employees')));
@@ -80,29 +87,56 @@ function InvoiceDetailContent() {
                 }
             }
 
-            const servicesSnapshot = await getDocs(collectionGroup(firestore, 'serviceRecords'));
-            const allServicesData = servicesSnapshot.docs.map(d => ({ id: d.id, ...d.data() } as ServiceRecord));
+            // Recuperem els serveis respectant permisos
+            let fetchedServices: ServiceRecord[] = [];
             
             if (invoice.sourceId) {
                 const sourceIds = invoice.sourceId.split(',');
-                const albaransSnapshot = await getDocs(query(collection(firestore, 'albarans')));
-                const filteredAlbarans = albaransSnapshot.docs.filter(doc => sourceIds.includes(doc.id)).map(doc => doc.data());
-                const recordIds = filteredAlbarans.flatMap(a => (a as any).serviceRecordIds || []);
-                setServices(allServicesData.filter(s => recordIds.includes(s.id)));
+                // En lloc de llistar tot el directori d'albarans (que falla sense admin), recuperem només els que volem
+                const albaranPromises = sourceIds.map(id => getDoc(doc(firestore, 'albarans', id)));
+                const albaranSnaps = await Promise.all(albaranPromises);
+                const recordIds = albaranSnaps
+                    .filter(snap => snap.exists())
+                    .flatMap(snap => (snap.data() as any).serviceRecordIds || []);
+
+                if (recordIds.length > 0) {
+                    let servicesQuery;
+                    if (isAdmin) {
+                        servicesQuery = collectionGroup(firestore, 'serviceRecords');
+                    } else {
+                        servicesQuery = query(collectionGroup(firestore, 'serviceRecords'), where('employeeId', '==', user?.uid));
+                    }
+                    const servicesSnapshot = await getDocs(servicesQuery);
+                    fetchedServices = servicesSnapshot.docs
+                        .map(d => ({ id: d.id, ...d.data() } as ServiceRecord))
+                        .filter(s => recordIds.includes(s.id));
+                }
             } else {
-                setServices(allServicesData.filter(s => s.customerId === invoice.customerId && s.projectName === invoice.projectName));
+                let servicesQuery;
+                if (isAdmin) {
+                    servicesQuery = query(collectionGroup(firestore, 'serviceRecords'), where('customerId', '==', invoice.customerId));
+                } else {
+                    servicesQuery = query(collectionGroup(firestore, 'serviceRecords'), where('customerId', '==', invoice.customerId), where('employeeId', '==', user?.uid));
+                }
+                const servicesSnapshot = await getDocs(servicesQuery);
+                fetchedServices = servicesSnapshot.docs
+                    .map(d => ({ id: d.id, ...d.data() } as ServiceRecord))
+                    .filter(s => s.projectName === invoice.projectName);
             }
+            
+            setServices(fetchedServices);
             setHasLoaded(true);
         } catch (e) {
-            toast({ variant: 'destructive', title: 'Error càrrega' });
+            console.error(e);
+            toast({ variant: 'destructive', title: 'Error càrrega', description: "No s'han pogut recuperar els detalls de la factura." });
         } finally {
             setIsLoadingData(false);
         }
-    }, [invoice, firestore, toast, hasLoaded]);
+    }, [invoice, firestore, user, currentEmployee, isAdmin, toast, hasLoaded]);
 
     useEffect(() => {
-        if (invoice && !hasLoaded) fetchData();
-    }, [invoice, fetchData, hasLoaded]);
+        if (invoice && currentEmployee !== undefined && !hasLoaded) fetchData();
+    }, [invoice, currentEmployee, fetchData, hasLoaded]);
 
     const generatePDF = async () => {
         const element = invoiceRef.current;
@@ -171,7 +205,7 @@ function InvoiceDetailContent() {
         }
     };
 
-    if (isUserLoading || isLoadingInvoice || (isLoadingData && !hasLoaded)) {
+    if (isUserLoading || isLoadingInvoice || currentEmployee === undefined || (isLoadingData && !hasLoaded)) {
         return <div className="text-center p-12 h-[60vh] flex flex-col items-center justify-center"><Loader2 className="h-12 w-12 animate-spin text-primary" /><p className="mt-4 font-black uppercase text-slate-400">Carregant Factura...</p></div>
     }
 
