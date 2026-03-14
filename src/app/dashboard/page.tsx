@@ -72,7 +72,7 @@ export default function DashboardPage() {
         const employeesData = employeeSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Employee));
         setEmployees(employeesData);
 
-        // Ara sempre consultem tot per als administradors
+        // Consultem tots els registres sense filtres d'empleat
         const serviceSnapshot = await getDocs(query(collectionGroup(firestore, 'serviceRecords'), orderBy('arrivalDateTime', 'desc')));
         const servicesData = serviceSnapshot.docs
             .map(doc => ({ id: doc.id, ...doc.data() } as ServiceRecord))
