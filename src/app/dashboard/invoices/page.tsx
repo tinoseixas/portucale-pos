@@ -27,10 +27,8 @@ function InvoicesPageContent() {
     
     const [selectedCustomerId, setSelectedCustomerId] = useState<string>('none');
     const [selectedAlbaranIds, setSelectedAlbaranIds] = useState<string[]>([]);
-    
     const [projectName, setProjectName] = useState<string>('');
     const [isSaving, setIsSaving] = useState(false);
-    
     const [servicesForInvoice, setServicesForInvoice] = useState<ServiceRecord[]>([]);
     const [applyIva, setApplyIva] = useState<boolean>(true);
 
@@ -57,14 +55,8 @@ function InvoicesPageContent() {
     useEffect(() => {
         const customerIdParam = searchParams.get('customerId');
         const albaranIdParam = searchParams.get('albaranId');
-
-        if (customerIdParam && customers && selectedCustomerId === 'none') {
-            setSelectedCustomerId(customerIdParam);
-        }
-
-        if (albaranIdParam && albarans && selectedAlbaranIds.length === 0) {
-            setSelectedAlbaranIds([albaranIdParam]);
-        }
+        if (customerIdParam && customers && selectedCustomerId === 'none') setSelectedCustomerId(customerIdParam);
+        if (albaranIdParam && albarans && selectedAlbaranIds.length === 0) setSelectedAlbaranIds([albaranIdParam]);
     }, [searchParams, customers, albarans, selectedCustomerId, selectedAlbaranIds]);
 
     const availableAlbarans = useMemo(() => {
@@ -73,9 +65,7 @@ function InvoicesPageContent() {
     }, [albarans, selectedCustomerId]);
     
     const handleAlbaranSelection = (albaranId: string, checked: boolean) => {
-        setSelectedAlbaranIds(prev => 
-            checked ? [...prev, albaranId] : prev.filter(id => id !== albaranId)
-        );
+        setSelectedAlbaranIds(prev => checked ? [...prev, albaranId] : prev.filter(id => id !== albaranId));
     };
 
     const importAlbarans = useCallback(async () => {
@@ -83,45 +73,32 @@ function InvoicesPageContent() {
             setServicesForInvoice([]);
             return;
         }
-
         const selectedAlbarans = albarans.filter(a => selectedAlbaranIds.includes(a.id));
         if (selectedAlbarans.length === 0) return;
-
         const firstAlbaran = selectedAlbarans[0];
         setProjectName(firstAlbaran.projectName);
-        
         try {
             const allServiceRecordIds = selectedAlbarans.flatMap(a => a.serviceRecordIds);
             if(allServiceRecordIds.length === 0) {
                 setServicesForInvoice([]);
                 return;
             }
-
             const allServicesSnapshot = await getDocs(collectionGroup(firestore, 'serviceRecords'));
             const allServicesData = allServicesSnapshot.docs.map(d => ({ id: d.id, ...d.data() } as ServiceRecord));
-            
             const aggregatedServices = allServiceRecordIds.map(serviceId => {
                 const serviceData = allServicesData.find(s => s.id === serviceId);
                 if (!serviceData) return null;
-
                 const albaran = selectedAlbarans.find(a => a.serviceRecordIds.includes(serviceId));
-                return {
-                    ...serviceData,
-                    albaranNumber: albaran?.albaranNumber || 0
-                };
+                return { ...serviceData, albaranNumber: albaran?.albaranNumber || 0 };
             }).filter((s): s is ServiceRecord => s !== null);
-
             setServicesForInvoice(aggregatedServices);
-
         } catch (e) {
-            console.error("Error important serveis:", e);
-            toast({ variant: 'destructive', title: 'Error', description: "No s'han pogut carregar els detalls dels serveis." });
+            console.error(e);
+            toast({ variant: 'destructive', title: 'Error', description: "No s'han pogut carregar els serveis." });
         }
     }, [selectedAlbaranIds, albarans, firestore, employees, toast]);
 
-    useEffect(() => {
-        importAlbarans();
-    }, [importAlbarans]);
+    useEffect(() => { importAlbarans(); }, [importAlbarans]);
 
     const associatedCustomer = useMemo(() => {
         if (!selectedCustomerId || !customers || selectedCustomerId === 'none') return undefined;
@@ -129,28 +106,17 @@ function InvoicesPageContent() {
     }, [selectedCustomerId, customers]);
 
     const handleSaveInvoice = async (exportAfter: boolean) => {
-        if (!firestore || !employees) return;
-        if(servicesForInvoice.length === 0) {
-            toast({ variant: 'destructive', title: 'Error', description: 'No hi ha serveis per facturar.' });
-            return;
-        }
+        if (!firestore || !employees || servicesForInvoice.length === 0) return;
         setIsSaving(true);
-        
         try {
             const counterRef = doc(firestore, "counters", "invoices");
             const newInvoiceNumber = await runTransaction(firestore, async (transaction) => {
                 const counterDoc = await transaction.get(counterRef);
-                if (!counterDoc.exists()) {
-                    transaction.set(counterRef, { lastNumber: 1 });
-                    return 1;
-                }
-                const newNumber = (counterDoc.data().lastNumber || 0) + 1;
-                transaction.update(counterRef, { lastNumber: newNumber });
-                return newNumber;
+                const next = (counterDoc.exists() ? counterDoc.data().lastNumber || 0 : 0) + 1;
+                transaction.set(counterRef, { lastNumber: next }, { merge: true });
+                return next;
             });
-            
             const { laborCost, totalGeneral } = calculateTotalAmount(servicesForInvoice, employees, applyIva);
-
             const invoiceRef = doc(collection(firestore, "invoices"));
             const invoiceData: Omit<Invoice, 'id'> = {
                 invoiceNumber: newInvoiceNumber,
@@ -158,6 +124,7 @@ function InvoicesPageContent() {
                 customerId: associatedCustomer?.id || '',
                 customerName: associatedCustomer?.name || 'N/A',
                 projectName: projectName || 'Sense nom',
+                employeeId: user?.uid,
                 items: [], 
                 labor: { description: "Mà d'obra", cost: laborCost },
                 totalAmount: totalGeneral,
@@ -166,54 +133,27 @@ function InvoicesPageContent() {
                 status: 'pendent',
                 applyIva: applyIva,
             };
-            
             const batch = writeBatch(firestore);
             batch.set(invoiceRef, { ...invoiceData, id: invoiceRef.id });
-
             const projectIdsToArchive = new Set<string>();
-
             selectedAlbaranIds.forEach(id => {
-                const albaranRef = doc(firestore, 'albarans', id);
-                batch.update(albaranRef, { status: 'facturat' });
-                
+                batch.update(doc(firestore, 'albarans', id), { status: 'facturat' });
                 const alb = albarans?.find(a => a.id === id);
-                if (alb && alb.projectId) {
-                    projectIdsToArchive.add(alb.projectId);
-                }
+                if (alb && alb.projectId) projectIdsToArchive.add(alb.projectId);
             });
-
-            // Arxivar les obres associades
             projectIdsToArchive.forEach(pId => {
-                const projectRef = doc(firestore, 'projects', pId);
-                batch.update(projectRef, { status: 'finished' });
+                batch.update(doc(firestore, 'projects', pId), { status: 'finished' });
             });
-
             await batch.commit();
-
-            toast({
-                title: "Factura generada",
-                description: `L'obra ha estat facturada i arxivada correctament.`,
-            });
-            
-            if (exportAfter) {
-                router.push(`/dashboard/invoices/${invoiceRef.id}?export=true`);
-            } else {
-                 router.push(`/dashboard/invoices/${invoiceRef.id}`);
-            }
-
+            toast({ title: "Factura generada", description: `L'obra ha estat facturada i arxivada correctament.` });
+            router.push(`/dashboard/invoices/${invoiceRef.id}${exportAfter ? '?export=true' : ''}`);
         } catch (error) {
-            console.error("Error guardant factura:", error)
+            console.error(error);
             toast({ variant: 'destructive', title: 'Error', description: "No s'ha pogut generar la factura." });
-        } finally {
-            setIsSaving(false);
-        }
+        } finally { setIsSaving(false); }
     };
 
-    const isLoading = isUserLoading || isLoadingCustomers || isLoadingAlbarans || isLoadingEmployees;
-
-    if (isLoading) {
-        return <div className="p-12 text-center"><Loader2 className="h-12 w-12 animate-spin mx-auto text-primary" /><p className="mt-4">Preparant dades de facturació...</p></div>
-    }
+    if (isUserLoading || isLoadingCustomers || isLoadingAlbarans || isLoadingEmployees) return <div className="p-12 text-center"><Loader2 className="h-12 w-12 animate-spin mx-auto text-primary" /><p className="mt-4">Preparant dades de facturació...</p></div>
 
     return (
         <AdminGate pageTitle="Generador de factures" pageDescription="Crea factures oficials a partir d'albarans d'obra.">
@@ -244,86 +184,39 @@ function InvoicesPageContent() {
                             </div>
                             <div className="space-y-2">
                                 <Label className="flex items-center gap-2 font-bold"><Briefcase className="h-4 w-4 text-primary" /> Nom de l'obra</Label>
-                                <Input 
-                                    placeholder="Nom del projecte"
-                                    value={projectName}
-                                    onChange={(e) => setProjectName(e.target.value)}
-                                    className="h-12 bg-white"
-                                />
+                                <Input placeholder="Nom del projecte" value={projectName} onChange={(e) => setProjectName(e.target.value)} className="h-12 bg-white" />
                             </div>
                         </div>
-
                         {selectedCustomerId !== 'none' && (
                             <div className="space-y-3">
                                 <Label className="font-bold">Albarans pendents del client:</Label>
                                 <div className="max-h-60 overflow-y-auto space-y-2 rounded-xl border p-4 bg-slate-50 shadow-inner">
                                     {availableAlbarans.length > 0 ? availableAlbarans.map(albaran => (
                                         <div key={albaran.id} className="flex items-center space-x-3 p-2 bg-white rounded-lg border border-slate-200">
-                                            <Checkbox
-                                                id={`albaran-${albaran.id}`}
-                                                checked={selectedAlbaranIds.includes(albaran.id)}
-                                                onCheckedChange={(checked) => handleAlbaranSelection(albaran.id, !!checked)}
-                                            />
-                                            <label
-                                                htmlFor={`albaran-${albaran.id}`}
-                                                className="text-sm font-bold leading-none cursor-pointer flex-grow"
-                                            >
+                                            <Checkbox id={`albaran-${albaran.id}`} checked={selectedAlbaranIds.includes(albaran.id)} onCheckedChange={(checked) => handleAlbaranSelection(albaran.id, !!checked)} />
+                                            <label htmlFor={`albaran-${albaran.id}`} className="text-sm font-bold leading-none cursor-pointer flex-grow">
                                                 Albarà #{String(albaran.albaranNumber).padStart(4, '0')} - {albaran.projectName} 
                                                 <span className="ml-2 text-primary font-black">({albaran.totalAmount.toFixed(2)}€)</span>
                                             </label>
                                         </div>
-                                    )) : (
-                                        <div className="text-center py-4 text-muted-foreground flex flex-col items-center gap-2">
-                                            <AlertCircle className="h-5 w-5 opacity-20" />
-                                            <p className="text-sm italic">No s'han trobat albarans pendents per a aquest client.</p>
-                                        </div>
-                                    )}
+                                    )) : <div className="text-center py-4 text-muted-foreground"><AlertCircle className="h-5 w-5 opacity-20 mx-auto mb-2" /><p className="text-sm italic">No hi ha albarans pendents.</p></div>}
                                 </div>
                             </div>
                         )}
-                        
                         <div className="flex items-center space-x-2 bg-slate-100 p-3 rounded-lg w-fit">
-                            <Checkbox
-                                id="apply-iva"
-                                checked={applyIva}
-                                onCheckedChange={(checked) => setApplyIva(!!checked)}
-                            />
-                            <label
-                                htmlFor="apply-iva"
-                                className="text-sm font-bold cursor-pointer select-none"
-                            >
-                                Aplicar IGI (4.5%)
-                            </label>
+                            <Checkbox id="apply-iva" checked={applyIva} onCheckedChange={(checked) => setApplyIva(!!checked)} />
+                            <label htmlFor="apply-iva" className="text-sm font-bold cursor-pointer select-none">Aplicar IGI (4.5%)</label>
                         </div>
-
-
                         <div className="flex justify-end pt-4 gap-3 flex-wrap">
-                             <Button onClick={() => handleSaveInvoice(false)} disabled={isSaving || servicesForInvoice.length === 0} variant="outline" className="h-12 px-6 font-bold">
-                                {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                                Desar factura
-                            </Button>
-                             <Button onClick={() => handleSaveInvoice(true)} disabled={isSaving || servicesForInvoice.length === 0} className="bg-primary hover:bg-primary/90 h-12 px-8 font-bold shadow-lg">
-                                {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileDown className="mr-2 h-4 w-4" />}
-                                Generar i exportar PDF
-                            </Button>
+                             <Button onClick={() => handleSaveInvoice(false)} disabled={isSaving || servicesForInvoice.length === 0} variant="outline" className="h-12 px-6 font-bold">{isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />} Desar factura</Button>
+                             <Button onClick={() => handleSaveInvoice(true)} disabled={isSaving || servicesForInvoice.length === 0} className="bg-primary hover:bg-primary/90 h-12 px-8 font-bold shadow-lg">{isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileDown className="mr-2 h-4 w-4" />} Generar PDF</Button>
                         </div>
                     </CardContent>
                 </Card>
-                
                 {servicesForInvoice.length > 0 && (
                     <Card className="border-2 border-primary/10 shadow-xl overflow-hidden">
-                        <CardHeader className="bg-slate-900 text-white">
-                            <CardTitle className="text-lg">Previsualització del document</CardTitle>
-                        </CardHeader>
-                        <CardContent className="p-0 bg-slate-100">
-                           <InvoicePreview
-                             customer={associatedCustomer}
-                             projectName={projectName}
-                             services={servicesForInvoice}
-                             employees={employees || []}
-                             applyIva={applyIva}
-                           />
-                        </CardContent>
+                        <CardHeader className="bg-slate-900 text-white"><CardTitle className="text-lg">Previsualització del document</CardTitle></CardHeader>
+                        <CardContent className="p-0 bg-slate-100"><InvoicePreview customer={associatedCustomer} projectName={projectName} services={servicesForInvoice} employees={employees || []} applyIva={applyIva} /></CardContent>
                     </Card>
                 )}
             </div>
@@ -333,8 +226,6 @@ function InvoicesPageContent() {
 
 export default function InvoicesPage() {
     return (
-        <Suspense fallback={<div className="p-12 text-center"><Loader2 className="h-12 w-12 animate-spin mx-auto text-primary" /></div>}>
-            <InvoicesPageContent />
-        </Suspense>
+        <Suspense fallback={<div className="p-12 text-center"><Loader2 className="h-12 w-12 animate-spin mx-auto text-primary" /></div>}><InvoicesPageContent /></Suspense>
     )
 }

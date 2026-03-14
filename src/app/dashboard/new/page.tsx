@@ -51,20 +51,16 @@ export default function NewServicePage() {
 
   const projectsQuery = useMemoFirebase(() => {
       if (!firestore || selectedCustomerId === 'none') return null;
-      return query(
-          collection(firestore, 'projects'), 
-          where('customerId', '==', selectedCustomerId)
-      );
+      return query(collection(firestore, 'projects'), where('customerId', '==', selectedCustomerId));
   }, [firestore, selectedCustomerId]);
 
-  const { data: allProjects, isLoading: isLoadingProjects } = useCollection<Project>(projectsQuery);
+  const { data: allProjects } = useCollection<Project>(projectsQuery);
 
   const activeProjects = useMemo(() => {
       if (!allProjects) return [];
       return allProjects.filter(p => p.status === 'active').sort((a, b) => a.name.localeCompare(b.name, 'ca'));
   }, [allProjects]);
 
-  // Sync project name when ID changes via Select
   useEffect(() => {
     if (selectedProjectId !== 'none') {
         const p = activeProjects.find(x => x.id === selectedProjectId);
@@ -85,19 +81,14 @@ export default function NewServicePage() {
               status: 'active',
               createdAt: new Date().toISOString()
           });
-          
-          // Capturar el nom immediatament abans que el Select pugui buidar-lo
           setProjectName(nameToSave);
           setSelectedProjectId(docRef.id);
-          
-          toast({ title: "Obra creada" });
           setIsNewProjectDialogOpen(false);
           setNewProjectName('');
+          toast({ title: "Obra creada" });
       } catch (e) {
           toast({ variant: 'destructive', title: "Error" });
-      } finally {
-          setIsCreatingProject(false);
-      }
+      } finally { setIsCreatingProject(false); }
   };
 
   const handleTranslate = async () => {
@@ -109,23 +100,16 @@ export default function NewServicePage() {
             setDescription(result.translatedText);
             toast({ title: "Traducció feta" });
         }
-    } catch (e) {
-        toast({ variant: 'destructive', title: "Error traducció" });
-    } finally {
-        setIsTranslating(false);
-    }
+    } catch (e) { toast({ variant: 'destructive', title: "Error traducció" }); } finally { setIsTranslating(false); }
   };
 
   const handleStartService = async () => {
     if (!user || !firestore || !currentEmployee) return;
-    
-    // Validació bàsica
-    if (!projectName.trim() && selectedProjectId !== 'none') {
-        // Intentar recuperar el nom si l'estat està buit però hi ha ID
+    let finalProjectName = projectName.trim();
+    if (!finalProjectName && selectedProjectId !== 'none') {
         const p = activeProjects.find(x => x.id === selectedProjectId);
-        if (p) setProjectName(p.name);
+        if (p) finalProjectName = p.name;
     }
-
     setIsStarting(true);
     try {
         const selectedCustomer = customers?.find(c => c.id === selectedCustomerId);
@@ -136,7 +120,7 @@ export default function NewServicePage() {
             arrivalDateTime: now.toISOString(),
             departureDateTime: now.toISOString(), 
             description: description.trim() || "Servei en curs...",
-            projectName: projectName.trim() || "Obra sense nom",
+            projectName: finalProjectName || "Obra sense nom",
             projectId: selectedProjectId !== 'none' ? selectedProjectId : '',
             pendingTasks: '',
             customerId: selectedCustomerId !== 'none' ? selectedCustomerId : '',
@@ -145,6 +129,7 @@ export default function NewServicePage() {
             media: [],
             albarans: [],
             materials: [],
+            additionalCosts: [],
             createdAt: now.toISOString(),
             isLunchSubtracted: true
         };
@@ -171,16 +156,10 @@ export default function NewServicePage() {
                 <div className="space-y-2">
                     <Label className="flex items-center gap-2 font-bold text-[10px] text-slate-400 tracking-tight pl-1"><Users className="h-3 w-3" /> Client</Label>
                     <Select value={selectedCustomerId} onValueChange={(val) => { setSelectedCustomerId(val); setSelectedProjectId('none'); setProjectName(''); }}>
-                        <SelectTrigger className="h-14 rounded-2xl border-2 font-bold bg-slate-50">
-                            <SelectValue placeholder="Selecciona un client" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="none">Cap client</SelectItem>
-                            {customers?.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-                        </SelectContent>
+                        <SelectTrigger className="h-14 rounded-2xl border-2 font-bold bg-slate-50"><SelectValue placeholder="Selecciona un client" /></SelectTrigger>
+                        <SelectContent><SelectItem value="none">Cap client</SelectItem>{customers?.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
                     </Select>
                 </div>
-
                 {selectedCustomerId !== 'none' && (
                     <div className="space-y-2">
                         <div className="flex justify-between items-center px-1">
@@ -195,17 +174,11 @@ export default function NewServicePage() {
                             </Dialog>
                         </div>
                         <Select value={selectedProjectId} onValueChange={setSelectedProjectId}>
-                            <SelectTrigger className="h-14 rounded-2xl border-2 font-bold bg-slate-50">
-                                <SelectValue placeholder="Selecciona obra..." />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="none">Cap obra seleccionada</SelectItem>
-                                {activeProjects.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
-                            </SelectContent>
+                            <SelectTrigger className="h-14 rounded-2xl border-2 font-bold bg-slate-50"><SelectValue placeholder="Selecciona obra..." /></SelectTrigger>
+                            <SelectContent><SelectItem value="none">Cap obra seleccionada</SelectItem>{activeProjects.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}</SelectContent>
                         </Select>
                     </div>
                 )}
-
                 <div className="space-y-2">
                     <div className="flex justify-between items-center px-1">
                         <Label className="flex items-center gap-2 font-bold text-[10px] text-slate-400 tracking-tight"><FileText className="h-3 w-3" /> Descripció del treball</Label>
@@ -216,7 +189,6 @@ export default function NewServicePage() {
                     <Textarea placeholder="Què has de fer avui?" value={description} onChange={(e) => setDescription(e.target.value)} className="rounded-2xl border-2 font-medium bg-slate-50 min-h-[120px] text-lg" />
                 </div>
               </div>
-
               <Button size="lg" className="w-full h-20 text-xl font-black tracking-tight bg-accent hover:bg-accent/90 text-primary rounded-3xl shadow-xl hover:scale-[1.02] transition-transform" onClick={handleStartService} disabled={isStarting || isLoadingEmployee}>
                   {isStarting ? <Loader2 className="mr-3 h-8 w-8 animate-spin" /> : <MapPin className="mr-3 h-8 w-8" />}
                   Iniciar servei

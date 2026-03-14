@@ -182,7 +182,6 @@ function EditServiceContent() {
     }
   }, [service, hasInitialized]);
 
-  // Sync project name when ID changes via Select
   useEffect(() => {
     if (projectId && projectId !== 'none') {
         const p = activeProjects.find(x => x.id === projectId);
@@ -203,11 +202,8 @@ function EditServiceContent() {
               status: 'active',
               createdAt: new Date().toISOString()
           });
-          
-          // Capturar el nom immediatament
           setProjectName(nameToSave);
           setProjectId(projectRef.id);
-          
           setIsNewProjectDialogOpen(false);
           setNewProjectName('');
           toast({ title: "Obra creada" });
@@ -254,7 +250,6 @@ function EditServiceContent() {
         return;
     }
 
-    // Doble comprovació del nom de l'obra
     let finalProjectName = projectName.trim();
     if (!finalProjectName && projectId !== 'none') {
         const p = activeProjects.find(x => x.id === projectId);
@@ -337,7 +332,7 @@ function EditServiceContent() {
           <CardHeader className="bg-slate-900 text-white p-6 sm:p-8">
             <div className="flex justify-between items-center">
                 <div className="space-y-1">
-                    <CardTitle className="text-2xl sm:text-3xl font-black uppercase tracking-tighter">Informe de treball</CardTitle>
+                    <CardTitle className="text-2xl font-black tracking-tight">Informe de treball</CardTitle>
                     <CardDescription className="text-slate-400 font-medium">Tècnic: {service.employeeName || '...'}</CardDescription>
                 </div>
                 <div className="bg-primary/20 p-3 rounded-2xl hidden sm:block">
@@ -473,7 +468,7 @@ function EditServiceContent() {
                           </div>
                       ))}
                   </div>
-                  <Button type="button" variant="ghost" onClick={() => setMaterials([...materials, { description: '', quantity: 1, unitPrice: 0 }])} className="w-full h-16 border-4 border-dashed border-slate-200 rounded-3xl font-black text-slate-400 uppercase text-xs">+ AFEGIR ARTICLE</Button>
+                  <Button type="button" variant="ghost" onClick={() => setMaterials([...materials, { description: '', quantity: 1, unitPrice: 0 }])} className="w-full h-16 border-4 border-dashed border-slate-200 rounded-3xl font-black text-slate-400 uppercase text-xs">+ Afegir article</Button>
               </div>
 
               <div className="space-y-6 rounded-[2.5rem] border-2 border-slate-100 p-6 sm:p-8 bg-slate-50/50 shadow-inner">
@@ -495,7 +490,7 @@ function EditServiceContent() {
                           </div>
                       ))}
                   </div>
-                  <Button type="button" variant="ghost" onClick={() => setAdditionalCosts([...additionalCosts, { description: '', quantity: 1, unitPrice: 0 }])} className="w-full h-16 border-4 border-dashed border-slate-200 rounded-3xl font-black text-slate-400 uppercase text-xs">+ AFEGIR CONCEPTE</Button>
+                  <Button type="button" variant="ghost" onClick={() => setAdditionalCosts([...additionalCosts, { description: '', quantity: 1, unitPrice: 0 }])} className="w-full h-16 border-4 border-dashed border-slate-200 rounded-3xl font-black text-slate-400 uppercase text-xs">+ Afegir concepte</Button>
                   <p className="text-[10px] text-slate-400 font-bold uppercase pl-1">Aquests costos es sumaran al subtotal net del document.</p>
               </div>
 
@@ -504,8 +499,8 @@ function EditServiceContent() {
                     <Label className="font-black text-slate-900 flex items-center gap-3 uppercase tracking-tighter text-xl"><Camera className="h-6 w-6 text-primary" /> Galeria</Label>
                     <div className="flex gap-2">
                         <input type="file" ref={galleryInputRef} onChange={handleGalleryUpload} accept="image/*" multiple className="hidden" />
-                        <Button type="button" variant="outline" size="sm" onClick={() => setShowCamera(true)} className="font-black h-12 rounded-2xl px-4 sm:px-6 border-2 text-[10px] sm:text-xs">CÀMERA</Button>
-                        <Button type="button" variant="outline" size="sm" onClick={() => galleryInputRef.current?.click()} className="font-black h-12 rounded-2xl px-4 sm:px-6 border-2 text-[10px] sm:text-xs">ARXIUS</Button>
+                        <Button type="button" variant="outline" size="sm" onClick={() => setShowCamera(true)} className="font-black h-12 rounded-2xl px-4 sm:px-6 border-2 text-[10px] sm:text-xs">Càmera</Button>
+                        <Button type="button" variant="outline" size="sm" onClick={() => galleryInputRef.current?.click()} className="font-black h-12 rounded-2xl px-4 sm:px-6 border-2 text-[10px] sm:text-xs">Arxius</Button>
                     </div>
                   </div>
                   <div className="grid grid-cols-3 sm:grid-cols-4 gap-4">
@@ -552,7 +547,7 @@ function EditServiceContent() {
                 </AlertDialog>
                 <Button type="submit" className="bg-primary px-10 sm:px-20 h-20 text-xl sm:text-2xl font-black shadow-2xl uppercase tracking-tighter hover:scale-[1.02] transition-all rounded-3xl w-full sm:w-auto" disabled={isSaving}>
                     {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                    GUARDAR TREBALL
+                    Guardar treball
                 </Button>
               </div>
             </form>

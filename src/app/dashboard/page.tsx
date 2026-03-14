@@ -76,12 +76,10 @@ export default function DashboardPage() {
     if (!firestore || !user) return;
     setIsLoadingData(true);
     try {
-        // Obtenir empleats
         const employeeSnapshot = await getDocs(query(collection(firestore, 'employees')));
         const employeesData = employeeSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Employee));
         setEmployees(employeesData);
 
-        // Obtenir serveis: Si no és admin, només demana els seus propis
         let servicesQuery;
         if (isAdmin) {
             servicesQuery = query(collectionGroup(firestore, 'serviceRecords'), orderBy('arrivalDateTime', 'desc'));
@@ -116,7 +114,6 @@ export default function DashboardPage() {
 
   const filteredServices = useMemo(() => {
     let filtered = allServices.filter(service => {
-        // Filtre d'usuari només si és admin (els altres ja reben dades filtrades)
         const userMatch = !isAdmin || selectedUser === 'all' || service.employeeId === selectedUser;
         const dateMatch = !selectedDate || isSameDay(parseISO(service.arrivalDateTime), selectedDate);
         const projectMatch = selectedProject === 'all' || (service.projectName?.trim() === selectedProject);
@@ -155,31 +152,31 @@ export default function DashboardPage() {
   if (!user) { router.push('/'); return null; }
 
   return (
-    <div className="max-w-7xl mx-auto space-y-8 md:space-y-12 px-4 md:px-8 pb-20">
+    <div className="max-w-7xl mx-auto space-y-8 px-4 md:px-8 pb-20">
       <div className="flex flex-col md:flex-row items-start md:items-end justify-between gap-6">
         <div className="space-y-1">
-          <h1 className="text-xl md:text-3xl font-black tracking-tighter leading-none text-primary">Registres de treball</h1>
+          <h1 className="text-xl md:text-2xl font-black tracking-tight leading-none text-primary">Registres de treball</h1>
           <p className="text-slate-400 font-bold text-[10px] tracking-tight pl-1">Supervisió detallada dels serveis realitzats per l'equip.</p>
         </div>
         <div className="flex flex-wrap gap-3 w-full md:w-auto">
-            <Button onClick={() => setRefreshTrigger(prev => prev + 1)} variant="outline" className="h-14 border-2 border-slate-200 text-slate-500 font-bold tracking-tight rounded-2xl text-[10px] px-6">
+            <Button onClick={() => setRefreshTrigger(prev => prev + 1)} variant="outline" className="h-12 border-2 border-slate-200 text-slate-500 font-bold tracking-tight rounded-2xl text-[10px] px-6">
                 <RefreshCw className="mr-2 h-4 w-4" />Actualitzar
             </Button>
-            <Button asChild variant="outline" className="h-14 border-2 border-slate-200 text-slate-500 font-bold tracking-tight rounded-2xl text-[10px] px-6">
+            <Button asChild variant="outline" className="h-12 border-2 border-slate-200 text-slate-500 font-bold tracking-tight rounded-2xl text-[10px] px-6">
                 <Link href="/dashboard/trash"><History className="mr-2 h-4 w-4" />Paperera</Link>
             </Button>
-            <Button asChild className="h-14 bg-accent hover:bg-accent/90 text-primary flex-1 md:flex-none font-black tracking-tight rounded-2xl shadow-xl text-[10px] px-8 border-b-4 border-primary/20">
+            <Button asChild className="h-12 bg-accent hover:bg-accent/90 text-primary flex-1 md:flex-none font-black tracking-tight rounded-2xl shadow-xl text-[10px] px-8 border-b-4 border-primary/20">
                 <Link href="/dashboard/new"><PlusCircle className="mr-2 h-5 w-5" />Nou registre</Link>
             </Button>
         </div>
       </div>
       
-      <Card className="border-none shadow-2xl rounded-[2.5rem] bg-white overflow-hidden border-t-8 border-primary">
+      <Card className="border-none shadow-2xl rounded-[2rem] bg-white overflow-hidden border-t-8 border-primary">
           <CardHeader className="bg-slate-50/50 p-8 border-b border-slate-100 space-y-6">
               <div className="flex justify-between items-center">
                   <div className="flex items-center gap-3 text-primary">
                       <Filter className="h-6 w-6" />
-                      <CardTitle className="text-xl font-black tracking-tight">Filtres de control</CardTitle>
+                      <CardTitle className="text-lg font-black tracking-tight">Filtres de control</CardTitle>
                   </div>
                   {isAdmin && selectedRows.length > 0 && (
                       <AlertDialog>
@@ -206,7 +203,7 @@ export default function DashboardPage() {
                     <div className="space-y-1.5">
                         <label className="text-[10px] font-bold text-slate-400 tracking-tight pl-1">Tècnic responsable</label>
                         <Select value={selectedUser} onValueChange={setSelectedUser}>
-                            <SelectTrigger className="h-14 rounded-2xl border-2 font-bold bg-white text-xs text-primary">
+                            <SelectTrigger className="h-12 rounded-2xl border-2 font-bold bg-white text-xs text-primary">
                                 <User className="mr-2 h-4 w-4 text-slate-300" />
                                 <SelectValue placeholder="Tots els tècnics" />
                             </SelectTrigger>
@@ -221,7 +218,7 @@ export default function DashboardPage() {
                       <label className="text-[10px] font-bold text-slate-400 tracking-tight pl-1">Data de realització</label>
                       <Popover>
                           <PopoverTrigger asChild>
-                              <Button variant="outline" className="w-full justify-start text-left font-bold border-2 h-14 rounded-2xl bg-white text-xs text-primary">
+                              <Button variant="outline" className="w-full justify-start text-left font-bold border-2 h-12 rounded-2xl bg-white text-xs text-primary">
                                   <CalendarIcon className="mr-2 h-4 w-4 text-slate-300" />
                                   {selectedDate ? format(selectedDate, "PPP", { locale: ca }) : <span>Tria una data</span>}
                               </Button>
@@ -232,7 +229,7 @@ export default function DashboardPage() {
                   <div className="space-y-1.5">
                       <label className="text-[10px] font-bold text-slate-400 tracking-tight pl-1">Projecte / obra</label>
                       <Select value={selectedProject} onValueChange={setSelectedProject}>
-                          <SelectTrigger className="h-14 rounded-2xl border-2 font-bold bg-white text-xs text-primary">
+                          <SelectTrigger className="h-12 rounded-2xl border-2 font-bold bg-white text-xs text-primary">
                               <Briefcase className="mr-2 h-4 w-4 text-slate-300" />
                               <SelectValue placeholder="Totes les obres" />
                           </SelectTrigger>
@@ -260,7 +257,7 @@ export default function DashboardPage() {
                               <TableHead className="font-bold text-[10px] tracking-tight text-slate-400">Tècnic</TableHead>
                               <TableHead className="font-bold text-[10px] tracking-tight text-slate-400">Data i hora</TableHead>
                               <TableHead className="font-bold text-[10px] tracking-tight text-slate-400">Obra</TableHead>
-                              <TableHead className="text-right px-8 font-bold text-[10px] tracking-tight">Acció</TableHead>
+                              <TableHead className="text-right px-8 font-bold text-[10px] tracking-tight text-slate-400">Acció</TableHead>
                           </TableRow>
                       </TableHeader>
                       <TableBody>

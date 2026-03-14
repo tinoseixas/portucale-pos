@@ -3,7 +3,7 @@
 
 import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { useCollection, useUser, useFirestore, useMemoFirebase, deleteDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase'
+import { useCollection, useUser, useFirestore, useMemoFirebase, deleteDocumentNonBlocking, updateDocumentNonBlocking, useDoc } from '@/firebase'
 import { collection, query, orderBy, doc, getDocs, collectionGroup, writeBatch, where } from 'firebase/firestore'
 import type { Albaran, ServiceRecord, Employee, Customer, Project } from '@/lib/types'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -37,9 +37,8 @@ export default function AlbaransHistoryPage() {
   const [isSyncing, setIsSyncing] = useState(false)
   
   const [filterCustomer, setFilterCustomer] = useState<string>('all')
-  const [searchProject, setSearchProject] = useState<string>('')
+  const [selectedProject, setSelectedProject] = useState<string>('all')
 
-  // Obtenir dades de l'usuari actual per saber si és admin
   const employeeDocRef = useMemoFirebase(() => {
     if (!user || !firestore) return null;
     return doc(firestore, 'employees', user.uid);
@@ -75,14 +74,20 @@ export default function AlbaransHistoryPage() {
     });
   }, [customers]);
 
+  const projectNames = useMemo(() => {
+    if (!albarans) return [];
+    const names = Array.from(new Set(albarans.map(a => a.projectName))).filter(Boolean);
+    return names.sort((a, b) => a.localeCompare(b));
+  }, [albarans]);
+
   const filteredAlbarans = useMemo(() => {
     if (!albarans) return []
     return albarans.filter(a => {
       const customerMatch = filterCustomer === 'all' || a.customerId === filterCustomer
-      const projectMatch = !searchProject || a.projectName.toLowerCase().includes(searchProject.toLowerCase())
+      const projectMatch = selectedProject === 'all' || a.projectName === selectedProject
       return customerMatch && projectMatch
     })
-  }, [albarans, filterCustomer, searchProject])
+  }, [albarans, filterCustomer, selectedProject])
 
   const pendingAlbarans = useMemo(() => filteredAlbarans.filter(a => a.status === 'pendent'), [filteredAlbarans]);
   const historyAlbarans = useMemo(() => filteredAlbarans.filter(a => a.status === 'facturat'), [filteredAlbarans]);
@@ -147,7 +152,6 @@ export default function AlbaransHistoryPage() {
         const counterSnap = await getDocs(query(collection(firestore, "counters"), where("__name__", "==", "albarans")));
         let nextNum = !counterSnap.empty ? (counterSnap.docs[0].data().lastNumber || 0) : 0;
 
-        // Eliminar només els albarans pendents que pertanyen a l'usuari actual (si no és admin)
         latestAlbarans.filter(a => a.status === 'pendent' && (isAdmin || a.employeeId === user.uid)).forEach(a => {
             batch.delete(doc(firestore, 'albarans', a.id));
         });
@@ -180,7 +184,7 @@ export default function AlbaransHistoryPage() {
                 totalAmount: totalGeneral,
                 status: project?.status === 'finished' ? 'arxivat' : 'pendent',
                 employeeName: technicianNames,
-                employeeId: isAdmin ? firstService.employeeId : user.uid // Assignem la propietat
+                employeeId: isAdmin ? firstService.employeeId : user.uid
             };
 
             batch.set(albaranRef, albaranData);
@@ -198,11 +202,6 @@ export default function AlbaransHistoryPage() {
         setIsSyncing(false);
     }
   };
-
-  const clearFilters = () => {
-    setFilterCustomer('all')
-    setSearchProject('')
-  }
 
   if (isUserLoading || isLoadingAlbarans) return <div className="p-12 text-center h-[60vh] flex flex-col items-center justify-center"><Loader2 className="h-16 w-16 animate-spin text-primary" /><p className="mt-6 text-primary font-black tracking-widest">Carregant albarans...</p></div>
 
@@ -240,18 +239,20 @@ export default function AlbaransHistoryPage() {
                         </Select>
                     </div>
                     <div className="flex-1 space-y-2">
-                        <label className="text-[10px] font-bold uppercase text-slate-400 tracking-widest flex items-center gap-2 px-1"><Search className="h-3 w-3" /> Cerca per obra</label>
-                        <div className="relative">
-                            <Briefcase className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
-                            <Input 
-                                placeholder="Nom del projecte..." 
-                                value={searchProject}
-                                onChange={(e) => setSearchProject(e.target.value)}
-                                className="pl-12 bg-white border-2 h-12 rounded-xl font-bold"
-                            />
-                        </div>
+                        <label className="text-[10px] font-bold uppercase text-slate-400 tracking-widest flex items-center gap-2 px-1"><Briefcase className="h-3 w-3" /> Cerca per obra</label>
+                        <Select value={selectedProject} onValueChange={setSelectedProject}>
+                            <SelectTrigger className="bg-white border-2 h-12 rounded-xl font-bold">
+                                <SelectValue placeholder="Totes les obres" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">Totes les obres</SelectItem>
+                                {projectNames.map(name => (
+                                    <SelectItem key={name} value={name}>{name}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
                     </div>
-                    <Button variant="ghost" onClick={clearFilters} className="font-bold text-slate-400 uppercase text-[10px] tracking-widest hover:bg-slate-100 h-12">
+                    <Button variant="ghost" onClick={() => { setFilterCustomer('all'); setSelectedProject('all'); }} className="font-bold text-slate-400 uppercase text-[10px] tracking-widest hover:bg-slate-100 h-12">
                         <X className="h-4 w-4 mr-1" /> Netejar
                     </Button>
                 </div>
@@ -315,7 +316,6 @@ export default function AlbaransHistoryPage() {
                                                 <CreditCard className="mr-2 h-4 w-4" /> Facturar
                                             </Link>
                                         </Button>
-                                        
                                         <AlertDialog>
                                             <AlertDialogTrigger asChild>
                                                 <Button variant="ghost" size="icon" className="h-10 w-10 text-red-300 hover:text-red-600 hover:bg-red-50 rounded-xl">
