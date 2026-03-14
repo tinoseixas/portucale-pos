@@ -4,15 +4,15 @@
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useCollection, useUser, useFirestore, useMemoFirebase, useDoc } from '@/firebase'
-import { collection, query, doc, getDocs, writeBatch, collectionGroup, orderBy, limit, where } from 'firebase/firestore'
-import type { Employee, ServiceRecord } from '@/lib/types'
+import { useCollection, useUser, useFirestore, useMemoFirebase } from '@/firebase'
+import { collection, query, doc, getDocs, writeBatch, collectionGroup, orderBy, limit, setDoc } from 'firebase/firestore'
+import type { Employee, Customer } from '@/lib/types'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Edit, ShieldAlert, Loader2, Database, AlertCircle, Download, Upload, RefreshCw, FileWarning, Cloud, RotateCcw, Star, Plus } from 'lucide-react'
+import { Edit, ShieldAlert, Loader2, Database, AlertCircle, Download, Upload, RefreshCw, Cloud, RotateCcw, Plus } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { AdminGate } from '@/components/AdminGate'
 import { format, parseISO } from 'date-fns'
@@ -42,6 +42,7 @@ export default function UsersPage() {
   const { user, isUserLoading } = useUser()
   const firestore = useFirestore()
   const [isImporting, setIsImporting] = useState(false);
+  const [isCreatingBackup, setIsCreatingBackup] = useState(false);
   const [restoringId, setRestoringId] = useState<string | null>(null);
 
   const employeesQuery = useMemoFirebase(() => {
@@ -120,6 +121,53 @@ export default function UsersPage() {
     }
   };
 
+  const handleCreateCloudBackup = async () => {
+    if (!firestore || !user) return;
+    setIsCreatingBackup(true);
+    toast({ title: "Generant còpia de seguretat...", description: "Això pot trigar uns segons." });
+    
+    try {
+        const data: any = {
+            customers: [],
+            projects: [],
+            albarans: [],
+            invoices: [],
+            quotes: [],
+            receipts: [],
+            employees: [],
+            serviceRecords: []
+        };
+
+        const collections = ['customers', 'projects', 'albarans', 'invoices', 'quotes', 'receipts', 'employees'];
+        for (const colName of collections) {
+            const snap = await getDocs(collection(firestore, colName));
+            data[colName] = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        }
+
+        const servicesSnap = await getDocs(collectionGroup(firestore, 'serviceRecords'));
+        data.serviceRecords = servicesSnap.docs.map(d => ({ 
+            id: d.id, 
+            parentPath: d.ref.parent.path, 
+            ...d.data() 
+        }));
+
+        const backupRef = doc(collection(firestore, 'backups'));
+        await setDoc(backupRef, {
+            id: backupRef.id,
+            createdAt: new Date().toISOString(),
+            data: JSON.stringify(data),
+            createdBy: user.email
+        });
+        
+        toast({ title: "Còpia al núvol creada", description: "La versió s'ha guardat correctament." });
+    } catch (e) {
+        console.error(e);
+        toast({ variant: 'destructive', title: "Error creant backup" });
+    } finally {
+        setIsCreatingBackup(false);
+    }
+  };
+
   const handleRestoreFromCloud = async (backup: any) => {
     if (!firestore) return;
     setRestoringId(backup.id);
@@ -151,6 +199,7 @@ export default function UsersPage() {
             invoices: [],
             quotes: [],
             receipts: [],
+            employees: [],
             serviceRecords: []
         };
 
@@ -174,7 +223,7 @@ export default function UsersPage() {
         a.download = `TS-Serveis-Backup-${format(new Date(), 'yyyy-MM-dd')}.json`;
         a.click();
         
-        toast({ title: "Backup completat" });
+        toast({ title: "Backup completat", description: "Fitxer descarregat." });
     } catch (e) {
         toast({ variant: 'destructive', title: "Error exportant" });
     }
@@ -190,7 +239,7 @@ export default function UsersPage() {
         try {
             const data = JSON.parse(evt.target?.result as string);
             await processImportData(data);
-            toast({ title: "Importació Finalitzada" });
+            toast({ title: "Importació finalitzada" });
             window.location.reload();
         } catch (err) {
             console.error(err);
@@ -209,33 +258,31 @@ export default function UsersPage() {
     return 'U'
   }
   
-  const isLoading = isUserLoading || isLoadingEmployees;
-  
-  if (isLoading) return <p className="p-12 text-center font-bold uppercase tracking-widest">Carregant...</p>
+  if (isUserLoading || isLoadingEmployees) return <p className="p-12 text-center font-bold uppercase tracking-widest">Carregant...</p>
   if (!user) return null;
 
   return (
-    <AdminGate pageTitle="Gestió d'Usuaris" pageDescription="Aquesta secció està protegida.">
+    <AdminGate pageTitle="Gestió d'usuaris" pageDescription="Administració centralitzada de l'equip i seguretat.">
         <div className="max-w-4xl mx-auto space-y-10 pb-20">
         <Card className="border-none shadow-xl rounded-3xl overflow-hidden">
             <CardHeader className="bg-slate-900 text-white">
-                <CardTitle className="text-2xl font-black uppercase tracking-tight">Gestió d'Usuaris</CardTitle>
-                <CardDescription className="text-slate-400">Visualitza i gestiona els perfils.</CardDescription>
+                <CardTitle className="text-2xl font-black uppercase tracking-tight">Gestió d'usuaris</CardTitle>
+                <CardDescription className="text-slate-400 font-medium">Visualitza i gestiona els perfils de l'equip.</CardDescription>
             </CardHeader>
             <CardContent className="p-0">
             <div className="overflow-x-auto">
                 <Table>
                     <TableHeader className="bg-slate-50">
                     <TableRow>
-                        <TableHead className="px-8 font-black uppercase text-[10px] tracking-widest">Empleat</TableHead>
-                        <TableHead className="font-black uppercase text-[10px] tracking-widest">ID d'Empleat</TableHead>
-                        <TableHead className="font-black uppercase text-[10px] tracking-widest">Rol</TableHead>
-                        <TableHead className="text-right px-8 font-black uppercase text-[10px] tracking-widest">Accions</TableHead>
+                        <TableHead className="px-8 py-4 font-black uppercase text-[10px] tracking-widest text-slate-400">Empleat</TableHead>
+                        <TableHead className="font-black uppercase text-[10px] tracking-widest text-slate-400">Id d'empleat</TableHead>
+                        <TableHead className="font-black uppercase text-[10px] tracking-widest text-slate-400">Rol</TableHead>
+                        <TableHead className="text-right px-8 font-black uppercase text-[10px] tracking-widest text-slate-400">Accions</TableHead>
                     </TableRow>
                     </TableHeader>
                     <TableBody>
                     {employees?.map(employee => (
-                        <TableRow key={employee.id} className="hover:bg-slate-50">
+                        <TableRow key={employee.id} className="hover:bg-slate-50 transition-colors border-b border-slate-50">
                         <TableCell className="px-8 py-4">
                             <div className="flex items-center gap-3">
                             <Avatar className="border-2 border-primary/10">
@@ -276,28 +323,40 @@ export default function UsersPage() {
         <div className="space-y-10">
             <Card className="border-none shadow-2xl bg-blue-50/50 rounded-[2.5rem] overflow-hidden">
                 <CardHeader className="bg-primary text-white p-8">
-                    <CardTitle className="text-xl font-black uppercase tracking-widest flex items-center gap-2">
-                        <Cloud className="h-6 w-6" />
-                        Còpies de Seguretat al Firebase
-                    </CardTitle>
-                    <CardDescription className="text-blue-100 font-medium italic">Historial de backups automàtics.</CardDescription>
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                        <div>
+                            <CardTitle className="text-xl font-black uppercase tracking-widest flex items-center gap-2">
+                                <Cloud className="h-6 w-6" />
+                                Còpies de seguretat al Firebase
+                            </CardTitle>
+                            <CardDescription className="text-blue-100 font-medium italic">Historial de versions guardades al núvol.</CardDescription>
+                        </div>
+                        <Button 
+                            onClick={handleCreateCloudBackup} 
+                            disabled={isCreatingBackup}
+                            className="bg-accent text-primary font-black uppercase text-[10px] tracking-widest h-12 px-6 rounded-xl shadow-lg hover:scale-105 transition-transform"
+                        >
+                            {isCreatingBackup ? <Loader2 className="animate-spin h-4 w-4 mr-2" /> : <Plus className="h-4 w-4 mr-2" />}
+                            Crear còpia al núvol ara
+                        </Button>
+                    </div>
                 </CardHeader>
                 <CardContent className="p-0 bg-white">
                     <div className="overflow-x-auto">
                         <Table>
                             <TableHeader className="bg-slate-50">
                                 <TableRow>
-                                    <TableHead className="px-8 py-4 font-black uppercase text-[10px] tracking-widest">Identificador</TableHead>
-                                    <TableHead className="font-black uppercase text-[10px] tracking-widest">Data i Hora</TableHead>
-                                    <TableHead className="text-right px-8 font-black uppercase text-[10px] tracking-widest">Accions</TableHead>
+                                    <TableHead className="px-8 py-4 font-black uppercase text-[10px] tracking-widest text-slate-400">Identificador</TableHead>
+                                    <TableHead className="font-black uppercase text-[10px] tracking-widest text-slate-400">Data i hora</TableHead>
+                                    <TableHead className="text-right px-8 font-black uppercase text-[10px] tracking-widest text-slate-400">Accions</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {isLoadingBackups ? (
                                     <TableRow><TableCell colSpan={3} className="text-center py-8"><Loader2 className="animate-spin h-6 w-6 mx-auto text-primary" /></TableCell></TableRow>
                                 ) : cloudBackups && cloudBackups.length > 0 ? cloudBackups.map(backup => (
-                                    <TableRow key={backup.id} className="hover:bg-slate-50">
-                                        <TableCell className="px-8 py-4 font-bold text-slate-600">{backup.id}</TableCell>
+                                    <TableRow key={backup.id} className="hover:bg-slate-50 border-b border-slate-50 transition-colors">
+                                        <TableCell className="px-8 py-4 font-bold text-slate-600">{backup.id.substring(0, 8)}...</TableCell>
                                         <TableCell className="text-xs font-medium text-slate-400">
                                             {format(parseISO(backup.createdAt), 'dd MMMM yyyy HH:mm', { locale: ca })}
                                         </TableCell>
@@ -311,21 +370,21 @@ export default function UsersPage() {
                                                 </AlertDialogTrigger>
                                                 <AlertDialogContent className="rounded-[2.5rem] p-10">
                                                     <AlertDialogHeader>
-                                                        <AlertDialogTitle className="text-2xl font-black uppercase">Restaurar versió?</AlertDialogTitle>
-                                                        <AlertDialogDescription className="text-base font-medium">
-                                                            Això sobreescriurà les dades actuals amb la versió del dia <strong>{format(parseISO(backup.createdAt), 'dd/MM/yyyy')}</strong>.
+                                                        <AlertDialogTitle className="text-2xl font-black uppercase text-primary">Restaurar versió?</AlertDialogTitle>
+                                                        <AlertDialogDescription className="text-base font-medium text-slate-500 leading-relaxed">
+                                                            Això sobreescriurà les dades actuals amb la versió del dia <strong>{format(parseISO(backup.createdAt), 'dd/MM/yyyy')}</strong>. Es recomana fer una exportació local abans de continuar.
                                                         </AlertDialogDescription>
                                                     </AlertDialogHeader>
                                                     <AlertDialogFooter className="pt-6">
                                                         <AlertDialogCancel className="h-14 rounded-2xl font-bold px-8 border-2">Cancel·lar</AlertDialogCancel>
-                                                        <AlertDialogAction onClick={() => handleRestoreFromCloud(backup)} className="bg-primary h-14 rounded-2xl font-black uppercase px-8 text-white">RESTAURAR TOT</AlertDialogAction>
+                                                        <AlertDialogAction onClick={() => handleRestoreFromCloud(backup)} className="bg-primary h-14 rounded-2xl font-black uppercase px-8 text-white shadow-xl">RESTABLIR DADES</AlertDialogAction>
                                                     </AlertDialogFooter>
                                                 </AlertDialogContent>
                                             </AlertDialog>
                                         </TableCell>
                                     </TableRow>
                                 )) : (
-                                    <TableRow><TableCell colSpan={3} className="text-center py-8 text-slate-400 italic">No hi ha backups encara.</TableCell></TableRow>
+                                    <TableRow><TableCell colSpan={3} className="text-center py-8 text-slate-400 italic font-medium">No hi ha còpies al núvol encara.</TableCell></TableRow>
                                 )}
                             </TableBody>
                         </Table>
@@ -337,33 +396,33 @@ export default function UsersPage() {
                 <CardHeader className="bg-slate-900 text-white p-8">
                     <CardTitle className="text-xl font-black uppercase tracking-widest flex items-center gap-2">
                         <ShieldAlert className="h-6 w-6 text-primary" />
-                        Zona de Recuperació Manual
+                        Zona de recuperació manual
                     </CardTitle>
-                    <CardDescription className="text-slate-400 font-medium italic">Exportació i restauració de dades.</CardDescription>
+                    <CardDescription className="text-slate-400 font-medium italic">Exportació i restauració mitjançant fitxers locals.</CardDescription>
                 </CardHeader>
                 <CardContent className="p-8 space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="p-6 bg-white rounded-3xl border-2 border-primary/10 shadow-sm space-y-4">
                             <div className="space-y-1">
-                                <p className="font-black text-primary uppercase text-xs">Còpia Local</p>
-                                <p className="text-[10px] text-slate-400 font-bold uppercase">Descarrega en format .json.</p>
+                                <p className="font-black text-primary uppercase text-xs">Còpia local</p>
+                                <p className="text-[10px] text-slate-400 font-bold uppercase">Descarrega tot el sistema en format .json.</p>
                             </div>
-                            <Button variant="outline" onClick={handleExportData} className="w-full h-12 border-primary text-primary font-black uppercase tracking-widest rounded-xl hover:bg-primary/5">
+                            <Button variant="outline" onClick={handleExportData} className="w-full h-12 border-primary text-primary font-black uppercase tracking-widest rounded-xl hover:bg-primary/5 transition-colors">
                                 <Download className="h-4 w-4 mr-2" />
-                                EXPORTAR ARA
+                                Exportar ara
                             </Button>
                         </div>
                         <div className="p-6 bg-white rounded-3xl border-2 border-primary/10 shadow-sm space-y-4">
                             <div className="space-y-1">
-                                <p className="font-black text-primary uppercase text-xs">Restaurar des de Fitxer</p>
-                                <p className="text-[10px] text-slate-400 font-bold uppercase">Carrega un fitxer .json exportat.</p>
+                                <p className="font-black text-primary uppercase text-xs">Restaurar des de fitxer</p>
+                                <p className="text-[10px] text-slate-400 font-bold uppercase">Carrega un fitxer .json exportat anteriorment.</p>
                             </div>
                             <div className="relative">
                                 <input type="file" accept=".json" onChange={handleImportData} className="hidden" id="import-json" />
-                                <Button asChild variant="outline" disabled={isImporting} className="w-full h-12 border-primary text-primary font-black uppercase tracking-widest rounded-xl hover:bg-primary/5 cursor-pointer">
-                                    <label htmlFor="import-json" className="flex items-center justify-center gap-2">
+                                <Button asChild variant="outline" disabled={isImporting} className="w-full h-12 border-primary text-primary font-black uppercase tracking-widest rounded-xl hover:bg-primary/5 cursor-pointer transition-colors">
+                                    <label htmlFor="import-json" className="flex items-center justify-center gap-2 cursor-pointer w-full">
                                         {isImporting ? <Loader2 className="animate-spin h-4 w-4" /> : <Upload className="h-4 w-4" />}
-                                        IMPORTAR BACKUP
+                                        Importar backup
                                     </label>
                                 </Button>
                             </div>
@@ -373,8 +432,7 @@ export default function UsersPage() {
                     <div className="bg-slate-900 border-2 border-primary p-4 rounded-2xl flex gap-3 shadow-inner">
                         <AlertCircle className="h-6 w-6 text-primary shrink-0" />
                         <div className="text-[10px] font-bold text-slate-400 uppercase leading-relaxed">
-                            <span className="text-white">NOTA:</span> El sistema fa backups automàtics cada dia. 
-                            Utilitza aquestes funcions només per a emergències o trasllat de dades.
+                            <span className="text-white">Nota important:</span> Utilitza la funció de restauració amb precaució, ja que sobreescriu les dades actuals. Es recomana crear una còpia al núvol abans de fer qualsevol canvi estructural.
                         </div>
                     </div>
                 </CardContent>
