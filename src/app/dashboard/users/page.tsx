@@ -44,28 +44,17 @@ export default function UsersPage() {
   const [isImporting, setIsImporting] = useState(false);
   const [restoringId, setRestoringId] = useState<string | null>(null);
 
-  const employeeDocRef = useMemoFirebase(() => {
-    if (!user || !firestore) return null;
-    return doc(firestore, 'employees', user.uid);
-  }, [firestore, user]);
-  const { data: currentEmployee } = useDoc<any>(employeeDocRef);
-  const isAdmin = currentEmployee?.role === 'admin';
-
   const employeesQuery = useMemoFirebase(() => {
     if (!user || !firestore) return null;
-    if (isAdmin) {
-        return query(collection(firestore, 'employees'))
-    } else {
-        return query(collection(firestore, 'employees'), where('id', '==', user.uid))
-    }
-  }, [firestore, user, isAdmin])
+    return query(collection(firestore, 'employees'));
+  }, [firestore, user])
 
   const { data: employees, isLoading: isLoadingEmployees } = useCollection<Employee>(employeesQuery)
 
   const backupsQuery = useMemoFirebase(() => {
-    if (!user || !firestore || !isAdmin) return null;
+    if (!user || !firestore) return null;
     return query(collection(firestore, 'backups'), orderBy('createdAt', 'desc'), limit(10))
-  }, [firestore, user, isAdmin]);
+  }, [firestore, user]);
 
   const { data: cloudBackups, isLoading: isLoadingBackups } = useCollection<any>(backupsQuery);
   
@@ -284,115 +273,113 @@ export default function UsersPage() {
             </CardContent>
         </Card>
 
-        {isAdmin && (
-            <div className="space-y-10">
-                <Card className="border-none shadow-2xl bg-blue-50/50 rounded-[2.5rem] overflow-hidden">
-                    <CardHeader className="bg-primary text-white p-8">
-                        <CardTitle className="text-xl font-black uppercase tracking-widest flex items-center gap-2">
-                            <Cloud className="h-6 w-6" />
-                            Còpies de Seguretat al Firebase
-                        </CardTitle>
-                        <CardDescription className="text-blue-100 font-medium italic">Historial de backups automàtics.</CardDescription>
-                    </CardHeader>
-                    <CardContent className="p-0 bg-white">
-                        <div className="overflow-x-auto">
-                            <Table>
-                                <TableHeader className="bg-slate-50">
-                                    <TableRow>
-                                        <TableHead className="px-8 py-4 font-black uppercase text-[10px] tracking-widest">Identificador</TableHead>
-                                        <TableHead className="font-black uppercase text-[10px] tracking-widest">Data i Hora</TableHead>
-                                        <TableHead className="text-right px-8 font-black uppercase text-[10px] tracking-widest">Accions</TableHead>
+        <div className="space-y-10">
+            <Card className="border-none shadow-2xl bg-blue-50/50 rounded-[2.5rem] overflow-hidden">
+                <CardHeader className="bg-primary text-white p-8">
+                    <CardTitle className="text-xl font-black uppercase tracking-widest flex items-center gap-2">
+                        <Cloud className="h-6 w-6" />
+                        Còpies de Seguretat al Firebase
+                    </CardTitle>
+                    <CardDescription className="text-blue-100 font-medium italic">Historial de backups automàtics.</CardDescription>
+                </CardHeader>
+                <CardContent className="p-0 bg-white">
+                    <div className="overflow-x-auto">
+                        <Table>
+                            <TableHeader className="bg-slate-50">
+                                <TableRow>
+                                    <TableHead className="px-8 py-4 font-black uppercase text-[10px] tracking-widest">Identificador</TableHead>
+                                    <TableHead className="font-black uppercase text-[10px] tracking-widest">Data i Hora</TableHead>
+                                    <TableHead className="text-right px-8 font-black uppercase text-[10px] tracking-widest">Accions</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {isLoadingBackups ? (
+                                    <TableRow><TableCell colSpan={3} className="text-center py-8"><Loader2 className="animate-spin h-6 w-6 mx-auto text-primary" /></TableCell></TableRow>
+                                ) : cloudBackups && cloudBackups.length > 0 ? cloudBackups.map(backup => (
+                                    <TableRow key={backup.id} className="hover:bg-slate-50">
+                                        <TableCell className="px-8 py-4 font-bold text-slate-600">{backup.id}</TableCell>
+                                        <TableCell className="text-xs font-medium text-slate-400">
+                                            {format(parseISO(backup.createdAt), 'dd MMMM yyyy HH:mm', { locale: ca })}
+                                        </TableCell>
+                                        <TableCell className="text-right px-8">
+                                            <AlertDialog>
+                                                <AlertDialogTrigger asChild>
+                                                    <Button variant="outline" size="sm" disabled={restoringId === backup.id} className="h-9 px-4 border-primary text-primary font-black uppercase text-[10px] tracking-widest rounded-xl hover:bg-primary hover:text-white transition-all">
+                                                        {restoringId === backup.id ? <Loader2 className="animate-spin h-3 w-3 mr-2" /> : <RotateCcw className="h-3 w-3 mr-2" />}
+                                                        Restaurar
+                                                    </Button>
+                                                </AlertDialogTrigger>
+                                                <AlertDialogContent className="rounded-[2.5rem] p-10">
+                                                    <AlertDialogHeader>
+                                                        <AlertDialogTitle className="text-2xl font-black uppercase">Restaurar versió?</AlertDialogTitle>
+                                                        <AlertDialogDescription className="text-base font-medium">
+                                                            Això sobreescriurà les dades actuals amb la versió del dia <strong>{format(parseISO(backup.createdAt), 'dd/MM/yyyy')}</strong>.
+                                                        </AlertDialogDescription>
+                                                    </AlertDialogHeader>
+                                                    <AlertDialogFooter className="pt-6">
+                                                        <AlertDialogCancel className="h-14 rounded-2xl font-bold px-8 border-2">Cancel·lar</AlertDialogCancel>
+                                                        <AlertDialogAction onClick={() => handleRestoreFromCloud(backup)} className="bg-primary h-14 rounded-2xl font-black uppercase px-8 text-white">RESTAURAR TOT</AlertDialogAction>
+                                                    </AlertDialogFooter>
+                                                </AlertDialogContent>
+                                            </AlertDialog>
+                                        </TableCell>
                                     </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {isLoadingBackups ? (
-                                        <TableRow><TableCell colSpan={3} className="text-center py-8"><Loader2 className="animate-spin h-6 w-6 mx-auto text-primary" /></TableCell></TableRow>
-                                    ) : cloudBackups && cloudBackups.length > 0 ? cloudBackups.map(backup => (
-                                        <TableRow key={backup.id} className="hover:bg-slate-50">
-                                            <TableCell className="px-8 py-4 font-bold text-slate-600">{backup.id}</TableCell>
-                                            <TableCell className="text-xs font-medium text-slate-400">
-                                                {format(parseISO(backup.createdAt), 'dd MMMM yyyy HH:mm', { locale: ca })}
-                                            </TableCell>
-                                            <TableCell className="text-right px-8">
-                                                <AlertDialog>
-                                                    <AlertDialogTrigger asChild>
-                                                        <Button variant="outline" size="sm" disabled={restoringId === backup.id} className="h-9 px-4 border-primary text-primary font-black uppercase text-[10px] tracking-widest rounded-xl hover:bg-primary hover:text-white transition-all">
-                                                            {restoringId === backup.id ? <Loader2 className="animate-spin h-3 w-3 mr-2" /> : <RotateCcw className="h-3 w-3 mr-2" />}
-                                                            Restaurar
-                                                        </Button>
-                                                    </AlertDialogTrigger>
-                                                    <AlertDialogContent className="rounded-[2.5rem] p-10">
-                                                        <AlertDialogHeader>
-                                                            <AlertDialogTitle className="text-2xl font-black uppercase">Restaurar versió?</AlertDialogTitle>
-                                                            <AlertDialogDescription className="text-base font-medium">
-                                                                Això sobreescriurà les dades actuals amb la versió del dia <strong>{format(parseISO(backup.createdAt), 'dd/MM/yyyy')}</strong>.
-                                                            </AlertDialogDescription>
-                                                        </AlertDialogHeader>
-                                                        <AlertDialogFooter className="pt-6">
-                                                            <AlertDialogCancel className="h-14 rounded-2xl font-bold px-8 border-2">Cancel·lar</AlertDialogCancel>
-                                                            <AlertDialogAction onClick={() => handleRestoreFromCloud(backup)} className="bg-primary h-14 rounded-2xl font-black uppercase px-8 text-white">RESTAURAR TOT</AlertDialogAction>
-                                                        </AlertDialogFooter>
-                                                    </AlertDialogContent>
-                                                </AlertDialog>
-                                            </TableCell>
-                                        </TableRow>
-                                    )) : (
-                                        <TableRow><TableCell colSpan={3} className="text-center py-8 text-slate-400 italic">No hi ha backups encara.</TableCell></TableRow>
-                                    )}
-                                </TableBody>
-                            </Table>
-                        </div>
-                    </CardContent>
-                </Card>
+                                )) : (
+                                    <TableRow><TableCell colSpan={3} className="text-center py-8 text-slate-400 italic">No hi ha backups encara.</TableCell></TableRow>
+                                )}
+                            </TableBody>
+                        </Table>
+                    </div>
+                </CardContent>
+            </Card>
 
-                <Card className="border-none shadow-2xl bg-slate-50 rounded-[2.5rem] overflow-hidden">
-                    <CardHeader className="bg-slate-900 text-white p-8">
-                        <CardTitle className="text-xl font-black uppercase tracking-widest flex items-center gap-2">
-                            <ShieldAlert className="h-6 w-6 text-primary" />
-                            Zona de Recuperació Manual
-                        </CardTitle>
-                        <CardDescription className="text-slate-400 font-medium italic">Exportació i restauració de dades.</CardDescription>
-                    </CardHeader>
-                    <CardContent className="p-8 space-y-6">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div className="p-6 bg-white rounded-3xl border-2 border-primary/10 shadow-sm space-y-4">
-                                <div className="space-y-1">
-                                    <p className="font-black text-primary uppercase text-xs">Còpia Local</p>
-                                    <p className="text-[10px] text-slate-400 font-bold uppercase">Descarrega en format .json.</p>
-                                </div>
-                                <Button variant="outline" onClick={handleExportData} className="w-full h-12 border-primary text-primary font-black uppercase tracking-widest rounded-xl hover:bg-primary/5">
-                                    <Download className="h-4 w-4 mr-2" />
-                                    EXPORTAR ARA
+            <Card className="border-none shadow-2xl bg-slate-50 rounded-[2.5rem] overflow-hidden">
+                <CardHeader className="bg-slate-900 text-white p-8">
+                    <CardTitle className="text-xl font-black uppercase tracking-widest flex items-center gap-2">
+                        <ShieldAlert className="h-6 w-6 text-primary" />
+                        Zona de Recuperació Manual
+                    </CardTitle>
+                    <CardDescription className="text-slate-400 font-medium italic">Exportació i restauració de dades.</CardDescription>
+                </CardHeader>
+                <CardContent className="p-8 space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="p-6 bg-white rounded-3xl border-2 border-primary/10 shadow-sm space-y-4">
+                            <div className="space-y-1">
+                                <p className="font-black text-primary uppercase text-xs">Còpia Local</p>
+                                <p className="text-[10px] text-slate-400 font-bold uppercase">Descarrega en format .json.</p>
+                            </div>
+                            <Button variant="outline" onClick={handleExportData} className="w-full h-12 border-primary text-primary font-black uppercase tracking-widest rounded-xl hover:bg-primary/5">
+                                <Download className="h-4 w-4 mr-2" />
+                                EXPORTAR ARA
+                            </Button>
+                        </div>
+                        <div className="p-6 bg-white rounded-3xl border-2 border-primary/10 shadow-sm space-y-4">
+                            <div className="space-y-1">
+                                <p className="font-black text-primary uppercase text-xs">Restaurar des de Fitxer</p>
+                                <p className="text-[10px] text-slate-400 font-bold uppercase">Carrega un fitxer .json exportat.</p>
+                            </div>
+                            <div className="relative">
+                                <input type="file" accept=".json" onChange={handleImportData} className="hidden" id="import-json" />
+                                <Button asChild variant="outline" disabled={isImporting} className="w-full h-12 border-primary text-primary font-black uppercase tracking-widest rounded-xl hover:bg-primary/5 cursor-pointer">
+                                    <label htmlFor="import-json" className="flex items-center justify-center gap-2">
+                                        {isImporting ? <Loader2 className="animate-spin h-4 w-4" /> : <Upload className="h-4 w-4" />}
+                                        IMPORTAR BACKUP
+                                    </label>
                                 </Button>
                             </div>
-                            <div className="p-6 bg-white rounded-3xl border-2 border-primary/10 shadow-sm space-y-4">
-                                <div className="space-y-1">
-                                    <p className="font-black text-primary uppercase text-xs">Restaurar des de Fitxer</p>
-                                    <p className="text-[10px] text-slate-400 font-bold uppercase">Carrega un fitxer .json exportat.</p>
-                                </div>
-                                <div className="relative">
-                                    <input type="file" accept=".json" onChange={handleImportData} className="hidden" id="import-json" />
-                                    <Button asChild variant="outline" disabled={isImporting} className="w-full h-12 border-primary text-primary font-black uppercase tracking-widest rounded-xl hover:bg-primary/5 cursor-pointer">
-                                        <label htmlFor="import-json" className="flex items-center justify-center gap-2">
-                                            {isImporting ? <Loader2 className="animate-spin h-4 w-4" /> : <Upload className="h-4 w-4" />}
-                                            IMPORTAR BACKUP
-                                        </label>
-                                    </Button>
-                                </div>
-                            </div>
                         </div>
+                    </div>
 
-                        <div className="bg-slate-900 border-2 border-primary p-4 rounded-2xl flex gap-3 shadow-inner">
-                            <AlertCircle className="h-6 w-6 text-primary shrink-0" />
-                            <div className="text-[10px] font-bold text-slate-400 uppercase leading-relaxed">
-                                <span className="text-white">NOTA:</span> El sistema fa backups automàtics cada dia. 
-                                Utilitza aquestes funcions només per a emergències o trasllat de dades.
-                            </div>
+                    <div className="bg-slate-900 border-2 border-primary p-4 rounded-2xl flex gap-3 shadow-inner">
+                        <AlertCircle className="h-6 w-6 text-primary shrink-0" />
+                        <div className="text-[10px] font-bold text-slate-400 uppercase leading-relaxed">
+                            <span className="text-white">NOTA:</span> El sistema fa backups automàtics cada dia. 
+                            Utilitza aquestes funcions només per a emergències o trasllat de dades.
                         </div>
-                    </CardContent>
-                </Card>
-            </div>
-        )}
+                    </div>
+                </CardContent>
+            </Card>
+        </div>
         </div>
     </AdminGate>
   )

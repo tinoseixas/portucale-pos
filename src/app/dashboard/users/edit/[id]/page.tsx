@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
@@ -32,7 +33,7 @@ const profileSchema = z.object({
 
 type ProfileFormValues = z.infer<typeof profileSchema>;
 
-const ADMIN_EMAIL = 'tinoseixas@gmail.com';
+const ADMIN_EMAILS = ['tinoseixas@gmail.com', 'tino@seixas.com'];
 
 export default function EditUserPage() {
   const router = useRouter();
@@ -138,7 +139,7 @@ export default function EditUserPage() {
   }
 
   if (!currentUser) {
-    return null; // Redirect is handled by useEffect
+    return null; 
   }
   
   if (!employee) {
@@ -152,7 +153,7 @@ export default function EditUserPage() {
     return 'U';
   }
   
-  const canEditRole = currentUser?.email === ADMIN_EMAIL;
+  const canEditRole = ADMIN_EMAILS.includes(currentUser?.email || '');
 
   return (
     <AdminGate pageTitle="Edició d'Usuari" pageDescription="Aquesta secció està protegida.">
@@ -280,5 +281,3 @@ export default function EditUserPage() {
     </AdminGate>
   );
 }
-
-    

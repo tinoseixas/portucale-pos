@@ -15,7 +15,7 @@ import { doc, setDoc, getDoc } from 'firebase/firestore'
 import { Logo } from '@/components/Logo'
 import { BRANDING } from '@/lib/branding'
 
-const ADMIN_EMAIL = 'tinoseixas@gmail.com';
+const ADMIN_EMAILS = ['tinoseixas@gmail.com', 'tino@seixas.com'];
 
 export default function Home() {
   const router = useRouter()
@@ -44,9 +44,7 @@ export default function Home() {
       const employeeRef = doc(firestore, 'employees', loggedInUser.uid);
       const employeeSnap = await getDoc(employeeRef);
 
-      // Si l'usuari ja existeix, mantenim el seu rol. Si no, és 'user' excepte si és l'email mestre.
-      const existingRole = employeeSnap.exists() ? employeeSnap.data().role : null;
-      const isMasterAdmin = loggedInUser.email?.toLowerCase() === ADMIN_EMAIL;
+      const isMasterAdmin = ADMIN_EMAILS.includes(loggedInUser.email?.toLowerCase() || '');
 
       await setDoc(employeeRef, {
           id: loggedInUser.uid,
@@ -54,7 +52,7 @@ export default function Home() {
           firstName: employeeSnap.exists() ? (employeeSnap.data().firstName || loggedInUser.email?.split('@')[0]) : (loggedInUser.email?.split('@')[0] || 'Usuari'),
           lastName: employeeSnap.exists() ? (employeeSnap.data().lastName || 'TS') : 'TS',
           email: loggedInUser.email?.toLowerCase(),
-          role: existingRole || (isMasterAdmin ? 'admin' : 'user'), 
+          role: isMasterAdmin ? 'admin' : (employeeSnap.exists() ? employeeSnap.data().role : 'user'), 
           hourlyRate: employeeSnap.exists() ? (employeeSnap.data()?.hourlyRate || 30) : 30,
       }, { merge: true });
 
@@ -81,7 +79,7 @@ export default function Home() {
       const userCredential = await createUserWithEmailAndPassword(auth, cleanEmail, password);
       const newUser = userCredential.user;
       
-      const isMasterAdmin = cleanEmail === ADMIN_EMAIL;
+      const isMasterAdmin = ADMIN_EMAILS.includes(cleanEmail);
       
       const employeeRef = doc(firestore, 'employees', newUser.uid);
       await setDoc(employeeRef, {
@@ -91,7 +89,7 @@ export default function Home() {
         lastName: 'Usuari',
         email: cleanEmail,
         phoneNumber: '',
-        role: isMasterAdmin ? 'admin' : 'user', // Per defecte és usuari sense privilegis
+        role: isMasterAdmin ? 'admin' : 'user',
         hourlyRate: 30,
       }, { merge: true });
 

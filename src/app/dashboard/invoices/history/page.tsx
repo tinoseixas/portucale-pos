@@ -34,21 +34,10 @@ export default function InvoicesHistoryPage() {
   const firestore = useFirestore()
   const { toast } = useToast()
 
-  const employeeDocRef = useMemoFirebase(() => {
-    if (!user || !firestore) return null;
-    return doc(firestore, 'employees', user.uid);
-  }, [firestore, user]);
-  const { data: currentEmployee } = useDoc<any>(employeeDocRef);
-  const isAdmin = currentEmployee?.role === 'admin';
-
   const invoicesQuery = useMemoFirebase(() => {
     if (!firestore || !user) return null
-    if (isAdmin) {
-        return query(collection(firestore, 'invoices'), orderBy('invoiceNumber', 'desc'))
-    } else {
-        return query(collection(firestore, 'invoices'), where('employeeId', '==', user.uid), orderBy('invoiceNumber', 'desc'))
-    }
-  }, [firestore, user, isAdmin])
+    return query(collection(firestore, 'invoices'), orderBy('invoiceNumber', 'desc'))
+  }, [firestore, user])
 
   const { data: invoices, isLoading: isLoadingInvoices } = useCollection<Invoice>(invoicesQuery)
 

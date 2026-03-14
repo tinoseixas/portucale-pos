@@ -1,3 +1,4 @@
+
 'use client'
 
 import { useMemo, useEffect } from 'react'
@@ -19,34 +20,18 @@ export default function PendingAlbaransPage() {
   const { user, isUserLoading } = useUser()
   const firestore = useFirestore()
 
-  const employeeDocRef = useMemoFirebase(() => {
-    if (!user || !firestore) return null;
-    return doc(firestore, 'employees', user.uid);
-  }, [firestore, user]);
-  const { data: currentEmployee } = useDoc<any>(employeeDocRef);
-  const isAdmin = currentEmployee?.role === 'admin';
-
   const albaransQuery = useMemoFirebase(() => {
-    if (!firestore || !user || currentEmployee === undefined) return null
-    if (isAdmin) {
-        return query(
-            collection(firestore, 'albarans'), 
-            where('status', '==', 'pendent'),
-            orderBy('albaranNumber', 'desc')
-        )
-    } else {
-        return query(
-            collection(firestore, 'albarans'), 
-            where('status', '==', 'pendent'),
-            where('employeeId', '==', user.uid),
-            orderBy('albaranNumber', 'desc')
-        )
-    }
-  }, [firestore, user, isAdmin, currentEmployee])
+    if (!firestore || !user) return null
+    return query(
+        collection(firestore, 'albarans'), 
+        where('status', '==', 'pendent'),
+        orderBy('albaranNumber', 'desc')
+    )
+  }, [firestore, user])
 
   const { data: albarans, isLoading: isLoadingAlbarans } = useCollection<Albaran>(albaransQuery)
 
-  if (isUserLoading || isLoadingAlbarans || currentEmployee === undefined) {
+  if (isUserLoading || isLoadingAlbarans) {
     return (
       <div className="flex items-center justify-center p-12">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />

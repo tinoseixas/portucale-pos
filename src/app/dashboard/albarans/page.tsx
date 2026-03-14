@@ -1,3 +1,4 @@
+
 'use client'
 
 import { useMemo, useState } from 'react'
@@ -38,21 +39,11 @@ export default function AlbaransHistoryPage() {
   const [filterCustomer, setFilterCustomer] = useState<string>('all')
   const [selectedProject, setSelectedProject] = useState<string>('all')
 
-  const employeeDocRef = useMemoFirebase(() => {
-    if (!user || !firestore) return null;
-    return doc(firestore, 'employees', user.uid);
-  }, [firestore, user]);
-  const { data: currentEmployee } = useDoc<any>(employeeDocRef);
-  const isAdmin = currentEmployee?.role === 'admin';
-
   const albaransQuery = useMemoFirebase(() => {
-    if (!firestore || !user || currentEmployee === undefined) return null
-    if (isAdmin) {
-        return query(collection(firestore, 'albarans'), orderBy('albaranNumber', 'desc'))
-    } else {
-        return query(collection(firestore, 'albarans'), where('employeeId', '==', user.uid), orderBy('albaranNumber', 'desc'))
-    }
-  }, [firestore, user, isAdmin, currentEmployee])
+    if (!firestore || !user) return null
+    // Ara sempre consultem tot per als administradors
+    return query(collection(firestore, 'albarans'), orderBy('albaranNumber', 'desc'))
+  }, [firestore, user])
 
   const { data: albarans, isLoading: isLoadingAlbarans } = useCollection<Albaran>(albaransQuery)
 
@@ -100,7 +91,7 @@ export default function AlbaransHistoryPage() {
   }
 
   const handleSyncAlbarans = async () => {
-    if (!firestore || !user || currentEmployee === undefined) return;
+    if (!firestore || !user) return;
     setIsSyncing(true);
     toast({ title: 'Sincronitzant obres...', description: 'Consolidant la feina nova.' });
 
@@ -108,25 +99,10 @@ export default function AlbaransHistoryPage() {
         const employeesSnap = await getDocs(collection(firestore, 'employees'));
         const employees = employeesSnap.docs.map(d => ({ id: d.id, ...d.data() } as Employee));
         
-        let servicesQuery;
-        if (isAdmin) {
-            servicesQuery = query(collectionGroup(firestore, 'serviceRecords'));
-        } else {
-            servicesQuery = query(collection(firestore, `employees/${user.uid}/serviceRecords`));
-        }
-        
-        const servicesSnap = await getDocs(servicesQuery);
+        const servicesSnap = await getDocs(collectionGroup(firestore, 'serviceRecords'));
         const allServices = servicesSnap.docs.map(d => ({ id: d.id, ...d.data() } as ServiceRecord));
         
-        // Filtrem els albarans existents segons el rol per evitar errors de permisos
-        let latestAlbaransQuery;
-        if (isAdmin) {
-            latestAlbaransQuery = collection(firestore, 'albarans');
-        } else {
-            latestAlbaransQuery = query(collection(firestore, 'albarans'), where('employeeId', '==', user.uid));
-        }
-        
-        const latestAlbaransSnap = await getDocs(latestAlbaransQuery);
+        const latestAlbaransSnap = await getDocs(collection(firestore, 'albarans'));
         const latestAlbarans = latestAlbaransSnap.docs.map(d => ({ id: d.id, ...d.data() } as Albaran));
 
         const projectsSnap = await getDocs(collection(firestore, 'projects'));
@@ -159,8 +135,7 @@ export default function AlbaransHistoryPage() {
         const counterSnap = await getDocs(query(collection(firestore, "counters"), where("__name__", "==", "albarans")));
         let nextNum = !counterSnap.empty ? (counterSnap.docs[0].data().lastNumber || 0) : 0;
 
-        // Eliminar albarans pendents anteriors per regenerar-los (només els que tenim permís)
-        latestAlbarans.filter(a => a.status === 'pendent' && (isAdmin || a.employeeId === user.uid)).forEach(a => {
+        latestAlbarans.filter(a => a.status === 'pendent').forEach(a => {
             batch.delete(doc(firestore, 'albarans', a.id));
         });
 
@@ -192,7 +167,7 @@ export default function AlbaransHistoryPage() {
                 totalAmount: totalGeneral,
                 status: project?.status === 'finished' ? 'arxivat' : 'pendent',
                 employeeName: technicianNames,
-                employeeId: isAdmin ? firstService.employeeId : user.uid
+                employeeId: user.uid
             };
 
             batch.set(albaranRef, albaranData);
@@ -211,7 +186,7 @@ export default function AlbaransHistoryPage() {
     }
   };
 
-  if (isUserLoading || isLoadingAlbarans || currentEmployee === undefined) return <div className="p-12 text-center h-[60vh] flex flex-col items-center justify-center"><Loader2 className="h-16 w-16 animate-spin text-primary" /><p className="mt-6 text-primary font-black tracking-widest">Carregant albarans...</p></div>
+  if (isUserLoading || isLoadingAlbarans) return <div className="p-12 text-center h-[60vh] flex flex-col items-center justify-center"><Loader2 className="h-16 w-16 animate-spin text-primary" /><p className="mt-6 text-primary font-black tracking-widest">Carregant albarans...</p></div>
 
   return (
     <AdminGate pageTitle="Gestió d'albarans" pageDescription="Supervisió i agrupació de treballs per projecte.">
@@ -225,7 +200,7 @@ export default function AlbaransHistoryPage() {
             </div>
             <Button variant="default" onClick={handleSyncAlbarans} disabled={isSyncing} className="w-full sm:w-auto bg-primary hover:bg-primary/90 shadow-xl font-bold h-14 px-8 rounded-2xl hover:scale-[1.02] transition-all">
                 {isSyncing ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <RefreshCw className="mr-2 h-5 w-5" />}
-                Actualitzar obres {isAdmin ? "de l'equip" : "personals"}
+                Actualitzar obres
             </Button>
         </div>
 

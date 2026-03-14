@@ -64,14 +64,6 @@ export default function DashboardPage() {
   
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
-  const employeeDocRef = useMemoFirebase(() => {
-    if (!user || !firestore) return null;
-    return doc(firestore, 'employees', user.uid);
-  }, [firestore, user]);
-  const { data: currentEmployee } = useDoc<Employee>(employeeDocRef);
-
-  const isAdmin = currentEmployee?.role === 'admin';
-
   const fetchData = useCallback(async () => {
     if (!firestore || !user) return;
     setIsLoadingData(true);
@@ -80,14 +72,8 @@ export default function DashboardPage() {
         const employeesData = employeeSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Employee));
         setEmployees(employeesData);
 
-        let servicesQuery;
-        if (isAdmin) {
-            servicesQuery = query(collectionGroup(firestore, 'serviceRecords'), orderBy('arrivalDateTime', 'desc'));
-        } else {
-            servicesQuery = query(collection(firestore, `employees/${user.uid}/serviceRecords`), orderBy('arrivalDateTime', 'desc'));
-        }
-        
-        const serviceSnapshot = await getDocs(servicesQuery);
+        // Ara sempre consultem tot per als administradors
+        const serviceSnapshot = await getDocs(query(collectionGroup(firestore, 'serviceRecords'), orderBy('arrivalDateTime', 'desc')));
         const servicesData = serviceSnapshot.docs
             .map(doc => ({ id: doc.id, ...doc.data() } as ServiceRecord))
             .filter(s => !s.deleted); 
@@ -98,13 +84,11 @@ export default function DashboardPage() {
     } finally {
         setIsLoadingData(false);
     }
-  }, [firestore, user, toast, isAdmin]);
+  }, [firestore, user, toast]);
 
   useEffect(() => {
-    if (currentEmployee) {
-        fetchData();
-    }
-  }, [fetchData, refreshTrigger, currentEmployee]);
+    fetchData();
+  }, [fetchData, refreshTrigger]);
 
   const projectNames = useMemo(() => {
     const names = allServices.map(s => s.projectName?.trim()).filter(Boolean);
@@ -114,7 +98,7 @@ export default function DashboardPage() {
 
   const filteredServices = useMemo(() => {
     let filtered = allServices.filter(service => {
-        const userMatch = !isAdmin || selectedUser === 'all' || service.employeeId === selectedUser;
+        const userMatch = selectedUser === 'all' || service.employeeId === selectedUser;
         const dateMatch = !selectedDate || isSameDay(parseISO(service.arrivalDateTime), selectedDate);
         const projectMatch = selectedProject === 'all' || (service.projectName?.trim() === selectedProject);
         return userMatch && dateMatch && projectMatch;
@@ -132,7 +116,7 @@ export default function DashboardPage() {
         lastDate = serviceDay;
         return { ...service, rowColor: dayColors[currentColorIndex] } as ServiceRecordWithColor;
     });
-  }, [allServices, selectedUser, selectedDate, selectedProject, isAdmin]);
+  }, [allServices, selectedUser, selectedDate, selectedProject]);
   
   const handleMoveToTrash = () => {
     if (!firestore) return;
@@ -178,7 +162,7 @@ export default function DashboardPage() {
                       <Filter className="h-6 w-6" />
                       <CardTitle className="text-lg font-black tracking-tight">Filtres de control</CardTitle>
                   </div>
-                  {isAdmin && selectedRows.length > 0 && (
+                  {selectedRows.length > 0 && (
                       <AlertDialog>
                           <AlertDialogTrigger asChild>
                               <Button variant="destructive" className="font-bold h-10 px-6 rounded-xl shadow-lg text-[10px] bg-destructive hover:bg-destructive/90">
@@ -199,21 +183,19 @@ export default function DashboardPage() {
                   )}
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {isAdmin && (
-                    <div className="space-y-1.5">
-                        <label className="text-[10px] font-bold text-slate-400 tracking-tight pl-1">Tècnic responsable</label>
-                        <Select value={selectedUser} onValueChange={setSelectedUser}>
-                            <SelectTrigger className="h-12 rounded-2xl border-2 font-bold bg-white text-xs text-primary">
-                                <User className="mr-2 h-4 w-4 text-slate-300" />
-                                <SelectValue placeholder="Tots els tècnics" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">Tots els tècnics</SelectItem>
-                                {employees.map(e => <SelectItem key={e.id} value={e.id}>{e.firstName} {e.lastName}</SelectItem>)}
-                            </SelectContent>
-                        </Select>
-                    </div>
-                  )}
+                  <div className="space-y-1.5">
+                      <label className="text-[10px] font-bold text-slate-400 tracking-tight pl-1">Tècnic responsable</label>
+                      <Select value={selectedUser} onValueChange={setSelectedUser}>
+                          <SelectTrigger className="h-12 rounded-2xl border-2 font-bold bg-white text-xs text-primary">
+                              <User className="mr-2 h-4 w-4 text-slate-300" />
+                              <SelectValue placeholder="Tots els tècnics" />
+                          </SelectTrigger>
+                          <SelectContent>
+                              <SelectItem value="all">Tots els tècnics</SelectItem>
+                              {employees.map(e => <SelectItem key={e.id} value={e.id}>{e.firstName} {e.lastName}</SelectItem>)}
+                          </SelectContent>
+                      </Select>
+                  </div>
                   <div className="space-y-1.5">
                       <label className="text-[10px] font-bold text-slate-400 tracking-tight pl-1">Data de realització</label>
                       <Popover>
@@ -247,12 +229,10 @@ export default function DashboardPage() {
                       <TableHeader className="bg-slate-50/30">
                           <TableRow className="border-b-2 border-slate-50">
                               <TableHead className="w-16 px-8 py-6">
-                                  {isAdmin && (
-                                    <Checkbox 
-                                        checked={selectedRows.length > 0 && selectedRows.length === filteredServices.length}
-                                        onCheckedChange={c => setSelectedRows(c ? filteredServices.map(s => s.id) : [])}
-                                    />
-                                  )}
+                                  <Checkbox 
+                                      checked={selectedRows.length > 0 && selectedRows.length === filteredServices.length}
+                                      onCheckedChange={c => setSelectedRows(c ? filteredServices.map(s => s.id) : [])}
+                                  />
                               </TableHead>
                               <TableHead className="font-bold text-[10px] tracking-tight text-slate-400">Tècnic</TableHead>
                               <TableHead className="font-bold text-[10px] tracking-tight text-slate-400">Data i hora</TableHead>
@@ -263,7 +243,7 @@ export default function DashboardPage() {
                       <TableBody>
                           {filteredServices.map(service => (
                               <TableRow key={service.id} className={cn(service.rowColor, "hover:bg-primary/5 transition-colors border-b border-slate-50")}>
-                                  <TableCell className="px-8">{isAdmin && <Checkbox checked={selectedRows.includes(service.id)} onCheckedChange={c => setSelectedRows(prev => c ? [...prev, service.id] : prev.filter(id => id !== service.id))} />}</TableCell>
+                                  <TableCell className="px-8"><Checkbox checked={selectedRows.includes(service.id)} onCheckedChange={c => setSelectedRows(prev => c ? [...prev, service.id] : prev.filter(id => id !== service.id))} /></TableCell>
                                   <TableCell>
                                       <div className="flex items-center gap-3">
                                           <div className="h-3 w-3 rounded-full shadow-sm border border-black/10" style={{ backgroundColor: getUserColor(service.employeeId) }} />

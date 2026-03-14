@@ -34,21 +34,10 @@ export default function QuotesHistoryPage() {
   const { toast } = useToast()
   const [isDuplicating, setIsDuplicating] = useState<string | null>(null);
 
-  const employeeDocRef = useMemoFirebase(() => {
-    if (!user || !firestore) return null;
-    return doc(firestore, 'employees', user.uid);
-  }, [firestore, user]);
-  const { data: currentEmployee } = useDoc<any>(employeeDocRef);
-  const isAdmin = currentEmployee?.role === 'admin';
-
   const quotesQuery = useMemoFirebase(() => {
     if (!firestore || !user) return null
-    if (isAdmin) {
-        return query(collection(firestore, 'quotes'), orderBy('quoteNumber', 'desc'))
-    } else {
-        return query(collection(firestore, 'quotes'), where('employeeId', '==', user.uid), orderBy('quoteNumber', 'desc'))
-    }
-  }, [firestore, user, isAdmin])
+    return query(collection(firestore, 'quotes'), orderBy('quoteNumber', 'desc'))
+  }, [firestore, user])
 
   const { data: quotes, isLoading: isLoadingQuotes } = useCollection<Quote>(quotesQuery)
 
