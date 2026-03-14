@@ -1,4 +1,3 @@
-
 'use client'
 
 import { useMemo, useState } from 'react'
@@ -47,13 +46,13 @@ export default function AlbaransHistoryPage() {
   const isAdmin = currentEmployee?.role === 'admin';
 
   const albaransQuery = useMemoFirebase(() => {
-    if (!firestore || !user) return null
+    if (!firestore || !user || currentEmployee === undefined) return null
     if (isAdmin) {
         return query(collection(firestore, 'albarans'), orderBy('albaranNumber', 'desc'))
     } else {
         return query(collection(firestore, 'albarans'), where('employeeId', '==', user.uid), orderBy('albaranNumber', 'desc'))
     }
-  }, [firestore, user, isAdmin])
+  }, [firestore, user, isAdmin, currentEmployee])
 
   const { data: albarans, isLoading: isLoadingAlbarans } = useCollection<Albaran>(albaransQuery)
 
@@ -77,7 +76,7 @@ export default function AlbaransHistoryPage() {
   const projectNames = useMemo(() => {
     if (!albarans) return [];
     const names = Array.from(new Set(albarans.map(a => a.projectName))).filter(Boolean);
-    return names.sort((a, b) => a.localeCompare(b));
+    return names.sort((a, b) => a.localeCompare(b, 'ca'));
   }, [albarans]);
 
   const filteredAlbarans = useMemo(() => {
@@ -101,7 +100,7 @@ export default function AlbaransHistoryPage() {
   }
 
   const handleSyncAlbarans = async () => {
-    if (!firestore || !user) return;
+    if (!firestore || !user || currentEmployee === undefined) return;
     setIsSyncing(true);
     toast({ title: 'Sincronitzant obres...', description: 'Consolidant la feina nova.' });
 
@@ -119,7 +118,15 @@ export default function AlbaransHistoryPage() {
         const servicesSnap = await getDocs(servicesQuery);
         const allServices = servicesSnap.docs.map(d => ({ id: d.id, ...d.data() } as ServiceRecord));
         
-        const latestAlbaransSnap = await getDocs(collection(firestore, 'albarans'));
+        // Filtrem els albarans existents segons el rol per evitar errors de permisos
+        let latestAlbaransQuery;
+        if (isAdmin) {
+            latestAlbaransQuery = collection(firestore, 'albarans');
+        } else {
+            latestAlbaransQuery = query(collection(firestore, 'albarans'), where('employeeId', '==', user.uid));
+        }
+        
+        const latestAlbaransSnap = await getDocs(latestAlbaransQuery);
         const latestAlbarans = latestAlbaransSnap.docs.map(d => ({ id: d.id, ...d.data() } as Albaran));
 
         const projectsSnap = await getDocs(collection(firestore, 'projects'));
@@ -152,6 +159,7 @@ export default function AlbaransHistoryPage() {
         const counterSnap = await getDocs(query(collection(firestore, "counters"), where("__name__", "==", "albarans")));
         let nextNum = !counterSnap.empty ? (counterSnap.docs[0].data().lastNumber || 0) : 0;
 
+        // Eliminar albarans pendents anteriors per regenerar-los (només els que tenim permís)
         latestAlbarans.filter(a => a.status === 'pendent' && (isAdmin || a.employeeId === user.uid)).forEach(a => {
             batch.delete(doc(firestore, 'albarans', a.id));
         });
@@ -203,7 +211,7 @@ export default function AlbaransHistoryPage() {
     }
   };
 
-  if (isUserLoading || isLoadingAlbarans) return <div className="p-12 text-center h-[60vh] flex flex-col items-center justify-center"><Loader2 className="h-16 w-16 animate-spin text-primary" /><p className="mt-6 text-primary font-black tracking-widest">Carregant albarans...</p></div>
+  if (isUserLoading || isLoadingAlbarans || currentEmployee === undefined) return <div className="p-12 text-center h-[60vh] flex flex-col items-center justify-center"><Loader2 className="h-16 w-16 animate-spin text-primary" /><p className="mt-6 text-primary font-black tracking-widest">Carregant albarans...</p></div>
 
   return (
     <AdminGate pageTitle="Gestió d'albarans" pageDescription="Supervisió i agrupació de treballs per projecte.">
@@ -217,7 +225,7 @@ export default function AlbaransHistoryPage() {
             </div>
             <Button variant="default" onClick={handleSyncAlbarans} disabled={isSyncing} className="w-full sm:w-auto bg-primary hover:bg-primary/90 shadow-xl font-bold h-14 px-8 rounded-2xl hover:scale-[1.02] transition-all">
                 {isSyncing ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <RefreshCw className="mr-2 h-5 w-5" />}
-                Actualitzar obres de l'equip
+                Actualitzar obres {isAdmin ? "de l'equip" : "personals"}
             </Button>
         </div>
 

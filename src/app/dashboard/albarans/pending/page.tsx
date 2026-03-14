@@ -2,8 +2,8 @@
 
 import { useMemo, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { useCollection, useUser, useFirestore, useMemoFirebase } from '@/firebase'
-import { collection, query, orderBy, where } from 'firebase/firestore'
+import { useCollection, useUser, useFirestore, useMemoFirebase, useDoc } from '@/firebase'
+import { collection, query, orderBy, where, doc } from 'firebase/firestore'
 import type { Albaran } from '@/lib/types'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
@@ -19,18 +19,34 @@ export default function PendingAlbaransPage() {
   const { user, isUserLoading } = useUser()
   const firestore = useFirestore()
 
+  const employeeDocRef = useMemoFirebase(() => {
+    if (!user || !firestore) return null;
+    return doc(firestore, 'employees', user.uid);
+  }, [firestore, user]);
+  const { data: currentEmployee } = useDoc<any>(employeeDocRef);
+  const isAdmin = currentEmployee?.role === 'admin';
+
   const albaransQuery = useMemoFirebase(() => {
-    if (!firestore || !user) return null
-    return query(
-      collection(firestore, 'albarans'), 
-      where('status', '==', 'pendent'),
-      orderBy('albaranNumber', 'desc')
-    )
-  }, [firestore, user])
+    if (!firestore || !user || currentEmployee === undefined) return null
+    if (isAdmin) {
+        return query(
+            collection(firestore, 'albarans'), 
+            where('status', '==', 'pendent'),
+            orderBy('albaranNumber', 'desc')
+        )
+    } else {
+        return query(
+            collection(firestore, 'albarans'), 
+            where('status', '==', 'pendent'),
+            where('employeeId', '==', user.uid),
+            orderBy('albaranNumber', 'desc')
+        )
+    }
+  }, [firestore, user, isAdmin, currentEmployee])
 
   const { data: albarans, isLoading: isLoadingAlbarans } = useCollection<Albaran>(albaransQuery)
 
-  if (isUserLoading || isLoadingAlbarans) {
+  if (isUserLoading || isLoadingAlbarans || currentEmployee === undefined) {
     return (
       <div className="flex items-center justify-center p-12">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />

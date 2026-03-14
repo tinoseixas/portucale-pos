@@ -1,9 +1,8 @@
-
 'use client'
 
 import { useMemo, useState, useEffect, useCallback, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { useCollection, useUser, useFirestore, useMemoFirebase } from '@/firebase'
+import { useCollection, useUser, useFirestore, useMemoFirebase, useDoc } from '@/firebase'
 import { collection, query, orderBy, doc, runTransaction, getDocs, collectionGroup, where, writeBatch } from 'firebase/firestore'
 import type { Customer, Albaran, Employee, ServiceRecord, Invoice } from '@/lib/types'
 import { Button } from '@/components/ui/button'
@@ -32,10 +31,26 @@ function InvoicesPageContent() {
     const [servicesForInvoice, setServicesForInvoice] = useState<ServiceRecord[]>([]);
     const [applyIva, setApplyIva] = useState<boolean>(true);
 
+    const employeeDocRef = useMemoFirebase(() => {
+        if (!user || !firestore) return null;
+        return doc(firestore, 'employees', user.uid);
+    }, [firestore, user]);
+    const { data: currentEmployee } = useDoc<any>(employeeDocRef);
+    const isAdmin = currentEmployee?.role === 'admin';
+
     const customersQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'customers'), orderBy('name', 'asc')) : null, [firestore]);
     const { data: customers, isLoading: isLoadingCustomers } = useCollection<Customer>(customersQuery);
 
-    const albaransQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'albarans'), orderBy('albaranNumber', 'desc')) : null, [firestore]);
+    const albaransQuery = useMemoFirebase(() => {
+        if (!firestore || currentEmployee === undefined) return null;
+        if (isAdmin) {
+            return query(collection(firestore, 'albarans'), orderBy('albaranNumber', 'desc'))
+        } else if (user) {
+            return query(collection(firestore, 'albarans'), where('employeeId', '==', user.uid), orderBy('albaranNumber', 'desc'))
+        }
+        return null;
+    }, [firestore, isAdmin, user, currentEmployee]);
+
     const { data: albarans, isLoading: isLoadingAlbarans } = useCollection<Albaran>(albaransQuery);
     
     const employeesQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'employees'), orderBy('firstName', 'asc')) : null, [firestore]);
@@ -83,8 +98,17 @@ function InvoicesPageContent() {
                 setServicesForInvoice([]);
                 return;
             }
-            const allServicesSnapshot = await getDocs(collectionGroup(firestore, 'serviceRecords'));
-            const allServicesData = allServicesSnapshot.docs.map(d => ({ id: d.id, ...d.data() } as ServiceRecord));
+            
+            // Per obtenir els serveis hem de respectar les regles de col·lecció de grup o per ID segons rol
+            let allServicesData: ServiceRecord[] = [];
+            if (isAdmin) {
+                const allServicesSnapshot = await getDocs(collectionGroup(firestore, 'serviceRecords'));
+                allServicesData = allServicesSnapshot.docs.map(d => ({ id: d.id, ...d.data() } as ServiceRecord));
+            } else if (user) {
+                const myServicesSnapshot = await getDocs(collection(firestore, `employees/${user.uid}/serviceRecords`));
+                allServicesData = myServicesSnapshot.docs.map(d => ({ id: d.id, ...d.data() } as ServiceRecord));
+            }
+
             const aggregatedServices = allServiceRecordIds.map(serviceId => {
                 const serviceData = allServicesData.find(s => s.id === serviceId);
                 if (!serviceData) return null;
@@ -96,7 +120,7 @@ function InvoicesPageContent() {
             console.error(e);
             toast({ variant: 'destructive', title: 'Error', description: "No s'han pogut carregar els serveis." });
         }
-    }, [selectedAlbaranIds, albarans, firestore, employees, toast]);
+    }, [selectedAlbaranIds, albarans, firestore, employees, toast, isAdmin, user]);
 
     useEffect(() => { importAlbarans(); }, [importAlbarans]);
 
@@ -141,9 +165,12 @@ function InvoicesPageContent() {
                 const alb = albarans?.find(a => a.id === id);
                 if (alb && alb.projectId) projectIdsToArchive.add(alb.projectId);
             });
+            
+            // Només els administradors solen arxivar obres oficialment, però permetem que ho faci el creador
             projectIdsToArchive.forEach(pId => {
                 batch.update(doc(firestore, 'projects', pId), { status: 'finished' });
             });
+            
             await batch.commit();
             toast({ title: "Factura generada", description: `L'obra ha estat facturada i arxivada correctament.` });
             router.push(`/dashboard/invoices/${invoiceRef.id}${exportAfter ? '?export=true' : ''}`);
@@ -153,7 +180,7 @@ function InvoicesPageContent() {
         } finally { setIsSaving(false); }
     };
 
-    if (isUserLoading || isLoadingCustomers || isLoadingAlbarans || isLoadingEmployees) return <div className="p-12 text-center"><Loader2 className="h-12 w-12 animate-spin mx-auto text-primary" /><p className="mt-4">Preparant dades de facturació...</p></div>
+    if (isUserLoading || isLoadingCustomers || isLoadingAlbarans || isLoadingEmployees || currentEmployee === undefined) return <div className="p-12 text-center"><Loader2 className="h-12 w-12 animate-spin mx-auto text-primary" /><p className="mt-4">Preparant dades de facturació...</p></div>
 
     return (
         <AdminGate pageTitle="Generador de factures" pageDescription="Crea factures oficials a partir d'albarans d'obra.">
