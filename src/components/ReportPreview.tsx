@@ -129,12 +129,22 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
                     <tbody className="text-xs">
                         {sortedServices.map((s, i) => {
                             const effectiveMin = calculateServiceEffectiveMinutes(s);
+                            const arrival = parseISO(s.arrivalDateTime);
+                            const departure = parseISO(s.departureDateTime);
+                            const breakMinutes = getMealBreakOverlapMinutes(arrival, departure);
+                            const lunchWasSubtracted = s.isLunchSubtracted !== false && breakMinutes > 0;
+
                             return (
                                 <tr key={s.id} className={`${i % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'} border-b border-slate-100`}>
                                     <td className="py-4 px-4 align-top font-bold text-slate-400">{format(parseISO(s.arrivalDateTime), 'dd/MM/yy')}</td>
                                     <td className="py-4 px-4 align-top font-black text-primary whitespace-nowrap">{s.employeeName?.split(' ')[0]}</td>
                                     <td className="py-4 px-4 align-top space-y-2">
                                         <p className="text-slate-700 font-medium leading-relaxed">{s.description}</p>
+                                        {lunchWasSubtracted && (
+                                            <p className="text-[9px] text-amber-600 font-bold italic">
+                                                * S'ha descomptat 1h de descans (13h-14h)
+                                            </p>
+                                        )}
                                         {s.pendingTasks && (
                                             <div className="bg-destructive/5 text-destructive p-2 rounded border-l-2 border-destructive text-[10px] font-bold">
                                                 Pendent: {s.pendingTasks}

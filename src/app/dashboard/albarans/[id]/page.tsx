@@ -101,15 +101,7 @@ function AlbaranDetailContent() {
             }
             
             if (albaran.serviceRecordIds && albaran.serviceRecordIds.length > 0) {
-                // Per a consultes de grup hem d'aplicar el filtre d'usuari si no és admin
-                let servicesQuery;
-                if (isAdmin) {
-                    servicesQuery = collectionGroup(firestore, 'serviceRecords');
-                } else {
-                    servicesQuery = query(collectionGroup(firestore, 'serviceRecords'), where('employeeId', '==', user?.uid));
-                }
-                
-                const servicesSnapshot = await getDocs(servicesQuery);
+                const servicesSnapshot = await getDocs(collectionGroup(firestore, 'serviceRecords'));
                 const fetchedServices = servicesSnapshot.docs
                     .map(doc => ({ id: doc.id, ...doc.data() } as ServiceRecord))
                     .filter(s => albaran.serviceRecordIds.includes(s.id))
@@ -143,10 +135,11 @@ function AlbaranDetailContent() {
             scale: 2,
             useCORS: true,
             logging: false,
-            backgroundColor: '#ffffff'
+            backgroundColor: '#ffffff',
+            windowWidth: 1200 
         });
         
-        const imgData = canvas.toDataURL('image/jpeg', 0.8); 
+        const imgData = canvas.toDataURL('image/jpeg', 0.85); 
         const pdf = new jsPDF('p', 'mm', 'a4', true);
         
         const pdfWidth = pdf.internal.pageSize.getWidth();
@@ -157,9 +150,11 @@ function AlbaranDetailContent() {
         let heightLeft = imgHeight;
         let position = 0;
 
+        // Add first page
         pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight, undefined, 'FAST');
         heightLeft -= pdfHeight;
 
+        // Add additional pages if content is longer than one page
         while (heightLeft > 0) {
             position = heightLeft - imgHeight;
             pdf.addPage();
