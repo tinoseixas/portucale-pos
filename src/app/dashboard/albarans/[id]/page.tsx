@@ -117,6 +117,7 @@ function AlbaranDetailContent() {
         const reportElement = reportRef.current;
         if (!reportElement) return null;
 
+        // Escala 2 per a alta definició i assegurar fons blanc pur
         const canvas = await html2canvas(reportElement, {
             scale: 2,
             useCORS: true,
@@ -125,7 +126,7 @@ function AlbaranDetailContent() {
             windowWidth: 1200 
         });
         
-        const imgData = canvas.toDataURL('image/jpeg', 0.85); 
+        const imgData = canvas.toDataURL('image/jpeg', 0.95); 
         const pdf = new jsPDF('p', 'mm', 'a4', true);
         
         const pdfWidth = pdf.internal.pageSize.getWidth();
@@ -136,9 +137,11 @@ function AlbaranDetailContent() {
         let heightLeft = imgHeight;
         let position = 0;
 
+        // Primera pàgina
         pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight, undefined, 'FAST');
         heightLeft -= pdfHeight;
 
+        // Pàgines addicionals si cal per evitar talls
         while (heightLeft > 0) {
             position = heightLeft - imgHeight;
             pdf.addPage();
@@ -151,7 +154,7 @@ function AlbaranDetailContent() {
 
     const handleExportPDF = async () => {
         setIsGenerating(true);
-        toast({ title: 'Generant Albarà...', description: 'Això pot trigar uns segons.' });
+        toast({ title: 'Generant Albarà...', description: 'Ajustant pàgines i títols.' });
         try {
             const pdf = await generatePDF();
             if (pdf) {
@@ -249,16 +252,18 @@ function AlbaranDetailContent() {
                             <Badge className="bg-primary text-white font-black uppercase px-4 py-1">{albaran?.status}</Badge>
                         </div>
                     </CardHeader>
-                    <CardContent className="p-0 bg-slate-100">
-                        <ReportPreview
-                            ref={reportRef}
-                            customer={customer}
-                            projectName={albaran?.projectName || ''}
-                            services={services}
-                            showPricing={true}
-                            albaranNumber={albaran?.albaranNumber}
-                            employees={employees || []}
-                        />
+                    <CardContent className="p-0 bg-slate-100 flex justify-center py-10">
+                        <div className="shadow-2xl bg-white">
+                            <ReportPreview
+                                ref={reportRef}
+                                customer={customer}
+                                projectName={albaran?.projectName || ''}
+                                services={services}
+                                showPricing={true}
+                                albaranNumber={albaran?.albaranNumber}
+                                employees={employees || []}
+                            />
+                        </div>
                     </CardContent>
                 </Card>
             </div>

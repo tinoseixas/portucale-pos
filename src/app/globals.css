@@ -50,23 +50,21 @@
         print-color-adjust: exact;
         -webkit-print-color-adjust: exact;
     }
-    .break-inside-avoid {
-        break-inside: avoid !important;
-        page-break-inside: avoid !important;
-    }
-    table {
-        break-inside: auto;
-    }
-    tr {
-        break-inside: avoid !important;
-        page-break-inside: avoid !important;
-    }
-    thead {
-        display: table-header-group;
-    }
-    .no-print {
-        display: none !important;
-    }
+}
+
+/* Forçant talls de pàgina correctes per a html2canvas i jsPDF */
+.printable-area * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+}
+
+.printable-area table, 
+.printable-area tr, 
+.printable-area section,
+.printable-area header,
+.printable-area footer {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
 }
 
 .scrollbar-hide::-webkit-scrollbar {

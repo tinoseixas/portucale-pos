@@ -10,19 +10,8 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { FileDown, Loader2, ArrowLeft, Trash2, CreditCard, Mail, Send, AlertCircle } from 'lucide-react'
+import { FileDown, Loader2, ArrowLeft, Mail, Send } from 'lucide-react'
 import { InvoicePreview } from '@/components/InvoicePreview'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog"
 import {
   Dialog,
   DialogContent,
@@ -87,12 +76,10 @@ function InvoiceDetailContent() {
                 }
             }
 
-            // Recuperem els serveis respectant permisos
             let fetchedServices: ServiceRecord[] = [];
             
             if (invoice.sourceId) {
                 const sourceIds = invoice.sourceId.split(',');
-                // En lloc de llistar tot el directori d'albarans (que falla sense admin), recuperem només els que volem
                 const albaranPromises = sourceIds.map(id => getDoc(doc(firestore, 'albarans', id)));
                 const albaranSnaps = await Promise.all(albaranPromises);
                 const recordIds = albaranSnaps
@@ -100,39 +87,22 @@ function InvoiceDetailContent() {
                     .flatMap(snap => (snap.data() as any).serviceRecordIds || []);
 
                 if (recordIds.length > 0) {
-                    let servicesQuery;
-                    if (isAdmin) {
-                        servicesQuery = collectionGroup(firestore, 'serviceRecords');
-                    } else {
-                        servicesQuery = query(collectionGroup(firestore, 'serviceRecords'), where('employeeId', '==', user?.uid));
-                    }
-                    const servicesSnapshot = await getDocs(servicesQuery);
+                    const servicesSnapshot = await getDocs(collectionGroup(firestore, 'serviceRecords'));
                     fetchedServices = servicesSnapshot.docs
                         .map(d => ({ id: d.id, ...d.data() } as ServiceRecord))
                         .filter(s => recordIds.includes(s.id));
                 }
-            } else {
-                let servicesQuery;
-                if (isAdmin) {
-                    servicesQuery = query(collectionGroup(firestore, 'serviceRecords'), where('customerId', '==', invoice.customerId));
-                } else {
-                    servicesQuery = query(collectionGroup(firestore, 'serviceRecords'), where('customerId', '==', invoice.customerId), where('employeeId', '==', user?.uid));
-                }
-                const servicesSnapshot = await getDocs(servicesQuery);
-                fetchedServices = servicesSnapshot.docs
-                    .map(d => ({ id: d.id, ...d.data() } as ServiceRecord))
-                    .filter(s => s.projectName === invoice.projectName);
             }
             
             setServices(fetchedServices);
             setHasLoaded(true);
         } catch (e) {
             console.error(e);
-            toast({ variant: 'destructive', title: 'Error càrrega', description: "No s'han pogut recuperar els detalls de la factura." });
+            toast({ variant: 'destructive', title: 'Error càrrega' });
         } finally {
             setIsLoadingData(false);
         }
-    }, [invoice, firestore, user, currentEmployee, isAdmin, toast, hasLoaded]);
+    }, [invoice, firestore, user, currentEmployee, toast, hasLoaded]);
 
     useEffect(() => {
         if (invoice && currentEmployee !== undefined && !hasLoaded) fetchData();
@@ -141,8 +111,13 @@ function InvoiceDetailContent() {
     const generatePDF = async () => {
         const element = invoiceRef.current;
         if (!element) return null;
-        const canvas = await html2canvas(element, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
-        const imgData = canvas.toDataURL('image/jpeg', 0.85);
+        const canvas = await html2canvas(element, { 
+            scale: 2, 
+            useCORS: true, 
+            backgroundColor: '#ffffff',
+            windowWidth: 1200
+        });
+        const imgData = canvas.toDataURL('image/jpeg', 0.95);
         const pdf = new jsPDF('p', 'mm', 'a4', true);
         const pdfWidth = pdf.internal.pageSize.getWidth();
         const pdfHeight = pdf.internal.pageSize.getHeight();
@@ -162,12 +137,12 @@ function InvoiceDetailContent() {
 
     const handleExportPDF = async () => {
         setIsGenerating(true);
-        toast({ title: 'Preparant Factura...' });
+        toast({ title: 'Preparant Factura...', description: 'Ajustant títols i talls de pàgina.' });
         try {
             const pdf = await generatePDF();
             if (pdf) {
                 pdf.save(`Factura-${invoice?.invoiceNumber}-${invoice?.customerName.replace(/\s+/g, '-')}.pdf`);
-                toast({ title: 'Factura generada correctament' });
+                toast({ title: 'Factura generada' });
             }
         } catch (error) {
             toast({ variant: 'destructive', title: 'Error PDF' });
@@ -189,7 +164,7 @@ function InvoiceDetailContent() {
             const result = await sendDocumentEmail({
                 to: recipientEmail.trim(),
                 subject: `Factura TS Serveis: #${invoice?.invoiceNumber}`,
-                html: `<div style="font-family: sans-serif;"><h2>Factura TS Serveis</h2><p>Adjuntem la factura corresponent als serveis de: <strong>${invoice?.projectName}</strong>.</p><p>Total: <strong>${invoice?.totalAmount.toFixed(2)} €</strong></p><p>Gràcies!</p></div>`,
+                html: `<div><h2>Factura TS Serveis</h2><p>Adjuntem la factura corresponent.</p></div>`,
                 attachments: [{ filename: `Factura-${invoice?.invoiceNumber}.pdf`, content: pdfBase64 }]
             });
             if (result.success) {
@@ -242,16 +217,18 @@ function InvoiceDetailContent() {
                             <Badge className="bg-green-600 uppercase font-black px-4">{invoice?.status}</Badge>
                         </div>
                     </CardHeader>
-                    <CardContent className="p-0 bg-slate-100">
-                        <InvoicePreview
-                            ref={invoiceRef}
-                            customer={customer}
-                            projectName={invoice?.projectName || ''}
-                            invoiceNumber={invoice?.invoiceNumber}
-                            services={services}
-                            employees={employees}
-                            applyIva={invoice?.applyIva}
-                        />
+                    <CardContent className="p-0 bg-slate-100 flex justify-center py-10">
+                        <div className="shadow-2xl bg-white">
+                            <InvoicePreview
+                                ref={invoiceRef}
+                                customer={customer}
+                                projectName={invoice?.projectName || ''}
+                                invoiceNumber={invoice?.invoiceNumber}
+                                services={services}
+                                employees={employees}
+                                applyIva={invoice?.applyIva}
+                            />
+                        </div>
                     </CardContent>
                 </Card>
             </div>
