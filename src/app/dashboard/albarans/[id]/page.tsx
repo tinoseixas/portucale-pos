@@ -1,4 +1,3 @@
-
 'use client'
 
 import { useState, useRef, useEffect, useCallback, Suspense } from 'react'
@@ -117,13 +116,13 @@ function AlbaranDetailContent() {
         const reportElement = reportRef.current;
         if (!reportElement) return null;
 
-        // Escala 2 per a alta definició i assegurar fons blanc pur
         const canvas = await html2canvas(reportElement, {
             scale: 2,
             useCORS: true,
             logging: false,
             backgroundColor: '#ffffff',
-            windowWidth: 1200 
+            width: 794, // 210mm a 96dpi aprox
+            windowWidth: 800
         });
         
         const imgData = canvas.toDataURL('image/jpeg', 0.95); 
@@ -141,7 +140,7 @@ function AlbaranDetailContent() {
         pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight, undefined, 'FAST');
         heightLeft -= pdfHeight;
 
-        // Pàgines addicionals si cal per evitar talls
+        // Pàgines addicionals
         while (heightLeft > 0) {
             position = heightLeft - imgHeight;
             pdf.addPage();

@@ -1,4 +1,3 @@
-
 'use client'
 import React, { forwardRef, useMemo } from 'react';
 import Image from 'next/image';
@@ -50,11 +49,11 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
     return (
         <div 
             ref={ref} 
-            className="bg-white p-12 font-sans text-slate-900 printable-area mx-auto flex flex-col gap-10"
+            className="bg-white p-12 font-sans text-slate-900 printable-area mx-auto flex flex-col gap-10 shadow-none border-none"
             style={{ width: '210mm', minHeight: '297mm', backgroundColor: '#ffffff' }}
         >
             {/* Capçalera corporativa */}
-            <header className="flex justify-between items-start border-b-8 border-primary pb-8 relative">
+            <header className="flex justify-between items-start border-b-8 border-primary pb-8 relative pdf-block">
                 <div className="space-y-4">
                     <Logo className="h-20 w-auto" />
                     <div className="text-[11px] leading-tight text-slate-500 font-medium tracking-tight">
@@ -64,10 +63,10 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
                         <p>Tel: {BRANDING.phone} | {BRANDING.email}</p>
                     </div>
                 </div>
-                <div className="flex flex-col items-end gap-4 text-right">
-                    <h1 className="text-5xl font-black tracking-tighter text-primary leading-tight">Albarà</h1>
+                <div className="flex flex-col items-end gap-8 text-right">
+                    <h1 className="text-5xl font-black tracking-tighter text-primary leading-none">Albarà</h1>
                     {albaranNumber && (
-                        <div className="bg-accent text-primary px-4 py-2 rounded-lg text-2xl font-black">
+                        <div className="bg-accent text-primary px-6 py-2 rounded-lg text-2xl font-black">
                             #{String(albaranNumber).padStart(4, '0')}
                         </div>
                     )}
@@ -79,7 +78,7 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
             </header>
 
             {/* Info client i projecte */}
-            <div className="grid grid-cols-2 gap-8">
+            <div className="grid grid-cols-2 gap-8 pdf-block">
                 <div className="bg-slate-50 p-6 rounded-3xl border-l-8 border-primary space-y-3">
                     <h3 className="text-[10px] font-bold text-slate-400 tracking-tight flex items-center gap-2">
                         <User className="w-3 h-3" /> Client
@@ -111,7 +110,7 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
             </div>
 
             {/* Taula de treballs */}
-            <section className="space-y-4">
+            <section className="space-y-4 pdf-block">
                 <h3 className="text-sm font-black tracking-tight text-primary border-l-4 border-primary pl-3">01. Detall dels treballs</h3>
                 <table className="w-full border-collapse rounded-xl overflow-hidden border border-slate-100">
                     <thead className="bg-primary text-white text-[10px] tracking-tight">
@@ -156,7 +155,7 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
             </section>
 
             {/* Taula de materials i extra */}
-            <section className="space-y-4">
+            <section className="space-y-4 pdf-block">
                 <h3 className="text-sm font-black tracking-tight text-primary border-l-4 border-primary pl-3">02. Materials i altres conceptes</h3>
                 <table className="w-full border-collapse rounded-xl overflow-hidden border border-slate-100">
                     <thead className="bg-slate-800 text-white text-[10px] tracking-tight">
@@ -192,7 +191,7 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
 
             {/* Totals si showpricing */}
             {showPricing && (
-                <div className="flex justify-end">
+                <div className="flex justify-end pdf-block">
                     <div className="w-80 bg-primary text-white p-6 rounded-2xl space-y-3 border-t-4 border-accent">
                         <div className="flex justify-between text-[10px] font-bold tracking-tight">
                             <span>Suma treballs i materials</span>
@@ -211,7 +210,7 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
             )}
 
             {/* Signatures */}
-            <section className="grid grid-cols-2 gap-12 mt-auto">
+            <section className="grid grid-cols-2 gap-12 mt-auto pdf-block">
                 <div className="space-y-4">
                     <p className="text-[10px] font-bold tracking-tight text-slate-400 border-b pb-2">Signatura tècnic</p>
                     <div className="h-24 flex items-center justify-center italic text-slate-300 text-xs font-bold uppercase">TS Serveis</div>
@@ -232,7 +231,7 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
             </section>
 
             {/* Peu de pàgina amb barra de colors corporativa */}
-            <footer className="pt-8 text-center mt-auto flex flex-col items-center gap-2">
+            <footer className="pt-8 text-center mt-auto flex flex-col items-center gap-2 pdf-block">
                 <div className="flex gap-1 justify-center">
                     <div className="w-16 h-1.5 bg-primary rounded-full"></div>
                     <div className="w-8 h-1.5 bg-accent rounded-full"></div>

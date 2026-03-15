@@ -1,4 +1,3 @@
-
 'use client'
 import React, { forwardRef, useMemo } from 'react';
 import type { Customer } from '@/lib/types';
@@ -54,9 +53,9 @@ export const QuotePreview = forwardRef<HTMLDivElement, QuotePreviewProps>(({ cus
     const totalGeneral = subtotal + iva;
 
     return (
-        <div ref={ref} className="bg-white p-12 font-sans text-slate-900 printable-area mx-auto flex flex-col gap-12" style={{ width: '210mm', minHeight: '297mm', backgroundColor: '#ffffff' }}>
+        <div ref={ref} className="bg-white p-12 font-sans text-slate-900 printable-area mx-auto flex flex-col gap-12 shadow-none border-none" style={{ width: '210mm', minHeight: '297mm', backgroundColor: '#ffffff' }}>
             {/* Capçalera professionals */}
-            <header className="flex justify-between items-start border-b-8 border-primary pb-10 relative">
+            <header className="flex justify-between items-start border-b-8 border-primary pb-10 relative pdf-block">
                 <div className="space-y-6">
                     <Logo className="h-24 w-auto" />
                     <div className="text-[11px] leading-relaxed text-slate-500 font-medium tracking-tight">
@@ -66,8 +65,8 @@ export const QuotePreview = forwardRef<HTMLDivElement, QuotePreviewProps>(({ cus
                         <p>Tel: {BRANDING.phone} | {BRANDING.email}</p>
                     </div>
                 </div>
-                <div className="flex flex-col items-end gap-4 text-right">
-                    <h1 className="text-6xl font-black tracking-tighter text-primary leading-tight">Pressupost</h1>
+                <div className="flex flex-col items-end gap-8 text-right">
+                    <h1 className="text-6xl font-black tracking-tighter text-primary leading-none">Pressupost</h1>
                     <div className="bg-accent text-primary px-6 py-2 rounded-lg inline-block text-2xl font-black">
                         #{String(quoteNumber || 0).padStart(4, '0')}
                     </div>
@@ -79,7 +78,7 @@ export const QuotePreview = forwardRef<HTMLDivElement, QuotePreviewProps>(({ cus
             </header>
 
             {/* Info client i obra */}
-            <div className="grid grid-cols-2 gap-12">
+            <div className="grid grid-cols-2 gap-12 pdf-block">
                 <div className="bg-slate-50 p-8 rounded-3xl border-l-8 border-primary space-y-4 shadow-sm">
                     <h3 className="text-[10px] font-bold text-slate-400 tracking-tight">Destinatari</h3>
                     <div>
@@ -98,7 +97,7 @@ export const QuotePreview = forwardRef<HTMLDivElement, QuotePreviewProps>(({ cus
             </div>
 
             {/* Detall de conceptes per categories */}
-            <div className="flex-grow space-y-12">
+            <div className="flex-grow space-y-12 pdf-block">
                 {Array.from(groupedItems.entries()).map(([category, catItems], idx) => {
                     const catTotal = catItems.reduce((acc, item) => acc + (item.quantity * item.unitPrice * (1 - (item.discount || 0)/100)), 0);
                     return (
@@ -148,7 +147,7 @@ export const QuotePreview = forwardRef<HTMLDivElement, QuotePreviewProps>(({ cus
             </div>
 
             {/* Resum financer */}
-            <div className="flex justify-end pb-12">
+            <div className="flex justify-end pb-12 pdf-block">
                 <div className="w-96 bg-primary text-white p-8 rounded-[2rem] space-y-4 border-t-8 border-accent">
                     <div className="flex justify-between text-[11px] font-bold tracking-tight text-slate-300">
                         <span>Suma de conceptes</span>
@@ -167,14 +166,14 @@ export const QuotePreview = forwardRef<HTMLDivElement, QuotePreviewProps>(({ cus
 
             {/* Notes i condicions */}
             {notes && (
-                <section className="bg-slate-50 p-8 rounded-3xl border-2 border-slate-100 border-l-8 border-primary">
+                <section className="bg-slate-50 p-8 rounded-3xl border-2 border-slate-100 border-l-8 border-primary pdf-block">
                     <h4 className="text-[10px] font-bold tracking-tight text-primary mb-4 border-b pb-2">Condicions i terminis de l'oferta</h4>
                     <div className="text-xs text-slate-600 leading-relaxed italic whitespace-pre-wrap">{notes}</div>
                 </section>
             )}
 
             {/* Peu de pàgina */}
-            <footer className="mt-auto border-t-2 border-slate-100 pt-8 text-center">
+            <footer className="mt-auto border-t-2 border-slate-100 pt-8 text-center pdf-block">
                 <p className="text-[10px] text-slate-300 font-bold tracking-widest mb-2">{BRANDING.companyName} - {BRANDING.slogan}</p>
                 <div className="flex gap-1 justify-center opacity-30">
                     <div className="w-12 h-1 bg-primary rounded-full"></div>

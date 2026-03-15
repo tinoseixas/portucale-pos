@@ -1,4 +1,3 @@
-
 'use client'
 import React, { forwardRef, useMemo } from 'react';
 import type { Customer, ServiceRecord, Employee } from '@/lib/types';
@@ -42,8 +41,8 @@ export const InvoicePreview = forwardRef<HTMLDivElement, InvoicePreviewProps>((p
     }, [services]);
 
     return (
-        <div ref={ref} className="bg-white p-12 font-sans text-slate-900 printable-area mx-auto flex flex-col gap-12" style={{ width: '210mm', minHeight: '297mm', backgroundColor: '#ffffff' }}>
-            <header className="flex justify-between items-start border-b-8 border-primary pb-10 relative">
+        <div ref={ref} className="bg-white p-12 font-sans text-slate-900 printable-area mx-auto flex flex-col gap-12 shadow-none border-none" style={{ width: '210mm', minHeight: '297mm', backgroundColor: '#ffffff' }}>
+            <header className="flex justify-between items-start border-b-8 border-primary pb-10 relative pdf-block">
                 <div className="space-y-6">
                     <Logo className="h-24 w-auto" />
                     <div className="text-[11px] leading-relaxed text-slate-500 font-medium tracking-tight">
@@ -53,8 +52,8 @@ export const InvoicePreview = forwardRef<HTMLDivElement, InvoicePreviewProps>((p
                         <p>Tel: {BRANDING.phone} | {BRANDING.email}</p>
                     </div>
                 </div>
-                <div className="flex flex-col items-end gap-4 text-right">
-                    <h1 className="text-6xl font-black tracking-tighter text-primary leading-tight">Factura</h1>
+                <div className="flex flex-col items-end gap-8 text-right">
+                    <h1 className="text-6xl font-black tracking-tighter text-primary leading-none">Factura</h1>
                     <div className="bg-accent text-primary px-6 py-2 rounded-lg inline-block text-2xl font-black">
                         #{String(invoiceNumber || 0).padStart(4, '0')}
                     </div>
@@ -65,7 +64,7 @@ export const InvoicePreview = forwardRef<HTMLDivElement, InvoicePreviewProps>((p
                 <div className="absolute bottom-[-8px] right-0 w-1/4 h-2 bg-destructive"></div>
             </header>
 
-            <div className="grid grid-cols-2 gap-12">
+            <div className="grid grid-cols-2 gap-12 pdf-block">
                 <div className="space-y-4 bg-slate-50 p-6 rounded-3xl border-l-8 border-primary">
                     <h3 className="text-[10px] font-bold text-slate-400 tracking-tight">Client</h3>
                     <div className="px-2">
@@ -83,7 +82,7 @@ export const InvoicePreview = forwardRef<HTMLDivElement, InvoicePreviewProps>((p
                 </div>
             </div>
 
-            <div className="flex-grow">
+            <div className="flex-grow pdf-block">
                 <table className="w-full border-collapse">
                     <thead>
                         <tr className="bg-primary text-white text-[10px] font-bold tracking-tight">
@@ -125,7 +124,7 @@ export const InvoicePreview = forwardRef<HTMLDivElement, InvoicePreviewProps>((p
                 </table>
             </div>
 
-            <div className="flex justify-end pb-12">
+            <div className="flex justify-end pb-12 pdf-block">
                 <div className="w-96 bg-primary text-white p-8 rounded-[2rem] space-y-4 border-t-8 border-accent">
                     <div className="flex justify-between text-[11px] font-bold tracking-tight text-slate-300">
                         <span>Base imposable</span>
@@ -144,7 +143,7 @@ export const InvoicePreview = forwardRef<HTMLDivElement, InvoicePreviewProps>((p
                 </div>
             </div>
 
-            <footer className="mt-auto border-t-2 border-slate-100 pt-8 flex justify-between items-end">
+            <footer className="mt-auto border-t-2 border-slate-100 pt-8 flex justify-between items-end pdf-block">
                 <div className="text-[10px] text-slate-400 font-bold tracking-tight leading-relaxed">
                     <p>{BRANDING.companyName} - {BRANDING.slogan}</p>
                     <p className="mt-1">Pagament segons condicions acordades</p>
