@@ -5,7 +5,7 @@ import { useState, useMemo, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
-import { PlusCircle, Calendar as CalendarIcon, User, Edit, Trash2, Briefcase, Filter, History, Search, X, Download, AlertTriangle, Loader2, RefreshCw } from 'lucide-react'
+import { PlusCircle, Calendar as CalendarIcon, User, Edit, Trash2, Briefcase, Filter, History, Search, X, Download, AlertTriangle, Loader2, RefreshCw, Euro } from 'lucide-react'
 import type { ServiceRecord, Employee } from '@/lib/types'
 import { useUser, useFirestore, updateDocumentNonBlocking, useDoc, useMemoFirebase } from '@/firebase';
 import { collection, query, orderBy, getDocs, collectionGroup, doc, where } from 'firebase/firestore';
@@ -72,7 +72,6 @@ export default function DashboardPage() {
         const employeesData = employeeSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Employee));
         setEmployees(employeesData);
 
-        // Consultem tots els registres sense filtres d'empleat
         const serviceSnapshot = await getDocs(query(collectionGroup(firestore, 'serviceRecords'), orderBy('arrivalDateTime', 'desc')));
         const servicesData = serviceSnapshot.docs
             .map(doc => ({ id: doc.id, ...doc.data() } as ServiceRecord))
@@ -237,6 +236,7 @@ export default function DashboardPage() {
                               <TableHead className="font-bold text-[10px] tracking-tight text-slate-400">Tècnic</TableHead>
                               <TableHead className="font-bold text-[10px] tracking-tight text-slate-400">Data i hora</TableHead>
                               <TableHead className="font-bold text-[10px] tracking-tight text-slate-400">Obra</TableHead>
+                              <TableHead className="font-bold text-[10px] tracking-tight text-slate-400">Preu hora</TableHead>
                               <TableHead className="text-right px-8 font-bold text-[10px] tracking-tight text-slate-400">Acció</TableHead>
                           </TableRow>
                       </TableHeader>
@@ -252,6 +252,12 @@ export default function DashboardPage() {
                                   </TableCell>
                                   <TableCell className="font-bold text-slate-500 text-xs">{format(parseISO(service.arrivalDateTime), 'dd/MM/yy HH:mm')}</TableCell>
                                   <TableCell className="font-black text-primary text-xs truncate max-w-[200px]">{service.projectName || 'Sense nom'}</TableCell>
+                                  <TableCell>
+                                      <div className="flex items-center gap-1 font-bold text-slate-600 text-xs">
+                                          <Euro className="h-3 w-3" />
+                                          {service.serviceHourlyRate ? service.serviceHourlyRate.toFixed(2) : '--.--'}
+                                      </div>
+                                  </TableCell>
                                   <TableCell className="text-right px-8">
                                       <Button variant="outline" size="sm" asChild className="h-10 px-5 border-2 rounded-xl font-bold text-[10px] tracking-tight border-primary/20 text-primary hover:bg-primary hover:text-white transition-all">
                                           <Link href={`/dashboard/edit/${service.id}?ownerId=${service.employeeId}`}><Edit className="h-3.5 w-3.5 mr-2" />Editar</Link>
@@ -260,7 +266,7 @@ export default function DashboardPage() {
                               </TableRow>
                           ))}
                           {filteredServices.length === 0 && (
-                              <TableRow><TableCell colSpan={5} className="h-64 text-center opacity-30 grayscale"><Search className="h-12 w-12 mx-auto mb-4" /><p className="font-bold text-xs italic">No s'han trobat registres segons els filtres.</p></TableCell></TableRow>
+                              <TableRow><TableCell colSpan={6} className="h-64 text-center opacity-30 grayscale"><Search className="h-12 w-12 mx-auto mb-4" /><p className="font-bold text-xs italic">No s'han trobat registres segons els filtres.</p></TableCell></TableRow>
                           )}
                       </TableBody>
                   </Table>

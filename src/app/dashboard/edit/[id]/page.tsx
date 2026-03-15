@@ -302,7 +302,7 @@ function EditServiceContent() {
     router.push('/dashboard');
   };
 
-  if (isUserLoading || isLoading || isSaving) return <div className="p-12 text-center h-[80vh] flex flex-col items-center justify-center"><Loader2 className="h-16 w-16 animate-spin mx-auto text-primary" /><p className="mt-6 font-black uppercase tracking-widest text-slate-400">Processant...</p></div>
+  if (isUserLoading || isLoading || isSaving) return <div className="p-12 text-center h-[80vh] flex flex-col items-center justify-center"><Loader2 className="h-16 w-16 animate-spin mx-auto text-primary" /><p className="mt-6 font-bold text-slate-400">Processant...</p></div>
   if (!service) return <div className="p-12 text-center">Registre no trobat.</div>
   if (showCamera) return <CameraCapture onCapture={(url, type) => { setMedia(prev => [...prev, { type, dataUrl: url }]); setShowCamera(false); }} onClose={() => setShowCamera(false)} />;
 
@@ -344,7 +344,7 @@ function EditServiceContent() {
             <form onSubmit={handleSubmit} className="space-y-10">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
                 <div className="space-y-3">
-                    <Label className="font-black text-xs uppercase tracking-[0.2em] text-slate-400">Data</Label>
+                    <Label className="font-bold text-xs text-slate-400">Data del servei</Label>
                     <Popover>
                         <PopoverTrigger asChild>
                         <Button variant="outline" className="w-full justify-start text-left font-bold h-16 rounded-2xl border-2 bg-slate-50">
@@ -357,31 +357,46 @@ function EditServiceContent() {
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-3">
-                        <Label className="font-black text-xs uppercase tracking-[0.2em] text-slate-400">Inici</Label>
+                        <Label className="font-bold text-xs text-slate-400">Hora inici</Label>
                         <Input type="time" required value={startTime} onChange={(e) => setStartTime(e.target.value)} className="h-16 rounded-2xl border-2 font-black text-xl text-center bg-slate-50" />
                     </div>
                     <div className="space-y-3">
-                        <Label className="font-black text-xs uppercase tracking-[0.2em] text-slate-400">Final</Label>
+                        <Label className="font-bold text-xs text-slate-400">Hora final</Label>
                         <Input type="time" required value={endTime} onChange={(e) => setEndTime(e.target.value)} className="h-16 rounded-2xl border-2 font-black text-xl text-center bg-slate-50" />
                     </div>
                 </div>
               </div>
 
-              <div className="bg-slate-50 p-6 rounded-3xl border-2 border-dashed flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                      <div className="bg-primary/10 p-2 rounded-xl text-primary">
-                        <Utensils className="h-5 w-5" />
-                      </div>
-                      <div className="space-y-0.5">
-                          <p className="font-black text-sm uppercase tracking-tight">Descomptar hora de dinar</p>
-                          <p className="text-[10px] text-slate-400 font-bold uppercase italic">Interval 13:00h - 14:00h</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 bg-slate-50 p-6 rounded-3xl border-2 border-dashed">
+                  <div className="space-y-3">
+                      <Label className="font-bold text-xs text-slate-400">Preu hora treballador (€/h)</Label>
+                      <div className="relative">
+                          <Input 
+                              type="number" 
+                              step="0.01"
+                              value={serviceHourlyRate} 
+                              onChange={(e) => setServiceHourlyRate(e.target.value === '' ? '' : Number(e.target.value))} 
+                              className="h-14 pl-10 rounded-xl border-2 font-bold text-lg bg-white" 
+                          />
+                          <Euro className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-primary" />
                       </div>
                   </div>
-                  <Switch checked={isLunchSubtracted} onCheckedChange={setIsLunchSubtracted} />
+                  <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                          <div className="bg-primary/10 p-2 rounded-xl text-primary">
+                            <Utensils className="h-5 w-5" />
+                          </div>
+                          <div className="space-y-0.5">
+                              <p className="font-bold text-sm">Descomptar hora de dinar</p>
+                              <p className="text-[10px] text-slate-400 font-medium italic">Interval 13:00h - 14:00h</p>
+                          </div>
+                      </div>
+                      <Switch checked={isLunchSubtracted} onCheckedChange={setIsLunchSubtracted} />
+                  </div>
               </div>
 
               <div className="space-y-4">
-                <Label className="font-black text-xs uppercase tracking-[0.2em] text-slate-400">Client i obra</Label>
+                <Label className="font-bold text-xs text-slate-400">Client i obra associada</Label>
                 <Button type="button" variant="outline" onClick={() => setIsCustomerDialogOpen(true)} className="h-16 w-full justify-start px-6 rounded-2xl border-2 font-black text-lg bg-slate-50 overflow-hidden text-slate-700">
                     <Users className="mr-4 h-6 w-6 text-primary shrink-0" />
                     <span className="truncate">{customers?.find(c => c.id === customerId)?.name || 'Selecciona un client'}</span>
@@ -391,8 +406,8 @@ function EditServiceContent() {
                     <div className="flex gap-2">
                         <div className="flex-1">
                             <Select value={projectId} onValueChange={setProjectId}>
-                                <SelectTrigger className="h-16 rounded-2xl border-2 font-black text-lg bg-slate-50">
-                                    <SelectValue placeholder="Selecciona obra activa" />
+                                <SelectTrigger className="h-16 rounded-2xl border-2 font-bold text-lg bg-slate-50">
+                                    <SelectValue placeholder="Selecciona una obra activa" />
                                 </SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="none">Cap obra seleccionada</SelectItem>
@@ -422,21 +437,21 @@ function EditServiceContent() {
               
               <div className="space-y-3">
                 <div className="flex justify-between items-center px-1">
-                    <Label className="font-black text-xs uppercase tracking-[0.2em] text-slate-400">Treballs realitzats</Label>
+                    <Label className="font-bold text-xs text-slate-400">Descripció dels treballs realitzats</Label>
                     <Button 
                         type="button" 
                         variant="ghost" 
                         size="sm" 
                         onClick={handleTranslate} 
                         disabled={isTranslating || !description.trim()}
-                        className="text-primary hover:text-primary/80 font-black text-[10px] uppercase gap-1.5"
+                        className="text-primary hover:text-primary/80 font-bold text-[10px] gap-1.5"
                     >
                         {isTranslating ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
-                        Traduir (IA)
+                        Traduir amb IA
                     </Button>
                 </div>
                 <Textarea 
-                    placeholder="Descriu la teva feina..." 
+                    placeholder="Què s'ha fet avui?" 
                     value={description} 
                     onChange={(e) => setDescription(e.target.value)} 
                     rows={5} 
@@ -445,62 +460,74 @@ function EditServiceContent() {
               </div>
 
               <div className="space-y-3">
-                <Label className="font-black text-xs uppercase tracking-[0.2em] text-amber-600">Tasques pendents</Label>
-                <Textarea placeholder="Falta alguna cosa?" value={pendingTasks} onChange={(e) => setPendingTasks(e.target.value)} rows={2} className="border-amber-200 bg-amber-50/50 rounded-2xl p-6 font-medium" />
+                <Label className="font-bold text-xs text-amber-600">Tasques pendents de finalitzar</Label>
+                <Textarea placeholder="Indica si falta alguna cosa per acabar..." value={pendingTasks} onChange={(e) => setPendingTasks(e.target.value)} rows={2} className="border-amber-200 bg-amber-50/50 rounded-2xl p-6 font-medium" />
               </div>
 
               <div className="space-y-6 rounded-[2.5rem] border-2 border-slate-100 p-6 sm:p-8 bg-slate-50/50 shadow-inner">
-                  <Label className="font-black text-slate-900 flex items-center gap-3 uppercase tracking-tighter text-xl"><Package className="h-6 w-6 text-primary" /> Materials</Label>
+                  <Label className="font-black text-slate-900 flex items-center gap-3 text-xl"><Package className="h-6 w-6 text-primary" /> Materials utilitzats</Label>
                   <div className="space-y-4">
                       {materials.map((m, i) => (
                           <div key={i} className="bg-white p-6 rounded-3xl border-2 shadow-sm space-y-4">
                               <div className="flex gap-3">
-                                <Input placeholder="Descripció de l'article" value={m.description} onChange={(e) => { const nm = [...materials]; nm[i].description = e.target.value; setMaterials(nm); }} className="border-none shadow-none font-black text-lg h-12 px-0 focus-visible:ring-0" />
+                                <Input placeholder="Descripció de l'article" value={m.description} onChange={(e) => { const nm = [...materials]; nm[i].description = e.target.value; setMaterials(nm); }} className="border-none shadow-none font-bold text-lg h-12 px-0 focus-visible:ring-0" />
                                 <Button type="button" variant="ghost" size="icon" onClick={() => setMaterials(materials.filter((_, idx) => idx !== i))} className="text-red-400"><Trash className="h-6 w-6" /></Button>
                               </div>
                               <div className="grid grid-cols-2 gap-6">
-                                <Input type="number" placeholder="Quant." value={m.quantity} onChange={(e) => { const nm = [...materials]; nm[i].quantity = Number(e.target.value); setMaterials(nm); }} className="h-16 rounded-2xl bg-slate-50 border-none font-black text-xl text-center" />
-                                <div className="relative">
-                                    <Input type="number" placeholder="PVP" value={m.unitPrice} onChange={(e) => { const nm = [...materials]; nm[i].unitPrice = Number(e.target.value); setMaterials(nm); }} className="h-16 pl-6 rounded-2xl bg-slate-50 border-none font-black text-xl" />
-                                    <Euro className="absolute right-6 top-1/2 -translate-y-1/2 h-6 w-6 text-slate-400" />
+                                <div className="space-y-1">
+                                    <Label className="text-[10px] text-slate-400 font-bold ml-1">Quantitat</Label>
+                                    <Input type="number" placeholder="0" value={m.quantity} onChange={(e) => { const nm = [...materials]; nm[i].quantity = Number(e.target.value); setMaterials(nm); }} className="h-14 rounded-xl bg-slate-50 border-none font-bold text-lg text-center" />
+                                </div>
+                                <div className="space-y-1">
+                                    <Label className="text-[10px] text-slate-400 font-bold ml-1">Preu unitari</Label>
+                                    <div className="relative">
+                                        <Input type="number" placeholder="0.00" value={m.unitPrice} onChange={(e) => { const nm = [...materials]; nm[i].unitPrice = Number(e.target.value); setMaterials(nm); }} className="h-14 pl-10 rounded-xl bg-slate-50 border-none font-bold text-lg" />
+                                        <Euro className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+                                    </div>
                                 </div>
                               </div>
                           </div>
                       ))}
                   </div>
-                  <Button type="button" variant="ghost" onClick={() => setMaterials([...materials, { description: '', quantity: 1, unitPrice: 0 }])} className="w-full h-16 border-4 border-dashed border-slate-200 rounded-3xl font-black text-slate-400 uppercase text-xs">+ Afegir article</Button>
+                  <Button type="button" variant="ghost" onClick={() => setMaterials([...materials, { description: '', quantity: 1, unitPrice: 0 }])} className="w-full h-16 border-4 border-dashed border-slate-200 rounded-3xl font-bold text-slate-400 uppercase text-xs">+ Afegir un altre article</Button>
               </div>
 
               <div className="space-y-6 rounded-[2.5rem] border-2 border-slate-100 p-6 sm:p-8 bg-slate-50/50 shadow-inner">
-                  <Label className="font-black text-slate-900 flex items-center gap-3 uppercase tracking-tighter text-xl"><ReceiptText className="h-6 w-6 text-primary" /> Altres costos</Label>
+                  <Label className="font-black text-slate-900 flex items-center gap-3 text-xl"><ReceiptText className="h-6 w-6 text-primary" /> Altres costos del servei</Label>
                   <div className="space-y-4">
                       {additionalCosts.map((c, i) => (
                           <div key={i} className="bg-white p-6 rounded-3xl border-2 shadow-sm space-y-4">
                               <div className="flex gap-3">
-                                <Input placeholder="Descripció (Peatges, dietes, etc.)" value={c.description} onChange={(e) => { const nc = [...additionalCosts]; nc[i].description = e.target.value; setAdditionalCosts(nc); }} className="border-none shadow-none font-black text-lg h-12 px-0 focus-visible:ring-0" />
+                                <Input placeholder="Descripció (peatges, dietes, etc.)" value={c.description} onChange={(e) => { const nc = [...additionalCosts]; nc[i].description = e.target.value; setAdditionalCosts(nc); }} className="border-none shadow-none font-bold text-lg h-12 px-0 focus-visible:ring-0" />
                                 <Button type="button" variant="ghost" size="icon" onClick={() => setAdditionalCosts(additionalCosts.filter((_, idx) => idx !== i))} className="text-red-400"><Trash className="h-6 w-6" /></Button>
                               </div>
                               <div className="grid grid-cols-2 gap-6">
-                                <Input type="number" placeholder="Quant." value={c.quantity} onChange={(e) => { const nc = [...additionalCosts]; nc[i].quantity = Number(e.target.value); setAdditionalCosts(nc); }} className="h-16 rounded-2xl bg-slate-50 border-none font-black text-xl text-center" />
-                                <div className="relative">
-                                    <Input type="number" placeholder="Preu" value={c.unitPrice} onChange={(e) => { const nc = [...additionalCosts]; nc[i].unitPrice = Number(e.target.value); setAdditionalCosts(nc); }} className="h-16 pl-6 rounded-2xl bg-slate-50 border-none font-black text-xl" />
-                                    <Euro className="absolute right-6 top-1/2 -translate-y-1/2 h-6 w-6 text-slate-400" />
+                                <div className="space-y-1">
+                                    <Label className="text-[10px] text-slate-400 font-bold ml-1">Quantitat</Label>
+                                    <Input type="number" placeholder="0" value={c.quantity} onChange={(e) => { const nc = [...additionalCosts]; nc[i].quantity = Number(e.target.value); setAdditionalCosts(nc); }} className="h-14 rounded-xl bg-slate-50 border-none font-bold text-lg text-center" />
+                                </div>
+                                <div className="space-y-1">
+                                    <Label className="text-[10px] text-slate-400 font-bold ml-1">Preu</Label>
+                                    <div className="relative">
+                                        <Input type="number" placeholder="0.00" value={c.unitPrice} onChange={(e) => { const nc = [...additionalCosts]; nc[i].unitPrice = Number(e.target.value); setAdditionalCosts(nc); }} className="h-14 pl-10 rounded-xl bg-slate-50 border-none font-bold text-lg" />
+                                        <Euro className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+                                    </div>
                                 </div>
                               </div>
                           </div>
                       ))}
                   </div>
-                  <Button type="button" variant="ghost" onClick={() => setAdditionalCosts([...additionalCosts, { description: '', quantity: 1, unitPrice: 0 }])} className="w-full h-16 border-4 border-dashed border-slate-200 rounded-3xl font-black text-slate-400 uppercase text-xs">+ Afegir concepte</Button>
-                  <p className="text-[10px] text-slate-400 font-bold uppercase pl-1">Aquests costos es sumaran al subtotal net del document.</p>
+                  <Button type="button" variant="ghost" onClick={() => setAdditionalCosts([...additionalCosts, { description: '', quantity: 1, unitPrice: 0 }])} className="w-full h-16 border-4 border-dashed border-slate-200 rounded-3xl font-bold text-slate-400 uppercase text-xs">+ Afegir concepte addicional</Button>
+                  <p className="text-[10px] text-slate-400 font-bold italic pl-1">Aquests costos es sumaran al subtotal net del document de facturació.</p>
               </div>
 
               <div className="space-y-6">
                   <div className="flex justify-between items-center px-1">
-                    <Label className="font-black text-slate-900 flex items-center gap-3 uppercase tracking-tighter text-xl"><Camera className="h-6 w-6 text-primary" /> Galeria</Label>
+                    <Label className="font-black text-slate-900 flex items-center gap-3 text-xl"><Camera className="h-6 w-6 text-primary" /> Galeria d'imatges</Label>
                     <div className="flex gap-2">
                         <input type="file" ref={galleryInputRef} onChange={handleGalleryUpload} accept="image/*" multiple className="hidden" />
-                        <Button type="button" variant="outline" size="sm" onClick={() => setShowCamera(true)} className="font-black h-12 rounded-2xl px-4 sm:px-6 border-2 text-[10px] sm:text-xs">Càmera</Button>
-                        <Button type="button" variant="outline" size="sm" onClick={() => galleryInputRef.current?.click()} className="font-black h-12 rounded-2xl px-4 sm:px-6 border-2 text-[10px] sm:text-xs">Arxius</Button>
+                        <Button type="button" variant="outline" size="sm" onClick={() => setShowCamera(true)} className="font-bold h-12 rounded-2xl px-4 sm:px-6 border-2 text-[10px] sm:text-xs">Càmera</Button>
+                        <Button type="button" variant="outline" size="sm" onClick={() => galleryInputRef.current?.click()} className="font-bold h-12 rounded-2xl px-4 sm:px-6 border-2 text-[10px] sm:text-xs">Pujar arxius</Button>
                     </div>
                   </div>
                   <div className="grid grid-cols-3 sm:grid-cols-4 gap-4">
@@ -514,11 +541,11 @@ function EditServiceContent() {
               </div>
 
               <div className="space-y-4 rounded-[2.5rem] border-4 border-primary/5 p-6 sm:p-8 bg-primary/5 shadow-inner text-center sm:text-left">
-                  <Label className="font-black flex items-center justify-center sm:justify-start gap-3 text-primary uppercase tracking-tighter text-xl"><PenTool className="h-6 w-6" /> Signatura</Label>
+                  <Label className="font-black flex items-center justify-center sm:justify-start gap-3 text-primary text-xl"><PenTool className="h-6 w-6" /> Signatura de conformitat</Label>
                   {customerSignatureDataUrl ? (
                     <div className="flex flex-col sm:flex-row items-center justify-between bg-white p-6 rounded-3xl border-2 shadow-lg gap-4">
                         <div className="text-center sm:text-left">
-                            <p className="text-[10px] text-slate-400 uppercase font-black">Confirmat per:</p>
+                            <p className="text-[10px] text-slate-400 font-bold uppercase">Confirmat per:</p>
                             <p className="font-black text-slate-900 text-xl">{customerSignatureName}</p>
                         </div>
                         <div className="relative h-24 w-40"><Image src={customerSignatureDataUrl} alt="Signatura" fill style={{ objectFit: 'contain' }} /></div>
@@ -526,7 +553,7 @@ function EditServiceContent() {
                     </div>
                   ) : (
                     <Button type="button" variant="outline" onClick={() => setIsSignatureDialogOpen(true)} className="w-full h-24 border-dashed border-4 border-primary/20 text-primary font-black shadow-sm rounded-3xl text-sm">
-                        <PenTool className="mr-2 sm:mr-4 h-6 sm:h-8 w-6 sm:w-8" /> Recollir signatura
+                        <PenTool className="mr-2 sm:mr-4 h-6 sm:h-8 w-6 sm:w-8" /> Recollir signatura del client
                     </Button>
                   )}
               </div>
@@ -534,20 +561,20 @@ function EditServiceContent() {
               <div className="flex flex-col sm:flex-row justify-between items-center pt-12 border-t-2 border-slate-100 gap-6">
                 <AlertDialog>
                     <AlertDialogTrigger asChild>
-                        <Button type="button" variant="ghost" className="text-red-500 font-bold h-16 w-full sm:w-auto rounded-2xl px-8 transition-colors">Esborrar registre</Button>
+                        <Button type="button" variant="ghost" className="text-red-500 font-bold h-16 w-full sm:w-auto rounded-2xl px-8 transition-colors">Eliminar registre</Button>
                     </AlertDialogTrigger>
                     <AlertDialogContent className="rounded-[2.5rem] p-10">
-                        <AlertDialogHeader><AlertDialogTitle className="text-2xl font-black uppercase">Moure a la paperera?</AlertDialogTitle></AlertDialogHeader>
-                        <AlertDialogDescription>El registre no s'esborrarà per sempre, podràs recuperar-lo a la paperera del dashboard.</AlertDialogDescription>
+                        <AlertDialogHeader><AlertDialogTitle className="text-2xl font-black">Moure a la paperera?</AlertDialogTitle></AlertDialogHeader>
+                        <AlertDialogDescription className="text-base font-medium">El registre no s'esborrarà definitivament, podràs recuperar-lo des de la secció de paperera.</AlertDialogDescription>
                         <AlertDialogFooter className="pt-6">
-                            <AlertDialogCancel className="rounded-2xl h-14 font-bold border-2">Enrere</AlertDialogCancel>
+                            <AlertDialogCancel className="rounded-2xl h-14 font-bold border-2">Tornar</AlertDialogCancel>
                             <AlertDialogAction onClick={handleSoftDelete} className="bg-red-600 rounded-2xl h-14 font-black uppercase tracking-widest">Esborrar</AlertDialogAction>
                         </AlertDialogFooter>
                     </AlertDialogContent>
                 </AlertDialog>
-                <Button type="submit" className="bg-primary px-10 sm:px-20 h-20 text-xl sm:text-2xl font-black shadow-2xl uppercase tracking-tighter hover:scale-[1.02] transition-all rounded-3xl w-full sm:w-auto" disabled={isSaving}>
+                <Button type="submit" className="bg-primary px-10 sm:px-20 h-20 text-xl sm:text-2xl font-black shadow-2xl tracking-tighter hover:scale-[1.02] transition-all rounded-3xl w-full sm:w-auto" disabled={isSaving}>
                     {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                    Guardar treball
+                    Guardar canvis
                 </Button>
               </div>
             </form>
@@ -559,7 +586,7 @@ function EditServiceContent() {
 
 export default function EditServicePage() {
     return (
-        <Suspense fallback={<div className="p-12 text-center h-[80vh] flex flex-col items-center justify-center"><Loader2 className="h-16 w-16 animate-spin mx-auto text-primary" /><p className="mt-6 font-black uppercase tracking-widest text-slate-400">Carregant...</p></div>}>
+        <Suspense fallback={<div className="p-12 text-center h-[80vh] flex flex-col items-center justify-center"><Loader2 className="h-16 w-16 animate-spin mx-auto text-primary" /><p className="mt-6 font-bold text-slate-400">Carregant...</p></div>}>
             <EditServiceContent />
         </Suspense>
     );
