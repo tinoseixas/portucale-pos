@@ -116,7 +116,7 @@ export default function Home() {
   }
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-br from-primary via-primary/90 to-slate-900 p-4 md:p-8">
+    <main className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-br from-primary via-destructive/20 to-slate-900 p-4 md:p-8">
       <div className="w-full max-w-md">
         <div className="flex justify-center mb-8 md:mb-12 scale-110">
             <Logo className="h-24 md:h-32 w-auto drop-shadow-2xl" variant="light" />
@@ -169,7 +169,7 @@ export default function Home() {
                     <span className="bg-white/95 px-4 text-slate-300 italic">Accés restringit a l'equip</span>
                 </div>
             </div>
-            <Button onClick={handleSignUp} variant="outline" className="w-full h-14 border-2 font-bold rounded-2xl text-slate-500 hover:bg-slate-50 border-accent/20 hover:border-accent" disabled={isAuthenticating}>
+            <Button onClick={handleSignUp} variant="outline" className="w-full h-14 border-2 font-bold rounded-2xl text-slate-500 hover:bg-slate-50 border-destructive/20 hover:border-destructive" disabled={isAuthenticating}>
               Sol·licitar nou compte
             </Button>
           </CardFooter>

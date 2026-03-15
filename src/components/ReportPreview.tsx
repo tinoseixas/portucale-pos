@@ -59,7 +59,7 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
             style={{ width: '210mm', minHeight: '297mm' }}
         >
             {/* Capçalera corporativa */}
-            <header className="flex justify-between items-start border-b-8 border-primary pb-8 break-inside-avoid">
+            <header className="flex justify-between items-start border-b-8 border-primary pb-8 break-inside-avoid relative">
                 <div className="space-y-4">
                     <Logo className="h-20 w-auto" />
                     <div className="text-[11px] leading-tight text-slate-500 font-medium tracking-tight">
@@ -80,6 +80,8 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
                         {format(new Date(), 'dd MMMM yyyy', { locale: ca })}
                     </p>
                 </div>
+                {/* Línia d'accent vermell a la capçalera */}
+                <div className="absolute bottom-[-8px] right-0 w-1/3 h-2 bg-destructive"></div>
             </header>
 
             {/* Info client i projecte */}
@@ -141,7 +143,7 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
                                     <td className="py-4 px-4 align-top space-y-2">
                                         <p className="text-slate-700 font-medium leading-relaxed">{s.description}</p>
                                         {lunchWasSubtracted && (
-                                            <p className="text-[9px] text-amber-600 font-bold italic">
+                                            <p className="text-[9px] text-destructive font-bold italic">
                                                 * S'ha descomptat 1h de descans (13h-14h)
                                             </p>
                                         )}
@@ -183,7 +185,7 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
                         {allAdditionalCosts.map((c, i) => (
                             <tr key={`extra-${i}`} className="bg-slate-100/50 border-b border-slate-200">
                                 <td className="py-3 px-4 font-black text-slate-900 flex items-center gap-2">
-                                    <ReceiptText className="h-3 w-3 text-slate-400" /> {c.description}
+                                    <ReceiptText className="h-3 w-3 text-destructive" /> {c.description}
                                 </td>
                                 <td className="py-3 px-4 text-right tabular-nums font-bold text-slate-900">{c.quantity.toFixed(2)}</td>
                                 {showPricing && <td className="py-3 px-4 text-right tabular-nums text-slate-400">{c.unitPrice.toFixed(2)} €</td>}
@@ -235,27 +237,14 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
                 </div>
             </section>
 
-            {/* Annex fotogràfic */}
-            {allImages.length > 0 && (
-                <section className="mt-10 pt-10 border-t-2 border-slate-100 break-inside-avoid">
-                    <h3 className="text-[10px] font-bold tracking-tight text-slate-400 mb-6">Evidència fotogràfica</h3>
-                    <div className="grid grid-cols-3 gap-4">
-                        {allImages.slice(0, 6).map((img, i) => (
-                            <div key={i} className="relative aspect-square rounded-2xl overflow-hidden border-4 border-white shadow-md">
-                                <Image src={img.dataUrl} alt={`Foto ${i}`} fill className="object-cover" />
-                            </div>
-                        ))}
-                    </div>
-                </section>
-            )}
-
-            {/* Peu de pàgina */}
-            <footer className="pt-8 text-center text-[9px] text-slate-300 font-bold tracking-tight break-inside-avoid mt-auto">
-                <p>TS Serveis - Solucions tècniques i manteniment</p>
-                <div className="flex gap-1 justify-center mt-2 opacity-30">
-                    <div className="w-10 h-1 bg-primary rounded-full"></div>
-                    <div className="w-5 h-1 bg-accent rounded-full"></div>
+            {/* Peu de pàgina amb barra de colors corporativa */}
+            <footer className="pt-8 text-center break-inside-avoid mt-auto flex flex-col items-center gap-2">
+                <div className="flex gap-1 justify-center">
+                    <div className="w-16 h-1.5 bg-primary rounded-full"></div>
+                    <div className="w-8 h-1.5 bg-accent rounded-full"></div>
+                    <div className="w-4 h-1.5 bg-destructive rounded-full"></div>
                 </div>
+                <p className="text-[9px] text-slate-400 font-bold tracking-widest uppercase">TS Serveis - Solucions tècniques i manteniment</p>
             </footer>
         </div>
     );

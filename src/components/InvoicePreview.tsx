@@ -43,7 +43,7 @@ export const InvoicePreview = forwardRef<HTMLDivElement, InvoicePreviewProps>((p
 
     return (
         <div ref={ref} className="bg-white p-12 font-sans text-slate-900 printable-area mx-auto flex flex-col gap-12" style={{ width: '210mm', minHeight: '297mm' }}>
-            <header className="flex justify-between items-start border-b-8 border-primary pb-10 break-inside-avoid">
+            <header className="flex justify-between items-start border-b-8 border-primary pb-10 break-inside-avoid relative">
                 <div className="space-y-6">
                     <Logo className="h-24 w-auto" />
                     <div className="text-[11px] leading-relaxed text-slate-500 font-medium tracking-tight">
@@ -62,6 +62,8 @@ export const InvoicePreview = forwardRef<HTMLDivElement, InvoicePreviewProps>((p
                         Data: {format(new Date(), 'dd MMMM yyyy', { locale: ca })}
                     </p>
                 </div>
+                {/* Línia d'accent vermell corporatiu */}
+                <div className="absolute bottom-[-8px] right-0 w-1/4 h-2 bg-destructive"></div>
             </header>
 
             <div className="grid grid-cols-2 gap-12 break-inside-avoid">
@@ -113,7 +115,7 @@ export const InvoicePreview = forwardRef<HTMLDivElement, InvoicePreviewProps>((p
                         {allAdditionalCosts.map((c, i) => (
                             <tr key={`extra-${i}`} className="border-b-2 border-slate-100 bg-slate-100/30">
                                 <td className="py-4 px-6 font-black text-slate-900 flex items-center gap-2">
-                                    <ReceiptText className="h-4 w-4 text-primary" /> {c.description}
+                                    <ReceiptText className="h-4 w-4 text-destructive" /> {c.description}
                                 </td>
                                 <td className="py-4 px-6 text-right tabular-nums">{c.quantity.toFixed(2)}</td>
                                 <td className="py-4 px-6 text-right tabular-nums">{c.unitPrice.toFixed(2)} €</td>
