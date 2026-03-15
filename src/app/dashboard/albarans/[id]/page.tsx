@@ -3,30 +3,18 @@
 
 import { useState, useRef, useEffect, useCallback, Suspense } from 'react'
 import { useRouter, useParams, useSearchParams } from 'next/navigation'
-import { useDoc, useUser, useFirestore, useMemoFirebase, deleteDocumentNonBlocking, useCollection, updateDocumentNonBlocking } from '@/firebase'
-import { collection, query, getDocs, doc, collectionGroup, getDoc, updateDoc, where } from 'firebase/firestore'
+import { useDoc, useUser, useFirestore, useMemoFirebase, useCollection, updateDocumentNonBlocking } from '@/firebase'
+import { collection, query, getDocs, doc, collectionGroup, getDoc } from 'firebase/firestore'
 import type { Customer, ServiceRecord, Albaran, Employee } from '@/lib/types'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { FileDown, Loader2, ArrowLeft, Trash2, Briefcase, CreditCard, AlertCircle, Edit, Mail, Send, ListChecks, ArrowRight, Archive, ArchiveRestore } from 'lucide-react'
+import { FileDown, Loader2, ArrowLeft, Briefcase, Mail, Send, Edit } from 'lucide-react'
 import { ReportPreview } from '@/components/ReportPreview'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog"
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -35,7 +23,6 @@ import {
 import { useToast } from '@/hooks/use-toast'
 import { AdminGate } from '@/components/AdminGate'
 import { Badge } from '@/components/ui/badge'
-import Link from 'next/link'
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { sendDocumentEmail } from '@/ai/flows/send-email'
@@ -72,7 +59,6 @@ function AlbaranDetailContent() {
         return doc(firestore, 'employees', user.uid);
     }, [firestore, user]);
     const { data: currentEmployee } = useDoc<Employee>(employeeDocRef);
-    const isAdmin = currentEmployee?.role === 'admin';
 
     const employeesQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'employees')) : null, [firestore]);
     const { data: employees } = useCollection<Employee>(employeesQuery);
@@ -121,7 +107,7 @@ function AlbaranDetailContent() {
         } finally {
             setIsLoadingData(false)
         }
-    }, [albaran, firestore, employees, user, isAdmin, currentEmployee, toast, hasLoaded]);
+    }, [albaran, firestore, employees, user, currentEmployee, toast, hasLoaded]);
 
     useEffect(() => {
         if (albaran && employees && currentEmployee !== undefined && !hasLoaded) fetchData();
@@ -150,11 +136,9 @@ function AlbaranDetailContent() {
         let heightLeft = imgHeight;
         let position = 0;
 
-        // Add first page
         pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight, undefined, 'FAST');
         heightLeft -= pdfHeight;
 
-        // Add additional pages if content is longer than one page
         while (heightLeft > 0) {
             position = heightLeft - imgHeight;
             pdf.addPage();
@@ -223,11 +207,11 @@ function AlbaranDetailContent() {
                     </Button>
                     <div className="flex items-center gap-2 flex-wrap justify-end">
                         <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-                            <DialogTrigger asChild><Button variant="outline" className="font-bold h-12 rounded-xl border-2"><Edit className="mr-2 h-4 w-4" /> Editar Títol</Button></DialogTrigger>
+                            <DialogTrigger asChild><Button variant="outline" className="font-bold h-12 rounded-xl border-2"><Edit className="mr-2 h-4 w-4" /> Editar títol</Button></DialogTrigger>
                             <DialogContent className="rounded-3xl">
-                                <DialogHeader><DialogTitle>Renomenar Projecte</DialogTitle></DialogHeader>
+                                <DialogHeader><DialogTitle>Renomenar projecte</DialogTitle></DialogHeader>
                                 <div className="py-4 space-y-2">
-                                    <Label>Nom de l'Obra</Label>
+                                    <Label>Nom de l'obra</Label>
                                     <Input value={editProjectName} onChange={(e) => setEditProjectName(e.target.value)} className="h-12 rounded-xl font-bold" />
                                 </div>
                                 <DialogFooter><Button onClick={() => { updateDocumentNonBlocking(albaranDocRef!, { projectName: editProjectName }); setIsEditDialogOpen(false); toast({ title: 'Actualitzat' }); }} className="bg-primary font-bold h-12 px-8">Guardar</Button></DialogFooter>
@@ -237,17 +221,17 @@ function AlbaranDetailContent() {
                         <Dialog open={isEmailDialogOpen} onOpenChange={setIsEmailDialogOpen}>
                             <DialogTrigger asChild><Button variant="outline" className="font-bold h-12 rounded-xl border-2 text-primary border-primary/20"><Mail className="mr-2 h-4 w-4" /> Enviar PDF</Button></DialogTrigger>
                             <DialogContent className="rounded-3xl">
-                                <DialogHeader><DialogTitle>Enviar per Correu</DialogTitle></DialogHeader>
+                                <DialogHeader><DialogTitle>Enviar per correu</DialogTitle></DialogHeader>
                                 <div className="py-4 space-y-4">
                                     <Label>E-mail del client</Label>
                                     <Input type="email" value={recipientEmail} onChange={(e) => setRecipientEmail(e.target.value)} className="h-12 rounded-xl font-bold" />
                                 </div>
-                                <DialogFooter><Button onClick={handleSendEmail} disabled={isSendingEmail} className="bg-primary font-bold h-12 w-full">{isSendingEmail ? <Loader2 className="animate-spin mr-2" /> : <Send className="mr-2 h-4 w-4" />} Enviar Ara</Button></DialogFooter>
+                                <DialogFooter><Button onClick={handleSendEmail} disabled={isSendingEmail} className="bg-primary font-bold h-12 w-full">{isSendingEmail ? <Loader2 className="animate-spin mr-2" /> : <Send className="mr-2 h-4 w-4" />} Enviar ara</Button></DialogFooter>
                             </DialogContent>
                         </Dialog>
 
                         <Button onClick={handleExportPDF} disabled={isGenerating} className="bg-slate-900 h-12 px-8 rounded-xl font-black uppercase text-xs text-white shadow-xl">
-                            {isGenerating ? <Loader2 className="animate-spin mr-2" /> : <FileDown className="mr-2 h-4 w-4" />} EXPORTAR PDF
+                            {isGenerating ? <Loader2 className="animate-spin mr-2" /> : <FileDown className="mr-2 h-4 w-4" />} Exportar PDF
                         </Button>
                     </div>
                 </div>

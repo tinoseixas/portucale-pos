@@ -6,7 +6,7 @@ import { Calendar as CalendarIcon, Clock, User, CheckCircle, Package, MapPin, Ph
 import type { ServiceRecord, Customer, Employee } from '@/lib/types';
 import { format, parseISO } from 'date-fns';
 import { ca } from 'date-fns/locale';
-import { calculateTotalAmount, calculateServiceEffectiveMinutes, getMealBreakOverlapMinutes, IVA_RATE } from '@/lib/calculations';
+import { calculateTotalAmount, calculateServiceEffectiveMinutes, getMealBreakOverlapMinutes } from '@/lib/calculations';
 import { Logo } from '@/components/Logo';
 import { BRANDING } from '@/lib/branding';
 
@@ -47,11 +47,6 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
         }).filter(c => c.description.trim() !== '');
     }, [sortedServices]);
 
-    const allImages = useMemo(() => {
-        if (!sortedServices) return [];
-        return sortedServices.flatMap(service => service.media || []).filter(m => m.type === 'image');
-    }, [sortedServices]);
-
     return (
         <div 
             ref={ref} 
@@ -69,18 +64,17 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
                         <p>Tel: {BRANDING.phone} | {BRANDING.email}</p>
                     </div>
                 </div>
-                <div className="text-right flex flex-col items-end">
-                    <h1 className="text-5xl font-black tracking-tighter text-primary">Albarà</h1>
+                <div className="text-right flex flex-col items-end gap-2">
+                    <h1 className="text-5xl font-black tracking-tighter text-primary leading-[1.1]">Albarà</h1>
                     {albaranNumber && (
-                        <div className="mt-2 bg-accent text-primary px-4 py-1.5 rounded-lg text-xl font-bold shadow-sm">
+                        <div className="bg-accent text-primary px-4 py-1.5 rounded-lg text-xl font-bold">
                             #{String(albaranNumber).padStart(4, '0')}
                         </div>
                     )}
-                    <p className="mt-3 text-slate-400 font-bold text-xs tracking-tight">
+                    <p className="mt-1 text-slate-400 font-bold text-xs tracking-tight">
                         {format(new Date(), 'dd MMMM yyyy', { locale: ca })}
                     </p>
                 </div>
-                {/* Línia d'accent vermell a la capçalera */}
                 <div className="absolute bottom-[-8px] right-0 w-1/3 h-2 bg-destructive"></div>
             </header>
 
@@ -119,7 +113,7 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
             {/* Taula de treballs */}
             <section className="space-y-4">
                 <h3 className="text-sm font-black tracking-tight text-primary border-l-4 border-primary pl-3">01. Detall dels treballs</h3>
-                <table className="w-full border-collapse rounded-xl overflow-hidden shadow-sm border border-slate-100">
+                <table className="w-full border-collapse rounded-xl overflow-hidden border border-slate-100">
                     <thead className="bg-primary text-white text-[10px] tracking-tight">
                         <tr>
                             <th className="py-3 px-4 text-left font-bold">Data</th>
@@ -137,7 +131,7 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
                             const lunchWasSubtracted = s.isLunchSubtracted !== false && breakMinutes > 0;
 
                             return (
-                                <tr key={s.id} className={`${i % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'} border-b border-slate-100`}>
+                                <tr key={s.id} className={`${i % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'} border-b border-slate-100 break-inside-avoid`}>
                                     <td className="py-4 px-4 align-top font-bold text-slate-400">{format(parseISO(s.arrivalDateTime), 'dd/MM/yy')}</td>
                                     <td className="py-4 px-4 align-top font-black text-primary whitespace-nowrap">{s.employeeName?.split(' ')[0]}</td>
                                     <td className="py-4 px-4 align-top space-y-2">
@@ -164,7 +158,7 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
             {/* Taula de materials i extra */}
             <section className="space-y-4 break-inside-avoid">
                 <h3 className="text-sm font-black tracking-tight text-primary border-l-4 border-primary pl-3">02. Materials i altres conceptes</h3>
-                <table className="w-full border-collapse rounded-xl overflow-hidden shadow-sm border border-slate-100">
+                <table className="w-full border-collapse rounded-xl overflow-hidden border border-slate-100">
                     <thead className="bg-slate-800 text-white text-[10px] tracking-tight">
                         <tr>
                             <th className="py-3 px-4 text-left font-bold">Concepte / descripció</th>
@@ -175,7 +169,7 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
                     </thead>
                     <tbody className="text-xs">
                         {allMaterials.map((m, i) => (
-                            <tr key={i} className={`${i % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'} border-b border-slate-100`}>
+                            <tr key={i} className={`${i % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'} border-b border-slate-100 break-inside-avoid`}>
                                 <td className="py-3 px-4 font-medium text-slate-700">{m.description}</td>
                                 <td className="py-3 px-4 text-right tabular-nums font-bold text-slate-900">{m.quantity.toFixed(2)}</td>
                                 {showPricing && <td className="py-3 px-4 text-right tabular-nums text-slate-400">{m.unitPrice.toFixed(2)} €</td>}
@@ -183,7 +177,7 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
                             </tr>
                         ))}
                         {allAdditionalCosts.map((c, i) => (
-                            <tr key={`extra-${i}`} className="bg-slate-100/50 border-b border-slate-200">
+                            <tr key={`extra-${i}`} className="bg-slate-100/50 border-b border-slate-200 break-inside-avoid">
                                 <td className="py-3 px-4 font-black text-slate-900 flex items-center gap-2">
                                     <ReceiptText className="h-3 w-3 text-destructive" /> {c.description}
                                 </td>
@@ -199,7 +193,7 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
             {/* Totals si showpricing */}
             {showPricing && (
                 <div className="flex justify-end break-inside-avoid">
-                    <div className="w-80 bg-primary text-white p-6 rounded-2xl space-y-3 shadow-xl border-t-4 border-accent">
+                    <div className="w-80 bg-primary text-white p-6 rounded-2xl space-y-3 border-t-4 border-accent">
                         <div className="flex justify-between text-[10px] font-bold tracking-tight">
                             <span>Suma treballs i materials</span>
                             <span className="tabular-nums">{subtotal.toFixed(2)} €</span>

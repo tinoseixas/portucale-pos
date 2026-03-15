@@ -1,3 +1,4 @@
+
 'use client'
 import React, { forwardRef, useMemo } from 'react';
 import type { Customer } from '@/lib/types';
@@ -55,7 +56,7 @@ export const QuotePreview = forwardRef<HTMLDivElement, QuotePreviewProps>(({ cus
     return (
         <div ref={ref} className="bg-white p-12 font-sans text-slate-900 printable-area mx-auto flex flex-col gap-12" style={{ width: '210mm', minHeight: '297mm' }}>
             {/* Capçalera professionals */}
-            <header className="flex justify-between items-start border-b-8 border-primary pb-10 break-inside-avoid">
+            <header className="flex justify-between items-start border-b-8 border-primary pb-10 break-inside-avoid relative">
                 <div className="space-y-6">
                     <Logo className="h-24 w-auto" />
                     <div className="text-[11px] leading-relaxed text-slate-500 font-medium tracking-tight">
@@ -65,15 +66,16 @@ export const QuotePreview = forwardRef<HTMLDivElement, QuotePreviewProps>(({ cus
                         <p>Tel: {BRANDING.phone} | {BRANDING.email}</p>
                     </div>
                 </div>
-                <div className="text-right space-y-3">
-                    <h1 className="text-6xl font-black tracking-tighter text-primary leading-none">Pressupost</h1>
-                    <div className="bg-accent text-primary px-6 py-2 rounded-lg inline-block text-2xl font-black shadow-sm">
+                <div className="text-right flex flex-col items-end gap-2">
+                    <h1 className="text-6xl font-black tracking-tighter text-primary leading-[1.1]">Pressupost</h1>
+                    <div className="bg-accent text-primary px-6 py-2 rounded-lg inline-block text-2xl font-black">
                         #{String(quoteNumber || 0).padStart(4, '0')}
                     </div>
                     <p className="text-slate-400 font-bold text-sm tracking-tight">
                         Vàlid fins: {format(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), 'dd/MM/yyyy', { locale: ca })}
                     </p>
                 </div>
+                <div className="absolute bottom-[-8px] right-0 w-1/3 h-2 bg-destructive"></div>
             </header>
 
             {/* Info client i obra */}
@@ -119,7 +121,7 @@ export const QuotePreview = forwardRef<HTMLDivElement, QuotePreviewProps>(({ cus
                                     {catItems.map((item, i) => {
                                         const finalPrice = item.unitPrice * (1 - (item.discount || 0)/100);
                                         return (
-                                            <tr key={i} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
+                                            <tr key={i} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors break-inside-avoid">
                                                 <td className="py-3 px-4 font-medium text-slate-700">{item.description}</td>
                                                 <td className="py-3 px-4 text-right tabular-nums text-slate-400">{item.quantity.toFixed(2)}</td>
                                                 <td className="py-3 px-4 text-right tabular-nums text-slate-400">{item.unitPrice.toFixed(2)} €</td>
@@ -135,7 +137,7 @@ export const QuotePreview = forwardRef<HTMLDivElement, QuotePreviewProps>(({ cus
                 })}
 
                 {labor.cost > 0 && (
-                    <div className="p-6 bg-slate-50 rounded-2xl border-2 border-primary/10 flex justify-between items-center break-inside-avoid shadow-sm border-l-8 border-l-primary">
+                    <div className="p-6 bg-slate-50 rounded-2xl border-2 border-primary/10 flex justify-between items-center break-inside-avoid border-l-8 border-l-primary">
                         <div className="space-y-1">
                             <p className="font-black text-primary text-sm">{labor.description || "Mà d'obra"}</p>
                             <p className="text-[10px] text-slate-400 tracking-tight font-bold">Instal·lació, transport i muntatge inclosos</p>
@@ -147,7 +149,7 @@ export const QuotePreview = forwardRef<HTMLDivElement, QuotePreviewProps>(({ cus
 
             {/* Resum financer */}
             <div className="flex justify-end pb-12 break-inside-avoid">
-                <div className="w-96 bg-primary text-white p-8 rounded-[2rem] shadow-2xl space-y-4 border-t-8 border-accent">
+                <div className="w-96 bg-primary text-white p-8 rounded-[2rem] space-y-4 border-t-8 border-accent">
                     <div className="flex justify-between text-[11px] font-bold tracking-tight text-slate-300">
                         <span>Suma de conceptes</span>
                         <span className="tabular-nums text-white">{subtotal.toFixed(2)} €</span>

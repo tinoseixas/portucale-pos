@@ -53,9 +53,9 @@ export const InvoicePreview = forwardRef<HTMLDivElement, InvoicePreviewProps>((p
                         <p>Tel: {BRANDING.phone} | {BRANDING.email}</p>
                     </div>
                 </div>
-                <div className="text-right space-y-3">
-                    <h1 className="text-6xl font-black tracking-tighter text-primary leading-none">Factura</h1>
-                    <div className="bg-accent text-primary px-6 py-2 rounded-lg inline-block text-2xl font-black shadow-sm">
+                <div className="text-right flex flex-col items-end gap-2">
+                    <h1 className="text-6xl font-black tracking-tighter text-primary leading-[1.1]">Factura</h1>
+                    <div className="bg-accent text-primary px-6 py-2 rounded-lg inline-block text-2xl font-black">
                         #{String(invoiceNumber || 0).padStart(4, '0')}
                     </div>
                     <p className="text-slate-400 font-bold text-sm tracking-tight">
@@ -95,7 +95,7 @@ export const InvoicePreview = forwardRef<HTMLDivElement, InvoicePreviewProps>((p
                         </tr>
                     </thead>
                     <tbody className="text-sm">
-                        <tr className="border-b-2 border-slate-100 font-bold bg-slate-50/50">
+                        <tr className="border-b-2 border-slate-100 font-bold bg-slate-50/50 break-inside-avoid">
                             <td className="py-6 px-6">
                                 <p className="font-black text-slate-900">Mà d'obra i treball tècnic</p>
                                 <p className="text-[10px] text-slate-400 tracking-tight mt-1 font-medium italic">Execució especialitzada i desplaçament</p>
@@ -105,7 +105,7 @@ export const InvoicePreview = forwardRef<HTMLDivElement, InvoicePreviewProps>((p
                             <td className="py-6 px-6 text-right font-black tabular-nums">{laborCost.toFixed(2)} €</td>
                         </tr>
                         {allMaterials.map((m, i) => (
-                            <tr key={i} className="border-b border-slate-100 hover:bg-slate-50/30 transition-colors">
+                            <tr key={i} className="border-b border-slate-100 hover:bg-slate-50/30 transition-colors break-inside-avoid">
                                 <td className="py-4 px-6 text-slate-700 font-medium">{m.description}</td>
                                 <td className="py-4 px-6 text-right tabular-nums text-slate-400">{m.quantity.toFixed(2)}</td>
                                 <td className="py-4 px-6 text-right tabular-nums text-slate-400">{m.unitPrice.toFixed(2)} €</td>
@@ -113,7 +113,7 @@ export const InvoicePreview = forwardRef<HTMLDivElement, InvoicePreviewProps>((p
                             </tr>
                         ))}
                         {allAdditionalCosts.map((c, i) => (
-                            <tr key={`extra-${i}`} className="border-b-2 border-slate-100 bg-slate-100/30">
+                            <tr key={`extra-${i}`} className="border-b-2 border-slate-100 bg-slate-100/30 break-inside-avoid">
                                 <td className="py-4 px-6 font-black text-slate-900 flex items-center gap-2">
                                     <ReceiptText className="h-4 w-4 text-destructive" /> {c.description}
                                 </td>
@@ -127,7 +127,7 @@ export const InvoicePreview = forwardRef<HTMLDivElement, InvoicePreviewProps>((p
             </div>
 
             <div className="flex justify-end pb-12 break-inside-avoid">
-                <div className="w-96 bg-primary text-white p-8 rounded-[2rem] shadow-2xl space-y-4 border-t-8 border-accent">
+                <div className="w-96 bg-primary text-white p-8 rounded-[2rem] space-y-4 border-t-8 border-accent">
                     <div className="flex justify-between text-[11px] font-bold tracking-tight text-slate-300">
                         <span>Base imposable</span>
                         <span className="tabular-nums text-white">{subtotal.toFixed(2)} €</span>
