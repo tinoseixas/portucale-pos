@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -11,10 +12,10 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
-import { doc, addDoc, collection } from 'firebase/firestore';
+import { doc, addDoc, collection, getDocs, query, where } from 'firebase/firestore';
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import type { Customer } from '@/lib/types';
-import { Save, ArrowLeft, Building, MapPin, Phone, Mail, Hash, Loader2 } from 'lucide-react';
+import { Save, ArrowLeft, Building, MapPin, Phone, Mail, Hash, Loader2, AlertCircle } from 'lucide-react';
 import { AdminGate } from '@/components/AdminGate';
 
 const customerSchema = z.object({
@@ -37,6 +38,7 @@ export default function EditCustomerPage() {
   const { toast } = useToast();
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
+  const [isSaving, setIsSaving] = useState(false);
 
   const customerDocRef = useMemoFirebase(() => {
     if (isNew || !firestore || !customerId) return null;
@@ -79,9 +81,19 @@ export default function EditCustomerPage() {
 
   const onSubmit = async (data: CustomerFormValues) => {
     if (!firestore) return;
+    setIsSaving(true);
     
     try {
         if (isNew) {
+            // Comprovar duplicats per nom
+            const q = query(collection(firestore, 'customers'), where('name', '==', data.name.trim()));
+            const snap = await getDocs(q);
+            if (!snap.empty) {
+                toast({ variant: 'destructive', title: 'Client duplicat', description: 'Ja existeix un client amb aquest nom.' });
+                setIsSaving(false);
+                return;
+            }
+
             const customersCollection = collection(firestore, 'customers');
             await addDoc(customersCollection, data);
             toast({
@@ -99,6 +111,8 @@ export default function EditCustomerPage() {
         router.push('/dashboard/customers');
     } catch (e) {
         toast({ variant: 'destructive', title: 'Error al desar' });
+    } finally {
+        setIsSaving(false);
     }
   };
 
@@ -125,13 +139,12 @@ export default function EditCustomerPage() {
                         {isNew ? 'Nou Client' : 'Editar Client'}
                     </CardTitle>
                     <CardDescription className="text-slate-400 font-medium">
-                        Segueix l'ordre oficial de 7 camps per evitar errors de sincronització.
+                        Dades oficials de facturació i contacte per a l'empresa.
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="p-8 pt-10">
                     <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
                         
-                        {/* 1. NOME */}
                         <div className="space-y-3">
                             <Label htmlFor="name" className="flex items-center gap-2 font-black uppercase text-xs text-primary tracking-widest pl-1">
                                 <Building className="h-4 w-4" /> 1. Nom del Client
@@ -146,7 +159,6 @@ export default function EditCustomerPage() {
                             {errors.name && <p className="text-xs text-destructive font-bold">{errors.name.message}</p>}
                         </div>
 
-                        {/* 2. NRT */}
                         <div className="space-y-3">
                             <Label htmlFor="nrt" className="flex items-center gap-2 font-black uppercase text-xs text-primary tracking-widest pl-1">
                                 <Hash className="h-4 w-4" /> 2. NIF / NRT
@@ -160,15 +172,13 @@ export default function EditCustomerPage() {
                             />
                         </div>
 
-                        {/* BLOCO MORADA (3, 4, 5) */}
                         <div className="bg-slate-50 p-8 rounded-[2rem] border-2 border-dashed border-slate-200 space-y-6">
                             <p className="font-black uppercase text-[10px] text-slate-400 tracking-[0.2em] flex items-center gap-2 mb-2">
                                 <MapPin className="h-4 w-4" /> LOCALITZACIÓ
                             </p>
                             
-                            {/* 3. RUA */}
                             <div className="space-y-2">
-                                <Label htmlFor="street" className="text-xs font-black text-slate-600 uppercase">3. Carrer i Número (Rua)</Label>
+                                <Label htmlFor="street" className="text-xs font-black text-slate-600 uppercase">3. Carrer i Número</Label>
                                 <Controller
                                     name="street"
                                     control={control}
@@ -179,7 +189,6 @@ export default function EditCustomerPage() {
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                {/* 4. CIDADE */}
                                 <div className="space-y-2">
                                     <Label htmlFor="city" className="text-xs font-black text-slate-600 uppercase">4. Ciutat / Parròquia</Label>
                                     <Controller
@@ -190,7 +199,6 @@ export default function EditCustomerPage() {
                                         )}
                                     />
                                 </div>
-                                {/* 5. CP */}
                                 <div className="space-y-2">
                                     <Label htmlFor="postalCode" className="text-xs font-black text-slate-600 uppercase">5. Codi Postal</Label>
                                     <Controller
@@ -204,9 +212,7 @@ export default function EditCustomerPage() {
                             </div>
                         </div>
 
-                        {/* BLOCO CONTACTO (6, 7) */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                            {/* 6. TELEFONE */}
                             <div className="space-y-3">
                                 <Label htmlFor="contact" className="flex items-center gap-2 font-black uppercase text-xs text-primary tracking-widest pl-1">
                                     <Phone className="h-4 w-4" /> 6. Telèfon
@@ -220,7 +226,6 @@ export default function EditCustomerPage() {
                                 />
                             </div>
 
-                            {/* 7. EMAIL */}
                             <div className="space-y-3">
                                 <Label htmlFor="email" className="flex items-center gap-2 font-black uppercase text-xs text-primary tracking-widest pl-1">
                                     <Mail className="h-4 w-4" /> 7. E-mail
@@ -239,10 +244,10 @@ export default function EditCustomerPage() {
                         <div className="flex justify-end pt-10 border-t-2 border-slate-100">
                             <Button 
                                 type="submit" 
-                                disabled={!isDirty && !isNew} 
+                                disabled={(!isDirty && !isNew) || isSaving} 
                                 className="h-20 px-12 bg-accent hover:bg-accent/90 text-accent-foreground font-black uppercase tracking-widest rounded-3xl shadow-2xl hover:scale-[1.02] transition-transform text-lg"
                             >
-                                <Save className="mr-3 h-6 w-6"/>
+                                {isSaving ? <Loader2 className="animate-spin h-6 w-6 mr-3" /> : <Save className="mr-3 h-6 w-6"/>}
                                 {isNew ? 'CREAR CLIENT' : 'DESAR CANVIS'}
                             </Button>
                         </div>

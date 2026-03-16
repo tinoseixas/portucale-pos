@@ -41,7 +41,6 @@ export default function AlbaransHistoryPage() {
 
   const albaransQuery = useMemoFirebase(() => {
     if (!firestore || !user) return null
-    // Ara sempre consultem tot per als administradors
     return query(collection(firestore, 'albarans'), orderBy('albaranNumber', 'desc'))
   }, [firestore, user])
 
@@ -108,6 +107,7 @@ export default function AlbaransHistoryPage() {
         const projectsSnap = await getDocs(collection(firestore, 'projects'));
         const projects = projectsSnap.docs.map(d => ({ id: d.id, ...d.data() } as Project));
 
+        // Serveis que ja estan en albarans tancats
         const handledServiceIds = new Set(
             latestAlbarans.filter(a => a.status === 'facturat' || a.status === 'arxivat')
                      .flatMap(a => a.serviceRecordIds)
@@ -135,6 +135,7 @@ export default function AlbaransHistoryPage() {
         const counterSnap = await getDocs(query(collection(firestore, "counters"), where("__name__", "==", "albarans")));
         let nextNum = !counterSnap.empty ? (counterSnap.docs[0].data().lastNumber || 0) : 0;
 
+        // Esborrar només albarans pendents vells per regenerar-los de zero
         latestAlbarans.filter(a => a.status === 'pendent').forEach(a => {
             batch.delete(doc(firestore, 'albarans', a.id));
         });

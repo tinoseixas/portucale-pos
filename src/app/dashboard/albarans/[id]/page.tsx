@@ -1,3 +1,4 @@
+
 'use client'
 
 import { useState, useRef, useEffect, useCallback, Suspense } from 'react'
@@ -116,12 +117,13 @@ function AlbaranDetailContent() {
         const reportElement = reportRef.current;
         if (!reportElement) return null;
 
+        // Capturar a 794px d'amplada exacta per a proporció A4 @ 96dpi
         const canvas = await html2canvas(reportElement, {
             scale: 2,
             useCORS: true,
             logging: false,
             backgroundColor: '#ffffff',
-            width: 794, // 210mm a 96dpi aprox
+            width: 794, 
             windowWidth: 800
         });
         

@@ -111,21 +111,27 @@ function InvoiceDetailContent() {
     const generatePDF = async () => {
         const element = invoiceRef.current;
         if (!element) return null;
+        
         const canvas = await html2canvas(element, { 
             scale: 2, 
             useCORS: true, 
             backgroundColor: '#ffffff',
-            windowWidth: 1200
+            width: 794,
+            windowWidth: 800
         });
+        
         const imgData = canvas.toDataURL('image/jpeg', 0.95);
         const pdf = new jsPDF('p', 'mm', 'a4', true);
         const pdfWidth = pdf.internal.pageSize.getWidth();
         const pdfHeight = pdf.internal.pageSize.getHeight();
         const imgHeight = (canvas.height * pdfWidth) / canvas.width;
+        
         let heightLeft = imgHeight;
         let position = 0;
+        
         pdf.addImage(imgData, 'JPEG', 0, position, pdfWidth, imgHeight, undefined, 'FAST');
         heightLeft -= pdfHeight;
+        
         while (heightLeft > 0) {
             position = heightLeft - imgHeight;
             pdf.addPage();

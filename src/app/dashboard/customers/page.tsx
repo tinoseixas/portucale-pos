@@ -1,9 +1,10 @@
+
 'use client'
 
 import { useMemo, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { useCollection, useUser, useFirestore, useMemoFirebase } from '@/firebase'
-import { collection, query, doc, writeBatch, orderBy } from 'firebase/firestore'
+import { collection, query, doc, writeBatch, orderBy, getDocs } from 'firebase/firestore'
 import type { Customer } from '@/lib/types'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
@@ -76,17 +77,34 @@ export default function CustomersPage() {
 
   const handleBulkImport = async () => {
     if (!firestore) return;
-    let customersToImport: Partial<Customer>[] = excelCustomers.length > 0 ? excelCustomers : 
-        bulkText.split('\n').map(n => ({ name: n.trim() })).filter(c => c.name && c.name.length > 0);
-
-    if (customersToImport.length === 0) return;
-    setIsImporting(true);
     
+    setIsImporting(true);
     try {
+        // Obtenir noms existents per evitar duplicats
+        const existingSnap = await getDocs(collection(firestore, 'customers'));
+        const existingNames = new Set(existingSnap.docs.map(d => d.data().name.toLowerCase().trim()));
+
+        let customersToImport: Partial<Customer>[] = excelCustomers.length > 0 ? excelCustomers : 
+            bulkText.split('\n').map(n => ({ name: n.trim() })).filter(c => c.name && c.name.length > 0);
+
+        if (customersToImport.length === 0) {
+            setIsImporting(false);
+            return;
+        }
+
         const batch = writeBatch(firestore);
         let count = 0;
+        let skipped = 0;
+
         for (const cust of customersToImport) {
             if (!cust.name) continue;
+            const normalizedName = cust.name.toLowerCase().trim();
+            
+            if (existingNames.has(normalizedName)) {
+                skipped++;
+                continue;
+            }
+
             const cRef = doc(collection(firestore, 'customers'));
             batch.set(cRef, {
                 name: cust.name,
@@ -97,10 +115,15 @@ export default function CustomersPage() {
                 contact: cust.contact || '',
                 email: cust.email || ''
             });
+            existingNames.add(normalizedName);
             count++;
         }
+
         await batch.commit();
-        toast({ title: "Importació completada", description: `S'han afegit ${count} clients correctament.` });
+        toast({ 
+            title: "Importació completada", 
+            description: `S'han afegit ${count} clients. S'han saltat ${skipped} per duplicats.` 
+        });
         setIsBulkDialogOpen(false);
         setBulkText('');
         setExcelCustomers([]);
