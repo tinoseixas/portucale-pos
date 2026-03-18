@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Button } from '@/components/ui/button'
-import { LogOut, User as UserIcon, Users, Building, FileArchive, FileSignature, Receipt, LineChart, Briefcase } from 'lucide-react'
+import { LogOut, User as UserIcon, Users, Building, FileArchive, FileSignature, Receipt, LineChart, Briefcase, Package } from 'lucide-react'
 import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase'
 import { signOut } from 'firebase/auth'
 import { useRouter } from 'next/navigation'
@@ -71,6 +71,10 @@ export function Header() {
                     <FileSignature className="mr-2 h-4 w-4" />
                     Pressupostos
                 </Button>
+                <Button variant="ghost" size="sm" onClick={() => router.push('/dashboard/articles')} className="font-bold">
+                    <Package className="mr-2 h-4 w-4" />
+                    Articles
+                </Button>
                 <Button variant="ghost" size="sm" onClick={() => router.push('/dashboard/albarans')} className="font-bold">
                     <FileArchive className="mr-2 h-4 w-4" />
                     Albarans
@@ -111,10 +115,15 @@ export function Header() {
                     <UserIcon className="mr-2 h-4 w-4" />
                     <span>Perfil</span>
                 </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => router.push('/dashboard/articles')}>
+                    <Package className="mr-2 h-4 w-4" />
+                    <span>Catàleg d'articles</span>
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => router.push('/dashboard/users')}>
                     <Users className="mr-2 h-4 w-4" />
                     <span>Gestió</span>
                 </DropdownMenuItem>
+                 <DropdownMenuSeparator />
                  <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:bg-destructive focus:text-destructive-foreground">
                     <LogOut className="mr-2 h-4 w-4" />
                     <span>Tanca la sessió</span>

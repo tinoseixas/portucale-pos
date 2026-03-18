@@ -114,6 +114,19 @@
       },
       "required": ["id", "name", "customerId", "status"]
     },
+    "Article": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Article",
+      "type": "object",
+      "description": "Represents a master item/material in the catalog.",
+      "properties": {
+        "id": { "type": "string" },
+        "description": { "type": "string" },
+        "unitPrice": { "type": "number" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "description", "unitPrice"]
+    },
     "ServiceRecord": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "ServiceRecord",
@@ -126,11 +139,11 @@
         },
         "employeeId": {
           "type": "string",
-          "description": "Reference to Employee. (Relationship: Employee 1:N ServiceRecord)"
+          "description": "Reference to Employee."
         },
         "customerId": {
           "type": "string",
-          "description": "Reference to Customer. (Relationship: Customer 1:N ServiceRecord)"
+          "description": "Reference to Customer."
         },
         "customerName": {
             "type": "string",
@@ -160,64 +173,38 @@
         },
         "pendingTasks": {
           "type": "string",
-          "description": "Description of pending tasks for the service. If this field has text, the record is considered to have pending items."
+          "description": "Description of pending tasks for the service."
         },
         "serviceHourlyRate": {
           "type": "number",
-          "description": "The specific hourly rate for this service, overriding the employee's default rate."
+          "description": "The specific hourly rate for this service."
         },
         "media": {
           "type": "array",
-          "description": "Array of media objects (images or videos) as base64 data URLs.",
           "items": {
             "type": "object",
             "properties": {
-              "type": {
-                "type": "string",
-                "enum": ["image", "video"]
-              },
-              "dataUrl": {
-                "type": "string",
-                "format": "uri"
-              }
+              "type": { "type": "string", "enum": ["image", "video"] },
+              "dataUrl": { "type": "string", "format": "uri" }
             },
             "required": ["type", "dataUrl"]
           }
         },
         "materials": {
           "type": "array",
-          "description": "List of materials used in the service.",
           "items": {
             "type": "object",
             "properties": {
-              "description": {
-                "type": "string"
-              },
-              "quantity": {
-                "type": "number"
-              },
-              "unitPrice": {
-                "type": "number"
-              },
-              "imageDataUrl": {
-                "type": "string",
-                "format": "uri",
-                "description": "Data URL of an image for the material."
-              }
+              "description": { "type": "string" },
+              "quantity": { "type": "number" },
+              "unitPrice": { "type": "number" },
+              "imageDataUrl": { "type": "string", "format": "uri" }
             }
-          }
-        },
-        "albarans": {
-          "type": "array",
-          "description": "List of 'albaran' numbers associated with the service record.",
-          "items": {
-            "type": "string"
           }
         },
         "updatedAt": {
           "type": "string",
-          "format": "date-time",
-          "description": "The ISO 8601 timestamp when the service record was last updated."
+          "format": "date-time"
         }
       },
       "required": [
@@ -232,188 +219,25 @@
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Albaran",
       "type": "object",
-      "description": "Represents a generated albarà (delivery note/report).",
+      "description": "Represents a generated albarà.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the albarà."
-        },
-        "albaranNumber": {
-          "type": "number",
-          "description": "Sequential number for the albarà."
-        },
-        "createdAt": {
-          "type": "string",
-          "format": "date-time",
-          "description": "Timestamp of when the albarà was generated."
-        },
-        "customerId": {
-          "type": "string",
-          "description": "ID of the associated customer."
-        },
-        "customerName": {
-          "type": "string",
-          "description": "Denormalized name of the customer."
-        },
-        "projectName": {
-          "type": "string",
-          "description": "Name of the project/obra."
-        },
+        "id": { "type": "string" },
+        "albaranNumber": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "customerId": { "type": "string" },
+        "customerName": { "type": "string" },
+        "projectName": { "type": "string" },
         "serviceRecordIds": {
           "type": "array",
-          "description": "Array of ServiceRecord IDs included in this albarà.",
           "items": { "type": "string" }
         },
-        "totalAmount": {
-          "type": "number",
-          "description": "The total amount calculated for the albarà."
-        },
+        "totalAmount": { "type": "number" },
         "status": {
             "type": "string",
-            "enum": ["pendent", "facturat", "arxivat"],
-            "description": "The status of the albarà, indicating if it has been invoiced or archived."
+            "enum": ["pendent", "facturat", "arxivat"]
         }
       },
       "required": ["id", "albaranNumber", "createdAt", "projectName", "serviceRecordIds", "totalAmount", "status"]
-    },
-    "Quote": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Quote",
-      "type": "object",
-      "description": "Represents a generated quote (pressupost).",
-      "properties": {
-        "id": { "type": "string", "description": "Unique identifier for the quote." },
-        "quoteNumber": { "type": "number", "description": "Sequential number for the quote." },
-        "createdAt": { "type": "string", "format": "date-time", "description": "Timestamp of when the quote was generated." },
-        "customerId": { "type": "string", "description": "ID of the associated customer." },
-        "customerName": { "type": "string", "description": "Denormalized name of the customer." },
-        "projectName": { "type": "string", "description": "Name of the project/obra." },
-        "items": {
-          "type": "array",
-          "description": "List of items included in the quote.",
-          "items": {
-            "type": "object",
-            "properties": {
-              "description": { "type": "string" },
-              "quantity": { "type": "number" },
-              "unitPrice": { "type": "number" },
-              "imageDataUrl": { "type": "string", "format": "uri", "description": "Data URL of an image for the item." },
-              "discount": { "type": "number", "description": "Percentage discount for the item." }
-            },
-            "required": ["description", "quantity", "unitPrice"]
-          }
-        },
-        "labor": {
-          "type": "object",
-          "description": "Labor costs for the quote.",
-          "properties": {
-            "description": { "type": "string" },
-            "cost": { "type": "number" }
-          },
-          "required": ["description", "cost"]
-        },
-        "totalAmount": { "type": "number", "description": "The total amount calculated for the quote." },
-        "notes": { "type": "string", "description": "Custom conditions or notes for the quote." }
-      },
-      "required": ["id", "quoteNumber", "createdAt", "projectName", "items", "labor", "totalAmount"]
-    },
-    "Invoice": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Invoice",
-      "type": "object",
-      "description": "Represents a generated invoice (factura).",
-      "properties": {
-        "id": { "type": "string", "description": "Unique identifier for the invoice." },
-        "invoiceNumber": { "type": "number", "description": "Sequential number for the invoice." },
-        "createdAt": { "type": "string", "format": "date-time", "description": "Timestamp of when the invoice was generated." },
-        "customerId": { "type": "string", "description": "ID of the associated customer." },
-        "customerName": { "type": "string", "description": "Denormalized name of the customer." },
-        "projectName": { "type": "string", "description": "Name of the project/obra." },
-        "items": {
-          "type": "array",
-          "description": "List of items included in the invoice.",
-          "items": {
-            "type": "object",
-            "properties": {
-              "description": { "type": "string" },
-              "quantity": { "type": "number" },
-              "unitPrice": { "type": "number" },
-              "imageDataUrl": { "type": "string", "format": "uri", "description": "Data URL of an image for the item." },
-              "discount": { "type": "number", "description": "Percentage discount for the item." }
-            },
-            "required": ["description", "quantity", "unitPrice"]
-          }
-        },
-        "labor": {
-          "type": "object",
-          "description": "Labor costs for the invoice.",
-          "properties": {
-            "description": { "type": "string" },
-            "cost": { "type": "number" }
-          },
-          "required": ["description", "cost"]
-        },
-        "totalAmount": { "type": "number", "description": "The total amount calculated for the invoice." },
-        "sourceId": { "type": "string", "description": "ID of the albaran or quote it was created from" },
-        "sourceType": { "type": "string", "enum": ["albaran", "quote"], "description": "The type of document this invoice was created from." },
-        "status": {
-          "type": "string",
-          "enum": ["pendent", "pagada", "parcialment pagada"],
-          "description": "The payment status of the invoice."
-        },
-        "paymentDate": {
-          "type": "string",
-          "format": "date-time",
-          "description": "The date of the last payment."
-        },
-        "notes": { "type": "string", "description": "Custom conditions or notes for the invoice." }
-      },
-      "required": ["id", "invoiceNumber", "createdAt", "projectName", "items", "labor", "totalAmount", "status"]
-    },
-    "Receipt": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Receipt",
-      "type": "object",
-      "description": "Represents a payment receipt for an invoice.",
-      "properties": {
-        "id": { "type": "string", "description": "Unique identifier for the receipt." },
-        "receiptNumber": { "type": "number", "description": "Sequential number for the receipt." },
-        "invoiceId": { "type": "string", "description": "ID of the associated invoice." },
-        "invoiceNumber": { "type": "number", "description": "Denormalized number of the invoice." },
-        "customerId": { "type": "string", "description": "ID of the associated customer." },
-        "customerName": { "type": "string", "description": "Denormalized name of the customer." },
-        "paymentDate": { "type": "string", "format": "date-time", "description": "Timestamp of when the payment was made." },
-        "amountPaid": { "type": "number", "description": "The amount paid in this receipt." },
-        "paymentMethod": { "type": "string", "description": "Method of payment (e.g., Transferència, Efectiu)." },
-        "createdAt": { "type": "string", "format": "date-time", "description": "Timestamp of when the receipt was generated." }
-      },
-      "required": ["id", "receiptNumber", "invoiceId", "invoiceNumber", "paymentDate", "amountPaid", "paymentMethod", "createdAt"]
-    },
-    "Counter": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Counter",
-      "type": "object",
-      "description": "A generic counter for sequential numbering.",
-      "properties": {
-        "lastNumber": {
-          "type": "number",
-          "description": "The last number that was used."
-        }
-      },
-      "required": ["lastNumber"]
-    },
-    "Backup": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Backup",
-      "type": "object",
-      "description": "Represents a cloud backup of the database.",
-      "properties": {
-        "id": { "type": "string" },
-        "createdAt": { "type": "string", "format": "date-time" },
-        "data": { "type": "string", "description": "JSON string of the database state" },
-        "createdBy": { "type": "string" }
-      },
-      "required": ["id", "createdAt", "data"]
     }
   },
   "auth": {
@@ -428,52 +252,27 @@
         "path": "/employees/{employeeId}",
         "definition": {
           "entityName": "Employee",
-          "schema": {
-            "$ref": "#/backend/entities/Employee"
-          },
+          "schema": { "$ref": "#/backend/entities/Employee" },
           "description": "Stores employee profiles.",
-          "params": [
-            {
-              "name": "employeeId",
-              "description": "Unique identifier for the employee."
-            }
-          ]
+          "params": [{ "name": "employeeId" }]
         }
       },
       {
         "path": "/employees/{employeeId}/serviceRecords/{serviceRecordId}",
         "definition": {
           "entityName": "ServiceRecord",
-          "schema": {
-            "$ref": "#/backend/entities/ServiceRecord"
-          },
-          "description": "Stores service records for each employee.",
-          "params": [
-            {
-              "name": "employeeId",
-              "description": "Unique identifier for the employee."
-            },
-            {
-              "name": "serviceRecordId",
-              "description": "Unique identifier for the service record."
-            }
-          ]
+          "schema": { "$ref": "#/backend/entities/ServiceRecord" },
+          "description": "Stores service records.",
+          "params": [{ "name": "employeeId" }, { "name": "serviceRecordId" }]
         }
       },
       {
         "path": "/customers/{customerId}",
         "definition": {
           "entityName": "Customer",
-          "schema": {
-            "$ref": "#/backend/entities/Customer"
-          },
+          "schema": { "$ref": "#/backend/entities/Customer" },
           "description": "Stores customer profiles.",
-          "params": [
-            {
-              "name": "customerId",
-              "description": "Unique identifier for the customer."
-            }
-          ]
+          "params": [{ "name": "customerId" }]
         }
       },
       {
@@ -481,8 +280,17 @@
         "definition": {
           "entityName": "Project",
           "schema": { "$ref": "#/backend/entities/Project" },
-          "description": "Stores projects (obres) grouped by customer.",
-          "params": [{ "name": "projectId", "description": "ID of the project" }]
+          "description": "Stores projects.",
+          "params": [{ "name": "projectId" }]
+        }
+      },
+      {
+        "path": "/articles/{articleId}",
+        "definition": {
+          "entityName": "Article",
+          "schema": { "$ref": "#/backend/entities/Article" },
+          "description": "Master list of articles/materials.",
+          "params": [{ "name": "articleId" }]
         }
       },
       {
@@ -491,16 +299,16 @@
             "entityName": "Albaran",
             "schema": { "$ref": "#/backend/entities/Albaran" },
             "description": "Stores generated albaràs.",
-            "params": [{ "name": "albaranId", "description": "Unique ID for the albarà." }]
+            "params": [{ "name": "albaranId" }]
         }
       },
-       {
+      {
         "path": "/quotes/{quoteId}",
         "definition": {
             "entityName": "Quote",
             "schema": { "$ref": "#/backend/entities/Quote" },
             "description": "Stores generated quotes.",
-            "params": [{ "name": "quoteId", "description": "Unique ID for the quote." }]
+            "params": [{ "name": "quoteId" }]
         }
       },
        {
@@ -509,7 +317,7 @@
             "entityName": "Invoice",
             "schema": { "$ref": "#/backend/entities/Invoice" },
             "description": "Stores generated invoices.",
-            "params": [{ "name": "invoiceId", "description": "Unique ID for the invoice." }]
+            "params": [{ "name": "invoiceId" }]
         }
       },
        {
@@ -518,52 +326,7 @@
             "entityName": "Receipt",
             "schema": { "$ref": "#/backend/entities/Receipt" },
             "description": "Stores generated receipts.",
-            "params": [{ "name": "receiptId", "description": "Unique ID for the receipt." }]
-        }
-      },
-      {
-        "path": "/counters/albarans",
-        "definition": {
-            "entityName": "Counter",
-            "schema": { "$ref": "#/backend/entities/Counter" },
-            "description": "Counter for albarà numbers.",
-            "params": []
-        }
-      },
-      {
-        "path": "/counters/quotes",
-        "definition": {
-            "entityName": "Counter",
-            "schema": { "$ref": "#/backend/entities/Counter" },
-            "description": "Counter for quote numbers.",
-            "params": []
-        }
-      },
-       {
-        "path": "/counters/invoices",
-        "definition": {
-            "entityName": "Counter",
-            "schema": { "$ref": "#/backend/entities/Counter" },
-            "description": "Counter for invoice numbers.",
-            "params": []
-        }
-      },
-       {
-        "path": "/counters/receipts",
-        "definition": {
-            "entityName": "Counter",
-            "schema": { "$ref": "#/backend/entities/Counter" },
-            "description": "Counter for receipt numbers.",
-            "params": []
-        }
-      },
-      {
-        "path": "/backups/{backupId}",
-        "definition": {
-            "entityName": "Backup",
-            "schema": { "$ref": "#/backend/entities/Backup" },
-            "description": "Stores daily automatic cloud backups.",
-            "params": [{ "name": "backupId", "description": "ID of the backup" }]
+            "params": [{ "name": "receiptId" }]
         }
       }
     ]

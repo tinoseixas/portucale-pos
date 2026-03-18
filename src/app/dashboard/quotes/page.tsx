@@ -1,10 +1,11 @@
+
 'use client'
 
 import { useMemo, useRef, useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useCollection, useUser, useFirestore, useMemoFirebase } from '@/firebase'
-import { collection, query, orderBy, doc, runTransaction } from 'firebase/firestore'
-import type { Customer, Quote as QuoteType } from '@/lib/types'
+import { collection, query, orderBy, doc, runTransaction, setDoc } from 'firebase/firestore'
+import type { Customer, Quote as QuoteType, Article } from '@/lib/types'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -37,7 +38,9 @@ export default function QuotesPage() {
     const customersQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'customers'), orderBy('name', 'asc')) : null, [firestore]);
     const { data: customers, isLoading: isLoadingCustomers } = useCollection<Customer>(customersQuery)
 
-    // Deduplicate customers by name for the select list
+    const articlesQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'articles'), orderBy('description', 'asc')) : null, [firestore]);
+    const { data: masterArticles } = useCollection<Article>(articlesQuery);
+
     const uniqueCustomers = useMemo(() => {
         if (!customers) return [];
         const seen = new Set();
@@ -66,6 +69,10 @@ export default function QuotesPage() {
         
         if (field === 'description' || field === 'category') {
             item[field] = value as string;
+            if (field === 'description') {
+                const match = masterArticles?.find(a => a.description.toLowerCase() === (value as string).toLowerCase());
+                if (match) item.unitPrice = match.unitPrice;
+            }
         } else {
             const numValue = safeNum(value);
             if (field === 'quantity') item.quantity = numValue;
@@ -201,6 +208,21 @@ export default function QuotesPage() {
 
             const filteredItems = sanitizedItems.filter(item => item.description.trim() !== '' || item.unitPrice > 0);
 
+            // Save new items to master list
+            const currentMaster = masterArticles || [];
+            for (const item of filteredItems) {
+                const exists = currentMaster.some(a => a.description.toLowerCase() === item.description.toLowerCase());
+                if (!exists && item.description.trim() !== '') {
+                    const artRef = doc(collection(firestore, 'articles'));
+                    await setDoc(artRef, {
+                        id: artRef.id,
+                        description: item.description,
+                        unitPrice: item.unitPrice,
+                        updatedAt: new Date().toISOString()
+                    });
+                }
+            }
+
             const materialsSubtotal = filteredItems.reduce((acc, item) => {
                 const itemTotal = item.quantity * item.unitPrice;
                 const discountAmount = itemTotal * (item.discount / 100);
@@ -259,6 +281,10 @@ export default function QuotesPage() {
     return (
         <AdminGate pageTitle="Generador de Pressupostos" pageDescription="Crea un nou pressupost organitzat per categories.">
             <div className="space-y-8 max-w-5xl mx-auto">
+                <datalist id="articles-master-list">
+                    {masterArticles?.map(a => <option key={a.id} value={a.description}>{a.unitPrice.toFixed(2)} €</option>)}
+                </datalist>
+
                 <input
                     type="file"
                     ref={imageInputRef}
@@ -341,6 +367,7 @@ export default function QuotesPage() {
                                                 <Label className="text-[10px] uppercase font-bold">Descripció Article</Label>
                                                 <Input 
                                                     placeholder="Què s'està pressupostant?"
+                                                    list="articles-master-list"
                                                     value={item.description}
                                                     onChange={(e) => handleItemChange(index, 'description', e.target.value)}
                                                     className="bg-background h-8"

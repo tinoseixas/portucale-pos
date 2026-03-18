@@ -11,8 +11,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Clock, Camera, ArrowLeft, Save, Trash2, Plus, X, Video, Calendar as CalendarIcon, Briefcase, Users, Package, Euro, ImagePlus, PenTool, Loader2, Trash, Edit, Utensils, Sparkles, ReceiptText } from 'lucide-react'
 import { useToast } from "@/hooks/use-toast"
 import { useFirestore, useUser, useDoc, useMemoFirebase, useCollection, updateDocumentNonBlocking } from '@/firebase'
-import { doc, collection, query, orderBy, setDoc, where, addDoc } from 'firebase/firestore'
-import type { ServiceRecord, Customer, Employee, Project, ExtraCostItem } from '@/lib/types'
+import { doc, collection, query, orderBy, setDoc, where, addDoc, getDocs } from 'firebase/firestore'
+import type { ServiceRecord, Customer, Employee, Project, ExtraCostItem, Article } from '@/lib/types'
 import Image from 'next/image'
 import {
   AlertDialog,
@@ -102,6 +102,9 @@ function EditServiceContent() {
   
   const customersQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'customers'), orderBy('name', 'asc')) : null, [firestore]);
   const { data: customers } = useCollection<Customer>(customersQuery);
+
+  const articlesQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'articles'), orderBy('description', 'asc')) : null, [firestore]);
+  const { data: articles } = useCollection<Article>(articlesQuery);
 
   const [date, setDate] = useState<Date | undefined>()
   const [startTime, setStartTime] = useState('')
@@ -243,17 +246,24 @@ function EditServiceContent() {
     if (galleryInputRef.current) galleryInputRef.current.value = '';
   }
 
+  const handleMaterialDescriptionChange = (index: number, value: string) => {
+    const newMaterials = [...materials];
+    newMaterials[index].description = value;
+    
+    // Si coincideix exactament amb un article, suggerir el preu
+    const match = articles?.find(a => a.description.toLowerCase() === value.toLowerCase());
+    if (match) {
+        newMaterials[index].unitPrice = match.unitPrice;
+    }
+    
+    setMaterials(newMaterials);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!firestore || !serviceDocRef || !date || !startTime || !endTime) {
         toast({ variant: 'destructive', title: 'Falten dades' });
         return;
-    }
-
-    let finalProjectName = projectName.trim();
-    if (!finalProjectName && projectId !== 'none') {
-        const p = activeProjects.find(x => x.id === projectId);
-        if (p) finalProjectName = p.name;
     }
 
     setIsSaving(true);
@@ -264,11 +274,28 @@ function EditServiceContent() {
         const departureDateTime = new Date(`${selectedDateStr}T${endTime}`).toISOString();
         const selectedCustomer = customers?.find(c => c.id === customerId);
         
+        // Auto-save new articles to catalog
+        const masterArticles = articles || [];
+        for (const mat of materials) {
+            if (mat.description.trim() !== '') {
+                const exists = masterArticles.some(a => a.description.toLowerCase() === mat.description.trim().toLowerCase());
+                if (!exists) {
+                    const artRef = doc(collection(firestore, 'articles'));
+                    await setDoc(artRef, {
+                        id: artRef.id,
+                        description: mat.description.trim(),
+                        unitPrice: mat.unitPrice,
+                        updatedAt: new Date().toISOString()
+                    });
+                }
+            }
+        }
+
         const updatedData: Partial<ServiceRecord> = {
             arrivalDateTime,
             departureDateTime,
             description: description || "Servei realitzat",
-            projectName: finalProjectName || "Obra sense nom",
+            projectName: projectName || "Obra sense nom",
             projectId: projectId || '',
             pendingTasks: pendingTasks || '',
             customerId: customerId || '',
@@ -286,7 +313,7 @@ function EditServiceContent() {
         };
 
         await setDoc(serviceDocRef, updatedData, { merge: true });
-        toast({ title: "Registre desat" });
+        toast({ title: "Registre desat i catàleg actualitzat" });
         router.push('/dashboard');
     } catch (error) {
         toast({ variant: 'destructive', title: 'Error al desar' });
@@ -308,6 +335,10 @@ function EditServiceContent() {
 
   return (
       <div className="max-w-2xl mx-auto space-y-8 pb-24 px-4">
+        <datalist id="articles-master-list">
+            {articles?.map(a => <option key={a.id} value={a.description}>{a.unitPrice.toFixed(2)} €</option>)}
+        </datalist>
+
         <div className="flex items-center justify-between">
             <Button variant="ghost" onClick={() => router.back()} className="font-bold">
                 <ArrowLeft className="mr-2 h-4 w-4" /> Enrere
@@ -470,7 +501,13 @@ function EditServiceContent() {
                       {materials.map((m, i) => (
                           <div key={i} className="bg-white p-6 rounded-3xl border-2 shadow-sm space-y-4">
                               <div className="flex gap-3">
-                                <Input placeholder="Descripció de l'article" value={m.description} onChange={(e) => { const nm = [...materials]; nm[i].description = e.target.value; setMaterials(nm); }} className="border-none shadow-none font-bold text-lg h-12 px-0 focus-visible:ring-0" />
+                                <Input 
+                                    placeholder="Descripció de l'article" 
+                                    list="articles-master-list"
+                                    value={m.description} 
+                                    onChange={(e) => handleMaterialDescriptionChange(i, e.target.value)} 
+                                    className="border-none shadow-none font-bold text-lg h-12 px-0 focus-visible:ring-0" 
+                                />
                                 <Button type="button" variant="ghost" size="icon" onClick={() => setMaterials(materials.filter((_, idx) => idx !== i))} className="text-red-400"><Trash className="h-6 w-6" /></Button>
                               </div>
                               <div className="grid grid-cols-2 gap-6">

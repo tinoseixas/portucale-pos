@@ -5,6 +5,13 @@ export interface ExtraCostItem {
   unitPrice: number;
 }
 
+export interface Article {
+  id: string;
+  description: string;
+  unitPrice: number;
+  updatedAt: string;
+}
+
 export interface ServiceRecord {
   id: string;
   employeeId: string;
