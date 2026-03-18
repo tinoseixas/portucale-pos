@@ -9,13 +9,13 @@ import { ai } from '@/ai/genkit';
 import { z } from 'zod';
 
 const MaterialSchema = z.object({
-  description: z.string().describe('Descripció tècnica detallada en CATALÀ professional (ex: Colze 90 graons 16mm).'),
-  quantity: z.number().describe('La quantitat numèrica.'),
-  unitPrice: z.number().describe('El preu per unitat abans d\'impostos.'),
+  description: z.string().describe('Descripció tècnica del producte.'),
+  quantity: z.number().describe('Quantitat.'),
+  unitPrice: z.number().describe('Preu unitari net.'),
 });
 
 const ExtractMaterialsInputSchema = z.object({
-  fileDataUri: z.string().describe("Un fitxer (Imatge o PDF) com a data URI format base64."),
+  fileDataUri: z.string().describe("Fitxer base64."),
 });
 
 const ExtractMaterialsOutputSchema = z.object({
@@ -29,6 +29,11 @@ export type ExtractMaterialsOutput = z.infer<typeof ExtractMaterialsOutputSchema
  * Extreu la llista de materials d'una factura o tiquet de compra (PDF o Imatge).
  */
 export async function extractMaterialsFromFile(input: ExtractMaterialsInput): Promise<ExtractMaterialsOutput> {
+  if (!input.fileDataUri) {
+    console.error("No s'ha proporcionat cap fitxer.");
+    return { materials: [] };
+  }
+
   try {
     const response = await ai.generate({
       model: 'googleai/gemini-1.5-flash',
@@ -39,6 +44,7 @@ export async function extractMaterialsFromFile(input: ExtractMaterialsInput): Pr
           { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' },
           { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
           { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' },
+          { category: 'HARM_CATEGORY_CIVIC_INTEGRITY', threshold: 'BLOCK_NONE' },
         ]
       },
       output: {
@@ -46,33 +52,30 @@ export async function extractMaterialsFromFile(input: ExtractMaterialsInput): Pr
       },
       prompt: [
         { media: { url: input.fileDataUri } },
-        { text: `Ets un assistent expert en lectura de factures i albarans de compra per a empreses de construcció i fontaneria.
+        { text: `Ets un assistent expert en lectura de documents de compra. 
         
         TASCA:
-        Analitza el document adjunt (pot ser una imatge o un PDF de vàries pàgines).
-        Extrau TOTS els articles individuals que s'han comprat.
+        Analitza el document (PDF o imatge) i extreu TOTS els articles comprats.
         
-        INSTRUCCIONS DE FILTRATGE:
-        - Ignora les dades de l'empresa venedora i del comprador.
-        - Ignora els totals finals, els impostos (IVA/IGI) i els descomptes a peu de factura.
-        - Centra't només en les línies de detall de la taula d'articles.
+        REQUISITS:
+        1. Identifica el NOM del producte (si està en castellà o portuguès, tradueix-lo al CATALÀ professional).
+        2. Identifica la QUANTITAT.
+        3. Identifica el PREU UNITARI NET (abans d'impostos).
         
-        REGLES D'EXTRACCIÓ:
-        - description: Identifica el nom del producte. Si està en castellà, tradueix-lo al CATALÀ professional.
-        - quantity: La quantitat comprada. Si no es veu, posa 1.
-        - unitPrice: El preu per unitat (PVP unitari net).
-        
-        Si el document és difícil de llegir o té molta informació irrellevant, fes el teu millor esforç per extreure només els noms dels materials i els seus preus.` }
+        Ignora dades de l'empresa, totals, IVAs i descomptes a peu de pàgina. Centra't només en la taula d'articles.` }
       ],
     });
 
     const result = response.output;
-    if (!result || !result.materials) {
+    if (!result || !result.materials || result.materials.length === 0) {
+        // Fallback: Si no retorna format estructurat, provem de llegir text lliure
+        console.warn("L'IA no ha retornat dades estructurades. Revisant resposta de text...");
         return { materials: [] };
     }
+    
     return result;
   } catch (error) {
-    console.error("Error en extractMaterialsFromFile:", error);
+    console.error("Error crític en extractMaterialsFromFile:", error);
     return { materials: [] };
   }
 }

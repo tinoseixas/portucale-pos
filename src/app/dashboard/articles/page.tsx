@@ -9,7 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Package, Trash2, Edit, Plus, Search, Loader2, Euro, Save, FileText, Upload, CheckCircle2, AlertCircle } from 'lucide-react'
+import { Package, Trash2, Edit, Plus, Search, Loader2, Euro, Save, FileText, Upload, CheckCircle2, AlertCircle, X } from 'lucide-react'
 import { AdminGate } from '@/components/AdminGate'
 import { useToast } from '@/hooks/use-toast'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog'
@@ -81,29 +81,46 @@ export default function ArticlesPage() {
     const file = e.target.files?.[0];
     if (!file || !firestore) return;
 
+    // Check size (Gemini supports up to 20MB, but let's keep it reasonable)
+    if (file.size > 8 * 1024 * 1024) {
+        toast({ variant: 'destructive', title: "Fitxer massa gran", description: "El límit recomanat és de 8MB." });
+        return;
+    }
+
     setIsProcessingFile(true);
     setExtractedItems([]);
-    toast({ title: "Analitzant document...", description: "L'IA està llegint els articles." });
+    
+    toast({ title: "Processant fitxer...", description: "Llegint dades amb IA." });
 
     const reader = new FileReader();
     reader.onload = async (evt) => {
         try {
             const base64 = evt.target?.result as string;
+            if (!base64) throw new Error("Error al llegir el fitxer.");
+
             const result = await extractMaterialsFromFile({ fileDataUri: base64 });
             
-            if (result && result.materials.length > 0) {
+            if (result && result.materials && result.materials.length > 0) {
                 setExtractedItems(result.materials);
-                toast({ title: "Articles detectats", description: `S'han trobat ${result.materials.length} articles al document.` });
+                toast({ title: "Dades extretes", description: `S'han trobat ${result.materials.length} articles.` });
             } else {
-                toast({ variant: 'destructive', title: "No s'han trobat articles", description: "Prova amb una imatge més clara o un PDF oficial." });
+                toast({ 
+                    variant: 'destructive', 
+                    title: "No s'han trobat dades", 
+                    description: "Assegura't que el document és una factura o tiquet clar." 
+                });
             }
         } catch (err) {
-            console.error(err);
-            toast({ variant: 'destructive', title: "Error en el processament" });
+            console.error("Error extraction:", err);
+            toast({ variant: 'destructive', title: "Error en el procés", description: "No s'ha pogut analitzar el fitxer." });
         } finally {
             setIsProcessingFile(false);
             if (fileInputRef.current) fileInputRef.current.value = '';
         }
+    };
+    reader.onerror = () => {
+        toast({ variant: 'destructive', title: "Error de lectura", description: "No s'ha pogut carregar el fitxer." });
+        setIsProcessingFile(false);
     };
     reader.readAsDataURL(file);
   };
@@ -118,7 +135,7 @@ export default function ArticlesPage() {
 
         for (const item of extractedItems) {
             const desc = item.description.trim();
-            if (!desc || existingDescriptions.has(desc.toLowerCase())) continue;
+            if (!desc) continue;
 
             const artRef = doc(collection(firestore, 'articles'));
             batch.set(artRef, {
@@ -127,16 +144,15 @@ export default function ArticlesPage() {
                 unitPrice: item.unitPrice,
                 updatedAt: new Date().toISOString()
             });
-            existingDescriptions.add(desc.toLowerCase());
             addedCount++;
         }
 
         await batch.commit();
-        toast({ title: "Importació completada", description: `S'han afegit ${addedCount} articles nous al catàleg.` });
+        toast({ title: "Importació completada", description: `S'han afegit ${addedCount} articles al catàleg.` });
         setIsImportDialogOpen(false);
         setExtractedItems([]);
     } catch (e) {
-        toast({ variant: 'destructive', title: "Error en desar els articles" });
+        toast({ variant: 'destructive', title: "Error en desar" });
     } finally {
         setIsSaving(false);
     }
@@ -156,7 +172,7 @@ export default function ArticlesPage() {
             </div>
             <div className="flex gap-2 w-full sm:w-auto">
                 <Button variant="outline" onClick={() => setIsImportDialogOpen(true)} className="flex-1 sm:flex-none border-2 border-primary text-primary font-bold h-12 rounded-2xl px-6">
-                    <FileText className="mr-2 h-5 w-5" /> Importar des de PDF/Foto
+                    <FileText className="mr-2 h-5 w-5" /> Importar PDF/Foto
                 </Button>
                 <Button onClick={() => handleOpenDialog()} className="flex-1 sm:flex-none bg-primary hover:bg-primary/90 font-bold h-12 rounded-2xl px-8 shadow-xl">
                     <Plus className="mr-2 h-5 w-5" /> Nou article
@@ -261,7 +277,7 @@ export default function ArticlesPage() {
                     <DialogTitle className="text-2xl font-black flex items-center gap-2">
                         <FileText className="h-6 w-6 text-primary" /> Importació intel·ligent
                     </DialogTitle>
-                    <DialogDescription>Puja un PDF o una foto de la factura de compra per extreure els articles.</DialogDescription>
+                    <DialogDescription>Puja un PDF o una foto de la factura per extreure els articles.</DialogDescription>
                 </DialogHeader>
                 
                 <div className="py-6 space-y-6">
@@ -276,7 +292,7 @@ export default function ArticlesPage() {
                                     <TableHeader>
                                         <TableRow>
                                             <TableHead className="font-bold text-[10px] uppercase">Descripció extreta</TableHead>
-                                            <TableHead className="font-bold text-[10px] uppercase text-right">PVP Unit.</TableHead>
+                                            <TableHead className="font-bold text-[10px] uppercase text-right">Preu</TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
@@ -295,14 +311,14 @@ export default function ArticlesPage() {
                             {isProcessingFile ? (
                                 <div className="space-y-4 py-4">
                                     <Loader2 className="h-12 w-12 animate-spin mx-auto text-primary" />
-                                    <p className="font-black text-primary uppercase tracking-widest text-xs animate-pulse">Llegint document amb IA...</p>
+                                    <p className="font-black text-primary uppercase tracking-widest text-xs animate-pulse">L'IA està llegint el document...</p>
                                 </div>
                             ) : (
                                 <>
                                     <Upload className="h-12 w-12 mx-auto text-primary opacity-50" />
                                     <div>
-                                        <p className="font-black text-slate-600 uppercase text-xs">Arrossega o selecciona un fitxer</p>
-                                        <p className="text-[10px] text-slate-400 font-bold mt-1">Accepta PDF, JPG i PNG</p>
+                                        <p className="font-black text-slate-600 uppercase text-xs">Selecciona un PDF o Imatge</p>
+                                        <p className="text-[10px] text-slate-400 font-bold mt-1">Màxim 8MB</p>
                                     </div>
                                     <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="application/pdf,image/*" className="hidden" />
                                     <Button onClick={() => fileInputRef.current?.click()} className="bg-primary font-black h-12 px-8 rounded-xl shadow-lg">
