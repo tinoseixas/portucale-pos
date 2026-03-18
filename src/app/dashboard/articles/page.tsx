@@ -70,7 +70,7 @@ export default function ArticlesPage() {
     toast({ title: "Article eliminat" });
   }
 
-  if (isUserLoading || isLoadingArticles) return <div className="p-12 text-center"><Loader2 className="h-12 w-12 animate-spin mx-auto text-primary" /></div>
+  if (isUserLoading || isLoadingArticles) return <div className="p-12 text-center h-[60vh] flex flex-col items-center justify-center"><Loader2 className="h-12 w-12 animate-spin mx-auto text-primary" /><p className="mt-4 font-bold text-slate-400">Carregant catàleg...</p></div>
 
   return (
     <AdminGate pageTitle="Catàleg d'Articles" pageDescription="Gestió de productes i preus mestre.">
@@ -78,12 +78,12 @@ export default function ArticlesPage() {
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
             <div className="space-y-1">
                 <h1 className="text-3xl font-black tracking-tight text-primary flex items-center gap-3">
-                    <Package className="h-8 w-8" /> Catàleg d'Articles
+                    <Package className="h-8 w-8" /> Catàleg d'articles
                 </h1>
                 <p className="text-slate-400 font-medium">Llista de materials i preus unitaris per a pressupostos i serveis.</p>
             </div>
             <Button onClick={() => handleOpenDialog()} className="bg-primary hover:bg-primary/90 font-bold h-12 rounded-2xl px-8 shadow-xl">
-                <Plus className="mr-2 h-5 w-5" /> Nou Article
+                <Plus className="mr-2 h-5 w-5" /> Nou article
             </Button>
         </div>
 
@@ -105,7 +105,7 @@ export default function ArticlesPage() {
                         <TableHeader>
                             <TableRow className="bg-slate-50/30">
                                 <TableHead className="px-8 py-4 font-black uppercase text-[10px] tracking-widest text-slate-400">Descripció</TableHead>
-                                <TableHead className="font-black uppercase text-[10px] tracking-widest text-slate-400 w-40">Preu Unitari</TableHead>
+                                <TableHead className="font-black uppercase text-[10px] tracking-widest text-slate-400 w-40">Preu unitari</TableHead>
                                 <TableHead className="text-right px-8 font-black uppercase text-[10px] tracking-widest text-slate-400">Accions</TableHead>
                             </TableRow>
                         </TableHeader>
@@ -140,7 +140,7 @@ export default function ArticlesPage() {
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogContent className="rounded-[2.5rem] p-8">
                 <DialogHeader>
-                    <DialogTitle className="text-2xl font-black">{editingArticle?.id ? 'Editar Article' : 'Nou Article'}</DialogTitle>
+                    <DialogTitle className="text-2xl font-black">{editingArticle?.id ? 'Editar article' : 'Nou article'}</DialogTitle>
                     <DialogDescription>Aquest article es podrà seleccionar ràpidament als formularis.</DialogDescription>
                 </DialogHeader>
                 <div className="space-y-6 py-4">
@@ -170,7 +170,7 @@ export default function ArticlesPage() {
                     <Button variant="outline" onClick={() => setIsDialogOpen(false)} className="h-12 rounded-xl font-bold">Cancel·lar</Button>
                     <Button onClick={handleSaveArticle} disabled={isSaving || !editingArticle?.description} className="bg-primary h-12 px-8 rounded-xl font-black">
                         {isSaving ? <Loader2 className="animate-spin h-5 w-5" /> : <Save className="mr-2 h-5 w-5" />}
-                        Guardar Article
+                        Guardar article
                     </Button>
                 </DialogFooter>
             </DialogContent>

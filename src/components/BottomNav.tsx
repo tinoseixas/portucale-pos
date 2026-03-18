@@ -3,7 +3,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, User as UserIcon, Users, Building, FileArchive, FileSignature, Receipt, LineChart, Briefcase } from 'lucide-react'
+import { LayoutDashboard, User as UserIcon, Users, Building, FileArchive, FileSignature, Receipt, LineChart, Briefcase, Package } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase'
 import { doc } from 'firebase/firestore'
@@ -22,10 +22,12 @@ export function BottomNav() {
   const { data: currentEmployee } = useDoc<Employee>(employeeDocRef);
   const isAdmin = currentEmployee?.role === 'admin';
 
+  // Llista d'ítems de navegació ampliada per incloure Articles
   const navItems = [
     { href: '/dashboard', icon: LayoutDashboard, label: 'Serveis' },
     { href: '/dashboard/activity-report', icon: LineChart, label: 'Hores' },
     { href: '/dashboard/projects', icon: Briefcase, label: 'Obres' },
+    { href: '/dashboard/articles', icon: Package, label: 'Articles' },
     { href: '/dashboard/quotes/history', icon: FileSignature, label: 'Presu.' },
     { href: '/dashboard/invoices/history', icon: Receipt, label: 'Factures' },
     { href: '/dashboard/albarans', icon: FileArchive, label: 'Albarans' },
