@@ -1,21 +1,20 @@
 'use server';
 /**
  * @fileOverview Flux d'extracció de materials mitjançant IA (OCR).
- * Optimitzat per a Genkit 1.x i Gemini 1.5 Flash.
+ * Optimitzat per a documents PDF i imatges de factures/tiquets de compra.
  */
 
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
 
 const MaterialSchema = z.object({
-  description: z.string().describe('Detailed technical description in professional CATALAN.'),
-  quantity: z.number().describe('The numeric quantity.'),
-  unitPrice: z.number().describe('The price per unit.'),
+  description: z.string().describe('Descripció tècnica detallada en CATALÀ professional (ex: Colze 90 graons 16mm).'),
+  quantity: z.number().describe('La quantitat numèrica.'),
+  unitPrice: z.number().describe('El preu per unitat abans d'impostos.'),
 });
 
 const ExtractMaterialsInputSchema = z.object({
-  photoDataUri: z.string().describe("A photo of a receipt, as a data URI."),
-  isSingleItem: z.boolean().optional().describe("If true, focus on one item.")
+  fileDataUri: z.string().describe("Un fitxer (Imatge o PDF) com a data URI format base64."),
 });
 
 const ExtractMaterialsOutputSchema = z.object({
@@ -26,9 +25,9 @@ export type ExtractMaterialsInput = z.infer<typeof ExtractMaterialsInputSchema>;
 export type ExtractMaterialsOutput = z.infer<typeof ExtractMaterialsOutputSchema>;
 
 /**
- * Funció principal per extreure materials d'una foto mitjançant OCR intel·ligent.
+ * Extreu la llista de materials d'una factura o tiquet de compra (PDF o Imatge).
  */
-export async function extractMaterialsFromPhoto(input: ExtractMaterialsInput): Promise<ExtractMaterialsOutput> {
+export async function extractMaterialsFromFile(input: ExtractMaterialsInput): Promise<ExtractMaterialsOutput> {
   try {
     const response = await ai.generate({
       model: 'googleai/gemini-1.5-flash',
@@ -39,21 +38,19 @@ export async function extractMaterialsFromPhoto(input: ExtractMaterialsInput): P
         schema: ExtractMaterialsOutputSchema
       },
       prompt: [
-        { media: { url: input.photoDataUri } },
-        { text: `You are an expert OCR assistant for construction supply receipts. 
+        { media: { url: input.fileDataUri } },
+        { text: `Ets un assistent expert en OCR per a documents de compra de materials de construcció i fontaneria.
         
-        TASK:
-        ${input.isSingleItem 
-          ? "Focus ONLY on the most prominent single item shown in this image. Extract its description, quantity, and unit price." 
-          : "Extract ALL individual technical line items from this receipt image. Ignore totals, tax info, and store headers."
-        }
+        TASCA:
+        Analitza el document adjunt (pot ser una foto o un PDF). Extrau TOTS els articles individuals que s'han comprat.
+        Ignora les dades de la botiga, els totals, els impostos i els descomptes globals.
         
-        EXTRACTION RULES:
-        - description: Translate technical names to professional CATALAN (e.g., "Tub multicapa", "Colze 90").
-        - quantity: The number of units. If not visible, assume 1.
-        - unitPrice: The price per unit before discounts.
+        REGLES D'EXTRACCIÓ:
+        - description: Tradueix o normalitza els noms tècnics al CATALÀ professional (ex: "Codo" -> "Colze", "Tubo" -> "Tub").
+        - quantity: Si no s'especifica, posa 1.
+        - unitPrice: El preu unitari base.
         
-        The output must be a JSON object with a "materials" array.` }
+        Si el document és difícil de llegir, intenta extreure el màxim d'articles possibles.` }
       ],
     });
 
@@ -63,7 +60,7 @@ export async function extractMaterialsFromPhoto(input: ExtractMaterialsInput): P
     }
     return result;
   } catch (error) {
-    console.error("Error in extractMaterialsFromPhoto:", error);
+    console.error("Error en extractMaterialsFromFile:", error);
     return { materials: [] };
   }
 }

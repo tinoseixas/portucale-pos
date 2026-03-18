@@ -1,28 +1,35 @@
-
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useRef } from 'react'
 import { useCollection, useUser, useFirestore, useMemoFirebase, deleteDocumentNonBlocking } from '@/firebase'
-import { collection, query, orderBy, doc, setDoc } from 'firebase/firestore'
+import { collection, query, orderBy, doc, setDoc, writeBatch } from 'firebase/firestore'
 import type { Article } from '@/lib/types'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Package, Trash2, Edit, Plus, Search, Loader2, Euro, Save, X } from 'lucide-react'
+import { Package, Trash2, Edit, Plus, Search, Loader2, Euro, Save, FileText, Upload, CheckCircle2, AlertCircle } from 'lucide-react'
 import { AdminGate } from '@/components/AdminGate'
 import { useToast } from '@/hooks/use-toast'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog'
+import { extractMaterialsFromFile } from '@/ai/flows/extract-materials'
 
 export default function ArticlesPage() {
   const { toast } = useToast()
   const { user, isUserLoading } = useUser()
   const firestore = useFirestore()
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  
   const [searchTerm, setSearchTerm] = useState('')
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingArticle, setEditingArticle] = useState<Partial<Article> | null>(null)
   const [isSaving, setIsSaving] = useState(false)
+
+  // AI Import states
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false)
+  const [isProcessingFile, setIsProcessingFile] = useState(false)
+  const [extractedItems, setExtractedItems] = useState<{description: string, unitPrice: number, quantity: number}[]>([])
 
   const articlesQuery = useMemoFirebase(() => {
     if (!firestore) return null;
@@ -70,6 +77,71 @@ export default function ArticlesPage() {
     toast({ title: "Article eliminat" });
   }
 
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !firestore) return;
+
+    setIsProcessingFile(true);
+    setExtractedItems([]);
+    toast({ title: "Analitzant document...", description: "L'IA està llegint els articles." });
+
+    const reader = new FileReader();
+    reader.onload = async (evt) => {
+        try {
+            const base64 = evt.target?.result as string;
+            const result = await extractMaterialsFromFile({ fileDataUri: base64 });
+            
+            if (result && result.materials.length > 0) {
+                setExtractedItems(result.materials);
+                toast({ title: "Articles detectats", description: `S'han trobat ${result.materials.length} articles al document.` });
+            } else {
+                toast({ variant: 'destructive', title: "No s'han trobat articles", description: "Prova amb una imatge més clara o un PDF oficial." });
+            }
+        } catch (err) {
+            console.error(err);
+            toast({ variant: 'destructive', title: "Error en el processament" });
+        } finally {
+            setIsProcessingFile(false);
+            if (fileInputRef.current) fileInputRef.current.value = '';
+        }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleConfirmImport = async () => {
+    if (!firestore || extractedItems.length === 0) return;
+    setIsSaving(true);
+    try {
+        const batch = writeBatch(firestore);
+        const existingDescriptions = new Set(articles?.map(a => a.description.toLowerCase().trim()) || []);
+        let addedCount = 0;
+
+        for (const item of extractedItems) {
+            const desc = item.description.trim();
+            if (!desc || existingDescriptions.has(desc.toLowerCase())) continue;
+
+            const artRef = doc(collection(firestore, 'articles'));
+            batch.set(artRef, {
+                id: artRef.id,
+                description: desc,
+                unitPrice: item.unitPrice,
+                updatedAt: new Date().toISOString()
+            });
+            existingDescriptions.add(desc.toLowerCase());
+            addedCount++;
+        }
+
+        await batch.commit();
+        toast({ title: "Importació completada", description: `S'han afegit ${addedCount} articles nous al catàleg.` });
+        setIsImportDialogOpen(false);
+        setExtractedItems([]);
+    } catch (e) {
+        toast({ variant: 'destructive', title: "Error en desar els articles" });
+    } finally {
+        setIsSaving(false);
+    }
+  };
+
   if (isUserLoading || isLoadingArticles) return <div className="p-12 text-center h-[60vh] flex flex-col items-center justify-center"><Loader2 className="h-12 w-12 animate-spin mx-auto text-primary" /><p className="mt-4 font-bold text-slate-400">Carregant catàleg...</p></div>
 
   return (
@@ -82,9 +154,14 @@ export default function ArticlesPage() {
                 </h1>
                 <p className="text-slate-400 font-medium">Llista de materials i preus unitaris per a pressupostos i serveis.</p>
             </div>
-            <Button onClick={() => handleOpenDialog()} className="bg-primary hover:bg-primary/90 font-bold h-12 rounded-2xl px-8 shadow-xl">
-                <Plus className="mr-2 h-5 w-5" /> Nou article
-            </Button>
+            <div className="flex gap-2 w-full sm:w-auto">
+                <Button variant="outline" onClick={() => setIsImportDialogOpen(true)} className="flex-1 sm:flex-none border-2 border-primary text-primary font-bold h-12 rounded-2xl px-6">
+                    <FileText className="mr-2 h-5 w-5" /> Importar des de PDF/Foto
+                </Button>
+                <Button onClick={() => handleOpenDialog()} className="flex-1 sm:flex-none bg-primary hover:bg-primary/90 font-bold h-12 rounded-2xl px-8 shadow-xl">
+                    <Plus className="mr-2 h-5 w-5" /> Nou article
+                </Button>
+            </div>
         </div>
 
         <Card className="border-none shadow-2xl rounded-3xl overflow-hidden bg-white">
@@ -137,6 +214,7 @@ export default function ArticlesPage() {
             </CardContent>
         </Card>
 
+        {/* Dialog Edició Manual */}
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogContent className="rounded-[2.5rem] p-8">
                 <DialogHeader>
@@ -168,10 +246,82 @@ export default function ArticlesPage() {
                 </div>
                 <DialogFooter className="gap-2">
                     <Button variant="outline" onClick={() => setIsDialogOpen(false)} className="h-12 rounded-xl font-bold">Cancel·lar</Button>
-                    <Button onClick={handleSaveArticle} disabled={isSaving || !editingArticle?.description} className="bg-primary h-12 px-8 rounded-xl font-black">
+                    <Button onClick={handleSaveArticle} disabled={isSaving || !editingArticle?.description} className="bg-primary h-12 px-8 rounded-xl font-black text-white">
                         {isSaving ? <Loader2 className="animate-spin h-5 w-5" /> : <Save className="mr-2 h-5 w-5" />}
                         Guardar article
                     </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+
+        {/* Dialog Importació AI */}
+        <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
+            <DialogContent className="rounded-[2.5rem] p-8 max-w-2xl">
+                <DialogHeader>
+                    <DialogTitle className="text-2xl font-black flex items-center gap-2">
+                        <FileText className="h-6 w-6 text-primary" /> Importació intel·ligent
+                    </DialogTitle>
+                    <DialogDescription>Puja un PDF o una foto de la factura de compra per extreure els articles.</DialogDescription>
+                </DialogHeader>
+                
+                <div className="py-6 space-y-6">
+                    {extractedItems.length > 0 ? (
+                        <div className="space-y-4">
+                            <div className="bg-green-50 border-2 border-green-200 p-4 rounded-2xl flex items-center gap-3">
+                                <CheckCircle2 className="h-6 w-6 text-green-600" />
+                                <p className="text-green-800 font-bold text-sm">S'han detectat {extractedItems.length} articles nous.</p>
+                            </div>
+                            <div className="max-h-64 overflow-y-auto border rounded-xl bg-slate-50">
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead className="font-bold text-[10px] uppercase">Descripció extreta</TableHead>
+                                            <TableHead className="font-bold text-[10px] uppercase text-right">PVP Unit.</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {extractedItems.map((item, idx) => (
+                                            <TableRow key={idx}>
+                                                <TableCell className="text-xs font-medium">{item.description}</TableCell>
+                                                <TableCell className="text-xs font-bold text-right">{item.unitPrice.toFixed(2)} €</TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="border-4 border-dashed border-primary/20 rounded-[2rem] p-10 text-center space-y-4 bg-primary/5">
+                            {isProcessingFile ? (
+                                <div className="space-y-4 py-4">
+                                    <Loader2 className="h-12 w-12 animate-spin mx-auto text-primary" />
+                                    <p className="font-black text-primary uppercase tracking-widest text-xs animate-pulse">Llegint document amb IA...</p>
+                                </div>
+                            ) : (
+                                <>
+                                    <Upload className="h-12 w-12 mx-auto text-primary opacity-50" />
+                                    <div>
+                                        <p className="font-black text-slate-600 uppercase text-xs">Arrossega o selecciona un fitxer</p>
+                                        <p className="text-[10px] text-slate-400 font-bold mt-1">Accepta PDF, JPG i PNG</p>
+                                    </div>
+                                    <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="application/pdf,image/*" className="hidden" />
+                                    <Button onClick={() => fileInputRef.current?.click()} className="bg-primary font-black h-12 px-8 rounded-xl shadow-lg">
+                                        Escollir arxiu
+                                    </Button>
+                                </>
+                            )}
+                        </div>
+                    )}
+                </div>
+
+                <DialogFooter className="gap-2">
+                    <Button variant="outline" onClick={() => { setIsImportDialogOpen(false); setExtractedItems([]); }} className="h-12 rounded-xl font-bold">Tancar</Button>
+                    {extractedItems.length > 0 && (
+                        <Button onClick={handleConfirmImport} disabled={isSaving} className="bg-primary h-12 px-8 rounded-xl font-black text-white shadow-xl">
+                            {isSaving ? <Loader2 className="animate-spin h-5 w-5 mr-2" /> : <Save className="mr-2 h-5 w-5" />}
+                            Afegir tots al catàleg
+                        </Button>
+                    )}
                 </DialogFooter>
             </DialogContent>
         </Dialog>
