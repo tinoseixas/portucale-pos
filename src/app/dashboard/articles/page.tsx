@@ -81,47 +81,41 @@ export default function ArticlesPage() {
     const file = e.target.files?.[0];
     if (!file || !firestore) return;
 
-    // Límits de seguretat (Gemini Pro suporta fins a 20MB, deixem 10MB per seguretat del servidor)
     if (file.size > 10 * 1024 * 1024) {
-        toast({ variant: 'destructive', title: "Fitxer massa gran", description: "El límit és de 10MB per document." });
+        toast({ variant: 'destructive', title: "Fitxer massa gran", description: "El límit és de 10MB." });
         return;
     }
 
     setIsProcessingFile(true);
     setExtractedItems([]);
     
-    toast({ title: "Processant fitxer...", description: "L'IA Pro està analitzant el document." });
+    toast({ title: "Analitzant document...", description: "L'IA està llegint el PDF." });
 
     const reader = new FileReader();
     reader.onload = async (evt) => {
         try {
             const base64 = evt.target?.result as string;
-            if (!base64) throw new Error("Error al llegir el contingut del fitxer.");
+            if (!base64) throw new Error("Error al llegir el contingut.");
 
-            console.log("Iniciant extracció IA per al fitxer:", file.name);
             const result = await extractMaterialsFromFile({ fileDataUri: base64 });
             
             if (result && result.materials && result.materials.length > 0) {
                 setExtractedItems(result.materials);
-                toast({ title: "Document llegit", description: `S'han trobat ${result.materials.length} articles.` });
+                toast({ title: "Lectura completada", description: `S'han trobat ${result.materials.length} articles.` });
             } else {
                 toast({ 
                     variant: 'destructive', 
-                    title: "No s'han trobat articles", 
-                    description: "Revisa que el document sigui una factura o tiquet amb articles detallats." 
+                    title: "No s'ha pogut llegir", 
+                    description: "Assegura't que el PDF és una factura amb llista d'articles clara." 
                 });
             }
         } catch (err) {
-            console.error("Error durant l'extracció:", err);
-            toast({ variant: 'destructive', title: "Error de l'IA", description: "No s'ha pogut processar el document. Prova amb una foto més nítida o un PDF menys pesat." });
+            console.error(err);
+            toast({ variant: 'destructive', title: "Error de l'IA", description: "Hi ha hagut un problema processant el fitxer." });
         } finally {
             setIsProcessingFile(false);
             if (fileInputRef.current) fileInputRef.current.value = '';
         }
-    };
-    reader.onerror = () => {
-        toast({ variant: 'destructive', title: "Error de lectura local", description: "No s'ha pogut carregar el fitxer des del dispositiu." });
-        setIsProcessingFile(false);
     };
     reader.readAsDataURL(file);
   };
@@ -148,7 +142,7 @@ export default function ArticlesPage() {
         }
 
         await batch.commit();
-        toast({ title: "Catàleg actualitzat", description: `S'han afegit ${addedCount} articles nous.` });
+        toast({ title: "Catàleg actualitzat", description: `S'han afegit ${addedCount} articles.` });
         setIsImportDialogOpen(false);
         setExtractedItems([]);
     } catch (e) {
@@ -277,7 +271,7 @@ export default function ArticlesPage() {
                     <DialogTitle className="text-2xl font-black flex items-center gap-2">
                         <FileText className="h-6 w-6 text-primary" /> Importació avançada
                     </DialogTitle>
-                    <DialogDescription>Puja un PDF o una foto per extreure els materials amb IA Pro.</DialogDescription>
+                    <DialogDescription>Puja un PDF o una foto per extreure els materials amb IA.</DialogDescription>
                 </DialogHeader>
                 
                 <div className="py-6 space-y-6">
@@ -285,22 +279,20 @@ export default function ArticlesPage() {
                         <div className="space-y-4">
                             <div className="bg-green-50 border-2 border-green-200 p-4 rounded-2xl flex items-center gap-3">
                                 <CheckCircle2 className="h-6 w-6 text-green-600" />
-                                <p className="text-green-800 font-bold text-sm">S'han extret {extractedItems.length} articles correctament.</p>
+                                <p className="text-green-800 font-bold text-sm">S'han extret {extractedItems.length} articles.</p>
                             </div>
                             <div className="max-h-64 overflow-y-auto border rounded-xl bg-slate-50">
                                 <Table>
                                     <TableHeader>
                                         <TableRow>
                                             <TableHead className="font-bold text-[10px] uppercase">Descripció</TableHead>
-                                            <TableHead className="font-bold text-[10px] uppercase text-right">Unitats</TableHead>
-                                            <TableHead className="font-bold text-[10px] uppercase text-right">PVP Net</TableHead>
+                                            <TableHead className="font-bold text-[10px] uppercase text-right">Preu unit.</TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
                                         {extractedItems.map((item, idx) => (
                                             <TableRow key={idx}>
                                                 <TableCell className="text-xs font-medium">{item.description}</TableCell>
-                                                <TableCell className="text-xs font-bold text-right text-slate-400">{item.quantity}</TableCell>
                                                 <TableCell className="text-xs font-bold text-right text-primary">{item.unitPrice.toFixed(2)} €</TableCell>
                                             </TableRow>
                                         ))}
@@ -313,26 +305,19 @@ export default function ArticlesPage() {
                             {isProcessingFile ? (
                                 <div className="space-y-4 py-4">
                                     <Loader2 className="h-12 w-12 animate-spin mx-auto text-primary" />
-                                    <div className="space-y-1">
-                                        <p className="font-black text-primary uppercase tracking-widest text-xs animate-pulse">L'IA Pro està analitzant la factura...</p>
-                                        <p className="text-[10px] text-slate-400 font-bold uppercase italic">Això pot trigar fins a 15-20 segons per a documents densos.</p>
-                                    </div>
+                                    <p className="font-black text-primary uppercase tracking-widest text-xs animate-pulse">L'IA està analitzant el document...</p>
                                 </div>
                             ) : (
                                 <>
                                     <Upload className="h-12 w-12 mx-auto text-primary opacity-50" />
                                     <div className="space-y-1">
                                         <p className="font-black text-slate-600 uppercase text-xs">Selecciona un PDF o Imatge</p>
-                                        <p className="text-[10px] text-slate-400 font-bold">Màxim 10MB per arxiu</p>
+                                        <p className="text-[10px] text-slate-400 font-bold">Màxim 10MB</p>
                                     </div>
                                     <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="application/pdf,image/*" className="hidden" />
                                     <Button onClick={() => fileInputRef.current?.click()} className="bg-primary font-black h-12 px-8 rounded-xl shadow-lg hover:scale-105 transition-transform">
                                         Escollir arxiu
                                     </Button>
-                                    <div className="mt-4 flex items-center justify-center gap-2 text-slate-400">
-                                        <Info className="h-3 w-3" />
-                                        <p className="text-[9px] font-bold uppercase">Consell: Assegura't que les dades de preu són llegibles.</p>
-                                    </div>
                                 </>
                             )}
                         </div>
