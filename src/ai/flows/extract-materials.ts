@@ -10,7 +10,7 @@ import { z } from 'zod';
 const MaterialSchema = z.object({
   description: z.string().describe('Descripció tècnica detallada en CATALÀ professional (ex: Colze 90 graons 16mm).'),
   quantity: z.number().describe('La quantitat numèrica.'),
-  unitPrice: z.number().describe('El preu per unitat abans d'impostos.'),
+  unitPrice: z.number().describe("El preu per unitat abans d'impostos."),
 });
 
 const ExtractMaterialsInputSchema = z.object({
@@ -42,7 +42,7 @@ export async function extractMaterialsFromFile(input: ExtractMaterialsInput): Pr
         { text: `Ets un assistent expert en OCR per a documents de compra de materials de construcció i fontaneria.
         
         TASCA:
-        Analitza el document adjunt (pot ser una foto o un PDF). Extrau TOTS els articles individuals que s'han comprat.
+        Analitza le document adjunt (pot ser una foto o un PDF). Extrau TOTS els articles individuals que s'han comprat.
         Ignora les dades de la botiga, els totals, els impostos i els descomptes globals.
         
         REGLES D'EXTRACCIÓ:
