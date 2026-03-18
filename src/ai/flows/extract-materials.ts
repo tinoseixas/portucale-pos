@@ -1,21 +1,20 @@
 'use server';
 /**
- * @fileOverview Flux d'extracció de materials mitjançant IA (OCR).
- * Optimitzat per a documents PDF i imatges de factures/tiquets de compra.
- * Utilitza Gemini 1.5 Flash per a una extracció ràpida i precisa.
+ * @fileOverview Flux d'extracció de materials mitjançant IA (OCR avançat).
+ * Utilitza Gemini 1.5 Pro per a una precisió màxima en la lectura de taules de factures.
  */
 
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
 
 const MaterialSchema = z.object({
-  description: z.string().describe('Descripció tècnica del producte.'),
-  quantity: z.number().describe('Quantitat.'),
+  description: z.string().describe('Descripció clara del producte en català.'),
+  quantity: z.number().describe('Quantitat comprada.'),
   unitPrice: z.number().describe('Preu unitari net.'),
 });
 
 const ExtractMaterialsInputSchema = z.object({
-  fileDataUri: z.string().describe("Fitxer base64."),
+  fileDataUri: z.string().describe("Fitxer base64 (Data URI)."),
 });
 
 const ExtractMaterialsOutputSchema = z.object({
@@ -26,7 +25,7 @@ export type ExtractMaterialsInput = z.infer<typeof ExtractMaterialsInputSchema>;
 export type ExtractMaterialsOutput = z.infer<typeof ExtractMaterialsOutputSchema>;
 
 /**
- * Extreu la llista de materials d'una factura o tiquet de compra (PDF o Imatge).
+ * Extreu la llista de materials d'una factura o tiquet utilitzant Gemini 1.5 Pro.
  */
 export async function extractMaterialsFromFile(input: ExtractMaterialsInput): Promise<ExtractMaterialsOutput> {
   if (!input.fileDataUri) {
@@ -36,7 +35,8 @@ export async function extractMaterialsFromFile(input: ExtractMaterialsInput): Pr
 
   try {
     const response = await ai.generate({
-      model: 'googleai/gemini-1.5-flash',
+      // Utilitzem el model PRO per a una precisió màxima en taules complexes
+      model: 'googleai/gemini-1.5-pro',
       config: {
         temperature: 0.1,
         safetySettings: [
@@ -52,30 +52,31 @@ export async function extractMaterialsFromFile(input: ExtractMaterialsInput): Pr
       },
       prompt: [
         { media: { url: input.fileDataUri } },
-        { text: `Ets un assistent expert en lectura de documents de compra. 
+        { text: `Ets un expert en comptabilitat i logística de construcció. 
         
         TASCA:
-        Analitza el document (PDF o imatge) i extreu TOTS els articles comprats.
+        Llegeix aquest document (PDF o imatge) que és una factura o tiquet de compra de materials.
+        Extreu TOTS els articles detallats en la taula de compra.
         
-        REQUISITS:
-        1. Identifica el NOM del producte (si està en castellà o portuguès, tradueix-lo al CATALÀ professional).
-        2. Identifica la QUANTITAT.
-        3. Identifica el PREU UNITARI NET (abans d'impostos).
+        NORMES ESTRICTES:
+        1. DESCIPCIÓ: Tradueix el nom de l'article al CATALÀ professional si està en un altre idioma. 
+        2. QUANTITAT: Agafa el número d'unitats.
+        3. PREU UNITARI: Important! Agafa el preu per unitat ABANS d'impostos (preu net).
         
-        Ignora dades de l'empresa, totals, IVAs i descomptes a peu de pàgina. Centra't només en la taula d'articles.` }
+        Ignora dades del proveïdor, adreces, dades del client, despeses d'enviament, IVAs i totals finals. 
+        Centra't exclusivament en els ítems de la llista de compra.` }
       ],
     });
 
     const result = response.output;
-    if (!result || !result.materials || result.materials.length === 0) {
-        // Fallback: Si no retorna format estructurat, provem de llegir text lliure
-        console.warn("L'IA no ha retornat dades estructurades. Revisant resposta de text...");
+    if (!result || !result.materials) {
+        console.warn("L'IA no ha detectat materials al document.");
         return { materials: [] };
     }
     
     return result;
   } catch (error) {
-    console.error("Error crític en extractMaterialsFromFile:", error);
+    console.error("Error crític en l'extracció de materials per IA:", error);
     return { materials: [] };
   }
 }

@@ -9,7 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Package, Trash2, Edit, Plus, Search, Loader2, Euro, Save, FileText, Upload, CheckCircle2, AlertCircle, X } from 'lucide-react'
+import { Package, Trash2, Edit, Plus, Search, Loader2, Euro, Save, FileText, Upload, CheckCircle2, AlertCircle, X, Info } from 'lucide-react'
 import { AdminGate } from '@/components/AdminGate'
 import { useToast } from '@/hooks/use-toast'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog'
@@ -62,7 +62,7 @@ export default function ArticlesPage() {
             updatedAt: new Date().toISOString()
         }, { merge: true });
         
-        toast({ title: editingArticle.id ? "Article actualitzat" : "Article creat" });
+        toast({ title: "Article actualitzat" });
         setIsDialogOpen(false);
     } catch (e) {
         toast({ variant: 'destructive', title: "Error al desar" });
@@ -81,45 +81,46 @@ export default function ArticlesPage() {
     const file = e.target.files?.[0];
     if (!file || !firestore) return;
 
-    // Check size (Gemini supports up to 20MB, but let's keep it reasonable)
-    if (file.size > 8 * 1024 * 1024) {
-        toast({ variant: 'destructive', title: "Fitxer massa gran", description: "El límit recomanat és de 8MB." });
+    // Límits de seguretat (Gemini Pro suporta fins a 20MB, deixem 10MB per seguretat del servidor)
+    if (file.size > 10 * 1024 * 1024) {
+        toast({ variant: 'destructive', title: "Fitxer massa gran", description: "El límit és de 10MB per document." });
         return;
     }
 
     setIsProcessingFile(true);
     setExtractedItems([]);
     
-    toast({ title: "Processant fitxer...", description: "Llegint dades amb IA." });
+    toast({ title: "Processant fitxer...", description: "L'IA Pro està analitzant el document." });
 
     const reader = new FileReader();
     reader.onload = async (evt) => {
         try {
             const base64 = evt.target?.result as string;
-            if (!base64) throw new Error("Error al llegir el fitxer.");
+            if (!base64) throw new Error("Error al llegir el contingut del fitxer.");
 
+            console.log("Iniciant extracció IA per al fitxer:", file.name);
             const result = await extractMaterialsFromFile({ fileDataUri: base64 });
             
             if (result && result.materials && result.materials.length > 0) {
                 setExtractedItems(result.materials);
-                toast({ title: "Dades extretes", description: `S'han trobat ${result.materials.length} articles.` });
+                toast({ title: "Document llegit", description: `S'han trobat ${result.materials.length} articles.` });
             } else {
                 toast({ 
                     variant: 'destructive', 
-                    title: "No s'han trobat dades", 
-                    description: "Assegura't que el document és una factura o tiquet clar." 
+                    title: "No s'han trobat articles", 
+                    description: "Revisa que el document sigui una factura o tiquet amb articles detallats." 
                 });
             }
         } catch (err) {
-            console.error("Error extraction:", err);
-            toast({ variant: 'destructive', title: "Error en el procés", description: "No s'ha pogut analitzar el fitxer." });
+            console.error("Error durant l'extracció:", err);
+            toast({ variant: 'destructive', title: "Error de l'IA", description: "No s'ha pogut processar el document. Prova amb una foto més nítida o un PDF menys pesat." });
         } finally {
             setIsProcessingFile(false);
             if (fileInputRef.current) fileInputRef.current.value = '';
         }
     };
     reader.onerror = () => {
-        toast({ variant: 'destructive', title: "Error de lectura", description: "No s'ha pogut carregar el fitxer." });
+        toast({ variant: 'destructive', title: "Error de lectura local", description: "No s'ha pogut carregar el fitxer des del dispositiu." });
         setIsProcessingFile(false);
     };
     reader.readAsDataURL(file);
@@ -130,7 +131,6 @@ export default function ArticlesPage() {
     setIsSaving(true);
     try {
         const batch = writeBatch(firestore);
-        const existingDescriptions = new Set(articles?.map(a => a.description.toLowerCase().trim()) || []);
         let addedCount = 0;
 
         for (const item of extractedItems) {
@@ -148,7 +148,7 @@ export default function ArticlesPage() {
         }
 
         await batch.commit();
-        toast({ title: "Importació completada", description: `S'han afegit ${addedCount} articles al catàleg.` });
+        toast({ title: "Catàleg actualitzat", description: `S'han afegit ${addedCount} articles nous.` });
         setIsImportDialogOpen(false);
         setExtractedItems([]);
     } catch (e) {
@@ -168,10 +168,10 @@ export default function ArticlesPage() {
                 <h1 className="text-3xl font-black tracking-tight text-primary flex items-center gap-3">
                     <Package className="h-8 w-8" /> Catàleg d'articles
                 </h1>
-                <p className="text-slate-400 font-medium">Llista de materials i preus unitaris per a pressupostos i serveis.</p>
+                <p className="text-slate-400 font-medium">Llista de materials i preus unitaris mestre.</p>
             </div>
             <div className="flex gap-2 w-full sm:w-auto">
-                <Button variant="outline" onClick={() => setIsImportDialogOpen(true)} className="flex-1 sm:flex-none border-2 border-primary text-primary font-bold h-12 rounded-2xl px-6">
+                <Button variant="outline" onClick={() => setIsImportDialogOpen(true)} className="flex-1 sm:flex-none border-2 border-primary text-primary font-bold h-12 rounded-2xl px-6 hover:bg-primary hover:text-white transition-all">
                     <FileText className="mr-2 h-5 w-5" /> Importar PDF/Foto
                 </Button>
                 <Button onClick={() => handleOpenDialog()} className="flex-1 sm:flex-none bg-primary hover:bg-primary/90 font-bold h-12 rounded-2xl px-8 shadow-xl">
@@ -235,11 +235,11 @@ export default function ArticlesPage() {
             <DialogContent className="rounded-[2.5rem] p-8">
                 <DialogHeader>
                     <DialogTitle className="text-2xl font-black">{editingArticle?.id ? 'Editar article' : 'Nou article'}</DialogTitle>
-                    <DialogDescription>Aquest article es podrà seleccionar ràpidament als formularis.</DialogDescription>
+                    <DialogDescription>Aquest material estarà disponible per a la selecció ràpida.</DialogDescription>
                 </DialogHeader>
                 <div className="space-y-6 py-4">
                     <div className="space-y-2">
-                        <Label className="font-bold text-xs text-slate-400 pl-1 uppercase">Descripció del material</Label>
+                        <Label className="font-bold text-xs text-slate-400 pl-1 uppercase">Descripció</Label>
                         <Input 
                             value={editingArticle?.description} 
                             onChange={(e) => setEditingArticle(prev => ({...prev, description: e.target.value}))} 
@@ -275,9 +275,9 @@ export default function ArticlesPage() {
             <DialogContent className="rounded-[2.5rem] p-8 max-w-2xl">
                 <DialogHeader>
                     <DialogTitle className="text-2xl font-black flex items-center gap-2">
-                        <FileText className="h-6 w-6 text-primary" /> Importació intel·ligent
+                        <FileText className="h-6 w-6 text-primary" /> Importació avançada
                     </DialogTitle>
-                    <DialogDescription>Puja un PDF o una foto de la factura per extreure els articles.</DialogDescription>
+                    <DialogDescription>Puja un PDF o una foto per extreure els materials amb IA Pro.</DialogDescription>
                 </DialogHeader>
                 
                 <div className="py-6 space-y-6">
@@ -285,21 +285,23 @@ export default function ArticlesPage() {
                         <div className="space-y-4">
                             <div className="bg-green-50 border-2 border-green-200 p-4 rounded-2xl flex items-center gap-3">
                                 <CheckCircle2 className="h-6 w-6 text-green-600" />
-                                <p className="text-green-800 font-bold text-sm">S'han detectat {extractedItems.length} articles nous.</p>
+                                <p className="text-green-800 font-bold text-sm">S'han extret {extractedItems.length} articles correctament.</p>
                             </div>
                             <div className="max-h-64 overflow-y-auto border rounded-xl bg-slate-50">
                                 <Table>
                                     <TableHeader>
                                         <TableRow>
-                                            <TableHead className="font-bold text-[10px] uppercase">Descripció extreta</TableHead>
-                                            <TableHead className="font-bold text-[10px] uppercase text-right">Preu</TableHead>
+                                            <TableHead className="font-bold text-[10px] uppercase">Descripció</TableHead>
+                                            <TableHead className="font-bold text-[10px] uppercase text-right">Unitats</TableHead>
+                                            <TableHead className="font-bold text-[10px] uppercase text-right">PVP Net</TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
                                         {extractedItems.map((item, idx) => (
                                             <TableRow key={idx}>
                                                 <TableCell className="text-xs font-medium">{item.description}</TableCell>
-                                                <TableCell className="text-xs font-bold text-right">{item.unitPrice.toFixed(2)} €</TableCell>
+                                                <TableCell className="text-xs font-bold text-right text-slate-400">{item.quantity}</TableCell>
+                                                <TableCell className="text-xs font-bold text-right text-primary">{item.unitPrice.toFixed(2)} €</TableCell>
                                             </TableRow>
                                         ))}
                                     </TableBody>
@@ -311,19 +313,26 @@ export default function ArticlesPage() {
                             {isProcessingFile ? (
                                 <div className="space-y-4 py-4">
                                     <Loader2 className="h-12 w-12 animate-spin mx-auto text-primary" />
-                                    <p className="font-black text-primary uppercase tracking-widest text-xs animate-pulse">L'IA està llegint el document...</p>
+                                    <div className="space-y-1">
+                                        <p className="font-black text-primary uppercase tracking-widest text-xs animate-pulse">L'IA Pro està analitzant la factura...</p>
+                                        <p className="text-[10px] text-slate-400 font-bold uppercase italic">Això pot trigar fins a 15-20 segons per a documents densos.</p>
+                                    </div>
                                 </div>
                             ) : (
                                 <>
                                     <Upload className="h-12 w-12 mx-auto text-primary opacity-50" />
-                                    <div>
+                                    <div className="space-y-1">
                                         <p className="font-black text-slate-600 uppercase text-xs">Selecciona un PDF o Imatge</p>
-                                        <p className="text-[10px] text-slate-400 font-bold mt-1">Màxim 8MB</p>
+                                        <p className="text-[10px] text-slate-400 font-bold">Màxim 10MB per arxiu</p>
                                     </div>
                                     <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="application/pdf,image/*" className="hidden" />
-                                    <Button onClick={() => fileInputRef.current?.click()} className="bg-primary font-black h-12 px-8 rounded-xl shadow-lg">
+                                    <Button onClick={() => fileInputRef.current?.click()} className="bg-primary font-black h-12 px-8 rounded-xl shadow-lg hover:scale-105 transition-transform">
                                         Escollir arxiu
                                     </Button>
+                                    <div className="mt-4 flex items-center justify-center gap-2 text-slate-400">
+                                        <Info className="h-3 w-3" />
+                                        <p className="text-[9px] font-bold uppercase">Consell: Assegura't que les dades de preu són llegibles.</p>
+                                    </div>
                                 </>
                             )}
                         </div>
@@ -335,7 +344,7 @@ export default function ArticlesPage() {
                     {extractedItems.length > 0 && (
                         <Button onClick={handleConfirmImport} disabled={isSaving} className="bg-primary h-12 px-8 rounded-xl font-black text-white shadow-xl">
                             {isSaving ? <Loader2 className="animate-spin h-5 w-5 mr-2" /> : <Save className="mr-2 h-5 w-5" />}
-                            Afegir tots al catàleg
+                            Afegir al catàleg
                         </Button>
                     )}
                 </DialogFooter>
