@@ -1,12 +1,9 @@
 "use client";
-// Build trigger comment
-
 import React, { useState, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { Search, ShoppingCart, Plus, Minus, ChefHat, ArrowLeft, Scale, X, Usb, Printer, CheckCircle2, AlertCircle, LayoutGrid, CreditCard, Coins, Trash2, Edit, FileText, Delete, Maximize2, MessageSquare, ArrowRightLeft } from "lucide-react";
+import { Search, ShoppingCart, Plus, Minus, ChefHat, ArrowLeft, Scale, X, Usb, Printer, CheckCircle2, AlertCircle, LayoutGrid, CreditCard, Coins, Trash2, Edit, FileText, Delete, Maximize2, MessageSquare, ArrowRightLeft, Landmark, Wallet, Calculator } from "lucide-react";
 import { useOrders, Order, OrderItem } from "../store";
-// Fullscreen Semi-Automático (Ao primeiro clique)
 import { FullscreenToggle } from "@/components/FullscreenToggle";
 
 type MenuItemDefs = {
@@ -80,6 +77,12 @@ function POSInterface() {
   // NEW: Table Management State
   const [showConfirmClear, setShowConfirmClear] = useState(false);
   const [showTransferModal, setShowTransferModal] = useState(false);
+
+  // NEW: Multi-Vault & Change State
+  const [showVaultModal, setShowVaultModal] = useState(false);
+  const [showCashModal, setShowCashModal] = useState(false);
+  const [cashVault, setCashVault] = useState<'principal' | 'caixa_b'>('principal');
+  const [receivedCash, setReceivedCash] = useState<string>("");
 
   useEffect(() => {
     if (showTakeawayModal && !takeawayTime) {
@@ -276,11 +279,13 @@ function POSInterface() {
     setInitialItemsStr(JSON.stringify(order.items));
   };
 
-  const payAndCloseOrder = (method: 'dinheiro' | 'multibanco') => {
+  const payAndCloseOrder = (method: 'dinheiro' | 'multibanco', vault?: 'principal' | 'caixa_b', received?: number) => {
     if (!selectedTable && !isTakeaway) {
        alert("Selecione a origem da venda para faturar.");
        return;
     }
+
+    const changeVal = (received || 0) > totalAmount ? (received! - totalAmount) : 0;
 
     if (existingOrder) {
       const finishedOrder: Order = {
@@ -289,6 +294,9 @@ function POSInterface() {
         total: totalAmount,
         status: "entregue",
         paymentMethod: method,
+        vault: vault || (method === 'multibanco' ? 'principal' : undefined),
+        cashReceived: received,
+        change: changeVal,
         updatedAt: Date.now(),
       };
       saveOrder(finishedOrder);
@@ -304,6 +312,9 @@ function POSInterface() {
           total: totalAmount,
           status: "entregue",
           paymentMethod: method,
+          vault: vault || (method === 'multibanco' ? 'principal' : undefined),
+          cashReceived: received,
+          change: changeVal,
           createdAt: Date.now(),
           updatedAt: Date.now(),
        };
@@ -500,19 +511,114 @@ function POSInterface() {
                     <span className="text-slate-500 font-bold uppercase tracking-widest text-sm">Valor a Cobrar</span>
                     <h2 className="text-6xl font-black text-slate-900 tabular-nums">{formatPrice(totalAmount)}</h2>
                  </div>
+                 <div className="flex gap-3">
+                  <button 
+                    onClick={() => {
+                        setShowVaultModal(true);
+                        setShowPaymentModal(false);
+                    }}
+                    className="flex-1 bg-emerald-50 text-emerald-700 border-2 border-emerald-100 py-8 rounded-3xl font-black flex flex-col items-center gap-3 hover:bg-emerald-100 hover:border-emerald-200 transition-all active:scale-95"
+                  >
+                    <Coins className="w-8 h-8" /> DINHEIRO
+                  </button>
+                  <button 
+                    onClick={() => payAndCloseOrder('multibanco', 'principal')}
+                    className="flex-1 bg-blue-50 text-blue-700 border-2 border-blue-100 py-8 rounded-3xl font-black flex flex-col items-center gap-3 hover:bg-blue-100 hover:border-blue-200 transition-all active:scale-95"
+                  >
+                    <CreditCard className="w-8 h-8" /> MULTIBANCO
+                  </button>
+                 </div>
+              </div>
+           </div>
+        </div>
+      )}
+
+      {/* VAULT SELECTION MODAL */}
+      {showVaultModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+           <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden flex flex-col">
+              <div className="bg-slate-50 px-6 py-4 border-b border-slate-100 flex justify-between items-center shrink-0">
+                 <h3 className="font-bold text-xl text-slate-800 flex items-center gap-2">
+                    <Coins className="w-5 h-5 text-emerald-600" /> Selecionar Caixa
+                 </h3>
+                 <button onClick={() => setShowVaultModal(false)} className="p-2 hover:bg-slate-200 rounded-full">
+                    <X className="w-5 h-5 text-slate-500" />
+                 </button>
+              </div>
+              <div className="p-8 flex flex-col gap-4">
                  <button 
-                    onClick={() => payAndCloseOrder('dinheiro')}
-                    className="w-full bg-emerald-50 text-emerald-700 border-2 border-emerald-200 hover:bg-emerald-100 p-6 rounded-2xl flex items-center justify-center gap-4 transition-transform active:scale-95 shadow-sm hover:shadow-md"
+                    onClick={() => {
+                        setCashVault('principal');
+                        setShowVaultModal(false);
+                        setShowCashModal(true);
+                    }}
+                    className="w-full bg-emerald-50 text-emerald-700 border-2 border-emerald-100 p-6 rounded-2xl flex items-center justify-center gap-4 transition-transform active:scale-95 shadow-sm hover:shadow-md"
                  >
-                    <Coins className="w-8 h-8" />
-                    <span className="font-black text-2xl uppercase tracking-wider">Dinheiro</span>
+                    <Wallet className="w-8 h-8" />
+                    <span className="font-black text-2xl uppercase tracking-wider">Caixa Principal</span>
                  </button>
                  <button 
-                    onClick={() => payAndCloseOrder('multibanco')}
-                    className="w-full bg-blue-50 text-blue-700 border-2 border-blue-200 hover:bg-blue-100 p-6 rounded-2xl flex items-center justify-center gap-4 transition-transform active:scale-95 shadow-sm hover:shadow-md"
+                    onClick={() => {
+                        setCashVault('caixa_b');
+                        setShowVaultModal(false);
+                        setShowCashModal(true);
+                    }}
+                    className="w-full bg-emerald-50 text-emerald-700 border-2 border-emerald-100 p-6 rounded-2xl flex items-center justify-center gap-4 transition-transform active:scale-95 shadow-sm hover:shadow-md"
                  >
-                    <CreditCard className="w-8 h-8" />
-                    <span className="font-black text-2xl uppercase tracking-wider">Multibanco</span>
+                    <Wallet className="w-8 h-8" />
+                    <span className="font-black text-2xl uppercase tracking-wider">Caixa B</span>
+                 </button>
+              </div>
+           </div>
+        </div>
+      )}
+
+      {/* CHANGE CALCULATOR MODAL */}
+      {showCashModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+           <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden flex flex-col">
+              <div className="bg-slate-50 px-6 py-4 border-b border-slate-100 flex justify-between items-center shrink-0">
+                 <h3 className="font-bold text-xl text-slate-800 flex items-center gap-2">
+                    <Calculator className="w-5 h-5 text-purple-600" /> Calcular Troco
+                 </h3>
+                 <button onClick={() => setShowCashModal(false)} className="p-2 hover:bg-slate-200 rounded-full">
+                    <X className="w-5 h-5 text-slate-500" />
+                 </button>
+              </div>
+              <div className="p-6">
+                 <div className="text-center space-y-2 mb-6">
+                    <span className="text-slate-500 font-bold uppercase tracking-widest text-sm">Valor a Cobrar</span>
+                    <h2 className="text-5xl font-black text-slate-900 tabular-nums">{formatPrice(totalAmount)}</h2>
+                 </div>
+
+                 <label className="text-sm font-bold text-slate-600 mb-2 block">Valor Recebido:</label>
+                 <input 
+                   type="number" 
+                   inputMode="decimal"
+                   autoFocus 
+                   value={receivedCash} 
+                   onChange={(e) => setReceivedCash(e.target.value)}
+                   className="w-full p-4 border-2 border-slate-200 rounded-xl text-lg font-bold focus:border-blue-500 focus:outline-none mb-4 text-center"
+                   placeholder="0.00"
+                 />
+
+                 <div className="text-center space-y-2 mt-6 mb-6">
+                    <span className="text-slate-500 font-bold uppercase tracking-widest text-sm">Troco</span>
+                    <h2 className="text-5xl font-black text-blue-600 tabular-nums">
+                        {formatPrice(Math.max(0, (parseFloat(receivedCash) || 0) - totalAmount))}
+                    </h2>
+                 </div>
+
+                 <button 
+                   onClick={() => {
+                        payAndCloseOrder('dinheiro', cashVault, parseFloat(receivedCash) || 0);
+                        setShowCashModal(false);
+                        setReceivedCash("");
+                   }}
+                   disabled={(parseFloat(receivedCash) || 0) < totalAmount}
+                   className="w-full mt-2 bg-blue-600 text-white font-bold p-4 rounded-xl active:scale-95 transition-transform disabled:opacity-50"
+                 >
+                   Finalizar Pagamento
                  </button>
               </div>
            </div>

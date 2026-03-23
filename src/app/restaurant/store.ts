@@ -39,6 +39,9 @@ export interface Order {
   total: number;
   status: OrderStatus;
   paymentMethod?: 'dinheiro' | 'multibanco';
+  vault?: 'principal' | 'caixa_b';
+  cashReceived?: number;
+  change?: number;
   createdAt: number;
   updatedAt: number;
 }

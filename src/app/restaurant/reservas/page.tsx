@@ -30,6 +30,26 @@ export default function ReservasPage() {
     e.preventDefault();
     if (!formData.name) { alert("Indique o nome."); return; }
     
+    // NEW: Overlap Check (1 hour margin)
+    const newDateTime = new Date(`${formData.date}T${formData.time}`).getTime();
+    const hasOverlap = reservations.some(r => {
+      if (r.status !== "confirmada" || r.tableId !== formData.tableId || r.date !== formData.date) return false;
+      const existingTime = new Date(`${r.date}T${r.time}`).getTime();
+      const diff = Math.abs(newDateTime - existingTime);
+      return diff < (60 * 60 * 1000); // 1 hour margin
+    });
+
+    if (hasOverlap) {
+      const conflictRes = reservations.find(r => {
+        if (r.status !== "confirmada" || r.tableId !== formData.tableId || r.date !== formData.date) return false;
+        return Math.abs(newDateTime - new Date(`${r.date}T${r.time}`).getTime()) < (60 * 60 * 1000);
+      });
+      
+      if (!confirm(`AVISO: A ${formData.tableId} já tem uma reserva para as ${conflictRes?.time} (${conflictRes?.customerName}).\n\n Pretende continuar?`)) {
+        return;
+      }
+    }
+
     const newRes: Reservation = {
       id: Date.now().toString(),
       customerName: formData.name,

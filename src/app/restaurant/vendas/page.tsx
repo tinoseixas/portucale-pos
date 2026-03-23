@@ -27,18 +27,26 @@ export default function VendasPage() {
     return orders.filter((o) => o.status === "entregue");
   }, [orders]);
 
-  // Apply time filter
+  const [vaultFilter, setVaultFilter] = useState("principal");
+
+  // Apply time and vault filters
   const filteredOrders = useMemo(() => {
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
     
     return completedOrders.filter(order => {
-      if (filter === "hoje") return order.createdAt >= today;
-      if (filter === "semana") return order.createdAt >= today - 7 * 24 * 60 * 60 * 1000;
-      if (filter === "mes") return order.createdAt >= today - 30 * 24 * 60 * 60 * 1000;
-      return true; // "tudo"
+      // Time filter
+      if (filter === "hoje" && order.createdAt < today) return false;
+      if (filter === "semana" && order.createdAt < today - 7 * 24 * 60 * 60 * 1000) return false;
+      if (filter === "mes" && order.createdAt < today - 30 * 24 * 60 * 60 * 1000) return false;
+      
+      // Vault filter
+      if (vaultFilter === "principal" && order.vault === "caixa_b") return false;
+      if (vaultFilter === "caixa_b" && (order.vault !== "caixa_b")) return false;
+      
+      return true;
     });
-  }, [completedOrders, filter]);
+  }, [completedOrders, filter, vaultFilter]);
 
   // Calculate metrics
   const metrics = useMemo(() => {
@@ -211,6 +219,22 @@ export default function VendasPage() {
         <div className="flex items-center gap-4">
           <div className="bg-slate-100 p-1 rounded-xl flex">
             {[ 
+              { id: 'principal', label: 'Principal' },
+              { id: 'caixa_b', label: 'Caixa B' },
+              { id: 'all', label: 'Tudo' }
+            ].map(v => (
+              <button
+                key={v.id}
+                onClick={() => setVaultFilter(v.id)}
+                className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${vaultFilter === v.id ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-500'}`}
+              >
+                {v.label}
+              </button>
+            ))}
+          </div>
+
+          <div className="bg-slate-100 p-1 rounded-xl flex">
+            {[ 
               { id: 'hoje', label: 'Hoje' },
               { id: 'semana', label: '7 Dias' },
               { id: 'mes', label: '30 Dias' },
@@ -365,10 +389,10 @@ export default function VendasPage() {
                 <tr className="border-b border-slate-100 text-slate-400 text-sm">
                   <th className="font-semibold py-3 px-4">Recibo ID</th>
                   <th className="font-semibold py-3 px-4">Data e Hora</th>
+                  <th className="font-semibold py-3 px-4">Caixa</th>
                   <th className="font-semibold py-3 px-4">Tipo</th>
                   <th className="font-semibold py-3 px-4">Método Cobro</th>
-                  <th className="font-semibold py-3 px-4 text-right">Base</th>
-                  <th className="font-semibold py-3 px-4 text-right">IGI (4.5%)</th>
+                  <th className="font-semibold py-3 px-4 text-right">Troco</th>
                   <th className="font-semibold py-3 px-4 text-right">Total</th>
                   <th className="font-semibold py-3 px-4 text-center">Ações</th>
                 </tr>
@@ -386,17 +410,21 @@ export default function VendasPage() {
                       <td className="py-3 px-4 font-mono text-sm text-slate-600">#{order.id.slice(-6).toUpperCase()}</td>
                       <td className="py-3 px-4 text-sm text-slate-600">{new Date(order.createdAt).toLocaleString("pt-PT")}</td>
                       <td className="py-3 px-4">
+                        <span className={`px-2 py-1 rounded text-xs font-bold uppercase ${order.vault === 'caixa_b' ? 'bg-rose-50 text-rose-600 border border-rose-100' : 'bg-slate-50 text-slate-600 border border-slate-200'}`}>
+                          {order.vault === 'caixa_b' ? 'Caixa B' : 'Principal'}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4">
                         <span className={`px-2 py-1 rounded text-xs font-bold uppercase ${order.type === 'mesa' ? 'bg-blue-50 text-blue-600' : 'bg-purple-50 text-purple-600'}`}>
                           {order.type === 'mesa' ? `Mesa` : 'Takeaway'}
                         </span>
                       </td>
                       <td className="py-3 px-4">
-                         <span className={`px-2 py-1 rounded text-xs font-bold uppercase ${order.paymentMethod === 'multibanco' ? 'bg-amber-50 text-amber-600' : 'bg-slate-100 text-slate-600'}`}>
+                         <span className={`px-2 py-1 rounded text-xs font-bold uppercase ${order.paymentMethod === 'multibanco' ? 'bg-amber-50 text-amber-600' : 'bg-emerald-50 text-emerald-600'}`}>
                           {order.paymentMethod === 'multibanco' ? 'Multibanco' : 'Dinheiro'}
                         </span>
                       </td>
-                      <td className="py-3 px-4 text-right text-sm font-medium text-slate-600">{formatCurrency(base)}</td>
-                      <td className="py-3 px-4 text-right text-sm font-medium text-slate-500">{formatCurrency(igi)}</td>
+                      <td className="py-3 px-4 text-right text-sm font-medium text-slate-400">{order.change ? formatCurrency(order.change) : '-'}</td>
                       <td className="py-3 px-4 text-right font-bold text-slate-800">{formatCurrency(order.total)}</td>
                       <td className="py-3 px-4 text-center">
                         <button
