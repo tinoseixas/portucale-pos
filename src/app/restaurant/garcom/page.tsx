@@ -241,18 +241,25 @@ export default function MobileWaiterPage() {
       </div>
 
       {totalItemsCount > 0 && (
-        <div className="absolute bottom-4 left-4 right-4 z-30">
+        <div className="absolute bottom-4 left-4 right-4 z-30 flex gap-3">
           <button 
             onClick={() => setIsCartOpen(true)}
-            className="w-full bg-slate-900 text-white rounded-2xl p-4 shadow-2xl flex items-center justify-between active:scale-[0.98] transition-transform"
+            className="bg-slate-900 text-white rounded-2xl p-4 shadow-2xl active:scale-[0.95] transition-transform"
+          >
+            <ShoppingCart className="w-6 h-6" />
+          </button>
+          
+          <button 
+            onClick={confirmOrder}
+            className="flex-1 bg-emerald-600 text-white rounded-2xl p-4 shadow-2xl flex items-center justify-between active:scale-[0.98] transition-all hover:bg-emerald-700"
           >
             <div className="flex items-center gap-3">
-              <div className="bg-slate-800 w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold border border-slate-700">
+              <div className="bg-emerald-700 w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold border border-emerald-500 shadow-inner">
                 {totalItemsCount}
               </div>
-              <span className="font-bold">Ver Pedido</span>
+              <span className="font-black uppercase tracking-widest text-sm">Enviar para Cozinha</span>
             </div>
-            <span className="font-black text-lg">{formatPrice(totalAmount)}</span>
+            <span className="font-black text-base opacity-90">{formatPrice(totalAmount)}</span>
           </button>
         </div>
       )}

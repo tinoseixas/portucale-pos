@@ -25,8 +25,10 @@ export function ReservationAlert() {
       {/* Trigger Badge */}
       <button 
         onClick={() => setShowPanel(!showPanel)}
-        className={`flex items-center gap-2 px-4 py-2 rounded-full shadow-lg transition-all active:scale-95 ${
-          showPanel ? 'bg-slate-900 text-white' : 'bg-blue-600 text-white hover:bg-blue-700'
+        className={`flex items-center gap-2 px-4 py-2 rounded-full shadow-lg transition-all active:scale-95 animate-pulse border-2 ${
+          showPanel 
+            ? 'bg-slate-900 text-white border-slate-700' 
+            : 'bg-rose-600 text-white hover:bg-rose-700 border-rose-400'
         }`}
       >
         <div className="relative">

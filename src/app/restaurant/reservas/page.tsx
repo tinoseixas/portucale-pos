@@ -45,9 +45,8 @@ export default function ReservasPage() {
         return Math.abs(newDateTime - new Date(`${r.date}T${r.time}`).getTime()) < (60 * 60 * 1000);
       });
       
-      if (!confirm(`AVISO: A ${formData.tableId} já tem uma reserva para as ${conflictRes?.time} (${conflictRes?.customerName}).\n\n Pretende continuar?`)) {
-        return;
-      }
+      alert(`ERRO: A ${formData.tableId} já tem uma reserva confirmada para as ${conflictRes?.time} (${conflictRes?.customerName}).\n\nNão é permitido marcar outra reserva para esta mesa com menos de 1 hora de diferença.`);
+      return;
     }
 
     const newRes: Reservation = {
