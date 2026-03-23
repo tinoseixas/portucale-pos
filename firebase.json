@@ -1,0 +1,9 @@
+{
+  "apphosting": {
+    "backendId": "nextn-backend",
+    "rootDir": "."
+  },
+  "firestore": {
+    "rules": "firestore.rules"
+  }
+}

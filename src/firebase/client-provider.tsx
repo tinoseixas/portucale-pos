@@ -11,8 +11,20 @@ interface FirebaseClientProviderProps {
 export function FirebaseClientProvider({ children }: FirebaseClientProviderProps) {
   const firebaseServices = useMemo(() => {
     // Initialize Firebase on the client side, once per component mount.
-    return initializeFirebase();
+    const services = initializeFirebase();
+    return services;
   }, []); // Empty dependency array ensures this runs only once on mount
+
+  // Automatically sign in anonymously if not already authenticated
+  React.useEffect(() => {
+    const { auth } = firebaseServices;
+    if (auth) {
+      const { signInAnonymously } = require('firebase/auth');
+      signInAnonymously(auth).catch((err: any) => {
+        console.error("Anonymous sign-in failed:", err);
+      });
+    }
+  }, [firebaseServices]);
 
   return (
     <FirebaseProvider

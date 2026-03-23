@@ -1,5 +1,11 @@
 import { Header } from '@/components/Header';
 import { BottomNav } from '@/components/BottomNav';
+import { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'TS Serveis - Portal Corporatiu',
+  description: 'Gestió de serveis i portal corporatiu',
+};
 
 export default function DashboardLayout({
   children,
