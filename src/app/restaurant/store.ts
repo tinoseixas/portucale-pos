@@ -6,6 +6,7 @@ import {
   doc, 
   setDoc, 
   updateDoc, 
+  deleteDoc,
   query, 
   orderBy, 
   Timestamp,
@@ -117,11 +118,34 @@ export const useOrders = () => {
       console.error("Error updating reservation status:", error);
     }
   };
+  
+  const deleteOrder = async (id: string) => {
+    try {
+      const docRef = doc(firestore, ORDERS_COLLECTION, id);
+      await deleteDoc(docRef);
+    } catch (error) {
+      console.error("Error deleting order:", error);
+    }
+  };
+
+  const transferOrder = async (id: string, newTableId: string) => {
+    try {
+      const docRef = doc(firestore, ORDERS_COLLECTION, id);
+      await updateDoc(docRef, { 
+        tableId: newTableId,
+        updatedAt: Date.now()
+      });
+    } catch (error) {
+      console.error("Error transferring order:", error);
+    }
+  };
 
   return { 
     orders, 
     updateOrderStatus, 
     saveOrder, 
+    deleteOrder,
+    transferOrder,
     reservations, 
     saveReservation, 
     updateReservationStatus,

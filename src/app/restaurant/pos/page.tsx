@@ -4,8 +4,9 @@
 import React, { useState, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { Search, ShoppingCart, Plus, Minus, ChefHat, ArrowLeft, Scale, X, Usb, Printer, CheckCircle2, AlertCircle, LayoutGrid, CreditCard, Coins, Trash2, Edit, FileText, Delete, Maximize2, MessageSquare } from "lucide-react";
+import { Search, ShoppingCart, Plus, Minus, ChefHat, ArrowLeft, Scale, X, Usb, Printer, CheckCircle2, AlertCircle, LayoutGrid, CreditCard, Coins, Trash2, Edit, FileText, Delete, Maximize2, MessageSquare, ArrowRightLeft } from "lucide-react";
 import { useOrders, Order, OrderItem } from "../store";
+// Fullscreen Semi-Automático (Ao primeiro clique)
 import { FullscreenToggle } from "@/components/FullscreenToggle";
 
 type MenuItemDefs = {
@@ -45,7 +46,7 @@ const BALCAO_OPTIONS = Array.from({ length: 4 }, (_, i) => `Balcão ${i + 1}`);
 function POSInterface() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { orders, saveOrder } = useOrders();
+  const { orders, saveOrder, deleteOrder, transferOrder, reservations, updateReservationStatus } = useOrders();
 
   const tableParam = searchParams.get("table");
   const takeawayParam = searchParams.get("takeaway");
@@ -75,6 +76,10 @@ function POSInterface() {
 
   const [isMounted, setIsMounted] = useState(false);
   useEffect(() => { setIsMounted(true); }, []);
+
+  // NEW: Table Management State
+  const [showConfirmClear, setShowConfirmClear] = useState(false);
+  const [showTransferModal, setShowTransferModal] = useState(false);
 
   useEffect(() => {
     if (showTakeawayModal && !takeawayTime) {
@@ -135,6 +140,25 @@ function POSInterface() {
   };
 
   const addToOrder = (menuItem: MenuItemDefs, quantity: number) => {
+    // Check-in Inteligente de Reservas (Auto "Chegou")
+    if (selectedTable && orderItems.length === 0) {
+       const now = new Date();
+       const today = now.toISOString().split('T')[0];
+       const tableRes = reservations.filter(r => r.tableId === selectedTable && r.date === today && r.status === "confirmada");
+       
+       if (tableRes.length > 0) {
+          const currentMins = now.getHours() * 60 + now.getMinutes();
+          const timed = tableRes.map(r => {
+             const [h, m] = r.time.split(':').map(Number);
+             return { ...r, diff: Math.abs((h * 60 + m) - currentMins) };
+          }).sort((a,b) => a.diff - b.diff);
+
+          if (timed[0].diff <= 90) { // Janela de 1h30m
+             updateReservationStatus(timed[0].id, 'chegou');
+          }
+       }
+    }
+
     setOrderItems((prev) => {
       const existing = prev.find((o) => o.id === menuItem.id && !menuItem.byWeight);
       if (existing && !menuItem.byWeight) {
@@ -207,6 +231,24 @@ function POSInterface() {
   };
 
   const formatPrice = (price: number) => new Intl.NumberFormat("pt-PT", { style: "currency", currency: "EUR" }).format(price);
+
+  const handleClearTable = async () => {
+    if (existingOrder) {
+      await deleteOrder(existingOrder.id);
+    }
+    setOrderItems([]);
+    setExistingOrder(null);
+    setInitialItemsStr("[]");
+    setShowConfirmClear(false);
+  };
+
+  const handleTransferTable = async (newTable: string) => {
+    if (existingOrder) {
+      await transferOrder(existingOrder.id, newTable);
+      setSelectedTable(newTable);
+    }
+    setShowTransferModal(false);
+  };
 
   const confirmOrder = () => {
     if (!selectedTable && !isTakeaway) {
@@ -555,22 +597,96 @@ function POSInterface() {
         </div>
       )}
 
+      {/* CONFIRM CLEAR MODAL */}
+      {showConfirmClear && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-slate-900/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+            <div className="bg-white rounded-3xl w-full max-w-sm shadow-2xl p-8 text-center animate-in zoom-in-95 duration-200">
+                <div className="w-20 h-20 bg-rose-100 text-rose-600 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <AlertCircle className="w-10 h-10" />
+                </div>
+                <h3 className="text-2xl font-black text-slate-900 mb-2">Limpar Mesa?</h3>
+                <p className="text-slate-500 font-medium mb-8">Esta ação irá apagar permanentemente todos os itens da {selectedTable || "mesa"}.</p>
+                <div className="flex gap-3">
+                    <button onClick={() => setShowConfirmClear(false)} className="flex-1 bg-slate-100 text-slate-600 font-bold py-4 rounded-xl">Cancelar</button>
+                    <button onClick={handleClearTable} className="flex-1 bg-rose-600 text-white font-bold py-4 rounded-xl shadow-lg shadow-rose-200">Sim, Limpar</button>
+                </div>
+            </div>
+        </div>
+      )}
+
+      {/* TRANSFER MODAL */}
+      {showTransferModal && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-slate-900/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+            <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+                <div className="bg-slate-50 px-6 py-4 border-b border-slate-100 flex justify-between items-center">
+                    <h3 className="font-bold text-xl text-slate-800 flex items-center gap-2">
+                        <ArrowRightLeft className="w-5 h-5 text-indigo-600" /> Transferir Mesa
+                    </h3>
+                    <button onClick={() => setShowTransferModal(false)} className="p-2 hover:bg-slate-200 rounded-full"><X className="w-5 h-5 text-slate-500" /></button>
+                </div>
+                <div className="p-6">
+                    <p className="text-slate-500 font-medium mb-4">Selecione a mesa de destino:</p>
+                    <div className="grid grid-cols-3 gap-3 max-h-60 overflow-y-auto p-1">
+                        {[...TABLE_OPTIONS, ...BALCAO_OPTIONS]
+                          .filter(t => t !== selectedTable)
+                          .map(tableId => (
+                            <button 
+                                key={tableId}
+                                onClick={() => handleTransferTable(tableId)}
+                                className="bg-slate-50 border-2 border-slate-100 hover:border-indigo-300 hover:bg-indigo-50 p-3 rounded-xl font-bold text-slate-700 transition-all text-sm"
+                            >
+                                {tableId}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            </div>
+        </div>
+      )}
+
       {/* --- CLASSIC POS LAYOUT --- */}
 
         {/* LEFT PANE: TICKET + NUMPAD (Width ~35-40%) */}
         <div className="w-[35%] min-w-[380px] bg-slate-50 border-r border-slate-300 flex flex-col shadow-xl z-20">
             {/* Header / Ticket Summary */}
-            <div className="bg-white p-4 shrink-0 flex items-center justify-between border-b-2 border-slate-200 shadow-sm z-10">
-                <div>
-                   <h2 className="text-2xl font-black text-slate-800 tracking-tight leading-none">
-                     {isTakeaway ? `🛒 TAK: ${takeawayName || "Novo"}` : selectedTable ? `🍽️ ${selectedTable}` : "📋 SELECIONE MESA"}
-                   </h2>
-                   <p className="text-sm font-semibold text-slate-400 mt-1 uppercase tracking-widest">{isMounted ? new Date().toLocaleDateString('pt-PT') : ''}</p>
+            <div className="bg-white p-4 shrink-0 border-b-2 border-slate-200 shadow-sm z-10 flex flex-col gap-3">
+                <div className="flex items-center justify-between">
+                    <div>
+                        <h2 className="text-2xl font-black text-slate-800 tracking-tight leading-none">
+                            {isTakeaway ? `🛒 TAK: ${takeawayName || "Novo"}` : selectedTable ? `🍽️ ${selectedTable}` : "📋 SELECIONE MESA"}
+                        </h2>
+                        <p className="text-sm font-semibold text-slate-400 mt-1 uppercase tracking-widest">{isMounted ? new Date().toLocaleDateString('pt-PT') : ''}</p>
+                    </div>
+                    <div className="text-right flex flex-col items-end gap-2">
+                        <div className="flex items-center gap-3">
+                            <FullscreenToggle />
+                            <div>
+                                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">TOTAL</p>
+                                <h2 className="text-3xl font-black text-blue-600 leading-none">{formatPrice(totalAmount)}</h2>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <div className="text-right">
-                   <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">TOTAL</p>
-                   <h2 className="text-3xl font-black text-blue-600 leading-none">{formatPrice(totalAmount)}</h2>
-                </div>
+                
+                {/* Actions Row - More Prominent Style */}
+                {(selectedTable || isTakeaway) && (
+                    <div className="flex gap-2">
+                        <button 
+                            onClick={() => setShowConfirmClear(true)}
+                            className="flex-1 bg-white text-rose-600 border-2 border-rose-200 py-3 rounded-xl font-black text-xs flex items-center justify-center gap-2 hover:bg-rose-50 hover:border-rose-400 transition-all shadow-sm active:scale-95"
+                        >
+                            <Trash2 className="w-4 h-4" /> LIMPAR CONTA
+                        </button>
+                        {!isTakeaway && (
+                            <button 
+                                onClick={() => setShowTransferModal(true)}
+                                className="flex-1 bg-white text-indigo-700 border-2 border-indigo-200 py-3 rounded-xl font-black text-xs flex items-center justify-center gap-2 hover:bg-indigo-50 hover:border-indigo-400 transition-all shadow-sm active:scale-95"
+                            >
+                                <ArrowRightLeft className="w-4 h-4" /> MUDAR MESA
+                            </button>
+                        )}
+                    </div>
+                )}
             </div>
 
             {/* Cart Items List (Scrollable) */}
@@ -693,9 +809,8 @@ function POSInterface() {
                        <span className="font-bold text-slate-500 uppercase tracking-widest text-sm flex items-center gap-2">
                          {existingOrder ? <span className="flex items-center gap-2"><ChefHat className="w-4 h-4 text-blue-600"/> Editando Mesa Ocupada</span> : "Software POS de Venda Rápida"}
                        </span>
-                       <div className="flex items-center gap-3">
-                           <FullscreenToggle />
-                           {existingOrder?.status === "pronto" && (
+                        <div className="flex items-center gap-3">
+                            {existingOrder?.status === "pronto" && (
                               <span className="bg-emerald-100 text-emerald-700 text-xs font-black uppercase px-2 py-1 rounded-sm animate-pulse border border-emerald-300">
                                   Pronto na Cozinha
                               </span>

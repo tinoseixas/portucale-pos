@@ -1,11 +1,29 @@
-"use client";
-
+import React, { useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutGrid, ShoppingBag, ChefHat, Smartphone, CalendarDays, BellRing, Calculator, BarChart3 } from "lucide-react";
+import { LayoutGrid, ShoppingBag, ChefHat, Smartphone, CalendarDays, BellRing, Calculator, BarChart3, Bell } from "lucide-react";
+import { ReservationAlert } from "@/components/ReservationAlert";
 
 export default function RestaurantLayoutClient({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+
+  // Fullscreen Semi-Automático: Ativa ao primeiro clique para imersão total
+  useEffect(() => {
+    const handleFirstInteraction = () => {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(() => {});
+      }
+      window.removeEventListener('click', handleFirstInteraction);
+      window.removeEventListener('touchstart', handleFirstInteraction);
+    };
+
+    window.addEventListener('click', handleFirstInteraction);
+    window.addEventListener('touchstart', handleFirstInteraction);
+    return () => {
+      window.removeEventListener('click', handleFirstInteraction);
+      window.removeEventListener('touchstart', handleFirstInteraction);
+    };
+  }, []);
 
   const tabs = [
     { name: "POS de Vendas", path: "/restaurant/pos", icon: Calculator },
@@ -44,6 +62,9 @@ export default function RestaurantLayoutClient({ children }: { children: React.R
           })}
         </div>
       </div>
+      
+      {/* Reservation Alerts Overlay */}
+      <ReservationAlert />
       
       {/* Page Content */}
       <div className="flex-1 overflow-hidden relative z-0 flex flex-col">

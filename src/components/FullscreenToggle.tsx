@@ -27,14 +27,21 @@ export function FullscreenToggle() {
   return (
     <button
       onClick={toggleFullscreen}
-      className="p-2 bg-slate-800/10 hover:bg-slate-800/20 rounded-full transition-colors flex items-center justify-center gap-2 group"
+      className={`px-4 py-2 rounded-xl transition-all duration-300 flex items-center justify-center gap-2 group shadow-sm border ${
+        isFullscreen 
+          ? "bg-slate-900 text-white border-slate-800" 
+          : "bg-white text-slate-600 border-slate-200 hover:border-blue-400 hover:text-blue-600"
+      }`}
       title={isFullscreen ? "Sair de Ecrã Inteiro" : "Ecrã Inteiro"}
     >
       {isFullscreen ? (
-        <Minimize className="w-5 h-5 text-slate-600 group-hover:text-slate-900" />
+        <Minimize className="w-4 h-4 transition-transform group-hover:scale-110" />
       ) : (
-        <Maximize className="w-5 h-5 text-slate-600 group-hover:text-slate-900" />
+        <Maximize className="w-4 h-4 transition-transform group-hover:scale-110" />
       )}
+      <span className="text-[10px] font-black uppercase tracking-widest hidden sm:block">
+        {isFullscreen ? "Sair" : "Full Screen"}
+      </span>
     </button>
   );
 }
