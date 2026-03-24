@@ -50,7 +50,7 @@ export default function Home() {
           id: loggedInUser.uid,
           employeeId: employeeSnap.exists() ? (employeeSnap.data().employeeId || loggedInUser.uid.substring(0, 8)) : loggedInUser.uid.substring(0, 8),
           firstName: employeeSnap.exists() ? (employeeSnap.data().firstName || loggedInUser.email?.split('@')[0]) : (loggedInUser.email?.split('@')[0] || 'Usuari'),
-          lastName: employeeSnap.exists() ? (employeeSnap.data().lastName || 'TS') : 'TS',
+          lastName: employeeSnap.exists() ? (employeeSnap.data().lastName || 'Portucale') : 'Portucale',
           email: loggedInUser.email?.toLowerCase(),
           role: isMasterAdmin ? 'admin' : (employeeSnap.exists() ? employeeSnap.data().role : 'user'), 
           hourlyRate: employeeSnap.exists() ? (employeeSnap.data()?.hourlyRate || 30) : 30,
@@ -124,7 +124,7 @@ export default function Home() {
         <Card className="shadow-2xl border-none overflow-hidden rounded-[2rem] md:rounded-[2.5rem] bg-white/95 backdrop-blur-xl">
           <CardHeader className="text-center space-y-2 bg-slate-900 text-white p-6 md:p-10">
             <CardTitle className="text-2xl md:text-3xl font-black tracking-tight">Portal corporatiu</CardTitle>
-            <CardDescription className="text-slate-400 font-medium">{BRANDING.companyName} - Gestió de serveis</CardDescription>
+            <CardDescription className="text-slate-400 font-medium">{BRANDING.companyName} - Sabores de Portugal</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6 pt-8 md:pt-12 px-6 md:px-10">
             <div className="space-y-3">

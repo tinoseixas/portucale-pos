@@ -6,8 +6,8 @@
 
 export const BRANDING = {
   companyName: "Portucale",
-  slogan: "Solucions Tècniques i Manteniment",
-  subSlogan: "CONVERTIM LES TEVES IDEES EN REALITAT",
+  slogan: "Sabors de Portugal",
+  subSlogan: "SABORES QUE REVELAM A ALMA",
   nrt: "F352231c",
   address: "Av. Francois Mitterrand 64, local 6",
   location: "AD200 Encamp, Andorra",

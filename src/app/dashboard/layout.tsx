@@ -3,8 +3,8 @@ import { BottomNav } from '@/components/BottomNav';
 import { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Portucale - Portal Corporatiu',
-  description: 'Gestió de serveis i portal corporatiu',
+  title: 'Portucale - Restaurante',
+  description: 'Gestão de Restaurante Portucale - Sabors de Portugal',
 };
 
 export default function DashboardLayout({

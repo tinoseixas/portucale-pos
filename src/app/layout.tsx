@@ -4,8 +4,8 @@ import { Toaster } from "@/components/ui/toaster";
 import { FirebaseClientProvider } from '@/firebase/client-provider';
 
 export const metadata: Metadata = {
-  title: 'Portal de Gestão',
-  description: 'Portal de serviços e gestão empresarial',
+  title: 'Portucale - Restaurante',
+  description: 'Sistema de Gestão Portucale - Sabors de Portugal',
 };
 
 export default function RootLayout({
