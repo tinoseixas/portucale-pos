@@ -84,9 +84,14 @@ export const useOrders = () => {
     [firestore]
   );
 
+  const loyaltyQuery = useMemoFirebase(
+    () => query(collection(firestore, LOYALTY_COLLECTION)),
+    [firestore]
+  );
+
   const { data: ordersData, isLoading: isOrdersLoading } = useCollection<Order>(ordersQuery);
   const { data: reservationsData, isLoading: isResLoading } = useCollection<Reservation>(reservationsQuery);
-  const { data: loyaltyData } = useCollection<LoyaltyCard>(query(collection(firestore, LOYALTY_COLLECTION)));
+  const { data: loyaltyData } = useCollection<LoyaltyCard>(loyaltyQuery);
 
   const orders = ordersData || [];
   const reservations = reservationsData || [];
