@@ -3,7 +3,7 @@ import { BottomNav } from '@/components/BottomNav';
 import { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'TS Serveis - Portal Corporatiu',
+  title: 'Portucale - Portal Corporatiu',
   description: 'Gestió de serveis i portal corporatiu',
 };
 

@@ -169,8 +169,8 @@ function InvoiceDetailContent() {
             const pdfBase64 = pdf.output('datauristring');
             const result = await sendDocumentEmail({
                 to: recipientEmail.trim(),
-                subject: `Factura TS Serveis: #${invoice?.invoiceNumber}`,
-                html: `<div><h2>Factura TS Serveis</h2><p>Adjuntem la factura corresponent.</p></div>`,
+                subject: `Factura Portucale: #${invoice?.invoiceNumber}`,
+                html: `<div><h2>Factura Portucale</h2><p>Adjuntem la factura corresponent.</p></div>`,
                 attachments: [{ filename: `Factura-${invoice?.invoiceNumber}.pdf`, content: pdfBase64 }]
             });
             if (result.success) {

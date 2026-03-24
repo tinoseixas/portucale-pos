@@ -220,7 +220,7 @@ export default function UsersPage() {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `TS-Serveis-Backup-${format(new Date(), 'yyyy-MM-dd')}.json`;
+        a.download = `Portucale-Backup-${format(new Date(), 'yyyy-MM-dd')}.json`;
         a.click();
         
         toast({ title: "Backup completat", description: "Fitxer descarregat." });

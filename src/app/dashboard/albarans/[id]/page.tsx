@@ -181,8 +181,8 @@ function AlbaranDetailContent() {
             const pdfBase64 = pdf.output('datauristring');
             const result = await sendDocumentEmail({
                 to: recipientEmail.trim(),
-                subject: `Albarà TS Serveis: ${albaran?.projectName}`,
-                html: `<div style="font-family: sans-serif;"><h2>Bon dia,</h2><p>Adjuntem l'albarà corresponent als treballs de: <strong>${albaran?.projectName}</strong>.</p><p>Gràcies per la seva confiança.</p><br/><p><strong>TS Serveis</strong></p></div>`,
+                subject: `Albarà Portucale: ${albaran?.projectName}`,
+                html: `<div style="font-family: sans-serif;"><h2>Bon dia,</h2><p>Adjuntem l'albarà corresponent als treballs de: <strong>${albaran?.projectName}</strong>.</p><p>Gràcies per la seva confiança.</p><br/><p><strong>Portucale</strong></p></div>`,
                 attachments: [{ filename: `Albara-${albaran?.albaranNumber}.pdf`, content: pdfBase64 }]
             });
             if (result.success) {

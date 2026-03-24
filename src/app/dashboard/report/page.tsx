@@ -198,7 +198,7 @@ export default function ReportPage() {
                     )}
                 </CardContent>
                 <CardFooter className="bg-slate-50 rounded-b-lg">
-                    <p className="text-[10px] text-slate-400 w-full text-center font-bold uppercase tracking-widest">TS Serveis - Registre d'Activitat Automàtic</p>
+                    <p className="text-[10px] text-slate-400 w-full text-center font-bold uppercase tracking-widest">Portucale - Registre d'Activitat Automàtic</p>
                 </CardFooter>
             </Card>
         </div>

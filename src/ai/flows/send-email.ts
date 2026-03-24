@@ -18,7 +18,7 @@ interface SendEmailParams {
  */
 export async function sendDocumentEmail({ to, subject, html, attachments }: SendEmailParams) {
   const apiKey = process.env.RESEND_API_KEY;
-  const fromAddress = process.env.RESEND_FROM_EMAIL || 'TS Serveis <eg.ad.tecnica@gmail.com>';
+  const fromAddress = process.env.RESEND_FROM_EMAIL || 'Portucale <eg.ad.tecnica@gmail.com>';
 
   if (!apiKey) {
     console.error('RESEND_API_KEY não configurada no arquivo .env');

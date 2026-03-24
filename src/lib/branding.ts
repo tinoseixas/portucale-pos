@@ -5,7 +5,7 @@
  */
 
 export const BRANDING = {
-  companyName: "TS SERVEIS",
+  companyName: "Portucale",
   slogan: "Solucions Tècniques i Manteniment",
   subSlogan: "CONVERTIM LES TEVES IDEES EN REALITAT",
   nrt: "F352231c",

@@ -213,7 +213,7 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
             <section className="grid grid-cols-2 gap-12 mt-auto pdf-block">
                 <div className="space-y-4">
                     <p className="text-[10px] font-bold tracking-tight text-slate-400 border-b pb-2">Signatura tècnic</p>
-                    <div className="h-24 flex items-center justify-center italic text-slate-300 text-xs font-bold uppercase">TS Serveis</div>
+                    <div className="h-24 flex items-center justify-center italic text-slate-300 text-xs font-bold uppercase">Portucale</div>
                 </div>
                 <div className="space-y-4">
                     <p className="text-[10px] font-bold tracking-tight text-slate-400 border-b pb-2">Conformitat del client</p>
@@ -237,7 +237,7 @@ export const ReportPreview = forwardRef<HTMLDivElement, ReportPreviewProps>(({ c
                     <div className="w-8 h-1.5 bg-accent rounded-full"></div>
                     <div className="w-4 h-1.5 bg-destructive rounded-full"></div>
                 </div>
-                <p className="text-[9px] text-slate-400 font-bold tracking-widest uppercase">TS Serveis - Solucions tècniques i manteniment</p>
+                <p className="text-[9px] text-slate-400 font-bold tracking-widest uppercase">Portucale</p>
             </footer>
         </div>
     );
