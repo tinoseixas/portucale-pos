@@ -174,7 +174,7 @@ export default function Home() {
             </Button>
           </CardFooter>
         </Card>
-        <p className="text-center mt-10 text-[10px] text-white/40 font-bold tracking-widest">{BRANDING.companyName} © 2024</p>
+        <p className="text-center mt-10 text-[10px] text-white/40 font-bold tracking-widest">{BRANDING.companyName} © 2024 - Powered by {BRANDING.platformName}</p>
       </div>
     </main>
   )

@@ -6,6 +6,7 @@
 
 export const BRANDING = {
   companyName: "Portucale",
+  platformName: "TS Serveis",
   slogan: "Sabors de Portugal",
   subSlogan: "SABORES QUE REVELAM A ALMA",
   nrt: "F352231c",
