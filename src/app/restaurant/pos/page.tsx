@@ -376,7 +376,7 @@ function POSInterface() {
   const NumpadBtn = ({ val, colSpan = 1, bg = "bg-slate-700", text = "text-white" }: { val: string, colSpan?: number, bg?: string, text?: string }) => (
     <button 
       onClick={() => handleNumpadInput(val)}
-      className={`${bg} ${text} ${colSpan > 1 ? `col-span-${colSpan}` : ''} font-bold text-xl md:text-2xl rounded-xl shadow-inner active:scale-95 transition-transform flex items-center justify-center p-4`}
+      className={`${bg} ${text} ${colSpan > 1 ? `col-span-${colSpan}` : ''} font-bold text-lg md:text-xl rounded-xl shadow-inner active:scale-95 transition-transform flex items-center justify-center p-2`}
     >
       {val === "CLR" ? <Delete className="w-6 h-6" /> : val}
     </button>
@@ -424,7 +424,7 @@ function POSInterface() {
         )}
       </div>
 
-      <div className="print:hidden flex h-screen w-full bg-slate-200 overflow-hidden text-slate-900 font-sans select-none">
+      <div className="print:hidden flex h-[100dvh] w-full bg-slate-200 overflow-hidden text-slate-900 font-sans select-none">
         
       {/* TABLE SELECT MODAL */}
       {showTableSelect && (
@@ -915,7 +915,7 @@ function POSInterface() {
                   <span className="text-emerald-400 font-mono text-2xl font-black tracking-widest">{numpadValue || "0"}</span>
                </div>
                
-               <div className="grid grid-cols-4 gap-2 h-[200px]">
+               <div className="grid grid-cols-4 gap-2 h-[160px]">
                   <NumpadBtn val="7" />
                   <NumpadBtn val="8" />
                   <NumpadBtn val="9" />
@@ -1039,13 +1039,13 @@ function POSInterface() {
                       <span className="text-[10px] font-bold uppercase tracking-widest">Sair</span>
                    </Link>
 
-                   <button onClick={() => setShowTableSelect(true)} className="w-full aspect-[4/3] bg-blue-600 hover:bg-blue-500 border-b-4 border-blue-800 rounded-xl flex flex-col items-center justify-center text-white transition-transform active:scale-95">
-                      <LayoutGrid className="w-6 h-6 mb-1" />
+                   <button onClick={() => setShowTableSelect(true)} className="w-full aspect-video bg-blue-600 hover:bg-blue-500 border-b-4 border-blue-800 rounded-xl flex flex-col items-center justify-center text-white transition-transform active:scale-95">
+                      <LayoutGrid className="w-5 h-5 mb-0.5" />
                       <span className="text-[10px] font-black uppercase tracking-widest">Mesas</span>
                    </button>
 
-                   <button onClick={() => setShowTakeawayModal(true)} className="w-full aspect-[4/3] bg-purple-600 hover:bg-purple-500 border-b-4 border-purple-800 rounded-xl flex flex-col items-center justify-center text-white transition-transform active:scale-95">
-                      <ShoppingBagIcon className="w-6 h-6 mb-1" />
+                   <button onClick={() => setShowTakeawayModal(true)} className="w-full aspect-video bg-purple-600 hover:bg-purple-500 border-b-4 border-purple-800 rounded-xl flex flex-col items-center justify-center text-white transition-transform active:scale-95">
+                      <ShoppingBagIcon className="w-5 h-5 mb-0.5" />
                       <span className="text-[10px] font-black uppercase tracking-widest">TKW</span>
                    </button>
                    
@@ -1059,10 +1059,10 @@ function POSInterface() {
                    <button 
                      onClick={confirmOrder}
                      disabled={isSendDisabled}
-                     className={`w-full aspect-[4/5] ${existingOrder ? 'bg-indigo-600 hover:bg-indigo-500 border-indigo-800' : 'bg-amber-500 hover:bg-amber-400 border-amber-700'} disabled:opacity-30 border-b-4 rounded-xl flex flex-col items-center justify-center text-white transition-transform active:scale-95 mt-4 group`}
+                     className={`w-full aspect-square ${existingOrder ? 'bg-indigo-600 hover:bg-indigo-500 border-indigo-800' : 'bg-amber-500 hover:bg-amber-400 border-amber-700'} disabled:opacity-30 border-b-4 rounded-xl flex flex-col items-center justify-center text-white transition-transform active:scale-95 mt-2 group`}
                    >
-                      <ChefHat className="w-8 h-8 mb-2 group-disabled:opacity-50" />
-                      <span className="text-[12px] font-black uppercase tracking-widest leading-tight text-center px-1">
+                      <ChefHat className="w-6 h-6 mb-1 group-disabled:opacity-50" />
+                      <span className="text-[11px] font-black uppercase tracking-widest leading-tight text-center px-1">
                          {existingOrder ? (
                             <>Modificar<br/>Pedido</>
                          ) : isTakeaway ? (
