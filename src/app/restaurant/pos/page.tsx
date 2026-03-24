@@ -867,24 +867,8 @@ function POSInterface() {
                               </div>
                           </div>
 
-                          {selectedLineId === item.id && (
-                             <div className="flex items-center gap-2 mt-1 animate-in slide-in-from-top-1">
-                                <div className="relative flex-1">
-                                  <MessageSquare className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                                  <input 
-                                    type="text"
-                                    placeholder="Nota de preparação..."
-                                    autoFocus
-                                    value={item.note || ""}
-                                    onChange={(e) => updateItemNote(item.id, e.target.value)}
-                                    className="w-full pl-8 pr-2 py-2 bg-white border border-slate-200 rounded-lg text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-blue-600/20"
-                                  />
-                                </div>
-                             </div>
-                          )}
-
-                          {item.note && selectedLineId !== item.id && (
-                             <div className="text-[10px] font-bold text-rose-600 flex items-center gap-1 bg-rose-50 px-2 py-0.5 rounded-md w-fit">
+                          {item.note && (
+                             <div className="text-[10px] font-bold text-rose-600 flex items-center gap-1 bg-rose-50 px-2 py-0.5 rounded-md w-fit mt-1">
                                 <MessageSquare className="w-3 h-3" /> {item.note}
                              </div>
                           )}
@@ -921,7 +905,8 @@ function POSInterface() {
                   <NumpadBtn val="9" />
                   <button
                     onClick={() => {
-                      if (!selectedLineId || !numpadValue) return;
+                      if (!selectedLineId) { alert("Selecione um artigo na lista primeiro."); return; }
+                      if (!numpadValue) { alert("Digite a percentagem de desconto no teclado primeiro."); return; }
                       const pct = parseFloat(numpadValue);
                       if (isNaN(pct) || pct < 0 || pct > 100) return;
                       setOrderItems(prev => prev.map(i =>
@@ -939,7 +924,8 @@ function POSInterface() {
                   <NumpadBtn val="6" />
                   <button
                     onClick={() => {
-                      if (!selectedLineId || !numpadValue) return;
+                      if (!selectedLineId) { alert("Selecione um artigo na lista primeiro."); return; }
+                      if (!numpadValue) { alert("Digite a quantidade nova no teclado primeiro."); return; }
                       const qty = parseFloat(numpadValue);
                       if (qty > 0) updateQuantity(selectedLineId, qty);
                       setNumpadValue("");

@@ -113,7 +113,7 @@ function InvoicesPageContent() {
                 const serviceData = allServicesData.find(s => s.id === serviceId);
                 if (!serviceData) return null;
                 const albaran = selectedAlbarans.find(a => a.serviceRecordIds.includes(serviceId));
-                return { ...serviceData, albaranNumber: albaran?.albaranNumber || 0 };
+                return { ...serviceData, albaranNumber: albaran?.albaranNumber || 0 } as ServiceRecord;
             }).filter((s): s is ServiceRecord => s !== null);
             setServicesForInvoice(aggregatedServices);
         } catch (e) {
