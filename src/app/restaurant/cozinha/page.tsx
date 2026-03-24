@@ -24,8 +24,8 @@ export default function CozinhaPage() {
   const getUrgencyColor = (createdAt: number) => {
     if (!isMounted) return "bg-slate-50 text-slate-800 border-slate-200";
     const minElapsed = (Date.now() - createdAt) / 60000;
-    if (minElapsed > 15) return "bg-rose-100 text-rose-800 border-rose-200";
-    if (minElapsed > 10) return "bg-amber-100 text-amber-800 border-amber-200";
+    if (minElapsed >= 5) return "bg-rose-600 text-white border-rose-700 animate-pulse";
+    if (minElapsed >= 3) return "bg-amber-500 text-white border-amber-600";
     return "bg-slate-50 text-slate-800 border-slate-200";
   };
 
@@ -94,15 +94,19 @@ export default function CozinhaPage() {
 function OrderCard({ order, getUrgencyColor, getTimeElapsed, updateOrderStatus }: { order: Order, getUrgencyColor: any, getTimeElapsed: any, updateOrderStatus: any }) {
   const isPrep = order.status === "preparacao";
   const isTakeaway = order.type === "takeaway";
+  const minElapsed = (Date.now() - order.createdAt) / 60000;
+  const isUrgent = minElapsed >= 5;
   
   return (
     <div className={`rounded-xl border-2 flex flex-col overflow-hidden transition-all duration-300 h-full ${
-      isPrep 
-        ? "border-blue-600 ring-2 ring-blue-600/20 shadow-lg bg-white z-10" 
-        : "border-slate-200 shadow-sm bg-white"
+      isUrgent
+        ? "border-rose-600 ring-4 ring-rose-500/50 shadow-2xl z-20 animate-pulse"
+        : isPrep 
+          ? "border-blue-600 ring-2 ring-blue-600/20 shadow-lg bg-white z-10" 
+          : "border-slate-200 shadow-sm bg-white"
     }`}>
       <div className={`p-2 border-b flex justify-between items-start shrink-0 ${
-        isPrep ? "bg-blue-600 text-white border-blue-600" : getUrgencyColor(order.createdAt)
+        isUrgent ? "bg-rose-600 text-white border-rose-700" : isPrep ? "bg-blue-600 text-white border-blue-600" : getUrgencyColor(order.createdAt)
       }`}>
         <div className="min-w-0 flex-1">
           <div className="font-black text-lg tracking-tight leading-none mb-0.5 truncate flex items-center gap-1">
