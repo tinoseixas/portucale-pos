@@ -2,7 +2,7 @@
 import React, { useState, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { Search, ShoppingCart, Plus, Minus, ChefHat, ArrowLeft, Scale, X, Usb, Printer, CheckCircle2, AlertCircle, LayoutGrid, CreditCard, Coins, Trash2, Edit, FileText, Delete, Maximize2, MessageSquare, ArrowRightLeft, Landmark, Wallet, Calculator } from "lucide-react";
+import { Search, ShoppingCart, ShoppingBag as ShoppingBagIcon, Plus, Minus, ChefHat, ArrowLeft, Scale, X, Usb, Printer, CheckCircle2, AlertCircle, LayoutGrid, CreditCard, Coins, Trash2, Edit, FileText, Delete, Maximize2, MessageSquare, ArrowRightLeft, Landmark, Wallet, Calculator } from "lucide-react";
 import { useOrders, Order, OrderItem } from "../store";
 import { FullscreenToggle } from "@/components/FullscreenToggle";
 
@@ -798,7 +798,7 @@ function POSInterface() {
       {/* --- CLASSIC POS LAYOUT --- */}
 
         {/* LEFT PANE: TICKET + NUMPAD (Width ~35-40%) */}
-        <div className="w-[35%] min-w-[380px] bg-slate-50 border-r border-slate-300 flex flex-col shadow-xl z-20">
+        <div className="w-[35%] min-w-[320px] max-w-[420px] bg-slate-50 border-r border-slate-300 flex flex-col shadow-xl z-20 overflow-hidden">
             {/* Header / Ticket Summary */}
             <div className="bg-white p-4 shrink-0 border-b-2 border-slate-200 shadow-sm z-10 flex flex-col gap-3">
                 <div className="flex items-center justify-between">
@@ -900,43 +900,64 @@ function POSInterface() {
             </div>
 
             {/* Middle Action Buttons & Info */}
-            <div className="shrink-0 p-3 bg-slate-100 border-y-2 border-slate-200">
+            <div className="shrink-0 p-2 bg-slate-100 border-y-2 border-slate-200">
                 <div className="grid grid-cols-3 gap-2">
-                    <button onClick={clearCart} className="bg-white text-slate-600 border border-slate-300 font-bold py-3 rounded-lg flex flex-col items-center justify-center hover:bg-slate-200 active:scale-95 shadow-sm text-xs uppercase"><Trash2 className="w-5 h-5 mb-1" />Limpar</button>
-                    <button onClick={removeSelectedLine} disabled={!selectedLineId} className="bg-white text-rose-600 disabled:opacity-50 border border-slate-300 font-bold py-3 rounded-lg flex flex-col items-center justify-center hover:bg-rose-50 active:scale-95 shadow-sm text-xs uppercase"><Minus className="w-5 h-5 mb-1" />Apagar Linha</button>
-                    <button onClick={() => setShowPaymentModal(true)} disabled={orderItems.length === 0} className="bg-emerald-500 text-white font-bold py-3 rounded-lg flex flex-col items-center justify-center disabled:opacity-50 hover:bg-emerald-600 active:scale-95 shadow-sm text-xs uppercase"><CreditCard className="w-5 h-5 mb-1" />Cobrar (F12)</button>
+                    <button onClick={clearCart} className="bg-white text-slate-600 border border-slate-300 font-bold py-2 rounded-lg flex flex-col items-center justify-center hover:bg-slate-200 active:scale-95 shadow-sm text-xs uppercase"><Trash2 className="w-4 h-4 mb-0.5" />Limpar</button>
+                    <button onClick={removeSelectedLine} disabled={!selectedLineId} className="bg-white text-rose-600 disabled:opacity-50 border border-slate-300 font-bold py-2 rounded-lg flex flex-col items-center justify-center hover:bg-rose-50 active:scale-95 shadow-sm text-xs uppercase"><Minus className="w-4 h-4 mb-0.5" />Apagar</button>
+                    <button onClick={() => setShowPaymentModal(true)} disabled={orderItems.length === 0} className="bg-emerald-500 text-white font-bold py-2 rounded-lg flex flex-col items-center justify-center disabled:opacity-50 hover:bg-emerald-600 active:scale-95 shadow-sm text-xs uppercase"><CreditCard className="w-4 h-4 mb-0.5" />Cobrar</button>
                 </div>
             </div>
 
             {/* Numpad Area */}
-            <div className="shrink-0 bg-slate-800 p-4 border-t border-slate-900">
+            <div className="shrink-0 bg-slate-800 p-2 border-t border-slate-900">
                {/* Numpad display */}
-               <div className="bg-slate-900 rounded-xl mb-4 p-3 flex justify-end shadow-inner h-16 items-center">
-                  <span className="text-emerald-400 font-mono text-3xl font-black tracking-widest">{numpadValue || "0"}</span>
+               <div className="bg-slate-900 rounded-xl mb-2 p-2 flex justify-end shadow-inner h-12 items-center">
+                  <span className="text-emerald-400 font-mono text-2xl font-black tracking-widest">{numpadValue || "0"}</span>
                </div>
                
-               <div className="grid grid-cols-4 gap-2 h-[220px]">
+               <div className="grid grid-cols-4 gap-2 h-[200px]">
                   <NumpadBtn val="7" />
                   <NumpadBtn val="8" />
                   <NumpadBtn val="9" />
-                  <button className="bg-slate-600 hover:bg-slate-500 text-white font-bold rounded-xl shadow-inner active:scale-95 text-xs flex flex-col items-center justify-center p-2 uppercase"><span className="text-xl mb-1">%</span>Desc</button>
+                  <button
+                    onClick={() => {
+                      if (!selectedLineId || !numpadValue) return;
+                      const pct = parseFloat(numpadValue);
+                      if (isNaN(pct) || pct < 0 || pct > 100) return;
+                      setOrderItems(prev => prev.map(i =>
+                        i.id === selectedLineId
+                          ? { ...i, price: parseFloat((i.price * (1 - pct / 100)).toFixed(2)) }
+                          : i
+                      ));
+                      setNumpadValue("");
+                    }}
+                    className="bg-slate-600 hover:bg-slate-500 text-white font-bold rounded-xl shadow-inner active:scale-95 text-xs flex flex-col items-center justify-center p-2 uppercase"
+                  ><span className="text-xl mb-1">%</span>Desc</button>
                   
                   <NumpadBtn val="4" />
                   <NumpadBtn val="5" />
                   <NumpadBtn val="6" />
-                  <button onClick={() => { if(numpadValue) { updateQuantity(selectedLineId||'', parseFloat(numpadValue)); setNumpadValue(""); } }} className="bg-slate-600 hover:bg-slate-500 text-white font-bold rounded-xl shadow-inner active:scale-95 text-xs flex flex-col items-center justify-center p-2 uppercase"><Edit className="w-5 h-5 mb-1" />Qtd</button>
+                  <button
+                    onClick={() => {
+                      if (!selectedLineId || !numpadValue) return;
+                      const qty = parseFloat(numpadValue);
+                      if (qty > 0) updateQuantity(selectedLineId, qty);
+                      setNumpadValue("");
+                    }}
+                    className="bg-slate-600 hover:bg-slate-500 text-white font-bold rounded-xl shadow-inner active:scale-95 text-xs flex flex-col items-center justify-center p-2 uppercase"
+                  ><Edit className="w-5 h-5 mb-1" />Qtd</button>
                   
                   <NumpadBtn val="1" />
                   <NumpadBtn val="2" />
                   <NumpadBtn val="3" />
-                  <button onClick={() => {
-                     if (selectedLineId) {
-                        setCurrentNote(orderItems.find(i=>i.id===selectedLineId)?.note || "");
-                        setShowNoteModal(true);
-                     } else {
-                        alert("Selecione um artigo na lista primeiro");
-                     }
-                  }} className="bg-slate-600 hover:bg-slate-500 text-white font-bold rounded-xl shadow-inner active:scale-95 text-xs flex flex-col items-center justify-center p-2 uppercase"><FileText className="w-5 h-5 mb-1" />Nota</button>
+                  <button
+                    onClick={() => {
+                      if (!selectedLineId) { alert("Selecione um artigo na lista primeiro"); return; }
+                      setCurrentNote(orderItems.find(i => i.id === selectedLineId)?.note || "");
+                      setShowNoteModal(true);
+                    }}
+                    className="bg-slate-600 hover:bg-slate-500 text-white font-bold rounded-xl shadow-inner active:scale-95 text-xs flex flex-col items-center justify-center p-2 uppercase"
+                  ><FileText className="w-5 h-5 mb-1" />Nota</button>
 
                   <NumpadBtn val="0" colSpan={2} />
                   <NumpadBtn val="." />
@@ -1121,13 +1142,13 @@ function TicketBody({
 
       {customerPhone && (
         <div className="mt-4 p-2 border border-black border-dashed text-[11px] font-bold text-center">
-          <p className="uppercase tracking-widest mb-1 font-black">Fidelização Pollastre</p>
+          <p className="uppercase tracking-widest mb-1 font-black">Fidelització Pollastre</p>
           <p className="text-[13px]">{customerPhone}</p>
-          <p className="mt-1">Acumulados: {currentLoyaltyCount % 11}/10</p>
+          <p className="mt-1">Comprats: {currentLoyaltyCount % 11} / 10</p>
           {currentLoyaltyCount % 11 === 10 ? (
-            <p className="text-sm font-black mt-1">*** PRÓXIMO É GRÁTIS! ***</p>
+            <p className="text-sm font-black mt-1">*** EL PROPER ÉS GRATUÏT! ***</p>
           ) : (
-            <p>Faltam {10 - (currentLoyaltyCount % 11)} para o GRÁTIS!</p>
+            <p>Falten {10 - (currentLoyaltyCount % 11)} per al GRATUÏT!</p>
           )}
         </div>
       )}
@@ -1141,8 +1162,7 @@ function TicketBody({
 }
 
 
-// Ensure ShoppingBag is imported
-import { ShoppingBag as ShoppingBagIcon } from 'lucide-react';
+// Ensure ShoppingBag is imported (already imported at top)
 
 export default function POSPage() {
   return (
