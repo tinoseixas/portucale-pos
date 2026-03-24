@@ -5,12 +5,10 @@ import Link from "next/link";
 import { ArrowLeft, CalendarDays, Plus, Clock, Users, Check, Ban, Coffee } from "lucide-react";
 import { useOrders, Reservation } from "../store";
 
-const MESAS = Array.from({ length: 10 }, (_, i) => `Mesa ${i + 1}`);
-const BALCAO = Array.from({ length: 4 }, (_, i) => `Balcão ${i + 1}`);
-const ALL_TABLES = [...MESAS, ...BALCAO];
+import { ALL_TABLES, MESAS, BALCAO } from "../constants";
 
 export default function ReservasPage() {
-  const { reservations, saveReservation, updateReservationStatus } = useOrders();
+  const { reservations, saveReservation, updateReservationStatus, checkReservationConflict } = useOrders();
   
   const [filterDate, setFilterDate] = useState(new Date().toISOString().split('T')[0]);
   const [showModal, setShowModal] = useState(false);
@@ -30,22 +28,11 @@ export default function ReservasPage() {
     e.preventDefault();
     if (!formData.name) { alert("Indique o nome."); return; }
     
-    // NEW: Overlap Check (1 hour margin)
-    const newDateTime = new Date(`${formData.date}T${formData.time}`).getTime();
-    const hasOverlap = reservations.some(r => {
-      if (r.status !== "confirmada" || r.tableId !== formData.tableId || r.date !== formData.date) return false;
-      const existingTime = new Date(`${r.date}T${r.time}`).getTime();
-      const diff = Math.abs(newDateTime - existingTime);
-      return diff < (60 * 60 * 1000); // 1 hour margin
-    });
-
-    if (hasOverlap) {
-      const conflictRes = reservations.find(r => {
-        if (r.status !== "confirmada" || r.tableId !== formData.tableId || r.date !== formData.date) return false;
-        return Math.abs(newDateTime - new Date(`${r.date}T${r.time}`).getTime()) < (60 * 60 * 1000);
-      });
-      
-      alert(`ERRO: A ${formData.tableId} já tem uma reserva confirmada para as ${conflictRes?.time} (${conflictRes?.customerName}).\n\nNão é permitido marcar outra reserva para esta mesa com menos de 1 hora de diferença.`);
+    // Using centralized conflict check
+    const conflictRes = checkReservationConflict(formData.tableId, formData.date, formData.time);
+    
+    if (conflictRes) {
+      alert(`ERRO: A ${formData.tableId} já tem uma reserva confirmada para as ${conflictRes.time} (${conflictRes.customerName}).\n\nNão é permitido marcar outra reserva para esta mesa com menos de 1 hora de diferença.`);
       return;
     }
 

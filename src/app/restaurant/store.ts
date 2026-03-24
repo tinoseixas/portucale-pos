@@ -143,6 +143,17 @@ export const useOrders = () => {
     }
   };
 
+  const checkReservationConflict = (tableId: string, date: string, time: string, excludeId?: string) => {
+    const newDateTime = new Date(`${date}T${time}`).getTime();
+    return reservations.find(r => {
+      if (r.id === excludeId) return false;
+      if (r.status !== "confirmada" || r.tableId !== tableId || r.date !== date) return false;
+      const existingTime = new Date(`${r.date}T${r.time}`).getTime();
+      const diff = Math.abs(newDateTime - existingTime);
+      return diff < (60 * 60 * 1000); // 1 hour margin
+    });
+  };
+
   return { 
     orders, 
     updateOrderStatus, 
@@ -152,6 +163,7 @@ export const useOrders = () => {
     reservations, 
     saveReservation, 
     updateReservationStatus,
+    checkReservationConflict,
     isLoading: isOrdersLoading || isResLoading
   };
 };
