@@ -70,6 +70,7 @@ function POSInterface() {
   const [liveWeight, setLiveWeight] = useState<number | null>(null);
   
   const [numpadValue, setNumpadValue] = useState<string>("");
+  const [customerPhone, setCustomerPhone] = useState<string>("");
 
   const [isMounted, setIsMounted] = useState(false);
   useEffect(() => { setIsMounted(true); }, []);
@@ -114,7 +115,25 @@ function POSInterface() {
   }, [selectedTable, orders, isTakeaway]);
 
   const filteredItems = MENU_ITEMS.filter((item) => item.categoryId === activeCategory && item.name.toLowerCase().includes(searchQuery.toLowerCase()));
-  const totalAmount = orderItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  
+  // Loyalty Logic for Total
+  const { loyaltyCards, saveLoyaltyCard } = useOrders();
+  const currentLoyaltyCount = loyaltyCards.find(c => c.phone === customerPhone)?.count || 0;
+  
+  let pollastreInCartCount = 0;
+  const totalAmount = orderItems.reduce((sum, item) => {
+    if (item.id === 'tkw5') {
+       let itemTotal = 0;
+       for (let i = 0; i < item.quantity; i++) {
+          pollastreInCartCount++;
+          if ((currentLoyaltyCount + pollastreInCartCount) % 11 !== 0) {
+             itemTotal += item.price;
+          }
+       }
+       return sum + itemTotal;
+    }
+    return sum + item.price * item.quantity;
+  }, 0);
   
   // Tax calculations (Andorra IGI 4.5%)
   const igiAmount = totalAmount - (totalAmount / 1.045);
@@ -272,6 +291,7 @@ function POSInterface() {
       status: "pendente", // Resets to 'pendente' automatically when sending to kitchen again
       createdAt: existingOrder?.createdAt || Date.now(),
       updatedAt: Date.now(),
+      customerPhone: customerPhone || undefined,
     };
 
     saveOrder(order);
@@ -298,8 +318,22 @@ function POSInterface() {
         cashReceived: received,
         change: changeVal,
         updatedAt: Date.now(),
+        customerPhone: customerPhone || undefined,
       };
       saveOrder(finishedOrder);
+
+      // Update Loyalty on completion
+      if (customerPhone) {
+         const pollastreCount = (finishedOrder.items || []).find(i => i.id === 'tkw5')?.quantity || 0;
+         if (pollastreCount > 0) {
+            const card = loyaltyCards.find(c => c.phone === customerPhone) || { phone: customerPhone, count: 0, totalFreeGiven: 0, updatedAt: Date.now() };
+            saveLoyaltyCard({
+               ...card,
+               count: card.count + pollastreCount
+            });
+         }
+      }
+
       setShowPaymentModal(false);
       router.push("/restaurant/mesas");
     } else {
@@ -318,8 +352,21 @@ function POSInterface() {
           createdAt: Date.now(),
           updatedAt: Date.now(),
        };
-       saveOrder(directOrder);
-       setShowPaymentModal(false);
+        saveOrder(directOrder);
+        
+        // Update Loyalty on completion
+        if (customerPhone) {
+           const pollastreCount = orderItems.find(i => i.id === 'tkw5')?.quantity || 0;
+           if (pollastreCount > 0) {
+              const card = loyaltyCards.find(c => c.phone === customerPhone) || { phone: customerPhone, count: 0, totalFreeGiven: 0, updatedAt: Date.now() };
+              saveLoyaltyCard({
+                 ...card,
+                 count: card.count + pollastreCount
+              });
+           }
+        }
+
+        setShowPaymentModal(false);
        if(isTakeaway) router.push("/restaurant/takeaway");
        else router.push("/restaurant/mesas");
     }
@@ -338,61 +385,43 @@ function POSInterface() {
   return (
     <>
       <div 
-        className="hidden print:block absolute top-0 left-0 bg-white text-black font-mono text-sm z-[9999] p-4 w-[80mm] h-max" 
+        className="hidden print:block absolute top-0 left-0 bg-white text-black font-mono text-sm z-[9999] p-4 w-[80mm]" 
         style={{ width: '80mm', margin: 0 }}
       >
-        <div className="text-center mb-4">
-          <h1 className="text-2xl font-bold uppercase tracking-widest mb-1">Portucale</h1>
-          <p className="text-[11px] uppercase tracking-wider font-bold border-b border-black pb-2 mb-2 inline-block">Sabors de Portugal</p>
-          <p className="text-[12px] font-bold">NIF: <span className="font-normal">999 999 990</span></p>
-          <p className="text-[11px] mt-2 mb-2">Hora: {isMounted ? new Date().toLocaleString('pt-PT') : ''}</p>
-        </div>
-        
-        <div className="border-y border-black border-dashed py-2 mb-4 text-center text-xl font-bold uppercase mx-2 shadow-sm">
-           {isTakeaway ? `TAKEAWAY: ${takeawayName || "CLIENTE"}` : selectedTable ? `${selectedTable}` : "VENDA DIRETA"}
-        </div>
+        <TicketBody 
+          label="CÓPIA CLIENTE"
+          isTakeaway={isTakeaway}
+          takeawayName={takeawayName}
+          selectedTable={selectedTable}
+          orderItems={orderItems}
+          subtotalAmount={subtotalAmount}
+          igiAmount={igiAmount}
+          totalAmount={totalAmount}
+          customerPhone={customerPhone}
+          currentLoyaltyCount={currentLoyaltyCount}
+          isMounted={isMounted}
+          orderNumber={existingOrder?.orderNumber || (orders.filter(o => new Date(o.createdAt).toDateString() === new Date().toDateString()).length + 1)}
+        />
 
-        <table className="w-full text-[13px] mb-4 text-left">
-          <thead>
-            <tr className="border-b border-black text-[12px] uppercase">
-              <th className="font-bold py-1 w-6">Qtd</th>
-              <th className="font-bold py-1 px-1">Artigo</th>
-              <th className="text-right font-bold py-1">Euros</th>
-            </tr>
-          </thead>
-          <tbody>
-            {orderItems.map((item, idx) => {
-               const isScale = item.quantity % 1 !== 0; 
-               return (
-                <tr key={idx} className="border-b border-dotted border-black/30 pb-1 align-top">
-                  <td className="py-2 pr-1 whitespace-nowrap font-bold">{isScale ? item.quantity.toFixed(3) : item.quantity}</td>
-                  <td className="py-2 px-1 leading-tight">
-                     <div>{item.name}</div>
-                     {item.note && <div className="text-[10px] font-bold mt-0.5 uppercase">*** {item.note} ***</div>}
-                  </td>
-                  <td className="text-right py-2 whitespace-nowrap font-semibold">{(item.price * item.quantity).toFixed(2)}</td>
-                </tr>
-            )})}
-          </tbody>
-        </table>
-
-        <div className="border-t border-black mb-1 pt-2 flex justify-between text-[11px]">
-          <span>Subtotal:</span>
-          <span>{subtotalAmount.toFixed(2)}€</span>
-        </div>
-        <div className="flex justify-between text-[11px]">
-          <span>IGI (4.5% incl):</span>
-          <span>{igiAmount.toFixed(2)}€</span>
-        </div>
-        <div className="border-t-[3px] border-black pt-3 flex justify-between items-center text-2xl font-black mt-2 bg-slate-100 p-2 text-center">
-          <span>TOTAL:</span>
-          <span>{totalAmount.toFixed(2)}€</span>
-        </div>
-        
-        <div className="text-center mt-12 text-xs font-bold text-black border-t border-black pt-4">
-          <p>Obrigado pela sua visita!</p>
-          <p className="mt-2 text-[10px] font-normal tracking-wide">SOFTWARE: Antigravity P.O.S.</p>
-        </div>
+        {isTakeaway && (
+          <>
+            <div className="my-8 border-t-2 border-dashed border-black" />
+            <TicketBody 
+              label="CÓPIA FUNCIONÁRIO"
+              isTakeaway={isTakeaway}
+              takeawayName={takeawayName}
+              selectedTable={selectedTable}
+              orderItems={orderItems}
+              subtotalAmount={subtotalAmount}
+              igiAmount={igiAmount}
+              totalAmount={totalAmount}
+              customerPhone={customerPhone}
+              currentLoyaltyCount={currentLoyaltyCount}
+              isMounted={isMounted}
+              orderNumber={existingOrder?.orderNumber || (orders.filter(o => new Date(o.createdAt).toDateString() === new Date().toDateString()).length + 1)}
+            />
+          </>
+        )}
       </div>
 
       <div className="print:hidden flex h-screen w-full bg-slate-200 overflow-hidden text-slate-900 font-sans select-none">
@@ -479,15 +508,31 @@ function POSInterface() {
                    onChange={(e) => setTakeawayTime(e.target.value)}
                    className="w-full p-4 border-2 border-slate-200 rounded-xl text-lg font-bold focus:border-blue-500 focus:outline-none mb-4"
                  />
-                 <button 
-                   onClick={() => {
-                     setIsTakeaway(true);
-                     setSelectedTable(undefined);
-                     setShowTakeawayModal(false);
-                   }}
-                   className="w-full mt-2 bg-blue-600 text-white font-bold p-4 rounded-xl active:scale-95 transition-transform"
-                 >
-                   Confirmar
+                              <label className="text-sm font-bold text-slate-600 mb-2 block">Telemóvel (Fidelização Pollastre):</label>
+                  <div className="relative mb-4">
+                    <input 
+                      type="tel"
+                      value={customerPhone} 
+                      onChange={(e) => setCustomerPhone(e.target.value)}
+                      className="w-full p-4 border-2 border-slate-200 rounded-xl text-lg font-bold focus:border-blue-500 focus:outline-none"
+                      placeholder="Ex: 912345678"
+                    />
+                    {customerPhone && (
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2 bg-blue-50 text-blue-700 px-3 py-1 rounded-lg text-xs font-black border border-blue-200">
+                        {currentLoyaltyCount % 11 === 10 ? "PRÓXIMO GRÁTIS!" : `Selos: ${currentLoyaltyCount % 11}/10`}
+                      </div>
+                    )}
+                  </div>
+                  
+                  <button 
+                    onClick={() => {
+                      setIsTakeaway(true);
+                      setSelectedTable(undefined);
+                      setShowTakeawayModal(false);
+                    }}
+                    className="w-full mt-2 bg-blue-600 text-white font-bold p-4 rounded-xl active:scale-95 transition-transform"
+                  >
+                    Confirmar
                  </button>
               </div>
            </div>
@@ -1014,6 +1059,87 @@ function POSInterface() {
     </>
   );
 }
+
+function TicketBody({ 
+  label, isTakeaway, takeawayName, selectedTable, orderItems, 
+  subtotalAmount, igiAmount, totalAmount, customerPhone, 
+  currentLoyaltyCount, isMounted, orderNumber 
+}: any) {
+  return (
+    <div className="ticket-body">
+      <div className="text-center mb-4">
+        <div className="flex justify-between items-center mb-2 px-2">
+           <div className="text-[10px] font-black border border-black px-2">{label}</div>
+           {orderNumber && <div className="text-[14px] font-black"># {orderNumber}</div>}
+        </div>
+        <h1 className="text-2xl font-bold uppercase tracking-widest mb-1">Portucale</h1>
+        <p className="text-[11px] uppercase tracking-wider font-bold border-b border-black pb-2 mb-2 inline-block">Sabors de Portugal</p>
+        <p className="text-[12px] font-bold">NIF: <span className="font-normal">999 999 990</span></p>
+        <p className="text-[11px] mt-2 mb-2">Hora: {isMounted ? new Date().toLocaleString('pt-PT') : ''}</p>
+      </div>
+      
+      <div className="border-y border-black border-dashed py-2 mb-4 text-center text-xl font-bold uppercase mx-2 shadow-sm">
+         {isTakeaway ? `TAKEAWAY: ${takeawayName || "CLIENTE"}` : selectedTable ? `${selectedTable}` : "VENDA DIRETA"}
+      </div>
+
+      <table className="w-full text-[13px] mb-4 text-left">
+        <thead>
+          <tr className="border-b border-black text-[12px] uppercase">
+            <th className="font-bold py-1 w-6">Qtd</th>
+            <th className="font-bold py-1 px-1">Artigo</th>
+            <th className="text-right font-bold py-1">Euros</th>
+          </tr>
+        </thead>
+        <tbody>
+          {orderItems.map((item: any, idx: number) => {
+             const isScale = item.quantity % 1 !== 0; 
+             return (
+              <tr key={idx} className="border-b border-dotted border-black/30 pb-1 align-top">
+                <td className="py-2 pr-1 whitespace-nowrap font-bold">{isScale ? item.quantity.toFixed(3) : item.quantity}</td>
+                <td className="py-2 px-1 leading-tight">
+                   <div>{item.name}</div>
+                   {item.note && <div className="text-[10px] font-bold mt-0.5 uppercase">*** {item.note} ***</div>}
+                </td>
+                <td className="text-right py-2 whitespace-nowrap font-semibold">{(item.price * item.quantity).toFixed(2)}</td>
+              </tr>
+          )})}
+        </tbody>
+      </table>
+
+      <div className="border-t border-black mb-1 pt-2 flex justify-between text-[11px]">
+        <span>Subtotal:</span>
+        <span>{subtotalAmount.toFixed(2)}€</span>
+      </div>
+      <div className="flex justify-between text-[11px]">
+        <span>IGI (4.5% incl):</span>
+        <span>{igiAmount.toFixed(2)}€</span>
+      </div>
+      <div className="border-t-[3px] border-black pt-3 flex justify-between items-center text-2xl font-black mt-2 bg-slate-100 p-2 text-center">
+        <span>TOTAL:</span>
+        <span>{totalAmount.toFixed(2)}€</span>
+      </div>
+
+      {customerPhone && (
+        <div className="mt-4 p-2 border border-black border-dashed text-[11px] font-bold text-center">
+          <p className="uppercase tracking-widest mb-1 font-black">Fidelização Pollastre</p>
+          <p className="text-[13px]">{customerPhone}</p>
+          <p className="mt-1">Acumulados: {currentLoyaltyCount % 11}/10</p>
+          {currentLoyaltyCount % 11 === 10 ? (
+            <p className="text-sm font-black mt-1">*** PRÓXIMO É GRÁTIS! ***</p>
+          ) : (
+            <p>Faltam {10 - (currentLoyaltyCount % 11)} para o GRÁTIS!</p>
+          )}
+        </div>
+      )}
+      
+      <div className="text-center mt-12 text-xs font-bold text-black border-t border-black pt-4">
+        <p>Obrigado pela sua visita!</p>
+        <p className="mt-2 text-[10px] font-normal tracking-wide">SOFTWARE: Antigravity P.O.S.</p>
+      </div>
+    </div>
+  );
+}
+
 
 // Ensure ShoppingBag is imported
 import { ShoppingBag as ShoppingBagIcon } from 'lucide-react';

@@ -16,7 +16,7 @@ export default function CozinhaPage() {
 
   // Sort orders: oldest pending first, filtered by food items only (exclude begudes)
   const activeOrders = orders
-    .filter((o) => o.status === "pendente" || o.status === "preparacao")
+    .filter((o) => (o.status === "pendente" || o.status === "preparacao") && o.type !== "takeaway")
     .map(order => ({ ...order, items: order.items.filter(i => i.categoryId !== 'begudes') }))
     .filter(order => order.items.length > 0)
     .sort((a, b) => a.createdAt - b.createdAt);

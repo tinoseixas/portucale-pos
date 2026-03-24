@@ -44,6 +44,15 @@ export interface Order {
   change?: number;
   createdAt: number;
   updatedAt: number;
+  customerPhone?: string;
+  orderNumber?: number;
+}
+
+export interface LoyaltyCard {
+  phone: string;
+  count: number;
+  totalFreeGiven: number;
+  updatedAt: number;
 }
 
 export interface Reservation {
@@ -59,6 +68,7 @@ export interface Reservation {
 
 const ORDERS_COLLECTION = 'restaurant_orders';
 const RESERVATIONS_COLLECTION = 'restaurant_reservations';
+const LOYALTY_COLLECTION = 'restaurant_loyalty';
 
 export const useOrders = () => {
   const firestore = useFirestore();
@@ -76,12 +86,21 @@ export const useOrders = () => {
 
   const { data: ordersData, isLoading: isOrdersLoading } = useCollection<Order>(ordersQuery);
   const { data: reservationsData, isLoading: isResLoading } = useCollection<Reservation>(reservationsQuery);
+  const { data: loyaltyData } = useCollection<LoyaltyCard>(query(collection(firestore, LOYALTY_COLLECTION)));
 
   const orders = ordersData || [];
   const reservations = reservationsData || [];
+  const loyaltyCards = loyaltyData || [];
 
   const saveOrder = async (order: Order) => {
     try {
+      // Generate sequential order number if it doesn't exist
+      if (!order.orderNumber) {
+        const today = new Date().toDateString();
+        const todayOrders = orders.filter(o => new Date(o.createdAt).toDateString() === today);
+        order.orderNumber = todayOrders.length + 1;
+      }
+
       const docRef = doc(firestore, ORDERS_COLLECTION, order.id);
       await setDoc(docRef, {
         ...order,
@@ -164,6 +183,15 @@ export const useOrders = () => {
     saveReservation, 
     updateReservationStatus,
     checkReservationConflict,
+    loyaltyCards,
+    saveLoyaltyCard: async (card: LoyaltyCard) => {
+      try {
+        const docRef = doc(firestore, LOYALTY_COLLECTION, card.phone);
+        await setDoc(docRef, { ...card, updatedAt: Date.now() }, { merge: true });
+      } catch (error) {
+        console.error("Error saving loyalty card:", error);
+      }
+    },
     isLoading: isOrdersLoading || isResLoading
   };
 };
